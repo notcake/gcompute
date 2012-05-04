@@ -1,0 +1,1 @@
+GAuth.NetServer = GLib.Protocol.NetServer ("GAuth", GAuth.Protocol.NetServerClient)

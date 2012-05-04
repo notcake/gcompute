@@ -1,0 +1,1 @@
+VFS.NetClientManager = GLib.Protocol.NetClientManager ("VFS", VFS.Protocol.NetClient)

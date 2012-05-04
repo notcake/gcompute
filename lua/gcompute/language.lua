@@ -1,155 +1,146 @@
-local SymbolMatchType = {
-	Regex = 1,
-	Plain = 2,
-	Custom = 3
+local self = {}
+GCompute.Languages.Language = GCompute.MakeConstructor (self)
+
+local SymbolMatchType =
+{
+	Regex	= 1,
+	Plain	= 2,
+	Custom	= 3
 }
 local KeywordTypes = GCompute.KeywordTypes
 
-local Language = {}
-Language.__index = Language
-
-function GCompute.Languages.Language (Name)
-	local Object = {}
-	setmetatable (Object, Language)
-	Object:ctor ()
-	Object.Name = Name
-	
-	GCompute.Languages.Languages [Name] = Object
-	return Object
-end
-
-function Language:ctor ()
-	self.Name = ""
+function self:ctor (name)
+	self.Name = name
 	self.Symbols = {}
 	self.SymbolMatchType = {}
 	self.SymbolTokenType = {}
 	self.Keywords = {}
 	
-	self._Parser = {}
-	self._Parser.__index = self._Parser
-	setmetatable (self._Parser, GCompute._Parser)
-	function self._Parser.ctor ()
+	self.ParserTable = {}
+	self.ParserConstructor = GCompute.MakeConstructor (self.ParserTable, GCompute.Parser)
+	self.ASTBuilderTable = {}
+	self.ASTBuilderConstructor = GCompute.MakeConstructor (self.ASTBuilderTable, GCompute.ASTBuilder)
+end
+
+function self:Parser (compilationUnit)
+	return self.ParserConstructor (compilationUnit)
+end
+
+function self:ASTBuilder (compilationUnit)
+	return self.ASTBuilderConstructor (compilationUnit)
+end
+
+function self:AddCustomSymbol (pattern, tokenType, matchFunction)
+	self.Symbols [#self.Symbols + 1] = pattern
+	self.SymbolMatchType [#self.SymbolMatchType + 1] = matchFunction
+	self.SymbolTokenType [#self.SymbolTokenType + 1] = tokenType
+end
+
+function self:AddCustomSymbols (patterns, tokenType, matchFunction)
+	for _, pattern in ipairs (patterns) do
+		self.Symbols [#self.Symbols + 1] = pattern
+		self.SymbolMatchType [#self.SymbolMatchType + 1] = matchFunction
+		self.SymbolTokenType [#self.SymbolTokenType + 1] = tokenType
 	end
 end
 
-function Language:Parser ()
-	local Object = {}
-	setmetatable (Object, self._Parser)
-	GCompute._Parser.ctor (Object)
-	Object:ctor ()
-	return Object
+function self:AddKeyword (keyword, keywordType)
+	if not keywordType then
+		keywordType = GCompute.KeywordTypes.Unknown
+	end
+	self.Keywords [keyword] = keywordType
 end
 
-function Language:AddCustomSymbol (Pattern, TokenType, MatchFunction)
-	self.Symbols [#self.Symbols + 1] = Pattern
-	self.SymbolMatchType [#self.SymbolMatchType + 1] = MatchFunction
-	self.SymbolTokenType [#self.SymbolTokenType + 1] = TokenType
-end
-
-function Language:AddCustomSymbols (Patterns, TokenType, MatchFunction)
-	for _, Pattern in ipairs (Patterns) do
-		self.Symbols [#self.Symbols + 1] = Pattern
-		self.SymbolMatchType [#self.SymbolMatchType + 1] = MatchFunction
-		self.SymbolTokenType [#self.SymbolTokenType + 1] = TokenType
+function self:AddKeywords (keywords, keywordType)
+	if not keywordType then
+		keywordType = GCompute.KeywordTypes.Unknown
+	end
+	for _, keyword in ipairs (keywords) do
+		self.Keywords [keyword] = keywordType
 	end
 end
 
-function Language:AddKeyword (Keyword, KeywordType)
-	if not KeywordType then
-		KeywordType = GCompute.KeywordTypes.Unknown
+function self:AddSymbol (pattern, tokenType, isRegex)
+	if isRegex == nil then
+		isRegex = true
 	end
-	self.Keywords [Keyword] = KeywordType
-end
-
-function Language:AddKeywords (Keywords, KeywordType)
-	if not KeywordType then
-		KeywordType = GCompute.KeywordTypes.Unknown
-	end
-	for _, Keyword in ipairs (Keywords) do
-		self.Keywords [Keyword] = KeywordType
-	end
-end
-
-function Language:AddSymbol (Pattern, TokenType, IsRegex)
-	if IsRegex == nil then
-		IsRegex = true
-	end
-	if IsRegex then
-		self.Symbols [#self.Symbols + 1] = "^" .. Pattern
+	if isRegex then
+		self.Symbols [#self.Symbols + 1] = "^" .. pattern
 	else
-		self.Symbols [#self.Symbols + 1] = Pattern
+		self.Symbols [#self.Symbols + 1] = pattern
 	end
-	if IsRegex then
-		self.SymbolMatchType [#self.SymbolMatchType + 1] = SymbolMatchType.Regex
-	else
-		self.SymbolMatchType [#self.SymbolMatchType + 1] = SymbolMatchType.Plain
-	end
-	self.SymbolTokenType [#self.SymbolTokenType + 1] = TokenType
+	self.SymbolMatchType [#self.SymbolMatchType + 1] = isRegex and SymbolMatchType.Regex or SymbolMatchType.Plain
+	self.SymbolTokenType [#self.SymbolTokenType + 1] = tokenType
 end
 
-function Language:AddSymbols (Patterns, TokenType, IsRegex)
-	if IsRegex == nil then
-		IsRegex = true
+function self:AddSymbols (patterns, tokenType, isRegex)
+	if isRegex == nil then
+		isRegex = true
 	end
-	if IsRegex then
-		IsRegex = SymbolMatchType.Regex
-	else
-		IsRegex = SymbolMatchType.Plain
-	end
-	for _, Pattern in ipairs (Patterns) do
-		if IsRegex == SymbolMatchType.Regex then
-			self.Symbols [#self.Symbols + 1] = "^" .. Pattern
+	for _, pattern in ipairs (patterns) do
+		if isRegex then
+			self.Symbols [#self.Symbols + 1] = "^" .. pattern
 		else
-			self.Symbols [#self.Symbols + 1] = Pattern
+			self.Symbols [#self.Symbols + 1] = pattern
 		end
-		self.SymbolMatchType [#self.SymbolMatchType + 1] = IsRegex
-		self.SymbolTokenType [#self.SymbolTokenType + 1] = TokenType
+		self.SymbolMatchType [#self.SymbolMatchType + 1] = isRegex and SymbolMatchType.Regex or SymbolMatchType.Plain
+		self.SymbolTokenType [#self.SymbolTokenType + 1] = tokenType
 	end
 end
 
-function Language:GetKeywordType (Token)
-	return self.Keywords [Token] or KeywordTypes.Unknown
+function self:GetKeywordType (token)
+	return self.Keywords [token] or KeywordTypes.Unknown
 end
 
-function Language:GetSymbols ()
+function self:GetSymbols ()
 	return self.Symbols
 end
 
-function Language:IsKeyword (Token)
-	return self.Keywords [Token] == true
+function self:IsKeyword (token)
+	return self.Keywords [token] == true
 end
 
-function Language:LoadParser (File)
-	if not File then
-		File = self.Name .. "_parser.lua"
+function self:LoadParser (file)
+	if not file then
+		file = self.Name .. "_parser.lua"
 	end
-	local Parser = _G.Parser
-	_G.Parser = self._Parser
-	include (File)
-	_G.Parser = Parser
+	local parser = _G.Parser
+	_G.Parser = self.ParserTable
+	include (file)
+	_G.Parser = parser
 end
 
-function Language:MatchSymbol (Code)
-	for Index, Symbol in ipairs (self.Symbols) do
-		local Match = nil
-		local MatchLength = 0
-		if self.SymbolMatchType [Index] == SymbolMatchType.Regex then
-			Match = Code:match (Symbol) 
-			if Match then
-				MatchLength = Match:len ()
+function self:LoadASTBuilder (file)
+	if not file then
+		file = self.Name .. "_astbuilder.lua"
+	end
+	local astBuilder = _G.ASTBuilder
+	_G.ASTBuilder = self.ASTBuilderTable
+	include (file)
+	_G.ASTBuilder = astBuilder
+end
+
+function self:MatchSymbol (code)
+	for index, symbol in ipairs (self.Symbols) do
+		local match = nil
+		local matchLength = 0
+		if self.SymbolMatchType [index] == SymbolMatchType.Regex then
+			match = code:match (symbol) 
+			if match then
+				matchLength = match:len ()
 			end
-		elseif self.SymbolMatchType [Index] == SymbolMatchType.Plain then
-			if Code:sub (1, Symbol:len ()) == Symbol then
-				Match = Symbol
-				MatchLength = Match:len ()
+		elseif self.SymbolMatchType [index] == SymbolMatchType.Plain then
+			if code:sub (1, symbol:len ()) == symbol then
+				match = symbol
+				matchLength = match:len ()
 			end
 		else
-			if Code:sub (1, Symbol:len ()) == Symbol then
-				Match, MatchLength = self.SymbolMatchType [Index] (Code)
+			if code:sub (1, symbol:len ()) == symbol then
+				match, matchLength = self.SymbolMatchType [index] (code)
 			end
 		end
-		if Match then
-			return Match, MatchLength, self.SymbolTokenType [Index]
+		if match then
+			return match, matchLength, self.SymbolTokenType [index]
 		end
 	end
 	return nil, 0

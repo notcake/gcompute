@@ -1,0 +1,1 @@
+GAuth.NetClientManager = GLib.Protocol.NetClientManager ("GAuth", GAuth.Protocol.NetClient)

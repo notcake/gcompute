@@ -1,7 +1,7 @@
 local LANGUAGE = GCompute.Languages.Create ("Derpscript")
 
 -- Tokenizer
-LANGUAGE:AddCustomSymbols ({"\"", "'"}, GCompute.TokenTypes.String, function (Code)
+LANGUAGE:AddCustomSymbols ({"\"", "'"}, GCompute.TokenType.String, function (Code)
 	local i = 2
 	local Escaped = false
 	while true do
@@ -22,7 +22,7 @@ LANGUAGE:AddCustomSymbols ({"\"", "'"}, GCompute.TokenTypes.String, function (Co
 		i = i + 1
 	end
 end)
-LANGUAGE:AddCustomSymbol ("/*", GCompute.TokenTypes.Comment, function (Code)
+LANGUAGE:AddCustomSymbol ("/*", GCompute.TokenType.Comment, function (Code)
 	local i = 3
 	while true do
 		local c = Code:sub (i, i + 1)
@@ -35,22 +35,23 @@ LANGUAGE:AddCustomSymbol ("/*", GCompute.TokenTypes.Comment, function (Code)
 	end
 	return nil, 0
 end)
-LANGUAGE:AddSymbol ("//[^\n\r]*", GCompute.TokenTypes.Comment)
-LANGUAGE:AddSymbol ("[a-zA-Z_][a-zA-Z0-9_]*", GCompute.TokenTypes.Identifier)
-LANGUAGE:AddSymbol ("0x[0-9a-fA-F]+", GCompute.TokenTypes.Number)
-LANGUAGE:AddSymbol ("[0-9]+%.[0-9]*e[+\\-]?[0-9]+", GCompute.TokenTypes.Number)
-LANGUAGE:AddSymbol ("[0-9]+%.[0-9]*", GCompute.TokenTypes.Number)
-LANGUAGE:AddSymbol ("[0-9]+e[+\\-]?[0-9]+", GCompute.TokenTypes.Number)
-LANGUAGE:AddSymbol ("[0-9]+", GCompute.TokenTypes.Number)
-LANGUAGE:AddSymbols ({"##", "++", "--", "::", "->", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "^=", "||", "&&"}, GCompute.TokenTypes.Operator, false)
-LANGUAGE:AddSymbols ({"#", "@", "!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ":", ".", ","}, GCompute.TokenTypes.Operator, false)
-LANGUAGE:AddSymbol (";", GCompute.TokenTypes.StatementTerminator, false)
-LANGUAGE:AddSymbols ({"\r\n", "\n\r", "\r", "\n"}, GCompute.TokenTypes.Newline, false)
-LANGUAGE:AddSymbol ("[ \t]+", GCompute.TokenTypes.Whitespace)
+LANGUAGE:AddSymbol ("//[^\n\r]*", GCompute.TokenType.Comment)
+LANGUAGE:AddSymbol ("[a-zA-Z_][a-zA-Z0-9_]*", GCompute.TokenType.Identifier)
+LANGUAGE:AddSymbol ("0x[0-9a-fA-F]+", GCompute.TokenType.Number)
+LANGUAGE:AddSymbol ("[0-9]+%.[0-9]*e[+\\-]?[0-9]+", GCompute.TokenType.Number)
+LANGUAGE:AddSymbol ("[0-9]+%.[0-9]*", GCompute.TokenType.Number)
+LANGUAGE:AddSymbol ("[0-9]+e[+\\-]?[0-9]+", GCompute.TokenType.Number)
+LANGUAGE:AddSymbol ("[0-9]+", GCompute.TokenType.Number)
+LANGUAGE:AddSymbols ({"##", "++", "--", "::", "->", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "^=", "||", "&&"}, GCompute.TokenType.Operator, false)
+LANGUAGE:AddSymbols ({"#", "@", "!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ":", ".", ","}, GCompute.TokenType.Operator, false)
+LANGUAGE:AddSymbol (";", GCompute.TokenType.StatementTerminator, false)
+LANGUAGE:AddSymbols ({"\r\n", "\n\r", "\r", "\n"}, GCompute.TokenType.Newline, false)
+LANGUAGE:AddSymbol ("[ \t]+", GCompute.TokenType.Whitespace)
 
 LANGUAGE:AddKeywords ({"if", "else", "while", "for", "do", "break", "switch", "new"}, GCompute.KeywordTypes.Control)
 LANGUAGE:AddKeywords ({"public", "private", "protected", "friend", "static", "const"}, GCompute.KeywordTypes.Modifier)
-LANGUAGE:AddKeywords ({"namespace", "struct", "class", "enum"}, GCompute.KeywordTypes.DataType)
+LANGUAGE:AddKeywords ({"namespace", "struct", "class", "enum", "using"}, GCompute.KeywordTypes.DataType)
 LANGUAGE:AddKeywords ({"true", "false", "null"}, GCompute.KeywordTypes.Constants)
 
 LANGUAGE:LoadParser ()
+LANGUAGE:LoadASTBuilder ()

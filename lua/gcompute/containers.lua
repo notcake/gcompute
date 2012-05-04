@@ -1,6 +1,4 @@
-if not GCompute.Containers then
-	GCompute.Containers = {}
-end
+GCompute.Containers = GCompute.Containers or {}
 local Containers = GCompute.Containers
 Containers.Containers = {}
 

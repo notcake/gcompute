@@ -1,87 +1,65 @@
 local Tree = {}
-Tree.__index = Tree
+GCompute.Containers.Tree = GCompute.MakeConstructor (Tree)
 
-function GCompute.Containers.Tree (...)
-	local Object = {}
-	setmetatable (Object, Tree)
-	Object:ctor (...)
-	return Object
-end
-
-function Tree:ctor (Value)
-	self.Value = Value
-	self.Children = nil
+function Tree:ctor (value)
+	self.Value = value
+	self.Children = GCompute.Containers.LinkedList ()
 	self.ChildCount = 0
 end
 
 function Tree:Add (Value)
 	local Child = GCompute.Containers.Tree (Value)
-	if not self.Children then
-		self.Children = GCompute.Containers.LinkedList ()
-	end
 	self.Children:AddLast (Child)
-	self.ChildCount = self.Children.Count + 1
+	self.ChildCount = self.ChildCount + 1
 	return Child
 end
 
 function Tree:AddNode (Tree)
 	if type (Tree) ~= "table" then
-		CAdmin.Debug.PrintStackTrace ()
-	end
-	if not self.Children then
-		self.Children = GCompute.Containers.LinkedList ()
+		GCompute.PrintStackTrace ()
 	end
 	self.Children:AddLast (Tree)
-	self.ChildCount = self.Children.Count + 1
+	self.ChildCount = self.ChildCount + 1
 	return Tree
 end
 
 function Tree:AddRange (Array)
-	if not self.Children then
-		self.Children = GCompute.Containers.LinkedList ()
-	end
 	for _, Value in ipairs (Array) do
 		self.Children:AddLast (GCompute.Containers.Tree ()).Value.Value = Value
-		self.ChildCount = self.Children.Count + 1
+		self.ChildCount = self.ChildCount + 1
 	end
 end
 
 function Tree:Clear ()
-	if self.Children then
-		self.Children:Clear ()
-	end
-	self.Count = 0
+	self.Children:Clear ()
+	self.ChildCount = 0
 end
 
-function Tree:FindChild (Value)
-	if not self.Children or
-		not self.Children.First then
-		return
-	end
-	local Current = self.Children.First
-	while Current do
-		if Current.Value.Value == Value then
-			return Current.Value
+function Tree:FindChild (value)
+	for LinkedListNode in self.Children:GetEnumerator () do
+		if LinkedListNode.Value.Value == value then
+			return LinkedListNode.Value
 		end
-		Current = Current.Next
 	end
 	return nil
 end
 
+function Tree:GetChild (n)
+	return self.Children:GetItem (n)
+end
+
+function Tree:GetChildCount ()
+	return self.ChildCount
+end
+
 function Tree:GetFirstChild ()
-	if not self.Children or
-		not self.Children.First then
+	if not self.Children.First then
 		return
 	end
 	return self.Children.First.Value
 end
 
 function Tree:GetEnumerator ()
-	if not self.Children then
-		return function ()
-			return nil
-		end
-	end
 	local Enumerator = self.Children:GetEnumerator ()
 	return function ()
 		local ChildNode = Enumerator ()
@@ -93,29 +71,26 @@ function Tree:GetEnumerator ()
 end
 
 function Tree:RemoveLast ()
-	if not self.Children or
-		not self.Children.Last then
+	if not self.Children.Last then
 		return
 	end
 	self.ChildCount = self.ChildCount - 1
 	self.Children:Remove (self.Children.Last)
 end
 
-function Tree:ToString (Indent)
-	if not Indent then
-		Indent = 0
-	end
-	local String = string.rep (" ", Indent) .. "+" .. tostring (self.Value)
-	if self.Children then
-		for Child in self.Children:GetEnumerator () do
-			local Value = Child.Value
-			if Value then
-				Value = Value:ToString (Indent + 1)
-			else
-				Value = string.rep (" ", Indent + 1) .. "+[nil]"
-			end
-			String = String .. "\n" .. Value
+function Tree:ToString (indent)
+	indent = indent or 0
+	local String = string.rep ("  ", indent) .. "+" .. tostring (self.Value)
+	
+	for LinkedListNode in self.Children:GetEnumerator () do
+		local TreeNode = LinkedListNode.Value
+		local Value
+		if TreeNode then
+			Value = TreeNode:ToString (indent + 1)
+		else
+			Value = string.rep ("  ", indent + 1) .. "+[nil]"
 		end
+		String = String .. "\n" .. Value
 	end
 	return String
 end

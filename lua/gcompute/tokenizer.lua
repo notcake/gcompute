@@ -1,67 +1,75 @@
-if not GCompute.Tokenizer then
-	GCompute.Tokenizer = {}
-end
-local Tokenizer = GCompute.Tokenizer
-Tokenizer.__index = Tokenizer
+local self = {}
+GCompute.Tokenizer = GCompute.MakeConstructor (self)
 
-GCompute.TokenTypes = {}
-local TokenTypes = GCompute.TokenTypes
-TokenTypes.Unknown = 0
-TokenTypes.Whitespace = 1
-TokenTypes.Newline = 2
-TokenTypes.Preprocessor = 3
-TokenTypes.Number = 4
-TokenTypes.Operator = 5
-TokenTypes.Identifier = 6
-TokenTypes.Keyword = 7
-TokenTypes.String = 8
-TokenTypes.Comment = 9
-TokenTypes.StatementTerminator = 10
-GCompute.InvertTable (TokenTypes)
+GCompute.TokenType =
+{
+	Unknown				= 0,
+	Whitespace			= 1,
+	Newline				= 2,
+	Preprocessor		= 3,
+	Number				= 4,
+	Operator			= 5,
+	Identifier			= 6,
+	Keyword				= 7,
+	String				= 8,
+	Comment				= 9,
+	StatementTerminator	= 10
+}
+GCompute.InvertTable (GCompute.TokenType)
+local TokenType = GCompute.TokenType
 
-GCompute.KeywordTypes = {}
+GCompute.KeywordTypes =
+{
+	Unknown		= 0,
+	Control		= 1,
+	Modifier	= 2,
+	DataType	= 3,
+	Constants	= 4
+}
 local KeywordTypes = GCompute.KeywordTypes
-KeywordTypes.Unknown = 0
-KeywordTypes.Control = 1
-KeywordTypes.Modifier = 2
-KeywordTypes.DataType = 3
-KeywordTypes.Constants = 4
 GCompute.InvertTable (KeywordTypes)
 
-function Tokenizer.Process (CompilerContext)
-	local Code = CompilerContext.Code
-	local Tokens = GCompute.Containers.LinkedList ()
-	local Offset = 1
-	local Line = 1
-	local Character = 1
-	while Offset <= Code:len () do
-		local StartOffset = Offset
-		local Match, MatchLength, TokenType = CompilerContext.Language:MatchSymbol (Code:sub (Offset))
-		local Original = Code:sub (Offset, Offset + MatchLength - 1)
-		local _, LineCount = Original:gsub ("(\r\n|\n\r|\n|\r)", "")
-		if LineCount > 0 then
-			Line = Line + LineCount
-			Character = 1
+function self:ctor ()
+end
+
+function self:Process (compilationUnit)
+	local code = compilationUnit:GetCode ()
+	local language = compilationUnit:GetLanguage ()
+	
+	local tokens = GCompute.Containers.LinkedList ()
+	local offset = 1
+	local line = 1
+	local character = 1
+	while offset <= code:len () do
+		local startOffset = offset
+		local match, matchLength, tokenType = language:MatchSymbol (code:sub (offset))
+		local original = code:sub (offset, offset + matchLength - 1)
+		local _, lineCount = original:gsub ("(\r\n|\n\r|\n|\r)", "")
+		if lineCount > 0 then
+			line = line + lineCount
+			character = 1
 		else
-			Character = Character + Original:len ()
+			character = character + original:len ()
 		end
-		if Match then
-			local Token = Tokens:AddLast (Match)
-			if CompilerContext.Language:GetKeywordType (Match) ~= KeywordTypes.Unknown then
-				TokenType = TokenTypes.Keyword
+		if match then
+			local token = tokens:AddLast (match)
+			if language:GetKeywordType (Match) ~= KeywordTypes.Unknown then
+				tokenType = TokenType.Keyword
 			end
-			Token.TokenType = TokenType
-			Token.Line = Line
-			Token.Character = Character
-			Offset = Offset + MatchLength
+			token.TokenType = tokenType
+			token.Line = line
+			token.Character = character
+			offset = offset + matchLength
 		else
-			local Token = Tokens:AddLast (Code:sub (Offset, Offset))
-			Token.TokenType = TokenTypes.Identifier
-			Token.Line = Line
-			Token.Character = Character
-			Offset = Offset + 1
+			local token = Tokens:AddLast (code:sub (offset, offset))
+			token.TokenType = TokenTypes.Identifier
+			token.Line = line
+			token.Character = character
+			offset = offset + 1
 		end
 	end
 	
-	return Tokens
+	return tokens
 end
+
+GCompute.Tokenizer = GCompute.Tokenizer ()

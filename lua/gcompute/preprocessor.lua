@@ -1,11 +1,8 @@
-if not GCompute.Preprocessor then
-	GCompute.Preprocessor = {}
-end
-local Preprocessor = GCompute.Preprocessor
-Preprocessor.__index = Preprocessor
+local self = {}
+GCompute.Preprocessor = GCompute.MakeConstructor (self)
 
-function Preprocessor.Process (CompilerContext, Tokens)
-	local TokenNode = Tokens.First
+function self:Process (compilationUnit, tokens)
+	local token = tokens.First
 	--[[
 		- Remove whitespace (done)
 		- Remove comments (done)
@@ -15,80 +12,84 @@ function Preprocessor.Process (CompilerContext, Tokens)
 		
 		- Read preprocessor directives
 	]]
-	while TokenNode do
-		local NextTokenNode = TokenNode.Next
-		if (TokenNode.Value == "@" or
-			TokenNode.Value == "#") and
-			(not TokenNode.Previous or
-			TokenNode.Previous.TokenType == GCompute.TokenTypes.Newline) then
+	while token do
+		local nextToken = token.Next
+		if (token.Value == "@" or
+			token.Value == "#") and
+			(not token.Previous or
+			token.Previous.TokenType == GCompute.TokenType.Newline) then
 			-- Preprocessor directive
-			local Removed = Preprocessor.ProcessDirective (CompilerContext, TokenNode) + 1
-			for i = 1, Removed do
-				Tokens:Remove (TokenNode)
-				TokenNode = NextTokenNode
-				NextTokenNode = TokenNode.Next
+			local tokensToRemove = self:ProcessDirective (compilationUnit, token) + 1
+			for i = 1, tokensToRemove do
+				tokens:Remove (token)
+				token = nextToken
+				nextToken = token.Next
 			end
-			NextTokenNode = TokenNode
-		elseif TokenNode.TokenType == GCompute.TokenTypes.Whitespace or
-		   TokenNode.TokenType == GCompute.TokenTypes.Comment then
-			Tokens:Remove (TokenNode)
-		elseif TokenNode.TokenType == GCompute.TokenTypes.String then
-			local QuoteType = TokenNode.Value:sub (1, 1)
-			TokenNode.Value = Preprocessor.UnescapeString (CompilerContext, TokenNode.Value)
+			nextToken = token
+		elseif token.TokenType == GCompute.TokenType.Whitespace or
+		   token.TokenType == GCompute.TokenType.Comment then
+			-- Remove whitespace and comments
+			tokens:Remove (token)
+		elseif token.TokenType == GCompute.TokenType.String then
+			-- Unescape strings and merge adjacent double-quoted strings
+			local quoteType = token.Value:sub (1, 1)
+			token.Value = self:UnescapeString (compilationUnit, token.Value)
 		
-			-- Merge adjacent double-quoted strings
-			if QuoteType == "\"" and
-				TokenNode.Previous and
-				TokenNode.Previous.TokenType == GCompute.TokenTypes.String then
-				TokenNode.Previous.Value = TokenNode.Previous.Value .. TokenNode.Value
-				Tokens:Remove (TokenNode)
+			if quoteType == "\"" and
+				token.Previous and
+				token.Previous.TokenType == GCompute.TokenType.String then
+				token.Previous.Value = token.Previous.Value .. token.Value
+				tokens:Remove (token)
 			end
-		elseif TokenNode.TokenType == GCompute.TokenTypes.Newline and
-				TokenNode.Previous and
-				TokenNode.Previous.TokenType == GCompute.TokenTypes.Newline then
-			Tokens:Remove (TokenNode)
-		elseif TokenNode.Value == "##" then
+		elseif token.TokenType == GCompute.TokenType.Newline and
+				token.Previous and
+				token.Previous.TokenType == GCompute.TokenType.Newline then
+			-- Collapse multiple newlines into one
+			tokens:Remove (token)
+		elseif token.Value == "##" then
 			-- Here be dragons
 			-- Join the previous and next symbols
-			if not TokenNode.Previous or
-				not TokenNode.Next or
-				TokenNode.Next.TokenType == GCompute.TokenTypes.Newline then
+			if not token.Previous or
+				not token.Next or
+				token.Next.TokenType == GCompute.TokenType.Newline then
 			else
-				NextTokenNode = NextTokenNode.Next
+				nextToken = nextToken.Next
 				
-				TokenNode.Previous.Value = TokenNode.Previous.Value .. TokenNode.Next.Value
+				token.Previous.Value = token.Previous.Value .. token.Next.Value
 				
-				Tokens:Remove (TokenNode.Next)
-				Tokens:Remove (TokenNode)
+				tokens:Remove (token.Next)
+				tokens:Remove (token)
 			end
 		end
-		TokenNode = NextTokenNode
+		token = nextToken
 	end
 end
 
-function Preprocessor.ProcessDirective (CompilerContext, TokenNode)
-	local Length = 0
-	local InitialTokenNode = TokenNode
-	while TokenNode.TokenType ~= GCompute.TokenTypes.Newline do
-		Length = Length + 1
-		TokenNode = TokenNode.Next
+function self:ProcessDirective (compilationUnit, token)
+	local length = 0
+	local initialTokenNode = tokenNode
+	while tokenNode.TokenType ~= GCompute.TokenType.Newline do
+		length = length + 1
+		token = token.Next
 	end
-	TokenNode = InitialTokenNode
-	if Length == 1 then
-		CompilerContext:PrintErrorMessage ("Preprocessor directive is missing.")
-		return Length
+	token = initialTokenNode
+	if length == 1 then
+		compilerUnit:Error ("Preprocessor directive is missing.", token.Line, token.Character)
+		return length
 	end
-	local Directive = TokenNode.Next.Value
-	CompilerContext:PrintDebugMessage ("Found preprocessor directive \"" .. Directive .. "\".")
-	return Length
+	local directive = token.Next.Value
+	compilerUnit:Debug ("Found preprocessor directive \"" .. directive .. "\".", initialTokenNode.Line, initialTokenNode.Character)
+	return length
 end
 
-function Preprocessor.UnescapeString (CompilerContext, String)
-	String = String:sub (2, -2)
-	return String:Replace ("\\\r", "\r")
+function self:UnescapeString (compilationUnit, string)
+	string = string:sub (2, -2)
+	return string:Replace ("\\\r", "\r")
 			:Replace ("\\n", "\n")
 			:Replace ("\\t", "\t")
 			:Replace ("\\\"", "\"")
 			:Replace ("\\\'", "\'")
 			:Replace ("\\\\", "\\")
 end
+
+GCompute.Preprocessor = GCompute.Preprocessor ()

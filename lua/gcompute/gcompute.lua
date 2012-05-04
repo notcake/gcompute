@@ -1,11 +1,12 @@
-if not GCompute then
-	GCompute = {}
-end
-local GCompute = GCompute
+GCompute = GCompute or {}
+include ("glib/glib.lua")
+GLib.Import (GCompute)
+GCompute.AddCSLuaFolderRecursive ("gcompute")
+
 GCompute.GlobalScope = nil
 
 function GCompute.ClearDebug ()
-	if LMsgConsoleClear ~= nil then
+	if LMsgConsoleClear then
 		LMsgConsoleClear ()
 	end
 end
@@ -20,45 +21,69 @@ function GCompute.PrintDebug (Message)
 	end
 end
 
-function GCompute.InvertTable (Table)
-	local Keys = {}
-	for Key, Value in pairs (Table) do
-		Keys [#Keys + 1] = Key
-	end
-	for i = 1, #Keys do
-		Table [Table [Keys [i]]] = Keys [i]
-	end
-end
-
+-- compiler
+include ("ast.lua")
 include ("containers.lua")
 include ("tokenizer.lua")
 include ("preprocessor.lua")
 include ("parser.lua")
-include ("semantics.lua")
-include ("compiler.lua")
+include ("astbuilder.lua")
 
+-- compiler passes
+include ("compiler/compilationgroup.lua")
+include ("compiler/compilationunit.lua")
+include ("compiler/passes/compilerpass.lua")
+include ("compiler/passes/declarationpass.lua")
+include ("compiler/passes/nameresolutionpass.lua")
+include ("compiler/passes/typechecker.lua")
+include ("compiler/passes/compiler2.lua")
+
+-- source files
+include ("sourcefilecache.lua")
+include ("sourcefile.lua")
+include ("anonymoussourcefile.lua")
+
+-- type system
+include ("type/type.lua")
+include ("type/arraytype.lua")
+include ("type/instancedtype.lua")
+include ("type/parametrictype.lua")
+include ("type/referencetype.lua")
+include ("type/typereference.lua")
+include ("type/typeparser.lua")
+
+-- name resolution
+include ("scopelookup.lua")
+include ("nameresolver.lua")
+include ("nameresolutionresult.lua")
+include ("nameresolutionresults.lua")
+
+-- output
+include ("textoutputbuffer.lua")
+include ("nulloutputbuffer.lua")
+
+-- runtime
 include ("function.lua")
 include ("functionlist.lua")
 include ("scope.lua")
-include ("type.lua")
+include ("reference.lua")
 include ("compilercontext.lua")
+include ("executioncontext.lua")
 
 include ("languages.lua")
 include ("language.lua")
 include ("languages/brainfuck.lua")
 include ("languages/derpscript.lua")
 
+-- runtime
+include ("runtime/process.lua")
+include ("runtime/thread.lua")
+include ("runtime/module.lua")
+
 GCompute.GlobalScope = GCompute.Scope ()
+GCompute.GlobalScope:SetGlobalScope (GCompute.GlobalScope)
 
-for _, file in ipairs (file.FindInLua ("gcompute/libraries/*.lua")) do
-	include ("libraries/" .. file)
-end
+include ("corelibrary.lua")
+GCompute.IncludeDirectory ("gcompute/libraries", true)
 
-if CLIENT then
-	concommand.Add ("gcompute_reload", function (ply, _, arg)
-		if SERVER and ply then
-			return
-		end
-		include ("gcompute/gcompute.lua")
-	end)
-end
+GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute")

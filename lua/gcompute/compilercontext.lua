@@ -1,30 +1,48 @@
 local CompilerContext = {}
-CompilerContext.__index = CompilerContext
+GCompute.CompilerContext = GCompute.MakeConstructor (CompilerContext)
 
-function GCompute.CompilerContext ()
-	local Object = {}
-	setmetatable (Object, CompilerContext)
-	Object:ctor ()
-	return Object
-end
+-- Tokenizer : Linked list of tokens
+-- Preprocessor : Linked list of tokens
+-- Parser : Custom tree describing code
+-- Compiler : Standardised abstract syntax tree
+-- Compiler2 : ast -> global scope entries, local scope entries etc
 
 function CompilerContext:ctor ()
+	-- This class is a fucking mess, remove
+
 	self.Language =  nil
 	self.Code = nil
 	self.Parser = nil
 	self.ParseTree = nil
+	self.AbstractSyntaxTree = nil
 	self.Debug = false
+	
+	self.ParserDebugOutput = GCompute.TextOutputBuffer ()
+	
 	self.Errors = {}
 	self.Warnings = {}
 	self.Messages = {}
 	self.MessageIndent = 0
-	
-	self.Scope = GCompute.Scope ()
+end
+
+function CompilerContext:GetCode ()
+	return self.Code
+end
+
+function CompilerContext:GetLanguage ()
+	return self.Language
+end
+
+function CompilerContext:CreateCompiler ()
+	self.Compiler = self.Language:Compiler ()
+	self.Compiler.CompilerContext = self
+	return self.Compiler
 end
 
 function CompilerContext:CreateParser ()
 	self.Parser = self.Language:Parser ()
 	self.Parser.CompilerContext = self
+	self.Parser.DebugOutput = self.ParserDebugOutput
 	return self.Parser
 end
 
@@ -36,6 +54,14 @@ function CompilerContext:IncreaseMessageIndent ()
 	self.MessageIndent = self.MessageIndent + 1
 end
 
+function CompilerContext:Compile ()
+	if not self.Compiler then
+		self:CreateCompiler ()
+	end
+	self.AbstractSyntaxTree = self.Compiler:Compile (self.ParseTree)
+	return self.AbstractSyntaxTree
+end
+
 function CompilerContext:Parse (Tokens)
 	if not self.Parser then
 		self:CreateParser ()
@@ -44,19 +70,13 @@ function CompilerContext:Parse (Tokens)
 	return self.ParseTree
 end
 
-function CompilerContext:PrintDebugMessage (Message)
-	if not self.Debug then
-		return
-	end
-	self.Messages [#self.Messages + 1] = string.rep ("  ", self.MessageIndent) .. Message
+-- Messages
+function CompilerContext:ClearDebugMessages ()
+	self.Messages = {}
 end
 
-function CompilerContext:PrintErrorMessage (Message, Line, Character)
-	self.Errors [#self.Errors + 1] = "Line " .. tostring (Line) .. " character " .. Character .. ": " .. Message
-end
-
-function CompilerContext:PrintWarningMessage (Message)
-	self.Warnings [#self.Warnings + 1] = Message
+function CompilerContext:ClearErrorMessages ()
+	self.Errors = {}
 end
 
 function CompilerContext:OutputDebugMessages (OutputFunction)
@@ -81,6 +101,21 @@ function CompilerContext:OutputWarningMessages (OutputFunction)
 	for _, Message in ipairs (self.Warnings) do
 		OutputFunction (Message)
 	end
+end
+
+function CompilerContext:PrintDebugMessage (Message)
+	if not self.Debug then
+		return
+	end
+	self.Messages [#self.Messages + 1] = string.rep ("  ", self.MessageIndent) .. Message
+end
+
+function CompilerContext:PrintErrorMessage (Message, Line, Character)
+	self.Errors [#self.Errors + 1] = "Line " .. tostring (Line) .. ", char " .. Character .. ": " .. Message
+end
+
+function CompilerContext:PrintWarningMessage (Message)
+	self.Warnings [#self.Warnings + 1] = Message
 end
 
 if CLIENT then
@@ -145,217 +180,102 @@ if CLIENT then
 				return Cache [n]
 			}
 		}
-	]];
-	TestInput = "print(\"LOL\");"
-
-	concommand.Add ("gcompute_test_tokenizer", function (ply, _, args)
-		local TestInput = TestInput
-		if #args > 0 then
-			TestInput = table.concat (args, " ")
-		end
+	]]
+	TestInput = [[
+		float a = systime ();
 	
-		GCompute.ClearDebug ()
-	
-		local StartTime = SysTime ()
-		local CompilerContext = GCompute.CompilerContext ()
-		CompilerContext.Debug = true
-		CompilerContext.Language = GCompute.Languages.Get ("Derpscript")
-		CompilerContext.Code = TestInput
+		int sum (int a, int b)
+		{
+			int result = 0;
+			for (int i = a; i <= b; i++)
+			{
+				result += i;
+			}
+			return result;
+		}
 		
-		GCompute.PrintDebug ("Testing tokenizer:")
-		GCompute.PrintDebug (TestInput)
+		int factorial (int n)
+		{
+			if (n <= 1) { return 1; }
+			return factorial (n - 1) * n;
+		}
 		
-		local Tokens = GCompute.Tokenizer.Process (CompilerContext)
-		GCompute.PrintDebug ("Tokenizer split string into " .. tostring (Tokens.Count) .. " symbols:")
-		local TokenString = ""
-		for Token in Tokens:GetEnumerator () do
-			if TokenString ~= "" then
-				TokenString = TokenString .. ", "
-			end
-			TokenString = TokenString .. "\"" .. Token.Value .. "\""
-		end
-		GCompute.PrintDebug (TokenString)
-		
-		CompilerContext:OutputMessages (function (Message)
-			Msg (Message .. "\n")
-		end)
-		
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Tokenizer took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-	end)
-	
-	concommand.Add ("gcompute_test_preprocessor", function (ply, _, args)
-		local TestInput = TestInput
-		if #args > 0 then
-			TestInput = table.concat (args, " ")
-		end
-	
-		GCompute.ClearDebug ()
-	
-		local StartTime = SysTime ()
-		local CompilerContext = GCompute.CompilerContext ()
-		CompilerContext.Debug = true
-		CompilerContext.Language = GCompute.Languages.Get ("Derpscript")
-		CompilerContext.Code = TestInput
-		
-		GCompute.PrintDebug ("Testing preprocessor:")
-		GCompute.PrintDebug (TestInput)
-		
-		local Tokens = GCompute.Tokenizer.Process (CompilerContext)
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Tokenizer ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		
-		StartTime = SysTime ()
-		GCompute.Preprocessor.Process (CompilerContext, Tokens)
-		local TokenString = ""
-		for Token in Tokens:GetEnumerator () do
-			if TokenString ~= "" then
-				TokenString = TokenString .. ", "
-			end
-			TokenString = TokenString .. "\"" .. Token.Value .. "\""
-		end
-		GCompute.PrintDebug (TokenString)
-		
-		CompilerContext:OutputMessages (function (Message)
-			Msg (Message .. "\n")
-		end)
-		
-		EndTime = SysTime ()
-		GCompute.PrintDebug ("Preprocessor took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-	end)
-	
-	concommand.Add ("gcompute_test_parser", function (ply, _, args)
-		local TestInput = TestInput
-		if #args > 0 then
-			TestInput = table.concat (args, " ")
-		end
-	
-		GCompute.ClearDebug ()
-	
-		local StartTime = SysTime ()
-		local CompilerContext = GCompute.CompilerContext ()
-		CompilerContext.Debug = true
-		CompilerContext.Language = GCompute.Languages.Get ("Derpscript")
-		CompilerContext.Code = TestInput
-		
-		GCompute.PrintDebug ("Testing parser:")
-		
-		local Tokens = GCompute.Tokenizer.Process (CompilerContext)
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Tokenizer ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		
-		StartTime = SysTime ()
-		GCompute.Preprocessor.Process (CompilerContext, Tokens)
-		EndTime = SysTime ()
-		GCompute.PrintDebug ("Preprocessor ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		
-		StartTime = SysTime ()
-		local ParseTree = CompilerContext:Parse (Tokens)
-		
-		EndTime = SysTime ()
-		local TreeString = ParseTree:ToString ()
-		local Parts = string.Explode ("\n", TreeString)
-		for _, Part in pairs (Parts) do
-			GCompute.PrintDebug (Part)
-		end
-		
-		CompilerContext:OutputMessages (function (Message)
-			Msg (Message .. "\n")
-		end)
-		GCompute.PrintDebug ("Parser took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		Msg ("E2 parser took " .. tostring (math.floor (TestE2Compiler (TestInput) * 100000 + 0.5) * 0.01) .. "ms.\n")
-		GCompute.PrintDebug (TestInput)
-	end)
-	
-	concommand.Add ("gcompute_test_parser", function (ply, _, args)
-		local TestInput = TestInput
-		if #args > 0 then
-			TestInput = table.concat (args, " ")
-		end
-	
-		GCompute.ClearDebug ()
-	
-		local StartTime = SysTime ()
-		local CompilerContext = GCompute.CompilerContext ()
-		CompilerContext.Debug = true
-		CompilerContext.Language = GCompute.Languages.Get ("Derpscript")
-		CompilerContext.Code = TestInput
-		
-		GCompute.PrintDebug ("Testing parser:")
-		
-		local Tokens = GCompute.Tokenizer.Process (CompilerContext)
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Tokenizer ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		
-		StartTime = SysTime ()
-		GCompute.Preprocessor.Process (CompilerContext, Tokens)
-		EndTime = SysTime ()
-		GCompute.PrintDebug ("Preprocessor ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		
-		StartTime = SysTime ()
-		local ParseTree = CompilerContext:Parse (Tokens)
-		
-		EndTime = SysTime ()
-		local TreeString = ParseTree:ToString ()
-		local Parts = string.Explode ("\n", TreeString)
-		for _, Part in pairs (Parts) do
-			GCompute.PrintDebug (Part)
-		end
-		
-		CompilerContext:OutputMessages (function (Message)
-			Msg (Message .. "\n")
-		end)
-		GCompute.PrintDebug ("Parser took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		Msg ("E2 parser took " .. tostring (math.floor (TestE2Compiler (TestInput) * 100000 + 0.5) * 0.01) .. "ms.\n")
-		GCompute.PrintDebug (TestInput)
-	end)
+		int n = 5;
+		print ("sum is " + sum (1000, 2000));
+		print ("factorial(" + n + ") is " + factorial (n));
+		print ("execution took " + ((systime () - a) * 1000) + " ms.");
+		print (n.GetHashCode ());
+	]]
+	TestInput = [[
+		Collections.List<int> numbers = new Collections.List ();
+		numbers.Add (2);
+		numbers.Add (3);
+		for (int i = 0; i < numbers.Count; i++)
+		{
+			print (numbers [i]);
+		}
+	]]
+	--[[TestInput = [[
+		int n = 2;
+		print ("n is " + n);
+		print ("n.GetHashCode () is " + n.GetHashCode ());
+	]]
+	--TestInput = "int a = 1; print(a);"
 	
 	concommand.Add ("gcompute_test_compiler", function (ply, _, args)
 		local TestInput = TestInput
 		if #args > 0 then
 			TestInput = table.concat (args, " ")
 		end
-	
+		
+		GCompute.PrintDebug = function (msg)
+			print (msg)
+			GCompute.E2Pipe.Print (msg)
+		end
+		
 		GCompute.ClearDebug ()
-	
-		local StartTime = SysTime ()
-		local CompilerContext = GCompute.CompilerContext ()
-		CompilerContext.Debug = true
-		CompilerContext.Language = GCompute.Languages.Get ("Derpscript")
-		CompilerContext.Code = TestInput
 		
-		GCompute.PrintDebug ("Testing parser:")
+		local compilationGroup = GCompute.CompilationGroup ()
+		local sourceFile = GCompute.AnonymousSourceFile (TestInput)
+		local compilationUnit = compilationGroup:AddSourceFile (sourceFile)
 		
-		local Tokens = GCompute.Tokenizer.Process (CompilerContext)
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Tokenizer ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		compilationGroup:Compile ()
 		
-		StartTime = SysTime ()
-		GCompute.Preprocessor.Process (CompilerContext, Tokens)
-		EndTime = SysTime ()
-		GCompute.PrintDebug ("Preprocessor ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		GCompute.PrintDebug ("Testing compiler:")
+		GCompute.PrintDebug ("Input: " .. TestInput)
+		GCompute.PrintDebug ("--------------------------------")
 		
-		StartTime = SysTime ()
-		local ParseTree = CompilerContext:Parse (Tokens)
-		EndTime = SysTime ()
-		GCompute.PrintDebug ("Parser ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		GCompute.PrintDebug ("Tokenizer ran in " .. tostring (math.floor ((compilationUnit.TokenizerDuration) * 100000 + 0.5) * 0.01) .. "ms.")
+		GCompute.PrintDebug ("Preprocessor ran in " .. tostring (math.floor ((compilationUnit.PreprocessorDuration) * 100000 + 0.5) * 0.01) .. "ms.")
+		GCompute.PrintDebug ("Parser ran in " .. tostring (math.floor ((compilationUnit.ParserDuration) * 100000 + 0.5) * 0.01) .. "ms.")
+		--GCompute.PrintDebug (ParseTree:ToString ())
+		GCompute.PrintDebug ("AST builder ran in " .. tostring (math.floor ((compilationUnit.ASTBuilderDuration) * 100000 + 0.5) * 0.01) .. "ms.")
 		
-		StartTime = SysTime ()
-		GCompute.Semantics.Process (CompilerContext)
-		EndTime = SysTime ()
-		GCompute.PrintDebug ("Semantic processor ran in " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		local AST = compilationUnit.AST
 		
-		StartTime = SysTime ()
-		GCompute.Compiler.Process (CompilerContext)
-		EndTime = SysTime ()
+		local passes =
+			{
+				"DeclarationPass",
+				"NameResolutionPass",
+				"TypeCheckerPass",
+				"Compiler2"
+			}
+			
+		local startTime = SysTime ()
+		for _, passName in ipairs (passes) do
+			startTime = SysTime ()
+			PCallError (function () GCompute [passName] ():Process (compilationUnit, AST) end)
+			endTime = SysTime ()
+			GCompute.PrintDebug (passName .. " ran in " .. tostring (math.floor ((endTime - startTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		end
 		
-		CompilerContext.Scope:Execute ()
+		compilationUnit:OutputMessages (GCompute.PrintDebug)
 		
-		CompilerContext:OutputMessages (function (Message)
-			Msg (Message .. "\n")
-		end)
-		GCompute.PrintDebug ("Compiler took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
-		Msg ("E2 compiler took " .. tostring (math.floor (TestE2Compiler (TestInput) * 100000 + 0.5) * 0.01) .. "ms.\n")
-		GCompute.PrintDebug (TestInput)
+		GCompute.PrintDebug ("Abstract Syntax Tree (serialized):")
+		GCompute.PrintDebug (AST:ToString ())
+		
+		local Process = GCompute.Process ()
+		Process:SetScope (AST:GetScope ())
+		Process:Start ()
 	end)
 end

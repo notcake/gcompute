@@ -1,12 +1,5 @@
 local Stack = {}
-Stack.__index = Stack
-
-function GCompute.Containers.Stack ()
-	local Object = {}
-	setmetatable (Object, Stack)
-	Object:ctor ()
-	return Object
-end
+GCompute.Containers.Stack = GCompute.MakeConstructor (Stack)
 
 function Stack:ctor ()
 	self.Items = {}
@@ -23,10 +16,10 @@ function Stack:IsEmpty ()
 	return self.Count == 0
 end
 
-function Stack:Push (Value)
+function Stack:Push (value)
 	self.Count = self.Count + 1
-	self.Items [self.Count] = Value
-	self.Top = Value
+	self.Items [self.Count] = value
+	self.Top = value
 end
 
 function Stack:Pop ()

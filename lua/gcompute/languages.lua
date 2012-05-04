@@ -4,12 +4,12 @@ end
 local Languages = GCompute.Languages
 Languages.Languages = {}
 
-function Languages.Create (Name)
-	local Language = Languages.Language (Name)
-	Language.Name = Name
+function Languages.Create (name)
+	local Language = Languages.Language (name)
+	Languages.Languages [name] = Language
 	return Language
 end
 
-function Languages.Get (Name)
-	return Languages.Languages [Name]
+function Languages.Get (name)
+	return Languages.Languages [name]
 end

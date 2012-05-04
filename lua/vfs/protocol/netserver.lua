@@ -1,0 +1,1 @@
+VFS.NetServer = GLib.Protocol.NetServer ("VFS", VFS.Protocol.NetServerClient)

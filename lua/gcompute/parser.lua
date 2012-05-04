@@ -1,18 +1,12 @@
 local Parser = {}
-Parser.__index = Parser
-GCompute._Parser = Parser
+GCompute.Parser = GCompute.MakeConstructor (Parser)
 
 local KeywordTypes = GCompute.KeywordTypes
 
-function GCompute.Parser ()
-	local Object = {}
-	setmetatable (Object, Parser)
-	Object:ctor ()
-	return Object
-end
-
-function Parser:ctor ()
-	self.CompilerContext = nil
+function Parser:ctor (compilationUnit)
+	self.CompilationUnit = compilationUnit
+	self.Language = compilationUnit:GetLanguage ()
+	self.DebugOutput = GCompute.NullOutputBuffer
 	
 	self.LastAccepted = nil
 	self.LastAcceptedType = nil
@@ -27,12 +21,12 @@ function Parser:ctor ()
 	self.Modifiers = {}
 end
 
-function Parser:Accept (Token)
-	if self.CurrentToken == Token then
+function Parser:Accept (token)
+	if self.CurrentToken == token then
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
 		self:GetNextToken ()
-		self.CompilerContext:PrintDebugMessage ("Accepted token (" .. self.LastAccepted .. ")")
+		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAccepted .. ")")
 		return self.LastAccepted
 	end
 	return nil
@@ -44,7 +38,7 @@ function Parser:AcceptAndSave (Token)
 		self.LastAcceptedType = self.CurrentTokenType
 		self:SavePosition ()
 		self:GetNextToken ()
-		self.CompilerContext:PrintDebugMessage ("Accepted token (" .. self.LastAccepted .. ")")
+		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAccepted .. ")")
 		return self.LastAccepted
 	end
 	return nil
@@ -53,13 +47,13 @@ end
 function Parser:AcceptTokens (Tokens)
 	-- debug
 	if #Tokens > 0 then
-		self.CompilerContext:PrintDebugMessage ("Parser:AcceptTokens : Tokens should be a table of keys, not an array (" .. table.concat (Tokens, ", ") .. ").")
+		self.DebugOutput:WriteLine ("Parser:AcceptTokens : Tokens should be a table of keys, not an array (" .. table.concat (Tokens, ", ") .. ").")
 	end
 	if Tokens [self.CurrentToken] then
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
 		self:GetNextToken ()
-		self.CompilerContext:PrintDebugMessage ("Accepted token (" .. self.LastAccepted .. ")")
+		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAccepted .. ")")
 		return self.LastAccepted
 	end
 	return nil
@@ -70,7 +64,7 @@ function Parser:AcceptTypes (TokenTypes)
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
 		self:GetNextToken ()
-		self.CompilerContext:PrintDebugMessage ("Accepted type " .. tostring (GCompute.TokenTypes [self.LastAcceptedType]) .. " (" .. self.LastAccepted .. ")")
+		self.DebugOutput:WriteLine ("Accepted type " .. tostring (GCompute.TokenType [self.LastAcceptedType]) .. " (" .. GCompute.String.Escape (self.LastAccepted) .. ")")
 		return self.LastAccepted
 	end
 	return nil
@@ -81,7 +75,7 @@ function Parser:AcceptType (TokenType)
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
 		self:GetNextToken ()
-		self.CompilerContext:PrintDebugMessage ("Accepted type " .. GCompute.TokenTypes [TokenType] .. " (" .. self.LastAccepted .. ")")
+		self.DebugOutput:WriteLine ("Accepted type " .. GCompute.TokenType [TokenType] .. " (" .. GCompute.String.Escape (self.LastAccepted) .. ")")
 		return self.LastAccepted
 	end
 	return nil
@@ -100,8 +94,8 @@ function Parser:AddModifier (Modifier)
 end
 
 function Parser:ChompModifiers ()
-	while self.CompilerContext.Language:GetKeywordType (self.CurrentToken) == KeywordTypes.Modifier do
-		self.CompilerContext:PrintDebugMessage ("Nommed modifier (" .. self.CurrentToken .. ")")
+	while self.CompilationUnit.Language:GetKeywordType (self.CurrentToken) == KeywordTypes.Modifier do
+		self.DebugOutput:WriteLine ("Nommed modifier (" .. self.CurrentToken .. ")")
 		self.Modifiers [#self.Modifiers + 1] = self.CurrentToken
 		self:GetNextToken ()
 	end
@@ -120,41 +114,49 @@ end
 function Parser:DiscardParseItem ()
 	self.ParseTreeStack:Pop ()
 	if not self.ParseTreeStack.Top then
-		CAdmin.Debug.PrintStackTrace ()
+		GCompute.PrintStackTrace ()
 	end
 	self.ParseTreeStack.Top:RemoveLast ()
 end
 
-function Parser:ExpectedItem (Item)
-	local Current = self.TokenNode
-	local CurrentToken = "<eof>"
-	local Line = 0
-	local Character = 0
-	if Current then
-		CurrentToken = Current.Value
-		Line = Current.Line
-		Character = Current.Character
+function Parser:ExpectedItem (item)
+	local current = self.TokenNode
+	local currentToken = "<eof>"
+	local line = 0
+	local character = 0
+	if current then
+		currentToken = "\"" .. current.Value .. "\""
+		line = current.Line
+		character = current.Character
 	else
-		Line = self.Tokens.Last.Line
-		Character = self.Tokens.Last.Character
+		line = self.Tokens.Last.Line
+		character = self.Tokens.Last.Character
 	end
-	self.CompilerContext:PrintErrorMessage ("Expected <" .. Item .. ">, got \"" .. CurrentToken .. "\".", Line, Character)
+	if self.CompilationUnit then
+		self.CompilationUnit:Error ("Expected <" .. item .. ">, got " .. currentToken .. ".", line, character)
+	else
+		GCompute.Error ("Expected <" .. item .. ">, got " .. currentToken .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
+	end
 end
 
-function Parser:ExpectedToken (Token)
-	local Current = self.TokenNode
-	local CurrentToken = "<eof>"
-	local Line = 0
-	local Character = 0
-	if Current then
-		CurrentToken = Current.Value
-		Line = Current.Line
-		Character = Current.Character
+function Parser:ExpectedToken (token)
+	local current = self.TokenNode
+	local currentToken = "<eof>"
+	local line = 0
+	local character = 0
+	if current then
+		currentToken = "\"" .. current.Value .. "\""
+		line = current.Line
+		character = current.Character
 	else
-		Line = self.Tokens.Last.Line
-		Character = self.Tokens.Last.Character
+		line = self.Tokens.Last.Line
+		character = self.Tokens.Last.Character
 	end
-	self.CompilerContext:PrintErrorMessage ("Expected \"" .. Token .. "\", got \"" .. CurrentToken .. "\".", Line, Character)
+	if self.CompilationUnit then
+		self.CompilationUnit:Error ("Expected \"" .. token .. "\", got " .. currentToken .. ".", line, character)
+	else
+		GCompute.Error ("Expected \"" .. token .. "\", got " .. currentToken .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
+	end
 end
 
 function Parser:GetNextToken ()
@@ -176,22 +178,22 @@ function Parser:IsTokenAvailable ()
 	return self.CurrentToken ~= nil
 end
 
-function Parser:List (SubParseFunction, Delimiter)
-	Delimiter = Delimiter or ","
-	local List = GCompute.Containers.Tree ("list")
-	local Item = SubParseFunction (self)
-	if not Item then
-		return List
+function Parser:List (subParseFunction, delimiter)
+	delimiter = delimiter or ","
+	local list = GCompute.Containers.Tree ("list")
+	local item = subParseFunction (self)
+	if not item then
+		return list
 	end
-	List:AddNode (Item)
-	while self:Accept (Delimiter) do
-		local Item = SubParseFunction (self)
-		if not Item then
-			return List
+	list:AddNode (item)
+	while self:Accept (delimiter) do
+		local item = subParseFunction (self)
+		if not item then
+			return list
 		end
-		List:AddNode (Item)
+		list:AddNode (item)
 	end
-	return List
+	return list
 end
 
 function Parser:Parse (Tokens)
@@ -204,24 +206,16 @@ function Parser:Parse (Tokens)
 	self.ParseTree.Value = "root"
 	self:PushParseNode (self.ParseTree)
 	
-	self:Root ();
+	self:Root ()
 	return self.ParseTree
 end
 
 function Parser:Peek ()
-	if not self.TokenNode or
-		not self.TokenNode.Next then
-		return nil, nil
-	end
-	return self.TokenNode.Next.Value, self.TokenNode.Next.TokenType
+	return self.CurrentToken, self.CurrentTokenType
 end
 
 function Parser:PeekType ()
-	if not self.TokenNode or
-		not self.TokenNode.Next then
-		return nil
-	end
-	return self.TokenNode.Next.TokenType
+	return self.CurrentTokenType
 end
 
 function Parser:PopParseItem ()
@@ -293,26 +287,35 @@ function Parser:RecurseRightUnary (SubParseFunction, Tokens)
 end
 
 function Parser:RestorePosition ()
-	self.CompilerContext:PrintDebugMessage ("Position restored.")
+	self.DebugOutput:WriteLine ("Position restored.")
 	self.TokenNode = self.TokenStack:Pop ()
-	self.CurrentToken = self.TokenNode.Value
-	self.CurrentTokenType = self.TokenNode.TokenType
+	if self.TokenNode then
+		self.CurrentToken = self.TokenNode.Value
+		self.CurrentTokenType = self.TokenNode.TokenType
+	else
+		self.CurrentToken = nil
+		self.CurrentTokenType = nil
+	end
 end
 
 function Parser:SavePosition ()
 	self.TokenStack:Push (self.TokenNode)
 end
 
-function Parser:SyntaxError (Error)
-	local Current = self.TokenNode
-	local Line = 0
-	local Character = 0
-	if Current then
-		Line = Current.Line
-		Character = Current.Character
+function Parser:SyntaxError (syntaxError)
+	local current = self.TokenNode
+	local line = 0
+	local character = 0
+	if current then
+		line = current.Line
+		character = current.Character
 	else
-		Line = self.Tokens.Last.Line
-		Character = self.Tokens.Last.Character
+		line = self.Tokens.Last.Line
+		character = self.Tokens.Last.Character
 	end
-	self.CompilerContext:PrintErrorMessage (Error, Line, Character)
+	if self.CompilationUnit then
+		self.CompilationUnit:Error (syntaxError, line, character)
+	else
+		GCompute.Error (syntaxError)
+	end
 end

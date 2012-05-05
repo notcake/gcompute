@@ -2,12 +2,13 @@ GLib.Net = {}
 GLib.Net.PlayerMonitor = GLib.PlayerMonitor ("GLib.Net")
 GLib.Net.OpenChannels = {}
 
-local function PlayerFromId (id)
+local function PlayerFromId (userId)
 	local players = player.GetAll ()
+	if userId == "Everyone" then return players end
 	for _, ply in pairs (players) do
-		if ply:SteamID () == id then return ply end
+		if ply:SteamID () == userId then return ply end
 	end
-	ErrorNoHalt ("GLib: PlayerFromId (" .. id .. ") failed to find player!\n")
+	ErrorNoHalt ("GLib: PlayerFromId (" .. tostring (userId) .. ") failed to find player!\n")
 	return nil
 end
 
@@ -26,8 +27,6 @@ elseif CLIENT then
 		-- datastream time.
 		if GLib.Net.IsChannelOpen (channelName) then
 			datastream.StreamToServer (channelName, packet.Data)
-			ErrorNoHalt ("datastream.StreamToServer: " .. channelName .. "\n")
-			PrintTable (packet.Data)
 		end
 	end
 end

@@ -15,7 +15,7 @@ function self:Init ()
 	
 	self.Owner = vgui.Create ("DLabel", self)
 	self.Owner:SetText ("Owner: ")
-	self.OwnerIcon = vgui.Create ("DImage", self)
+	self.OwnerIcon = vgui.Create ("GImage", self)
 	self.OwnerName = vgui.Create ("DLabel", self)
 	self.OwnerName:SetText ("Unknown")
 	

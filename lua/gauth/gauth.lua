@@ -34,6 +34,10 @@ elseif CLIENT then
 	end
 end
 
+function GAuth.GetEveryoneId ()
+	return "Everyone"
+end
+
 function GAuth.GetServerId ()
 	return "Server"
 end
@@ -49,6 +53,7 @@ end
 function GAuth.GetUserIcon (userId)
 	if userId == GAuth.GetSystemId () then return "gui/g_silkicons/cog" end
 	if userId == GAuth.GetServerId () then return "gui/g_silkicons/server" end
+	if userId == GAuth.GetEveryoneId () then return "gui/g_silkicons/world" end
 	return "gui/g_silkicons/user"
 end
 
@@ -59,10 +64,17 @@ end
 
 function GAuth.ResolveGroup (groupId)
 	local node = GAuth.ResolveGroupTreeNode (groupId)
-	return node:IsGroup () and node or nil
+	return node and node:IsGroup () and node or nil
+end
+
+function GAuth.ResolveGroupTree (groupId)
+	local node = GAuth.ResolveGroupTreeNode (groupId)
+	if not node then GLib.Error (groupId .. " not found.") end
+	return node and node:IsGroupTree () and node or nil
 end
 
 function GAuth.ResolveGroupTreeNode (groupId)
+	if groupId == "" then return GAuth.Groups end
 	local parts = groupId:Split ("/")
 	local node = GAuth.Groups
 	for i = 1, #parts do
@@ -101,6 +113,26 @@ include ("group.lua")
 include ("grouptree.lua")
 include ("permissionblock.lua")
 include ("permissiondictionary.lua")
+include ("grouptreesender.lua")
+
+include ("protocol/protocol.lua")
+include ("protocol/endpoint.lua")
+include ("protocol/endpointmanager.lua")
+include ("protocol/session.lua")
+
+include ("protocol/useradditionnotification.lua")
+include ("protocol/userremovalnotification.lua")
+include ("protocol/nodeadditionnotification.lua")
+include ("protocol/noderemovalnotification.lua")
+
+include ("protocol/useradditionrequest.lua")
+include ("protocol/useradditionresponse.lua")
+include ("protocol/userremovalrequest.lua")
+include ("protocol/userremovalresponse.lua")
+include ("protocol/nodeadditionrequest.lua")
+include ("protocol/nodeadditionresponse.lua")
+include ("protocol/noderemovalrequest.lua")
+include ("protocol/noderemovalresponse.lua")
 
 if CLIENT then
 	GAuth.IncludeDirectory ("gauth/ui")
@@ -108,6 +140,9 @@ end
 
 GAuth.Groups = GAuth.GroupTree ()
 GAuth.Groups:SetHost (GAuth.GetServerId ())
+
+-- Set up notification sending
+GAuth.GroupTreeSender:HookNode (GAuth.Groups)
 
 GAuth.Groups:MarkPredicted ()
 
@@ -138,6 +173,7 @@ GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Administrators",
 				return ply:IsAdmin ()
 			end
 		)
+		group:SetIcon ("gui/g_silkicons/shield")
 	end
 )
 
@@ -150,6 +186,18 @@ GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Super Administrators",
 				return ply:IsSuperAdmin ()
 			end
 		)
+		group:SetIcon ("gui/g_silkicons/shield")
+	end
+)
+
+GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Everyone",
+	function (returnCode, group)
+		group:SetMembershipFunction (
+			function (userId, permissionBlock)
+				return true
+			end
+		)
+		group:SetIcon ("gui/g_silkicons/world")
 	end
 )
 
@@ -161,6 +209,7 @@ GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Owner",
 				return userId == permissionBlock:GetOwner ()
 			end
 		)
+		group:SetIcon ("gui/g_silkicons/user")
 	end
 )
 GAuth.Groups:ClearPredictedFlag ()

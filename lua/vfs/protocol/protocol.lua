@@ -17,7 +17,7 @@ end
 
 VFS.Net.RegisterChannel ("vfs_new_request",
 	function (senderId, inBuffer)
-		local client = VFS.NetServer:GetClient (senderId)
+		local client = VFS.NetServer:GetEndPoint (senderId)
 		local requestId = inBuffer:UInt32 ()
 		local typeId = inBuffer:UInt32 ()
 		local packetType = VFS.Protocol.StringTable:StringFromHash (typeId)
@@ -28,28 +28,27 @@ VFS.Net.RegisterChannel ("vfs_new_request",
 			return
 		end
 		local response = ctor ()
-		response:SetClient (client)
-		response:SetServer (VFS.NetServer)
+		response:SetRemoteEndPoint (client)
 		response:SetId (requestId)
-		client:HandleNewRequest (response, inBuffer)
+		client:HandleIncomingSession (response, inBuffer)
 	end
 )
 
 VFS.Net.RegisterChannel ("vfs_request_data",
 	function (senderId, inBuffer)
-		local client = VFS.NetServer:GetClient (senderId)
+		local client = VFS.NetServer:GetEndPoint (senderId)
 	end
 )
 
 VFS.Net.RegisterChannel ("vfs_response_data",
 	function (senderId, inBuffer)
-		local client = VFS.NetClientManager:GetClient (senderId)
-		client:HandleResponse (inBuffer:UInt32 (), inBuffer)
+		local client = VFS.NetClientManager:GetEndPoint (senderId)
+		client:HandleIncomingPacket (inBuffer:UInt32 (), inBuffer)
 	end
 )
 
 VFS.Net.RegisterChannel ("vfs_notification",
 	function (senderId, inBuffer)
-		local client = VFS.NetClientManager:GetClient (senderId)
+		local client = VFS.NetClientManager:GetEndPoint (senderId)
 	end
 )

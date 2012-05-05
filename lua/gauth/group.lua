@@ -22,11 +22,13 @@ function self:ctor (name)
 	self.Icon = "gui/g_silkicons/group"
 	
 	self:AddEventListener ("NotifyUserAddded", function (_, userId)
+		if self.Users [userId] then return end
 		self.Users [userId] = true
 		self:DispatchEvent ("UserAdded", userId)
 	end)
 	
 	self:AddEventListener ("NotifyUserRemoved", function (_, userId)
+		if not self.Users [userId] then return end
 		self.Users [userId] = nil
 		self:DispatchEvent ("UserRemoved", userId)
 	end)
@@ -44,7 +46,7 @@ function self:AddUser (authId, userId, callback)
 				callback (returnCode)
 			end
 		)
-		GAuth.NetClientManager:GetClient (self:GetHost ()):StartRequest (userAdditionRequest)
+		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (userAdditionRequest)
 		return
 	end
 	
@@ -96,7 +98,7 @@ function self:RemoveUser (authId, userId)
 				callback (returnCode)
 			end
 		)
-		GAuth.NetClientManager:GetClient (self:GetHost ()):StartRequest (userRemovalRequest)
+		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (userRemovalRequest)
 		return
 	end
 	

@@ -31,4 +31,8 @@ function self:String (data)
 	umsg.String (data)
 end
 
+function self:Boolean (b)
+	umsg.Char (b and 1 or 0)
+end
+
 GLib.Net.UsermessageDispatcher = GLib.Net.UsermessageDispatcher ()

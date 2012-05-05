@@ -8,12 +8,14 @@ GLib.Net.DataType =
 	Int32	= 5,
 	Float	= 6,
 	Double	= 7,
-	String	= 8
+	String	= 8,
+	Boolean	= 9
 }
 GLib.InvertTable (GLib.Net.DataType)
 
 GLib.Net.DataTypeSizes =
 {
+	Boolean	= 1,
 	UInt8	= 1,
 	UInt16	= 2,
 	UInt32	= 4,

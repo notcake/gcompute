@@ -20,3 +20,7 @@ end
 function self:String ()
 	return self.Usermessage:ReadString ()
 end
+
+function self:Boolean ()
+	return self.Usermessage:ReadChar () ~= 0
+end

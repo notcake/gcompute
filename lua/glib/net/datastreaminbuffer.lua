@@ -25,3 +25,8 @@ function self:String ()
 	self.NextReadIndex = self.NextReadIndex + 1
 	return self.Data [self.NextReadIndex - 1]
 end
+
+function self:Boolean ()
+	self.NextReadIndex = self.NextReadIndex + 1
+	return self.Data [self.NextReadIndex - 1]
+end

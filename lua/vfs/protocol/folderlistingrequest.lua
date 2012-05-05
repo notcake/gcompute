@@ -5,16 +5,13 @@ VFS.Protocol.FolderListingRequest = VFS.MakeConstructor (self, VFS.Protocol.Requ
 function self:ctor (folder)
 	self.Folder = folder
 	self.Path = folder:GetPath ()
-	
-	local outBuffer = VFS.Net.OutBuffer ()
-	outBuffer:String (self.Path)
 end
 
 function self:GenerateInitialPacket (outBuffer)
 	outBuffer:String (self.Path)
 end
 
-function self:HandleResponse (inBuffer)
+function self:HandlePacket (inBuffer)
 	local returnCode = inBuffer:UInt8 ()
 	if returnCode == VFS.ReturnCode.None then
 		local nodeType = inBuffer:UInt8 ()

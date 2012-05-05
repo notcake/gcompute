@@ -17,7 +17,7 @@ function self:Init ()
 			self.Menu:SetTargetItem (targetItem)
 			self.Menu:FindItem ("Permissions"):SetDisabled (not self.Group)
 			
-			if self.Group:IsGroup () then
+			if self.Group and self.Group:IsGroup () then
 				local permissionBlock = self.Group:GetPermissionBlock ()
 				self.Menu:FindItem ("Add User"):SetDisabled (not self.Group or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Add User"))
 				self.Menu:FindItem ("Remove User"):SetDisabled (#targetItem == 0 or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Remove User"))

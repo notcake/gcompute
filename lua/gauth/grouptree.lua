@@ -27,6 +27,7 @@ function self:ctor (name)
 	
 	self:AddEventListener ("NotifyGroupAdded",
 		function (_, name)
+			if self.Children [name] then return end
 			self.Children [name] = GAuth.Group (name)
 			self.Children [name]:SetParentNode (self)
 			self.Children [name]:SetHost (self:GetHost ())
@@ -38,6 +39,7 @@ function self:ctor (name)
 	
 	self:AddEventListener ("NotifyGroupTreeAdded",
 		function (_, name)
+			if self.Children [name] then return end
 			self.Children [name] = GAuth.GroupTree (name)
 			self.Children [name]:SetParentNode (self)
 			self.Children [name]:SetHost (self:GetHost ())
@@ -50,9 +52,10 @@ function self:ctor (name)
 	self:AddEventListener ("NotifyNodeRemoved",
 		function (_, name)
 			local node = self.Children [name]
+			if not node then return end
 			self.Children [name] = nil
 			node:DispatchEvent ("Removed")
-			self:DispatchEvent ("NodeRemoved", name)
+			self:DispatchEvent ("NodeRemoved", node)
 		end
 	)
 end
@@ -72,12 +75,12 @@ function self:AddGroup (authId, name, callback)
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Create Group") then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
-		local groupCreationRequest = GAuth.Protocol.GroupCreationRequest (self, name,
+		local nodeAdditionRequest = GAuth.Protocol.NodeAdditionRequest (self, name, false,
 			function (returnCode)
 				callback (returnCode, self.Children [name])
 			end
 		)
-		GAuth.NetClientManager:GetClient (self:GetHost ()):StartRequest (groupCreationRequest)
+		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeAdditionRequest)
 		return
 	end
 	
@@ -106,12 +109,12 @@ function self:AddGroupTree (authId, name, callback)
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Create Group Tree") then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
-		local groupTreeCreationRequest = GAuth.Protocol.GroupTreeCreationRequest (self, name,
+		local nodeAdditionRequest = GAuth.Protocol.NodeAdditionRequest (self, name, true,
 			function (returnCode)
 				callback (returnCode, self.Children [name])
 			end
 		)
-		GAuth.NetClientManager:GetClient (self:GetHost ()):StartRequest (groupTreeCreationRequest)
+		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeAdditionRequest)
 		return
 	end
 	
@@ -136,6 +139,10 @@ function self:GetChild (name)
 	return self.Children [name]
 end
 
+--[[
+	GroupTree:GetChildEnumerator ()
+		Returns: ()->(name, GroupTreeNode childNode)
+]]
 function self:GetChildEnumerator ()
 	local next, tbl, key = pairs (self.Children)
 	return function ()
@@ -151,17 +158,17 @@ end
 function self:RemoveNode (authId, name, callback)
 	callback = callback or GAuth.NullCallback
 	
-	if not self.Children [name] then callback (GAuth.ReturnCode.Success) return end
 	local node = self.Children [name]
+	if not node then callback (GAuth.ReturnCode.Success) return end
 	if not node:GetPermissionBlock ():IsAuthorized (authId, "Delete") then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
-		local nodeRemovalRequest = GAuth.Protocol.NodeRemovalRequest (self, name,
+		local nodeRemovalRequest = GAuth.Protocol.NodeRemovalRequest (self, node,
 			function (returnCode)
 				callback (returnCode)
 			end
 		)
-		GAuth.NetClientManager:GetClient (self:GetHost ()):StartRequest (nodeRemovalRequest)
+		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeRemovalRequest)
 	end
 	
 	self.Children [name] = nil

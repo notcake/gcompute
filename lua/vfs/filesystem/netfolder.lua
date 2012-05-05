@@ -45,7 +45,7 @@ function self:EnumerateChildren (authId, callback)
 		
 		if not self.FolderListingRequest then
 			self.FolderListingRequest = VFS.Protocol.FolderListingRequest (self)
-			self.NetClient:StartRequest (self.FolderListingRequest)
+			self.NetClient:StartSession (self.FolderListingRequest)
 			
 			self.FolderListingRequest:AddEventListener ("ReceivedNodeInfo", function (request, nodeType, name, displayName)
 				local child = self.Children [name]
@@ -104,7 +104,7 @@ function self:GetDirectChild (authId, name, callback)
 		callback (VFS.ReturnCode.NotFound)
 	else
 		local folderChildRequest = VFS.Protocol.FolderChildRequest (self, name)
-		self.NetClient:StartRequest (folderChildRequest)
+		self.NetClient:StartSession (folderChildRequest)
 		
 		folderChildRequest:AddEventListener ("RunCallback", function (request, returnCode, node)
 			callback (returnCode, node)

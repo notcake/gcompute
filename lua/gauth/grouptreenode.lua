@@ -147,6 +147,7 @@ function self:SetDisplayName (displayName)
 end
 
 function self:SetHost (hostId)
+	ErrorNoHalt (self:GetFullName () .. ": Host is now " .. hostId .. "\n")
 	self.Host = hostId
 end
 

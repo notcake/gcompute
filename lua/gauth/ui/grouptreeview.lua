@@ -152,7 +152,10 @@ function self:Populate (groupTreeNode, treeViewNode)
 	
 	groupTreeNode:AddEventListener ("NodeRemoved", tostring (self),
 		function (_, deletedNode)
-			treeViewNode:RemoveNode (treeViewNode:FindChild (deletedNode:GetDisplayName ()))
+			local childNode = treeViewNode:FindChild (deletedNode:GetName ())
+			deletedNode:RemoveEventListener ("NodeAdded", tostring (self))
+			deletedNode:RemoveEventListener ("NodeRemoved", tostring (self))
+			treeViewNode:RemoveNode (childNode)
 		end
 	)
 end

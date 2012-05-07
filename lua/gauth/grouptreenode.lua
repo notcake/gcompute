@@ -4,11 +4,13 @@ GAuth.GroupTreeNode = GAuth.MakeConstructor (self)
 --[[
 	Events:
 		DisplayNameChanged
-			Fired when this node's display name has been changed
+			Fired when this node's display name has been changed.
+		HostChanged
+			Fired when this node's host is updated.
 		IconChanged
-			Fired when this node's icon has been changed
+			Fired when this node's icon has been changed.
 		Removed
-			Fired when this node has been removed
+			Fired when this node has been removed.
 ]]
 
 function self:ctor (name)
@@ -147,8 +149,12 @@ function self:SetDisplayName (displayName)
 end
 
 function self:SetHost (hostId)
+	if self.Host == hostId then return end
+
 	ErrorNoHalt (self:GetFullName () .. ": Host is now " .. hostId .. "\n")
 	self.Host = hostId
+	
+	self:DispatchEvent ("HostChanged", self.Host)
 end
 
 function self:SetIcon (icon)

@@ -7,7 +7,7 @@ GAuth.PermissionBlock = GAuth.MakeConstructor (self)
 			Fire this when a group entry is added to the host PermissionBlock
 		NotifyGroupEntryRemoved (groupId)
 			Fire this when a group entry is removed form the host PermissionBlock
-		NotifyGroupEntryPermissionChanged (groupId, actionId, access)
+		NotifyGroupPermissionChanged (groupId, actionId, access)
 			Fire this when a group entry permission is changed on the host PermissionBlock
 		NotifyInheritOwnerChanged (inheritOwner)
 			Fire this when owner inheritance has changed on the host PermissionBlock
@@ -62,36 +62,12 @@ function self:ctor ()
 	
 	GAuth.EventProvider (self)
 	
-	self:AddEventListener ("NotifyGroupEntryAdded", function (_, groupId)
-		self.GroupEntries [groupId] = self.GroupEntries [groupId] or {}
-		self:DispatchEvent ("GroupEntryAdded", groupId)
-	end)
-	
-	self:AddEventListener ("NotifyGroupEntryRemoved", function (_, groupId)
-		self.GroupEntries [groupId] = nil
-		self:DispatchEvent ("GroupEntryRemoved", groupId)
-	end)
-	
-	self:AddEventListener ("NotifyGroupPermissionChanged", function (_, groupId, actionId, access)
-		self.GroupEntries [groupId] = self.GroupEntries [groupId] or {}
-		self.GroupEntries [groupId] [actionId] = access
-		self:DispatchEvent ("GroupPermissionChanged", groupId, actionId, access)
-	end)
-	
-	self:AddEventListener ("NotifyInheritOwnerChanged", function (_, inheritOwner)
-		self.InheritOwner = inheritOwner
-		self:DispatchEvent ("InheritOwnerChanged", inheritOwner)
-	end)
-	
-	self:AddEventListener ("NotifyInheritPermissionsChanged", function (_, inheritPermissions)
-		self.InheritPermissions = inheritPermissions
-		self:DispatchEvent ("InheritPermissionsChanged", inheritPermissions)
-	end)
-	
-	self:AddEventListener ("NotifyOwnerChanged", function (_, ownerId)
-		self.OwnerId = ownerId
-		self:DispatchEvent ("OwnerChanged", ownerId)
-	end)
+	self:AddEventListener ("NotifyGroupEntryAdded",           self.NotifyGroupEntryAdded)
+	self:AddEventListener ("NotifyGroupEntryRemoved",         self.NotifyGroupEntryRemoved)
+	self:AddEventListener ("NotifyGroupPermissionChanged",    self.NotifyGroupPermissionChanged)	
+	self:AddEventListener ("NotifyInheritOwnerChanged",       self.NotifyInheritOwnerChanged)
+	self:AddEventListener ("NotifyInheritPermissionsChanged", self.NotifyInheritPermissionsChanged)
+	self:AddEventListener ("NotifyOwnerChanged",              self.NotifyOwnerChanged)
 end
 
 function self:AddGroupEntry (authId, groupId, callback)
@@ -279,6 +255,7 @@ function self:SetInheritOwner (authId, inheritOwner, callback)
 	
 	if self:DispatchEvent ("RequestSetInheritOwner", authId, inheritOwner, callback) then return end
 	
+	if not inheritOwner then self.OwnerId = self:GetOwner () end
 	self.InheritOwner = inheritOwner
 	self:DispatchEvent ("InheritOwnerChanged", inheritOwner)
 	
@@ -323,13 +300,15 @@ function self:SetOwner (authId, ownerId, callback)
 
 	if self:DispatchEvent ("RequestSetOwner", authId, ownerId, callback) then return end
 	
-	self.OwnerId = ownerId
-	self:DispatchEvent ("OwnerChanged", ownerId)
-	
 	-- Turn off owner inheritance. This line shouldn't be in the notification
 	-- reception code, since the InheritOwnerChanged notification should 
 	-- get sent separately
-	if self.InheritOwner then self:SetInheritOwner (authId, false) end
+	self.InheritOwner = false
+	self:DispatchEvent ("InheritOwnerChanged", false)
+	
+	self.OwnerId = ownerId
+	self:DispatchEvent ("OwnerChanged", ownerId)
+	
 	
 	callback (GAuth.ReturnCode.Success)
 end
@@ -344,4 +323,37 @@ end
 
 function self:SetPermissionDictionary (permissionDictionary)
 	self.PermissionDictionary = permissionDictionary
+end
+
+-- Events
+function self:NotifyGroupEntryAdded (groupId)
+	self.GroupEntries [groupId] = self.GroupEntries [groupId] or {}
+	self:DispatchEvent ("GroupEntryAdded", groupId)
+end
+
+function self:NotifyGroupEntryRemoved (groupId)
+	self.GroupEntries [groupId] = nil
+	self:DispatchEvent ("GroupEntryRemoved", groupId)
+end
+
+function self:NotifyGroupPermissionChanged (groupId, actionId, access)
+	self.GroupEntries [groupId] = self.GroupEntries [groupId] or {}
+	self.GroupEntries [groupId] [actionId] = access
+	self:DispatchEvent ("GroupPermissionChanged", groupId, actionId, access)
+end
+
+function self:NotifyInheritOwnerChanged (inheritOwner)
+	if not inheritOwner then self.OwnerId = self:GetOwner () end
+	self.InheritOwner = inheritOwner
+	self:DispatchEvent ("InheritOwnerChanged", inheritOwner)
+end
+
+function self:NotifyInheritPermissionsChanged (inheritPermissions)
+	self.InheritPermissions = inheritPermissions
+	self:DispatchEvent ("InheritPermissionsChanged", inheritPermissions)
+end
+
+function self:NotifyOwnerChanged (ownerId)
+	self.OwnerId = ownerId
+	self:DispatchEvent ("OwnerChanged", ownerId)
 end

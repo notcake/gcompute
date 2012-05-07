@@ -21,17 +21,8 @@ function self:ctor (name)
 	
 	self.Icon = "gui/g_silkicons/group"
 	
-	self:AddEventListener ("NotifyUserAddded", function (_, userId)
-		if self.Users [userId] then return end
-		self.Users [userId] = true
-		self:DispatchEvent ("UserAdded", userId)
-	end)
-	
-	self:AddEventListener ("NotifyUserRemoved", function (_, userId)
-		if not self.Users [userId] then return end
-		self.Users [userId] = nil
-		self:DispatchEvent ("UserRemoved", userId)
-	end)
+	self:AddEventListener ("NotifyUserAddded",  self.NotifyUserAdded)	
+	self:AddEventListener ("NotifyUserRemoved", self.NotifyUserRemoved)
 end
 
 function self:AddUser (authId, userId, callback)
@@ -41,11 +32,7 @@ function self:AddUser (authId, userId, callback)
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Add User") then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
-		local userAdditionRequest = GAuth.Protocol.UserAdditionRequest (self, userId,
-			function (returnCode)
-				callback (returnCode)
-			end
-		)
+		local userAdditionRequest = GAuth.Protocol.UserAdditionRequest (self, userId, callback)
 		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (userAdditionRequest)
 		return
 	end
@@ -93,11 +80,7 @@ function self:RemoveUser (authId, userId)
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Remove User") then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
-		local userRemovalRequest = GAuth.Protocol.UserRemovalRequest (self, userId,
-			function (returnCode)
-				callback (returnCode)
-			end
-		)
+		local userRemovalRequest = GAuth.Protocol.UserRemovalRequest (self, userId, callback)
 		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (userRemovalRequest)
 		return
 	end
@@ -109,4 +92,17 @@ end
 
 function self:SetMembershipFunction (membershipFunction)
 	self.MembershipFunction = membershipFunction
+end
+
+-- Events
+function self:NotifyUserAdded (userId)
+	if self.Users [userId] then return end
+	self.Users [userId] = true
+	self:DispatchEvent ("UserAdded", userId)
+end
+	
+function self:NotifyUserRemoved (userId)
+	if not self.Users [userId] then return end
+	self.Users [userId] = nil
+	self:DispatchEvent ("UserRemoved", userId)
 end

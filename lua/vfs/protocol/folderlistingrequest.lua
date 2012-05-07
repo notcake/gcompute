@@ -1,6 +1,6 @@
 local self = {}
 VFS.Protocol.Register ("FolderListing", self)
-VFS.Protocol.FolderListingRequest = VFS.MakeConstructor (self, VFS.Protocol.Request)
+VFS.Protocol.FolderListingRequest = VFS.MakeConstructor (self, VFS.Protocol.Session)
 
 function self:ctor (folder)
 	self.Folder = folder

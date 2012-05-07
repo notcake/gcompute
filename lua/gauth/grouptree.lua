@@ -25,39 +25,9 @@ function self:ctor (name)
 	
 	self.Icon = "gui/g_silkicons/folder_user"
 	
-	self:AddEventListener ("NotifyGroupAdded",
-		function (_, name)
-			if self.Children [name] then return end
-			self.Children [name] = GAuth.Group (name)
-			self.Children [name]:SetParentNode (self)
-			self.Children [name]:SetHost (self:GetHost ())
-			
-			self:DispatchEvent ("GroupAdded", self.Children [name])
-			self:DispatchEvent ("NodeAdded", self.Children [name])
-		end
-	)
-	
-	self:AddEventListener ("NotifyGroupTreeAdded",
-		function (_, name)
-			if self.Children [name] then return end
-			self.Children [name] = GAuth.GroupTree (name)
-			self.Children [name]:SetParentNode (self)
-			self.Children [name]:SetHost (self:GetHost ())
-			
-			self:DispatchEvent ("GroupTreeAdded", self.Children [name])
-			self:DispatchEvent ("NodeAdded", self.Children [name])
-		end
-	)
-	
-	self:AddEventListener ("NotifyNodeRemoved",
-		function (_, name)
-			local node = self.Children [name]
-			if not node then return end
-			self.Children [name] = nil
-			node:DispatchEvent ("Removed")
-			self:DispatchEvent ("NodeRemoved", node)
-		end
-	)
+	self:AddEventListener ("NotifyGroupAdded",     self.NotifyGroupAdded)
+	self:AddEventListener ("NotifyGroupTreeAdded", self.NotifyGroupTreeAdded)
+	self:AddEventListener ("NotifyNodeRemoved",    self.NotifyNodeRemoved)
 end
 
 function self:AddGroup (authId, name, callback)
@@ -163,11 +133,7 @@ function self:RemoveNode (authId, name, callback)
 	if not node:GetPermissionBlock ():IsAuthorized (authId, "Delete") then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
-		local nodeRemovalRequest = GAuth.Protocol.NodeRemovalRequest (self, node,
-			function (returnCode)
-				callback (returnCode)
-			end
-		)
+		local nodeRemovalRequest = GAuth.Protocol.NodeRemovalRequest (self, node, callback)
 		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeRemovalRequest)
 	end
 	
@@ -176,4 +142,33 @@ function self:RemoveNode (authId, name, callback)
 	self:DispatchEvent ("NodeRemoved", node)
 	
 	callback (GAuth.ReturnCode.Success)
+end
+
+-- Events
+function self:NotifyGroupAdded (name)
+	if self.Children [name] then return end
+	self.Children [name] = GAuth.Group (name)
+	self.Children [name]:SetParentNode (self)
+	self.Children [name]:SetHost (self:GetHost ())
+	
+	self:DispatchEvent ("GroupAdded", self.Children [name])
+	self:DispatchEvent ("NodeAdded", self.Children [name])
+end
+
+function self:NotifyGroupTreeAdded (name)
+	if self.Children [name] then return end
+	self.Children [name] = GAuth.GroupTree (name)
+	self.Children [name]:SetParentNode (self)
+	self.Children [name]:SetHost (self:GetHost ())
+	
+	self:DispatchEvent ("GroupTreeAdded", self.Children [name])
+	self:DispatchEvent ("NodeAdded", self.Children [name])
+end
+
+function self:NotifyNodeRemoved (name)
+	local node = self.Children [name]
+	if not node then return end
+	self.Children [name] = nil
+	node:DispatchEvent ("Removed")
+	self:DispatchEvent ("NodeRemoved", node)
 end

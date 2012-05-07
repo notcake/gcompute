@@ -5,6 +5,7 @@ function self:ctor (systemName)
 	self.SystemName = systemName
 
 	self.Players = {}
+	self.EntitiesToUserIds = {}
 	self.QueuedPlayers = {}
 	GLib.EventProvider (self)
 	
@@ -31,6 +32,7 @@ function self:ctor (systemName)
 						Player = ply,
 						Name = ply:Name ()
 					}
+					self.EntitiesToUserIds [ply] = steamID
 					self:DispatchEvent ("PlayerConnected", ply, isLocalPlayer)
 					if isLocalPlayer then
 						self:DispatchEvent ("LocalPlayerConnected", ply)
@@ -48,6 +50,7 @@ function self:ctor (systemName)
 				local isLocalPlayer = CLIENT and ply == LocalPlayer () or false
 				if SinglePlayer () and isLocalPlayer then steamID = "STEAM_0:0:0" end
 				self.Players [steamID] = nil
+				self.EntitiesToUserIds [ply] = nil
 			end
 			self:DispatchEvent ("PlayerDisconnected", ply)
 		end

@@ -16,6 +16,10 @@ end
 if SERVER then
 	function GLib.Net.DispatchPacket (destinationId, channelName, packet)
 		local ply = PlayerFromId (destinationId)
+		if not ply then
+			GLib.Error ("GLib.Net.DispatchPacket: Destination " .. destinationId .. " not found.")
+			return
+		end
 		if packet:GetSize () + channelName:len () > 255 then
 			datastream.StreamToClients (ply, channelName, packet.Data)
 		else

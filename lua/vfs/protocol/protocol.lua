@@ -24,7 +24,7 @@ VFS.Net.RegisterChannel ("vfs_new_request",
 		
 		local ctor = VFS.Protocol.ResponseTable [packetType]
 		if not ctor then
-			ErrorNoHalt ("vfs_new_request : No handler for " .. packetType .. " is registered!")
+			ErrorNoHalt ("vfs_new_request : No handler for " .. tostring (packetType) .. " is registered!")
 			return
 		end
 		local response = ctor ()

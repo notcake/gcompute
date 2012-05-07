@@ -23,9 +23,7 @@ function self:ctor (host, getParentEventProvider)
 end
 
 function self:AddEventListener (eventName, nameOrCallback, callback)
-	if not callback then
-		callback = nameOrCallback
-	end
+	callback = callback or nameOrCallback
 	if not self.EventListeners [eventName] then
 		self.EventListeners [eventName] = {}
 	end
@@ -33,9 +31,7 @@ function self:AddEventListener (eventName, nameOrCallback, callback)
 end
 
 function self:DispatchEvent (eventName, ...)
-	if self.ShouldSuppressEvents then
-		return
-	end
+	if self.ShouldSuppressEvents then return end
 	local a, b, c = nil, nil, nil
 	if self.EventListeners [eventName] then
 		for callbackName, callback in pairs (self.EventListeners [eventName]) do
@@ -70,9 +66,7 @@ function self:DispatchEvent (eventName, ...)
 end
 
 function self:RemoveEventListener (eventName, nameOrCallback)
-	if not self.EventListeners [eventName] then
-		return
-	end
+	if not self.EventListeners [eventName] then return end
 	self.EventListeners [eventName] [nameOrCallback] = nil
 	if next (self.EventListeners [eventName]) == nil then
 		self.EventListeners [eventName] = nil

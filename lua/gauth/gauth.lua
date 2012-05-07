@@ -29,6 +29,9 @@ elseif CLIENT then
 		end
 	else
 		function GAuth.GetLocalId ()
+			if not LocalPlayer or not LocalPlayer ().SteamID then
+				return "STEAM_0:0:0"
+			end
 			return LocalPlayer ():SteamID ()
 		end
 	end
@@ -64,13 +67,20 @@ end
 
 function GAuth.ResolveGroup (groupId)
 	local node = GAuth.ResolveGroupTreeNode (groupId)
-	return node and node:IsGroup () and node or nil
+	if node and not node:IsGroup () then
+		GAuth.Error ("GAuth.ResolveGroup : " .. groupId .. " is not a group.")
+		node = nil
+	end
+	return node
 end
 
 function GAuth.ResolveGroupTree (groupId)
 	local node = GAuth.ResolveGroupTreeNode (groupId)
-	if not node then GLib.Error (groupId .. " not found.") end
-	return node and node:IsGroupTree () and node or nil
+	if node and not node:IsGroupTree () then
+		GAuth.Error ("GAuth.ResolveGroup : " .. groupId .. " is not a group tree.")
+		node = nil
+	end
+	return node
 end
 
 function GAuth.ResolveGroupTreeNode (groupId)
@@ -113,6 +123,8 @@ include ("group.lua")
 include ("grouptree.lua")
 include ("permissionblock.lua")
 include ("permissiondictionary.lua")
+
+include ("permissionblocknetworker.lua")
 include ("grouptreesender.lua")
 
 include ("protocol/protocol.lua")
@@ -120,10 +132,14 @@ include ("protocol/endpoint.lua")
 include ("protocol/endpointmanager.lua")
 include ("protocol/session.lua")
 
+include ("protocol/initialsyncrequest.lua")
+
+-- Group Tree Nodes
 include ("protocol/useradditionnotification.lua")
 include ("protocol/userremovalnotification.lua")
 include ("protocol/nodeadditionnotification.lua")
 include ("protocol/noderemovalnotification.lua")
+include ("protocol/nodepermissionblocknotification.lua")
 
 include ("protocol/useradditionrequest.lua")
 include ("protocol/useradditionresponse.lua")
@@ -133,6 +149,33 @@ include ("protocol/nodeadditionrequest.lua")
 include ("protocol/nodeadditionresponse.lua")
 include ("protocol/noderemovalrequest.lua")
 include ("protocol/noderemovalresponse.lua")
+include ("protocol/nodepermissionblockrequest.lua")
+include ("protocol/nodepermissionblockresponse.lua")
+
+-- Permission Blocks
+include ("protocol/permissionblocknotification.lua")
+include ("protocol/permissionblockrequest.lua")
+include ("protocol/permissionblockresponse.lua")
+
+include ("protocol/permissionblock/groupentryadditionnotification.lua")
+include ("protocol/permissionblock/groupentryremovalnotification.lua")
+include ("protocol/permissionblock/grouppermissionchangenotification.lua")
+include ("protocol/permissionblock/inheritownerchangenotification.lua")
+include ("protocol/permissionblock/inheritpermissionschangenotification.lua")
+include ("protocol/permissionblock/ownerchangenotification.lua")
+
+include ("protocol/permissionblock/groupentryadditionrequest.lua")
+include ("protocol/permissionblock/groupentryadditionresponse.lua")
+include ("protocol/permissionblock/groupentryremovalrequest.lua")
+include ("protocol/permissionblock/groupentryremovalresponse.lua")
+include ("protocol/permissionblock/grouppermissionchangerequest.lua")
+include ("protocol/permissionblock/grouppermissionchangeresponse.lua")
+include ("protocol/permissionblock/inheritownerchangerequest.lua")
+include ("protocol/permissionblock/inheritownerchangeresponse.lua")
+include ("protocol/permissionblock/inheritpermissionschangerequest.lua")
+include ("protocol/permissionblock/inheritpermissionschangeresponse.lua")
+include ("protocol/permissionblock/ownerchangerequest.lua")
+include ("protocol/permissionblock/ownerchangeresponse.lua")
 
 if CLIENT then
 	GAuth.IncludeDirectory ("gauth/ui")
@@ -221,9 +264,9 @@ GAuth.PlayerMonitor:AddEventListener ("PlayerConnected",
 		GAuth.Groups:AddGroupTree (GAuth.GetSystemId (), userId,
 			function (returnCode, groupTree)
 				groupTree:SetHost (userId)
+				groupTree:MarkPredicted ()
 				groupTree:GetPermissionBlock ():SetOwner (GAuth.GetSystemId (), userId)
 				groupTree:SetDisplayName (ply:Name ())
-				groupTree:MarkPredicted ()
 				groupTree:AddGroup (GAuth.GetSystemId (), "Player",
 					function (returnCode, playerGroup)
 						playerGroup:MarkPredicted ()
@@ -236,6 +279,11 @@ GAuth.PlayerMonitor:AddEventListener ("PlayerConnected",
 			end
 		)
 		GAuth.Groups:ClearPredictedFlag ()
+		
+		if isLocalPlayer then
+			GAuth.EndPointManager:GetEndPoint ("Server"):SendNotification (GAuth.Protocol.InitialSyncRequest ())
+			GAuth.GroupTreeSender:SendNode ("Server", GAuth.Groups)
+		end
 	end
 )
 

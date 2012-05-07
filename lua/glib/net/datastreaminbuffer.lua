@@ -21,6 +21,21 @@ function self:UInt32 ()
 	return self.Data [self.NextReadIndex - 1]
 end
 
+function self:Int8 ()
+	self.NextReadIndex = self.NextReadIndex + 1
+	return self.Data [self.NextReadIndex - 1]
+end
+
+function self:Int16 ()
+	self.NextReadIndex = self.NextReadIndex + 1
+	return self.Data [self.NextReadIndex - 1]
+end
+
+function self:Int32 ()
+	self.NextReadIndex = self.NextReadIndex + 1
+	return self.Data [self.NextReadIndex - 1]
+end
+
 function self:String ()
 	self.NextReadIndex = self.NextReadIndex + 1
 	return self.Data [self.NextReadIndex - 1]

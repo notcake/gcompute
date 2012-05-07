@@ -1,3 +1,4 @@
+GAuth.Protocol.PermissionBlock = {}
 GAuth.Protocol.ResponseTable = {}
 GAuth.Protocol.StringTable = GAuth.Net.StringTable ()
 
@@ -32,7 +33,7 @@ GAuth.Net.RegisterChannel ("gauth_new_session",
 		
 		local ctor = GAuth.Protocol.ResponseTable [packetType]
 		if not ctor then
-			ErrorNoHalt ("gauth_new_session : No handler for " .. packetType .. " is registered!")
+			ErrorNoHalt ("gauth_new_session : No handler for " .. tostring (packetType) .. " is registered!\n")
 			return
 		end
 		local session = ctor ()
@@ -57,12 +58,11 @@ GAuth.Net.RegisterChannel ("gauth_notification",
 		
 		local ctor = GAuth.Protocol.ResponseTable [packetType]
 		if not ctor then
-			ErrorNoHalt ("gauth_new_session : No handler for " .. packetType .. " is registered!")
+			ErrorNoHalt ("gauth_notification : No handler for " .. tostring (packetType) .. " is registered!\n")
 			return
 		end
 		local session = ctor ()
 		session:SetRemoteEndPoint (remoteEndPoint)
-		session:SetId (requestId)
 		remoteEndPoint:HandleIncomingNotification (session, inBuffer)
 	end
 )

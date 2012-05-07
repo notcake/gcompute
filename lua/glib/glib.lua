@@ -6,7 +6,7 @@ if SERVER then
 		local files = file.FindInLua (folder .. "/*")
 		for _, fileName in pairs (files) do
 			if fileName:sub (-4) == ".lua" then
-				-- AddCSLuaFile (folder .. "/" .. fileName)
+				AddCSLuaFile (folder .. "/" .. fileName)
 			end
 		end
 	end
@@ -23,15 +23,19 @@ if SERVER then
 		includePath = includePath or (systemName .. "/" .. systemName .. ".lua")
 		
 		concommand.Add (systemName .. "_reload_sv", function (ply, _, arg)
+			local startTime = SysTime ()
 			GLib.UnloadSystem (systemTableName)
 			include (includePath)
+			ErrorNoHalt (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.\n")
 		end)
 		concommand.Add (systemName .. "_reload_sh", function (ply, _, arg)
+			local startTime = SysTime ()
 			GLib.UnloadSystem (systemTableName)
 			include (includePath)
 			for _, ply in ipairs (player.GetAll ()) do
 				ply:ConCommand (systemName .. "_reload")
 			end
+			ErrorNoHalt (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.\n")
 		end)
 	end
 	
@@ -44,8 +48,10 @@ elseif CLIENT then
 		includePath = includePath or (systemName .. "/" .. systemName .. ".lua")
 		
 		concommand.Add (systemName .. "_reload", function (ply, _, arg)
+			local startTime = SysTime ()
 			GLib.UnloadSystem (systemTableName)
 			include (includePath)
+			ErrorNoHalt (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.\n")
 		end)
 	end
 end
@@ -201,5 +207,3 @@ include ("protocol/channel.lua")
 include ("protocol/endpoint.lua")
 include ("protocol/endpointmanager.lua")
 include ("protocol/session.lua")
-include ("protocol/request.lua")
-include ("protocol/response.lua")

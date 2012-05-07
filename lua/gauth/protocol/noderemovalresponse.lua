@@ -6,10 +6,10 @@ end
 
 function self:HandleInitialPacket (inBuffer)
 	local groupId = inBuffer:String ()
-	local groupTree = GAuth.ResolveGroup (groupId)
+	local groupTreeNode = GAuth.ResolveGroupTreeNode (groupId)
 	
-	if groupTree then
-		groupTree:GetParent ():RemoveNode (self:GetRemoteEndPoint ():GetRemoteId (), groupTree:GetName (),
+	if groupTreeNode then
+		groupTreeNode:GetParentNode ():RemoveNode (self:GetRemoteEndPoint ():GetRemoteId (), groupTreeNode:GetName (),
 			function (returnCode)
 				local outBuffer = self:CreatePacket ()
 				outBuffer:UInt8 (returnCode)

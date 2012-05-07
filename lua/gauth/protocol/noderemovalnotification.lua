@@ -15,7 +15,7 @@ function self:HandleInitialPacket (inBuffer)
 	
 	local groupTreeNode = GAuth.ResolveGroupTreeNode (self.GroupId)
 	if not groupTreeNode then return end
-	if not self:ShouldProcessNotification (groupTreeNode:GetParent ()) then return end
+	if not self:ShouldProcessNotification (groupTreeNode:GetParentNode ()) then return end
 	
-	groupTreeNode:GetParent ():DispatchEvent ("NotifyNodeRemoved", groupTreeNode:GetName ())
+	groupTreeNode:GetParentNode ():DispatchEvent ("NotifyNodeRemoved", groupTreeNode:GetName ())
 end

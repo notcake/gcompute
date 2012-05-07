@@ -27,6 +27,18 @@ function self:UInt32 (n)
 	umsg.Long (n - 2147483648)
 end
 
+function self:Int8 (n)
+	umsg.Char (n)
+end
+
+function self:Int16 (n)
+	umsg.Short (n)
+end
+
+function self:Int32 (n)
+	umsg.Long (n)
+end
+
 function self:String (data)
 	umsg.String (data)
 end

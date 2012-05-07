@@ -167,6 +167,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 VFS.PlayerMonitor:AddEventListener ("PlayerDisconnected",
 	function (_, ply)
 		if SERVER then
+			if ply:SteamID () == "" then return end
 			VFS.Root:DeleteChild (GAuth.GetSystemId (), ply:SteamID ())
 		end
 	end

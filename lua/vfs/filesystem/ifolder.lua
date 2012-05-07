@@ -11,6 +11,12 @@ end
 		Delete this filesystem node
 ]]
 function self:Delete (authId, callback)
+	if not self:GetParentFolder () then
+		VFS.Error ("IFolder:Delete : " .. self:GetPath () .. " has no parent folder from which to delete.")
+		PrintTable (self)
+		PrintTable (debug.getinfo (self.ctor))
+		return
+	end
 	self:GetParentFolder ():DeleteDirectChild (authId, self:GetName (), callback)
 end
 

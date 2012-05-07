@@ -27,3 +27,18 @@ end
 function self:GetSize ()
 	return self.Size
 end
+
+--[[
+	OutBuffer:OutBuffer (OutBuffer outBuffer)
+	
+		Appends the contents of outBuffer to this OutBuffer
+]]
+function self:OutBuffer (outBuffer)
+	for i = 1, #outBuffer.Data do
+		self.Data [self.NextDataId] = outBuffer.Data [i]
+		self.Types [self.NextDataId] = outBuffer.Types [i]
+		self.NextDataId = self.NextDataId + 1
+	end
+	
+	self.Size = self.Size + outBuffer:GetSize ()
+end

@@ -1,5 +1,5 @@
 local self = {}
-VFS.Protocol.RegisterResponse ("FolderListing", VFS.MakeConstructor (self, VFS.Protocol.Response))
+VFS.Protocol.RegisterResponse ("FolderListing", VFS.MakeConstructor (self, VFS.Protocol.Session))
 
 function self:ctor ()
 	self.FolderPath = nil

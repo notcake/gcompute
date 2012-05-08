@@ -53,6 +53,8 @@ function GLib.Net.RegisterChannel (channelName, handler)
 				umsg.String (channelName)
 			umsg.End ()
 		end
+		
+		GLib.Net.OpenChannels [channelName] = true
 	elseif CLIENT then
 		datastream.Hook (channelName,
 			function (channelName, _, _, data)
@@ -94,9 +96,13 @@ elseif CLIENT then
 		GLib.Net.OpenChannels [umsg:ReadString ()] = true
 	end)
 	
-	timer.Simple (1,
-		function ()
-			RunConsoleCommand ("glib_request_channels")
+	local function RequestChannelList ()
+		if not LocalPlayer or
+			not LocalPlayer () or
+			not LocalPlayer ():IsValid () then
+			timer.Simple (0, RequestChannelList)
 		end
-	)
+		
+		RunConsoleCommand ("glib_request_channels")
+	end
 end

@@ -2,9 +2,37 @@ local self = {}
 GAuth.GroupTreeSender = GAuth.MakeConstructor (self)
 
 function self:ctor ()
-	self.PermissionBlockNetworker = GAuth.PermissionBlockNetworker ()
-	self.PermissionBlockNetworker:AddEventListener ("Request",      tostring (self), self.Request)
-	self.PermissionBlockNetworker:AddEventListener ("Notification", tostring (self), self.Notification)
+	self.PermissionBlockNetworker = GAuth.PermissionBlockNetworker ("GAuth")
+	self.PermissionBlockNetworker:SetResolver (
+		function (permissionBlockId)
+			local groupTreeNode = GAuth.ResolveGroupTreeNode (permissionBlockId)
+			return groupTreeNode and groupTreeNode:GetPermissionBlock ()
+		end
+	)
+	self.PermissionBlockNetworker:SetNotificationFilter (
+		function (remoteId, permissionBlockId, permissionBlock)
+			local groupTreeNode = GAuth.ResolveGroupTreeNode (permissionBlockId)
+			if not groupTreeNode then return end
+			
+			local hostId = groupTreeNode:GetHost ()
+	
+			if hostId == GAuth.GetLocalId () then return false end
+			if hostId == remoteId then return true end
+			if remoteId == GAuth.GetServerId () then return true end
+
+			return false
+		end
+	)
+	self.PermissionBlockNetworker:SetRequestFilter (
+		function (permissionBlock)
+			local groupId = permissionBlock:GetName ()
+			local groupTreeNode = GAuth.ResolveGroupTreeNode (groupId)
+			if not groupTreeNode then return false end
+			if groupTreeNode:IsPredicted () then return false end
+			
+			return true, groupTreeNode:GetHost ()
+		end
+	)
 
 	-- Make a closure for the NodeAdded and Removed event handler
 	self.NodeAdded = function (groupTreeNode, childNode)
@@ -53,9 +81,7 @@ function self:SendNode (destUserId, groupTreeNode)
 	if groupTreeNode:GetHost () == destUserId then send = false end
 	
 	if send then
-		for _, notification in ipairs (self.PermissionBlockNetworker:SerializeBlock (groupTreeNode:GetPermissionBlock ())) do
-			GAuth.EndPointManager:GetEndPoint (destUserId):SendNotification (GAuth.Protocol.NodePermissionBlockNotification (groupTreeNode:GetFullName (), notification))
-		end
+		self.PermissionBlockNetworker:SynchronizeBlock (destUserId, groupTreeNode:GetPermissionBlock ())
 	end
 	
 	if groupTreeNode:IsGroup () then
@@ -111,21 +137,5 @@ end
 -- and self:UnhookNode ()
 self.HostChanged = GAuth.NullCallback
 self.Removed     = GAuth.NullCallback
-
--- PermissionBlockNetworker events
-function self.Notification (_, permissionBlock, notification)
-	GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.NodePermissionBlockNotification (permissionBlock:GetName (), notification))
-end
-
-function self.Request (_, permissionBlock, request)
-	local groupId = permissionBlock:GetName ()
-	local groupTreeNode = GAuth.ResolveGroupTreeNode (groupId)
-	if not groupTreeNode then return end
-	if groupTreeNode:IsPredicted () then return end
-	
-	GAuth.EndPointManager:GetEndPoint (groupTreeNode:GetHost ()):StartSession (GAuth.Protocol.NodePermissionBlockRequest (groupTreeNode, request))
-	
-	return true
-end
 
 GAuth.GroupTreeSender = GAuth.GroupTreeSender ()

@@ -374,6 +374,7 @@ function self:UpdateOwner ()
 	else
 		self.OwnerName:SetText (ownerName)
 	end
+	self.OwnerName:SizeToContents ()
 end
 
 vgui.Register ("GAuthPermissions", self, "DFrame")

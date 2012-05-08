@@ -6,7 +6,7 @@ if SERVER then
 		local files = file.FindInLua (folder .. "/*")
 		for _, fileName in pairs (files) do
 			if fileName:sub (-4) == ".lua" then
-				AddCSLuaFile (folder .. "/" .. fileName)
+				-- AddCSLuaFile (folder .. "/" .. fileName)
 			end
 		end
 	end
@@ -189,6 +189,18 @@ function GLib.UnloadSystem (systemTableName)
 		_G [systemTableName]:DispatchEvent ("Unloaded")
 	end
 	_G [systemTableName] = nil
+end
+
+function GLib.WeakKeyTable ()
+	local tbl = {}
+	setmetatable (tbl, { __mode = "v" })
+	return tbl
+end
+
+function GLib.WeakValueTable ()
+	local tbl = {}
+	setmetatable (tbl, { __mode = "v" })
+	return tbl
 end
 
 include ("eventprovider.lua")

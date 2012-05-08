@@ -11,7 +11,7 @@ function self:HandleInitialPacket (inBuffer)
 	local actionId = inBuffer:String ()
 	local access = inBuffer:UInt8 ()
 	
-	self.PermissionBlock:SetGroupAccess (self:GetRemoteEndPoint ():GetRemoteId (), groupId, actionId, access,
+	self.PermissionBlock:SetGroupPermission (self:GetRemoteEndPoint ():GetRemoteId (), groupId, actionId, access,
 		function (returnCode)
 			local outBuffer = self:CreatePacket ()
 			outBuffer:UInt8 (returnCode)

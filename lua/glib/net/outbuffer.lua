@@ -11,6 +11,8 @@ end
 
 for typeName, enumValue in pairs (GLib.Net.DataType) do
 	self [typeName] = function (self, n)
+		if n == nil then GLib.Error ("OutBuffer : Received nil value") end
+	
 		self.Data [self.NextDataId] = n
 		self.Types [self.NextDataId] = enumValue
 		self.NextDataId = self.NextDataId + 1

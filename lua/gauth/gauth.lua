@@ -124,6 +124,7 @@ include ("grouptree.lua")
 include ("permissionblock.lua")
 include ("permissiondictionary.lua")
 
+include ("permissionblocknetworkermanager.lua")
 include ("permissionblocknetworker.lua")
 include ("grouptreesender.lua")
 
@@ -139,7 +140,6 @@ include ("protocol/useradditionnotification.lua")
 include ("protocol/userremovalnotification.lua")
 include ("protocol/nodeadditionnotification.lua")
 include ("protocol/noderemovalnotification.lua")
-include ("protocol/nodepermissionblocknotification.lua")
 
 include ("protocol/useradditionrequest.lua")
 include ("protocol/useradditionresponse.lua")
@@ -149,8 +149,6 @@ include ("protocol/nodeadditionrequest.lua")
 include ("protocol/nodeadditionresponse.lua")
 include ("protocol/noderemovalrequest.lua")
 include ("protocol/noderemovalresponse.lua")
-include ("protocol/nodepermissionblockrequest.lua")
-include ("protocol/nodepermissionblockresponse.lua")
 
 -- Permission Blocks
 include ("protocol/permissionblocknotification.lua")

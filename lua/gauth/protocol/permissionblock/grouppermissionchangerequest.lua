@@ -13,7 +13,7 @@ end
 function self:GenerateInitialPacket (outBuffer)
 	outBuffer:String (self.GroupId)
 	outBuffer:String (self.ActionId)
-	outBUffer:UInt8 (self.Access)
+	outBuffer:UInt8 (self.Access)
 end
 
 function self:HandlePacket (inBuffer)

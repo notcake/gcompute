@@ -27,7 +27,7 @@ end
 
 function self:StringFromHash (hash)
 	if not self.HashStrings [hash] then
-		GLib.Error ("StringTable:StringFromHash : " .. hash .. " is not in the table!")
+		GLib.Error ("StringTable:StringFromHash : " .. tostring (hash) .. " is not in the table!")
 	end
 	return self.HashStrings [hash]
 end

@@ -32,7 +32,7 @@ function self:CloseSession (session)
 	if not self.Sessions [session:GetId ()] then return end
 	
 	if not session:HasQueuedPackets () then
-		ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. ") closed.\n")
+		ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. " closed.\n")
 		self.Sessions [session:GetId ()] = nil
 	end
 	
@@ -53,7 +53,6 @@ function self:HandleIncomingPacket (sessionId, inBuffer)
 		ErrorNoHalt (self.SystemName .. ".NetEndPoint:HandleIncomingPacket : Session " .. sessionId .. " not found!\n")
 		return
 	end
-	
 	session:ResetTimeout ()
 	session:HandlePacket (inBuffer)
 end
@@ -69,6 +68,7 @@ function self:ProcessSessions ()
 	for _, session in pairs (self.Sessions) do
 		local outBuffer = session:DequeuePacket ()
 		if outBuffer then
+			ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. " packet sent to " .. self.RemoteId .. ".\n")
 			GLib.Net.DispatchPacket (self.RemoteId, self.DataChannel, outBuffer)
 		end
 		
@@ -95,9 +95,6 @@ end
 
 function self:SendNotification (session)
 	session:SetRemoteEndPoint (self)
-	if not session:GetType () then
-		A = session
-	end
 	ErrorNoHalt (self.SystemName .. ".Net.EndPoint:SendNotification : " .. session:ToString () .. "\n")
 	
 	local outBuffer = GLib.Net.OutBuffer ()

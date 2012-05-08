@@ -208,14 +208,14 @@ function self:SetPermissionBlock (permissionBlock)
 	self.PermissionList:Sort ()
 	
 	-- Events
-	self.PermissionBlock:AddEventListener ("GroupEntryAdded",
+	self.PermissionBlock:AddEventListener ("GroupEntryAdded", tostring (self),
 		function (_, groupId)
 			self:AddGroup (groupId, self.PermissionBlock, 1)
 			self.Groups:Sort ()
 		end
 	)
 	
-	self.PermissionBlock:AddEventListener ("GroupEntryRemoved",
+	self.PermissionBlock:AddEventListener ("GroupEntryRemoved", tostring (self),
 		function (permissionBlock, groupId)
 			for _, item in pairs (self.Groups:GetItems ()) do
 				if item.GroupId == groupId and
@@ -229,14 +229,14 @@ function self:SetPermissionBlock (permissionBlock)
 		end
 	)
 	
-	self.PermissionBlock:AddEventListener ("GroupPermissionChanged",
+	self.PermissionBlock:AddEventListener ("GroupPermissionChanged", tostring (self),
 		function (permissionBlock, groupId, actionId, access)
 			self:CheckPermissions ()
 			self:PopulatePermissions ()
 		end
 	)
 	
-	self.PermissionBlock:AddEventListener ("InheritOwnerChanged",
+	self.PermissionBlock:AddEventListener ("InheritOwnerChanged", tostring (self),
 		function (permissionBlock, groupId, actionId, access)
 			self:CheckPermissions ()
 			self:PopulatePermissions ()
@@ -245,7 +245,7 @@ function self:SetPermissionBlock (permissionBlock)
 		end
 	)
 	
-	self.PermissionBlock:AddEventListener ("InheritPermissionsChanged",
+	self.PermissionBlock:AddEventListener ("InheritPermissionsChanged", tostring (self),
 		function (permissionBlock, groupId, actionId, access)
 			self:CheckPermissions ()
 			self:PopulateGroupEntries ()
@@ -254,7 +254,7 @@ function self:SetPermissionBlock (permissionBlock)
 		end
 	)
 	
-	self.PermissionBlock:AddEventListener ("OwnerChanged",
+	self.PermissionBlock:AddEventListener ("OwnerChanged", tostring (self),
 		function (permissionBlock, groupId, actionId, access)
 			self:CheckPermissions ()
 			self:PopulatePermissions ()

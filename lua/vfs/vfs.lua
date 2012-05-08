@@ -70,7 +70,7 @@ VFS.RealRoot = VFS.RealFolder ("", "")
 if SERVER then
 	VFS.Root = VFS.VFolder ("")
 elseif CLIENT then
-	VFS.Client = VFS.NetClientManager:GetEndPoint (GAuth.GetServerId ())
+	VFS.Client = VFS.EndPointManager:GetEndPoint (GAuth.GetServerId ())
 	VFS.Root = VFS.Client:GetRoot ()
 end
 
@@ -120,7 +120,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 			-- pre-empt the NetFolder creation
 			local netClient = nil
 			if SERVER then
-				netClient = VFS.NetClientManager:GetEndPoint (ply:SteamID ())
+				netClient = VFS.EndPointManager:GetEndPoint (ply:SteamID ())
 			elseif CLIENT then
 				netClient = VFS.Client
 			end

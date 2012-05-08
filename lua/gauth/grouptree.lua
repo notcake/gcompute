@@ -50,7 +50,7 @@ function self:AddGroup (authId, name, callback)
 				callback (returnCode, self.Children [name])
 			end
 		)
-		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeAdditionRequest)
+		GAuth.EndPointManager:GetEndPoint (self:GetHost ()):StartSession (nodeAdditionRequest)
 		return
 	end
 	
@@ -84,7 +84,7 @@ function self:AddGroupTree (authId, name, callback)
 				callback (returnCode, self.Children [name])
 			end
 		)
-		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeAdditionRequest)
+		GAuth.EndPointManager:GetEndPoint (self:GetHost ()):StartSession (nodeAdditionRequest)
 		return
 	end
 	
@@ -134,7 +134,7 @@ function self:RemoveNode (authId, name, callback)
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
 		local nodeRemovalRequest = GAuth.Protocol.NodeRemovalRequest (self, node, callback)
-		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (nodeRemovalRequest)
+		GAuth.EndPointManager:GetEndPoint (self:GetHost ()):StartSession (nodeRemovalRequest)
 	end
 	
 	self.Children [name] = nil

@@ -42,13 +42,13 @@ VFS.Net.RegisterChannel ("vfs_request_data",
 
 VFS.Net.RegisterChannel ("vfs_response_data",
 	function (senderId, inBuffer)
-		local client = VFS.NetClientManager:GetEndPoint (senderId)
+		local client = VFS.EndPointManager:GetEndPoint (senderId)
 		client:HandleIncomingPacket (inBuffer:UInt32 (), inBuffer)
 	end
 )
 
 VFS.Net.RegisterChannel ("vfs_notification",
 	function (senderId, inBuffer)
-		local client = VFS.NetClientManager:GetEndPoint (senderId)
+		local client = VFS.EndPointManager:GetEndPoint (senderId)
 	end
 )

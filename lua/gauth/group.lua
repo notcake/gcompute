@@ -33,7 +33,7 @@ function self:AddUser (authId, userId, callback)
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
 		local userAdditionRequest = GAuth.Protocol.UserAdditionRequest (self, userId, callback)
-		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (userAdditionRequest)
+		GAuth.EndPointManager:GetEndPoint (self:GetHost ()):StartSession (userAdditionRequest)
 		return
 	end
 	
@@ -81,7 +81,7 @@ function self:RemoveUser (authId, userId)
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
 		local userRemovalRequest = GAuth.Protocol.UserRemovalRequest (self, userId, callback)
-		GAuth.NetClientManager:GetEndPoint (self:GetHost ()):StartSession (userRemovalRequest)
+		GAuth.EndPointManager:GetEndPoint (self:GetHost ()):StartSession (userRemovalRequest)
 		return
 	end
 	

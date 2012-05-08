@@ -44,6 +44,7 @@ function self:Init ()
 	self.Menu:AddOption ("Remove User",
 		function (targetUserIds)
 			if not self.Group then return end
+			if not targetUserIds then return end
 			if #targetUserIds == 0 then return end
 			for _, userId in ipairs (targetUserIds) do
 				self.Group:RemoveUser (GAuth.GetLocalId (), userId)

@@ -10,10 +10,10 @@ function self:HandleInitialPacket (inBuffer)
 	ErrorNoHalt ("FolderListing: Request for " .. self.FolderPath .. " received.\n")
 	VFS.Root:GetChild (self:GetRemoteEndPoint ():GetRemoteId (), self.FolderPath,
 		function (returnCode, node)
-			if returnCode == VFS.ReturnCode.None then
+			if returnCode == VFS.ReturnCode.Success then
 				node:EnumerateChildren (self:GetRemoteEndPoint ():GetRemoteId (),
 					function (returnCode, node)
-						if returnCode == VFS.ReturnCode.None then
+						if returnCode == VFS.ReturnCode.Success then
 							self:SendReturnCode (returnCode, node)
 						elseif returnCode == VFS.ReturnCode.Finished then
 							self:SendReturnCode (VFS.ReturnCode.Finished)
@@ -37,7 +37,7 @@ function self:SendReturnCode (returnCode, node)
 	local outBuffer = self:CreatePacket ()
 	outBuffer:UInt8 (returnCode)
 	
-	if returnCode == VFS.ReturnCode.None then
+	if returnCode == VFS.ReturnCode.Success then
 		outBuffer:UInt8 (node:GetNodeType ())
 		outBuffer:String (node:GetName ())
 		if node:GetName () == node:GetDisplayName () then

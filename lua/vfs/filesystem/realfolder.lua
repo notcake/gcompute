@@ -1,10 +1,7 @@
 local self = {}
-VFS.RealFolder = VFS.MakeConstructor (self, VFS.IFolder)
+VFS.RealFolder = VFS.MakeConstructor (self, VFS.IFolder, VFS.RealNode)
 
 function self:ctor (path, name, parentFolder)
-	self.Name = name
-	self.ParentFolder = parentFolder
-	self.Path = path
 	self.FolderPath = self.Path == "" and "" or self.Path .. "/"
 	
 	self.Children = {}
@@ -18,7 +15,7 @@ end
 
 function self:GetDirectChild (authId, name, callback)
 	if self.Children [name] then
-		callback (VFS.ReturnCode.None, self.Children [name])
+		callback (VFS.ReturnCode.Success, self.Children [name])
 		return
 	end
 
@@ -28,18 +25,10 @@ function self:GetDirectChild (authId, name, callback)
 		else
 			self.Children [name] = VFS.RealFile (self.FolderPath .. name, name, self)
 		end
-		callback (VFS.ReturnCode.None, self.Children [name])
+		callback (VFS.ReturnCode.Success, self.Children [name])
 	else
 		callback (VFS.ReturnCode.NotFound)
 	end
-end
-
-function self:GetName ()
-	return self.Name
-end
-
-function self:GetParentFolder ()
-	return self.ParentFolder
 end
 
 -- Internal callbacks
@@ -81,7 +70,7 @@ function self:TFindCallback (searchPath, folders, files, callback)
 	
 	-- 3. Call callback
 	for _, node in pairs (self.Children) do
-		callback (VFS.ReturnCode.None, node)
+		callback (VFS.ReturnCode.Success, node)
 	end
 	callback (VFS.ReturnCode.Finished)
 end

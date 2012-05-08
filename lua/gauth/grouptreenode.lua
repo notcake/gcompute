@@ -23,16 +23,8 @@ function self:ctor (name)
 	self.Predicted = false
 	
 	self.PermissionBlock = GAuth.PermissionBlock ()
-	self.PermissionBlock:SetDisplayNameFunction (
-		function (permissionBlock)
-			return self:GetFullDisplayName ()
-		end
-	)
-	self.PermissionBlock:SetNameFunction (
-		function (permissionBlock)
-			return self:GetFullName ()
-		end
-	)
+	self.PermissionBlock:SetDisplayNameFunction (function () return self:GetFullDisplayName () end)
+	self.PermissionBlock:SetNameFunction (function () return self:GetFullName () end)
 	self.PermissionBlock:SetParentFunction (
 		function (permissionBlock)
 			local parentNode = self:GetParentNode ()

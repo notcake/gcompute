@@ -1,26 +1,15 @@
 local self = {}
-VFS.NetFolder = VFS.MakeConstructor (self, VFS.IFolder)
+VFS.NetFolder = VFS.MakeConstructor (self, VFS.IFolder, VFS.NetNode)
 
 function self:ctor (netClient, path, name, parentFolder)
-	self.NetClient = netClient
-	self.Path = path
 	self.FolderPath = self.Path .. "/"
 	if self.Path == "" then
 		self.FolderPath = ""
 	end
-	self.Name = name
-	self.DisplayName = self.Name
-	self.ParentFolder = parentFolder
 	
 	self.ReceivedChildren = false
 	self.FolderListingRequest = nil
 	self.Children = {}
-	
-	self.Predicted = false
-end
-
-function self:ClearPredictedFlag ()
-	self.Predicted = false
 end
 
 function self:CreatePredictedFolder (name)
@@ -34,7 +23,7 @@ function self:EnumerateChildren (authId, callback)
 	
 	-- Enumerate received children
 	for _, node in pairs (self.Children) do
-		callback (VFS.ReturnCode.None, node)
+		callback (VFS.ReturnCode.Success, node)
 	end
 	
 	-- TODO: Run callback on unreceived children
@@ -63,7 +52,7 @@ function self:EnumerateChildren (authId, callback)
 					self.Children [name] = child
 				end
 				child:SetDisplayName (displayName or name)
-				request:DispatchEvent ("RunCallback", VFS.ReturnCode.None, child)
+				request:DispatchEvent ("RunCallback", VFS.ReturnCode.Success, child)
 			end)
 			
 			self.FolderListingRequest:AddEventListener ("TimedOut", function (request)
@@ -74,7 +63,7 @@ function self:EnumerateChildren (authId, callback)
 			
 			local failed = false
 			self.FolderListingRequest:AddEventListener ("RunCallback", function (request, returnCode)
-				if returnCode == VFS.ReturnCode.None then
+				if returnCode == VFS.ReturnCode.Success then
 				elseif returnCode == VFS.ReturnCode.Finished then
 					self.ReceivedChildren = not failed
 					self.FolderListingRequest = nil
@@ -91,15 +80,11 @@ function self:EnumerateChildren (authId, callback)
 	end
 end
 
-function self:FlagAsPredicted ()
-	self.Predicted = true
-end
-
 function self:GetDirectChild (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
 	if self.Children [name] then
-		callback (VFS.ReturnCode.None, self.Children [name])
+		callback (VFS.ReturnCode.Success, self.Children [name])
 	elseif self.ReceivedChildren then
 		callback (VFS.ReturnCode.NotFound)
 	else
@@ -112,18 +97,6 @@ function self:GetDirectChild (authId, name, callback)
 	end
 end
 
-function self:GetDisplayName ()
-	return self.DisplayName
-end
-
-function self:GetName ()
-	return self.Name
-end
-
-function self:GetParentFolder ()
-	return self.ParentFolder
-end
-
 function self:MountLocal (name, node)
 	if not node then return end
 
@@ -132,8 +105,4 @@ function self:MountLocal (name, node)
 	else
 		self.Children [name] = VFS.MountedFile (name, node, self)
 	end
-end
-
-function self:SetDisplayName (displayName)
-	self.DisplayName = displayName
 end

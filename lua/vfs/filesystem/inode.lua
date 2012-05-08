@@ -5,6 +5,22 @@ function self:ctor ()
 	VFS.EventProvider (self)
 end
 
+--[[
+	INode:Delete (authId, (returnCode)->() callback)
+		
+		Do not implement this, implement IFolder:DeleteDirectChild instead
+		Delete this filesystem node
+]]
+function self:Delete (authId, callback)
+	if not self:GetParentFolder () then
+		VFS.Error ("IFolder:Delete : " .. self:GetPath () .. " has no parent folder from which to delete.")
+		PrintTable (self)
+		PrintTable (debug.getinfo (self.ctor))
+		return
+	end
+	self:GetParentFolder ():DeleteDirectChild (authId, self:GetName (), callback)
+end
+
 function self:GetDisplayName ()
 	return self:GetName ()
 end
@@ -37,8 +53,7 @@ function self:GetNodeType ()
 end
 
 function self:GetOwner ()
-	VFS.Error ("INode:GetOwner : Not implemented")
-	return GAuth.GetSystemId ()
+	return self:GetPermissionBlock ():GetOwner ()
 end
 
 function self:GetParentFolder ()
@@ -79,8 +94,5 @@ function self:SetDisplayName (displayName)
 end
 
 function self:SetOwner (authId, ownerId, callback)
-	VFS.Error ("INode:SetOwner : Not implemented")
-	
-	callback = callback or VFS.NullCallback
-	callback (VFS.ReturnCode.AccessDenied)
+	self:GetPermissionBlock ():SetOwner (authId, ownerId, callback)
 end

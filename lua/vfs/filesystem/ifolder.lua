@@ -1,23 +1,17 @@
 local self = {}
 VFS.IFolder = VFS.MakeConstructor (self, VFS.INode)
 
-function self:ctor ()
-end
-
 --[[
-	IFolder:Delete (authId, function (ReturnCode))
-		
-		Do not implement this, implement IFolder:DeleteDirectChild instead
-		Delete this filesystem node
+	Events:
+		NodeCreated (INode childNode)
+			Fired when a new child file or folder is created.
+		NodeDeleted (INode deletedNode)
+			Fired when a child file or folder is deleted.
+		NodeRenamed (INode childNode, string oldName, string newName)
+			Fired when a child file or folder is renamed.
 ]]
-function self:Delete (authId, callback)
-	if not self:GetParentFolder () then
-		VFS.Error ("IFolder:Delete : " .. self:GetPath () .. " has no parent folder from which to delete.")
-		PrintTable (self)
-		PrintTable (debug.getinfo (self.ctor))
-		return
-	end
-	self:GetParentFolder ():DeleteDirectChild (authId, self:GetName (), callback)
+
+function self:ctor ()
 end
 
 --[[
@@ -31,7 +25,7 @@ function self:DeleteChild (authId, path, callback)
 
 	self:GetChild (authId, path,
 		function (returnCode, node)
-			if returnCode == VFS.ReturnCode.None then
+			if returnCode == VFS.ReturnCode.Success then
 				node:Delete (authId, callback)
 			else
 				callback (returnCode)
@@ -72,7 +66,7 @@ function self:GetChild (authId, path, callback)
 	local path = VFS.Path (path)
 	
 	if path:IsEmpty () then
-		callback (VFS.ReturnCode.None, self)
+		callback (VFS.ReturnCode.Success, self)
 		return
 	end
 
@@ -82,7 +76,7 @@ function self:GetChild (authId, path, callback)
 			if path:IsEmpty () then
 				callback (returnCode, node)
 			else
-				if returnCode == VFS.ReturnCode.None then
+				if returnCode == VFS.ReturnCode.Success then
 					if node:IsFolder () then
 						node:GetChild (authId, path, callback)
 					else

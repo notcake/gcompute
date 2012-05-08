@@ -35,6 +35,9 @@ function self:Init ()
 			if targetItem then
 				targetItem = targetItem.Item
 				self.Menu:SetTargetItem (targetItem)
+			else
+				targetItem = GAuth.Groups
+				self.Menu:SetTargetItem (targetItem)
 			end
 			
 			if not targetItem then

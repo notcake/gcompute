@@ -1,13 +1,7 @@
 local self = {}
-VFS.VFolder = VFS.MakeConstructor (self, VFS.IFolder)
+VFS.VFolder = VFS.MakeConstructor (self, VFS.IFolder, VFS.VNode)
 
-function self:ctor (name, parentFolder)
-	self.Name = name
-	self.DisplayName = self.Name
-	self.ParentFolder = parentFolder
-	
-	self.OwnerId = GAuth.GetSystemId ()
-	
+function self:ctor (name, parentFolder)	
 	self.Children = {}
 end
 
@@ -26,7 +20,7 @@ function self:CreateFolder (authId, path, callback)
 	path:RemoveFirstSegment ()
 	
 	if path:IsEmpty () then
-		callback (VFS.ReturnCode.None, folder)
+		callback (VFS.ReturnCode.Success, folder)
 	else
 		folder:CreateFolder (authId, path, callback)
 	end
@@ -36,43 +30,27 @@ function self:DeleteDirectChild (authId, name, callback)
 	callback = callback or VFS.NullCallback
 
 	if not self.Children [name] then
-		callback (VFS.ReturnCode.None)
+		callback (VFS.ReturnCode.Success)
 		return
 	end
 	
 	self.Children [name] = nil
-	callback (VFS.ReturnCode.None)
+	callback (VFS.ReturnCode.Success)
 end
 
 function self:EnumerateChildren (authId, callback)
 	for _, node in pairs (self.Children) do
-		callback (VFS.ReturnCode.None, node)
+		callback (VFS.ReturnCode.Success, node)
 	end
 	callback (VFS.ReturnCode.Finished)
 end
 
 function self:GetDirectChild (authId, name, callback)
 	if self.Children [name] then
-		callback (VFS.ReturnCode.None, self.Children [name])
+		callback (VFS.ReturnCode.Success, self.Children [name])
 	else
 		callback (VFS.ReturnCode.NotFound)
 	end
-end
-
-function self:GetDisplayName ()
-	return self.DisplayName
-end
-
-function self:GetName ()
-	return self.Name
-end
-
-function self:GetOwner ()
-	return self.OwnerId
-end
-
-function self:GetParentFolder ()
-	return self.ParentFolder
 end
 
 function self:Mount (name, node, displayName)
@@ -85,14 +63,4 @@ function self:Mount (name, node, displayName)
 		self.Children [name] = VFS.MountedFile (name, node, self)
 		self.Children [name]:SetDisplayName (displayName)
 	end
-end
-
-function self:SetDisplayName (displayName)
-	self.DisplayName = displayName
-end
-
-function self:SetOwner (authId, ownerId, callback)
-	callback = callback or VFS.NullCallback
-	self.Owner = ownerId
-	callback (VFS.ReturnCode.None)
 end

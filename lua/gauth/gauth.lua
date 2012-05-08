@@ -1,3 +1,4 @@
+if GAuth then return end
 if GAuth then
 	if type (GAuth.DispatchEvent) == "function" then
 		GAuth:DispatchEvent ("Unloaded")

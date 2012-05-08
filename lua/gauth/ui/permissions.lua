@@ -201,11 +201,13 @@ function self:SetPermissionBlock (permissionBlock)
 	
 	-- Populate permissions
 	self.PermissionList:Clear ()
-	for actionId in self.PermissionBlock:GetPermissionDictionary ():GetPermissionEnumerator () do
-		local line = self.PermissionList:AddLine (actionId)
-		line.ActionId = actionId
+	if self.PermissionBlock:GetPermissionDictionary () then
+		for actionId in self.PermissionBlock:GetPermissionDictionary ():GetPermissionEnumerator () do
+			local line = self.PermissionList:AddLine (actionId)
+			line.ActionId = actionId
+		end
+		self.PermissionList:Sort ()
 	end
-	self.PermissionList:Sort ()
 	
 	-- Events
 	self.PermissionBlock:AddEventListener ("GroupEntryAdded", tostring (self),

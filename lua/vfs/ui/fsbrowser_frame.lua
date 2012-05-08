@@ -8,103 +8,17 @@ function self:Init ()
 	self:SetDeleteOnClose (false)
 	self:MakePopup ()
 	
-	self.FolderTree = vgui.Create ("GTreeView", self)
-	self.FolderTree:SetPopulator (function (node)
-		node:SetIcon ("gui/g_silkicons/folder_explore")
-		node.Item:EnumerateChildren (GAuth.GetLocalId (),
-			function (returnCode, fsNode)
-				if returnCode == VFS.ReturnCode.Finished then
-					node:SetIcon ("gui/g_silkicons/folder")
-					node:SuppressLayout (true)
-					node:LayoutRecursive ()
-					if node:GetChildCount () == 0 then
-						node:SetExpandable (false)
-					else
-						node:SortChildren ()
-					end
-				
-					node.Item:AddEventListener ("ItemAdded", "FSBrowserTree", function (folder, item)
-						if folder ~= node.Item then
-							return
-						end
-						if node.Added [item:GetName ()] or not item:IsFolder () then
-							return
-						end
-						local child = node:AddNode (item:GetDisplayName ())
-						node.Added [item:GetName ()] = child
-						child.Item = item
-						child:SetExpandable (true)
-						node:SortChildren ()
-					end)
-					
-					node.Item:AddEventListener ("ItemDeleted", "FSBrowserTree", function (folder, item)
-						if folder ~= node.Item then
-							return
-						end
-						if not node.Added [item:GetName ()] or not item:IsFolder () then
-							return
-						end
-						local child = node:FindChild (item:GetDisplayName ())
-						child:Remove ()
-						node.Added [item:GetName ()] = nil
-					end)
-					
-					node.Item:AddEventListener ("ItemRenamed", "FSBrowser", function (item, lastName, lastNiceName)
-						if node.Added [lastName] and
-							node.Added [lastName].Item == item then
-							node.Added [lastName]:SetText (item:GetDisplayName ())
-						end
-					end)
-				elseif returnCode == VFS.ReturnCode.None then
-					node.Added = node.Added or {}
-					if not node.Added [fsNode:GetName ()] and fsNode:IsFolder () then
-						local childNode = node:AddNode (fsNode:GetDisplayName ())
-						node.Added [fsNode:GetName ()] = childNode
-						childNode.Item = fsNode
-						childNode:SetExpandable (true)
-					end
-				elseif returnCode == VFS.ReturnCode.EndOfBurst then
-					node:LayoutRecursive ()
-					node:SortChildren ()
-				elseif returnCode == VFS.ReturnCode.AccessDenied then
-					node:MarkUnpopulated ()
-					node:SetIcon ("gui/g_silkicons/folder_delete")
-				end
-			end
-		)
-	end)
-	local root = self.FolderTree:AddNode ("root")
-	root.Item = VFS.Root
-	root:SetExpandable (true)
-	self.FolderTree:AddEventListener ("Click",
-		function (tree, item)
-			self:SetCurrentFolder (item.Item, item)
+	self.FolderTree = vgui.Create ("VFSFolderTreeView", self)
+	self.FolderTree:AddEventListener ("SelectedFolderChanged",
+		function (_, folder)
+			if not folder then return end
+			self:SetCurrentFolder (folder)
 		end
 	)
-	root:Select ()
-	
-	-- TreeView menu
-	self.FolderTree.Menu = vgui.Create ("GMenu")
-	self.FolderTree.Menu:AddOption ("Delete", function ()
-		local item = self.FolderTree:GetSelectedItem ()
-		if not item then
-			return
-		end
-		item:Remove ()
-		item.Item:Delete (GAuth.GetLocalId ())
-	end):SetIcon ("gui/g_silkicons/cross")
-	self.FolderTree.Menu:AddOption ("Permissions", function ()
-		local item = self.FolderTree:GetSelectedItem ()
-		if not item then
-			return
-		end
-		Tubes.PermissionView (item.Item:GetPermissions ())
-	end):SetIcon ("gui/g_silkicons/key")
 	
 	self.FileList = vgui.Create ("GListView", self)
 	self.FileList:AddColumn ("Name")
 	self.FileList:AddColumn ("Owner")
-	self:SetCurrentFolder (VFS.Root, root)
 	
 	-- ListView menu
 	self.FileList.Menu = vgui.Create ("GMenu")
@@ -129,20 +43,21 @@ function self:Init ()
 		if #items == 0 then
 			return
 		end
-		Tubes.PermissionView (items [1].Item:GetPermissions ())
+		GAuth.OpenPermissions (items [1].Item:GetPermissionBlock ())
 	end):SetIcon ("gui/g_silkicons/key")
 	
 	self.FileList.Menu:AddEventListener ("MenuOpening", function (_)
 		local SelectedItem = self.FileList:GetSelectedItems () [1]
-		self.FileList.Menu:FindItem ("New Folder"):SetDisabled (not self.CurrentFolder:PlayerHasPermission (GAuth.GetLocalId (), "Create Folder"))
+		self.FileList.Menu:FindItem ("New Folder"):SetDisabled (not self.CurrentFolder:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
 		if SelectedItem then
-			self.FileList.Menu:FindItem ("Delete"):SetDisabled (not SelectedItem.Item:PlayerHasPermission (GAuth.GetLocalId (), "Delete"))
+			self.FileList.Menu:FindItem ("Delete"):SetDisabled (not SelectedItem.Item:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
 		else
 			self.FileList.Menu:FindItem ("Delete"):SetDisabled (true)
 		end
 	end)
 	
 	self.FileList:AddEventListener ("DoubleClick", function (_, item)
+		if not item then return end
 		if item.Item:IsFolder () then
 			self.CurrentFolderNode:SetExpanded (true)
 			self.CurrentFolderNode:FindChild (item.Item:GetDisplayName ()):Select ()
@@ -162,6 +77,7 @@ function self:Init ()
 		end
 	end)
 	
+	self:SetCurrentFolder (VFS.Root)
 	self:PerformLayout ()
 end
 
@@ -238,7 +154,7 @@ function self:SetCurrentFolder (folder, treeViewItem)
 					return a:GetDisplayName () < b:GetDisplayName ()
 				end
 			)
-		elseif returnCode == VFS.ReturnCode.None then
+		elseif returnCode == VFS.ReturnCode.Success then
 			if not self.FileList.Added [fsNode:GetName ()] then
 				local item = self.FileList:AddLine (fsNode:GetDisplayName (), "")
 				self.FileList.Added [fsNode:GetName ()] = item

@@ -1,21 +1,16 @@
 local self = {}
-VFS.MountedFolder = VFS.MakeConstructor (self, VFS.IFolder)
+VFS.MountedFolder = VFS.MakeConstructor (self, VFS.IFolder, VFS.MountedNode)
 
-function self:ctor (nameOverride, mountedFolder, parentFolder)
-	self.NameOverride = nameOverride
-	self.DisplayNameOverride = nil
-	self.MountedFolder = mountedFolder
-	self.ParentFolder = parentFolder
-	
+function self:ctor (nameOverride, mountedNode, parentFolder)
 	self.Children = {}
 end
 
 function self:EnumerateChildren (authId, callback)
 	callback = callback or VFS.NullCallback
 	
-	self.MountedFolder:EnumerateChildren (authId,
+	self.MountedNode:EnumerateChildren (authId,
 		function (returnCode, node)
-			if returnCode == VFS.ReturnCode.None then
+			if returnCode == VFS.ReturnCode.Success then
 				if not self.Children [node:GetName ()] then
 					if node:IsFolder () then
 						self.Children [node:GetName ()] = VFS.MountedFolder (nil, node, self)
@@ -34,9 +29,9 @@ end
 function self:GetDirectChild (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
-	self.MountedFolder:GetDirectChild (authId, name,
+	self.MountedNode:GetDirectChild (authId, name,
 		function (returnCode, node)
-			if returnCode == VFS.ReturnCode.None then
+			if returnCode == VFS.ReturnCode.Success then
 				if not self.Children [node:GetName ()] then
 					if node:IsFolder () then
 						self.Children [node:GetName ()] = VFS.MountedFolder (nil, node, self)
@@ -50,20 +45,4 @@ function self:GetDirectChild (authId, name, callback)
 			end
 		end
 	)
-end
-
-function self:GetDisplayName ()
-	return self.DisplayNameOverride or self.MountedFolder:GetDisplayName ()
-end
-
-function self:GetName ()
-	return self.NameOverride or self.MountedFolder:GetName ()
-end
-
-function self:GetParentFolder ()
-	return self.ParentFolder
-end
-
-function self:SetDisplayName (displayName)
-	self.DisplayNameOverride = displayName
 end

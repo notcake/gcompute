@@ -157,7 +157,7 @@ end
 
 function self:GetDisplayName ()
 	if self.DisplayNameFunction then return self.DisplayNameFunction (self) end
-	return self.DisplayName
+	return self.DisplayName or self:GetName ()
 end
 
 function self:GetName ()
@@ -196,13 +196,7 @@ function self:InheritsPermissions ()
 end
 
 function self:IsAuthorized (authId, actionId, permissionBlock)
-	local authorized = self:GetAccess (authId, actionId, permissionBlock or self) == GAuth.Access.Allow
-	if authorized then
-		print (authId .. " is permitted to " .. actionId .. " on " .. self:GetName ())
-	else
-		print (authId .. " is NOT permitted to " .. actionId .. " on " .. self:GetName ())
-	end
-	return authorized
+	return self:GetAccess (authId, actionId, permissionBlock or self) == GAuth.Access.Allow
 end
 
 function self:RemoveGroupEntry (authId, groupId, callback)

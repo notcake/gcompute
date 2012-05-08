@@ -54,14 +54,14 @@ usermessage.GetTable () ["wire_expression2_request_file"] =
 		ErrorNoHalt ("read: " .. filePath)
 		VFS.Root:GetChild (GAuth.GetLocalId (), filePath,
 			function (returnCode, node)
-				if returnCode == VFS.ReturnCode.None then
+				if returnCode == VFS.ReturnCode.Success then
 					if node:IsFile () then
 						node:Open (GAuth.GetLocalId (), VFS.OpenFlags.ReadOnly,
 							function (returnCode, filestream)
-								if returnCode == VFS.ReturnCode.None then
+								if returnCode == VFS.ReturnCode.Success then
 									filestream:Read (filestream:GetLength (),
 										function (returnCode, data)
-											if returnCode == VFS.ReturnCode.None then
+											if returnCode == VFS.ReturnCode.Success then
 												
 												local encoded = E2Lib.encode (data)
 												
@@ -109,10 +109,10 @@ usermessage.GetTable () ["wire_expression2_request_list"] =
 		ErrorNoHalt ("list: " .. folderPath)
 		VFS.Root:GetChild (GAuth.GetLocalId (), folderPath,
 			function (returnCode, node)
-				if returnCode == VFS.ReturnCode.None then
+				if returnCode == VFS.ReturnCode.Success then
 					node:EnumerateChildren (GAuth.GetLocalId (),
 						function (returnCode, node)
-							if returnCode == VFS.ReturnCode.None then
+							if returnCode == VFS.ReturnCode.Success then
 								if node:IsFolder () then
 									QueueConsoleCommand ("wire_expression2_file_list", "1", E2Lib.encode (node:GetDisplayName () .. "/"))
 								else

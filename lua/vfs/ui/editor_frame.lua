@@ -52,7 +52,7 @@ end
 function self:LoadFile (file)
 	file:Open (GAuth.GetLocalId (), VFS.OpenFlags.ReadOnly,
 		function (returnCode, fileStream)
-			if returnCode == VFS.ReturnCode.None then
+			if returnCode == VFS.ReturnCode.Success then
 				fileStream:Read (fileStream:GetLength (),
 					function (returnCode, data)
 						self.CodeEditor:SetText (data)

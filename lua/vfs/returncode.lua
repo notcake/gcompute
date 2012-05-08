@@ -1,10 +1,10 @@
 VFS.ReturnCode =
 {
-	None			= 0,
-	EndOfBurst		= 1,
-	Finished		= 2,
-	TimedOut		= 3,
-	AccessDenied	= 4,
+	Success         = 0,
+	AccessDenied    = 1,
+	TimedOut        = 2,
+	EndOfBurst		= 3,
+	Finished		= 4,
 	NotFound		= 5,
 	NotAFolder		= 6
 }

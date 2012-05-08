@@ -109,13 +109,31 @@ function GLib.InvertTable (tbl)
 	end
 end
 
-function GLib.MakeConstructor (metatable, base)
+--[[
+	GLib.MakeConstructor (metatable, base, base2)
+		Returns: ()->Object
+		
+		Produces a constructor for the object defined by metatable.
+		base may be nil or the constructor of a base class.
+		base2 may be nil or the constructor of another base class.
+		The second base class must not be a class with inheritance.
+]]
+function GLib.MakeConstructor (metatable, base, base2)
 	metatable.__index = metatable
 	
 	if base then
 		local basetable = GLib.GetMetaTable (base)
 		metatable.__base = basetable
 		setmetatable (metatable, basetable)
+		
+		if base2 then
+			local base2table = base2
+			if type (base2) == "function" then base2table = GLib.GetMetaTable (base2) end
+			for k, v in pairs (base2table) do
+				if k:sub (1, 2) ~= "__" then metatable [k] = v end
+			end
+			metatable.ctor2 = base2table.ctor
+		end
 	end
 	
 	return function (...)
@@ -129,6 +147,7 @@ function GLib.MakeConstructor (metatable, base)
 			local dtors = {}
 			while base ~= nil do
 				ctors [#ctors + 1] = base.ctor
+				ctors [#ctors + 1] = base.ctor2
 				dtors [#dtors + 1] = base.dtor
 				base = base.__base
 			end

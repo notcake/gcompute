@@ -13,7 +13,7 @@ end
 
 function self:HandlePacket (inBuffer)
 	local returnCode = inBuffer:UInt8 ()
-	if returnCode == VFS.ReturnCode.None then
+	if returnCode == VFS.ReturnCode.Success then
 		local nodeType = inBuffer:UInt8 ()
 		local name = inBuffer:String ()
 		local displayName = inBuffer:String ()

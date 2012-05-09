@@ -1,1 +1,0 @@
-VFS.EndPointManager = GLib.Protocol.EndPointManager ("VFS", VFS.Protocol.NetClient)

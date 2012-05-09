@@ -1,0 +1,41 @@
+VFS.EndPointManager = GLib.Protocol.EndPointManager ("VFS", VFS.Protocol.EndPoint)
+VFS.PermissionBlockNetworker = GAuth.PermissionBlockNetworker ("VFS")
+
+VFS.PermissionBlockNetworker:SetResolver (
+	function (permissionBlockId)
+		local node = VFS.Root:GetChildSynchronous (permissionBlockId)
+		if not node then return false end
+		return node:GetPermissionBlock ()
+	end
+)
+
+VFS.PermissionBlockNetworker:SetNotificationFilter (
+	function (remoteId, permissionBlockId, permissionBlock)
+		local node = VFS.Root:GetChildSynchronous (permissionBlockId)
+		if not node then return false end
+		local netNode = node:GetInner ()
+		if not netNode then return false end
+		local hostId = netNode.EndPoint and netNode.EndPoint:GetRemoteId () or GAuth.GetLocalId ()
+
+		if hostId == GAuth.GetLocalId () then return false end
+		if hostId == remoteId then return true end
+		if remoteId == GAuth.GetServerId () then return true end
+
+		return false
+	end
+)
+
+VFS.PermissionBlockNetworker:SetRequestFilter (
+	function (permissionBlock)
+		local path = permissionBlock:GetName ()
+		local node = VFS.Root:GetChildSynchronous (path)
+		if not node then VFS.Error ("Failed to resolve path " .. path) return false end
+		node = node:GetInner ()
+		
+		if not node.EndPoint then VFS.Error ("Non networked node " .. path) return false end
+		if node:IsPredicted () then ErrorNoHalt (path .. " is predicted.\n") return false end
+		
+		ErrorNoHalt ("Remote: " .. node.EndPoint:GetRemoteId () .. ": " .. path .. "\n")
+		return true, node.EndPoint:GetRemoteId ()
+	end
+)

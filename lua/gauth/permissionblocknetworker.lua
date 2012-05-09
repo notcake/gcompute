@@ -21,7 +21,11 @@ function self:ctor (systemName)
 	self.SystemName = systemName
 	GAuth.PermissionBlockNetworkerManager:Register (self)
 	
-	self.ResolverFunction = GAuth.NullCallback
+	self.ResolverFunction = function ()
+		GLib.Error ("PermissionBlockNetworker : No resolver function set!")
+		self.ResolverFunction = function () return nil end
+		return nil
+	end
 	self.NotificationFilter = function ()
 		GLib.Error ("PermissionBlockNetworker : No notification filter set!")
 		self.NotificationFilter = function () return true end
@@ -29,8 +33,8 @@ function self:ctor (systemName)
 	end
 	self.RequestFilter = function ()
 		GLib.Error ("PermissionBlockNetworker : No request filter set!")
-		self.NotificationFilter = function () return true end
-		return true
+		self.RequestFilter = function () return true, "Server" end
+		return true, "Server"
 	end
 	
 	GAuth.EventProvider (self)
@@ -157,13 +161,7 @@ function self:UnhookBlock (permissionBlock)
 	permissionBlock:RemoveEventListener ("RequestSetOwner",              tostring (self))
 end
 
---[[
-	PermissionBlockNetworker:SerializeBlock (PermissionBlock permissionBlock)
-		
-		Sends a series of notifications that will synchronize the state of a
-		remote permission block to match the given local permission block.
-]]
-function self:SynchronizeBlock (destUserId, permissionBlock)
+function self:PreparePermissionBlockSynchronizationList (permissionBlock)
 	local notifications = {}
 	notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.InheritOwnerChangeNotification (permissionBlock, permissionBlock:InheritsOwner ())
 	notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.InheritPermissionsChangeNotification (permissionBlock, permissionBlock:InheritsPermissions ())
@@ -172,17 +170,29 @@ function self:SynchronizeBlock (destUserId, permissionBlock)
 	end
 	
 	for groupId in permissionBlock:GetGroupEntryEnumerator () do
-		for actionId in permissionBlock:GetPermissionDictionary ():GetPermissionEnumerator () do
-			local access = permissionBlock:GetGroupPermission (groupId, actionId)
-			if access ~= GAuth.Access.None then
-				notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.GroupPermissionChangeNotification (permissionBlock, groupId, actionId, access)
+		if permissionBlock:GetPermissionDictionary () then
+			for actionId in permissionBlock:GetPermissionDictionary ():GetPermissionEnumerator () do
+				local access = permissionBlock:GetGroupPermission (groupId, actionId)
+				if access ~= GAuth.Access.None then
+					notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.GroupPermissionChangeNotification (permissionBlock, groupId, actionId, access)
+				end
 			end
+		else
+			GAuth.Error ("PermissionBlock (" .. permissionBlock:GetName () .. ") has no dictionary!")
 		end
 	end
 	
-	for _, session in ipairs (notifications) do
-		GAuth.EndPointManager:GetEndPoint (destUserId):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
-	end
+	return notifications
+end
+
+--[[
+	PermissionBlockNetworker:SerializeBlock (PermissionBlock permissionBlock)
+		
+		Sends a series of notifications that will synchronize the state of a
+		remote permission block to match the given local permission block.
+]]
+function self:SynchronizeBlock (destUserId, permissionBlock)	
+	GAuth.EndPointManager:GetEndPoint (destUserId):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, self:PreparePermissionBlockSynchronizationList (permissionBlock)))
 end
 
 function self:GetSystemName ()
@@ -190,27 +200,42 @@ function self:GetSystemName ()
 end
 
 --[[
-	PermissionBlockNetworker:HandleNotification (EndPoint remoteEndPoint, PermissionBlock permissionBlock, InBuffer inBuffer)
-		Returns: PermissionBlockResponse response
+	PermissionBlockNetworker:HandleNotification (EndPoint remoteEndPoint, permissionBlockId, InBuffer inBuffer)
+		Returns: PermissionBlockNotification[] notifications
 ]]
-function self:HandleNotification (remoteEndPoint, permissionBlockId, inBuffer)
-	local typeId = inBuffer:UInt32 ()
-	local packetType = GAuth.Protocol.StringTable:StringFromHash (typeId)
-	
+function self:HandleNotification (remoteEndPoint, permissionBlockId, inBuffer)	
 	local permissionBlock = self:ResolvePermissionBlock (permissionBlockId)
-	if not permissionBlock then return end
-	if not self:ShouldProcessNotification (remoteEndPoint:GetRemoteId (), permissionBlockId, permissionBlock) then return end
-	
-	local ctor = GAuth.Protocol.ResponseTable [packetType]
-	if not ctor then
-		ErrorNoHalt (self:GetSystemName () .. ".PermissionBlockNetworker:HandleNotification : No handler for " .. tostring (packetType) .. " is registered!")
+	if not permissionBlock then
+		ErrorNoHalt (self:GetSystemName () .. ".PermissionBlockNetworker:HandleNotification : Failed to resolve " .. permissionBlockId .. "\n")
 		return
 	end
+	if not self:ShouldProcessNotification (remoteEndPoint:GetRemoteId (), permissionBlockId, permissionBlock) then return end
 	
-	local session = ctor (permissionBlock)
-	session:SetRemoteEndPoint (remoteEndPoint)
-	session:HandleInitialPacket (inBuffer)
-	return session
+	return self:HandleNotificationForBlock (permissionBlock, inBuffer)
+end
+
+--[[
+	PermissionBlockNetworker:HandleNotificationForBlock (PermissionBlock permissionBlock, InBuffer inBuffer)
+		Returns: PermissionBlockNotification[] notifications
+]]
+function self:HandleNotificationForBlock (permissionBlock, inBuffer)
+	local sessionCount = inBuffer:UInt16 ()
+	local sessions = {}
+	for i = 1, sessionCount do
+		local typeId = inBuffer:UInt32 ()
+		local packetType = GAuth.Protocol.StringTable:StringFromHash (typeId)
+		local ctor = GAuth.Protocol.ResponseTable [packetType]
+		if not ctor then
+			ErrorNoHalt (self:GetSystemName () .. ".PermissionBlockNetworker:HandleNotificationForBlock : No handler for " .. tostring (packetType) .. " is registered!")
+			return
+		end
+		
+		local session = ctor (permissionBlock)
+		session:SetRemoteEndPoint (remoteEndPoint)
+		session:HandleInitialPacket (inBuffer)
+		sessions [#sessions + 1] = session
+	end
+	return sessions
 end
 
 --[[
@@ -222,7 +247,10 @@ function self:HandleRequest (permissionBlockResponse, permissionBlockId, inBuffe
 	local packetType = GAuth.Protocol.StringTable:StringFromHash (typeId)
 	
 	local permissionBlock = self:ResolvePermissionBlock (permissionBlockId)
-	if not permissionBlock then return end
+	if not permissionBlock then
+		ErrorNoHalt (self:GetSystemName () .. ".PermissionBlockNetworker:HandleRequest : Failed to resolve " .. permissionBlockId .. "\n")
+		return
+	end
 	
 	local ctor = GAuth.Protocol.ResponseTable [packetType]
 	if not ctor then
@@ -248,7 +276,7 @@ end
 function self:ShouldSendRequest (permissionBlock)
 	local sendRequest, destUserId = self.RequestFilter (permissionBlock)
 	if sendRequest and not destUserId then
-		GAuth.Error (self:GetSystemName () .. ".PermissionBlockNetworker : Request filter did not return a destination user id!")
+		GAuth.Error (self:GetSystemName () .. ".PermissionBlockNetworker : Request filter did not return a destination user id for " .. permissionBlock:GetName () .. "!")
 		sendRequest = false
 	end
 	return sendRequest, destUserId

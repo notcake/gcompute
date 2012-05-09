@@ -1,12 +1,30 @@
 local self = {}
 VFS.INode = VFS.MakeConstructor (self)
 
+--[[
+	Events:
+		Deleted ()
+			Fired when this node has been deleted.
+		Renamed (oldName, newName)
+			Fired when this node has been renamed.
+		PermissionsChanged ()
+			Fired when this node's permissions have changed.
+]]
+
 function self:ctor ()
 	VFS.EventProvider (self)
+	
+	self.Predicted = false
+	
+	self:AddEventListener ("PermissionsChanged", self.PermissionsChanged)
+end
+
+function self:ClearPredictedFlag ()
+	self.Predicted = false
 end
 
 --[[
-	INode:Delete (authId, (returnCode)->() callback)
+	INode:Delete (authId, function (returnCode))
 		
 		Do not implement this, implement IFolder:DeleteDirectChild instead
 		Delete this filesystem node
@@ -40,6 +58,10 @@ function self:GetDisplayPath ()
 	end
 	
 	return path
+end
+
+function self:GetInner ()
+	return self
 end
 
 function self:GetName ()
@@ -90,9 +112,31 @@ function self:IsFolder ()
 	return self:GetNodeType () & VFS.NodeType.Folder ~= 0
 end
 
+function self:IsPredicted ()
+	return self.Predicted
+end
+
+function self:MarkPredicted ()
+	self.Predicted = true
+end
+
+function self:Rename (authId, name)
+	VFS.Error ("INode:Rename : Not implemented")
+end
+
 function self:SetDisplayName (displayName)
 end
 
 function self:SetOwner (authId, ownerId, callback)
 	self:GetPermissionBlock ():SetOwner (authId, ownerId, callback)
+end
+
+function self:UnhookPermissionBlock ()
+	VFS.PermissionBlockNetworker:UnhookBlock (self:GetPermissionBlock ())
+end
+
+-- Events
+function self:PermissionsChanged ()
+	if not self:GetParentFolder () then return end
+	self:GetParentFolder ():DispatchEvent ("NodePermissionsChanged", self)
 end

@@ -43,19 +43,21 @@ include ("filesystem/mountedfolder.lua")
 include ("filesystem/mountedfilestream.lua")
 
 include ("protocol/protocol.lua")
+include ("protocol/fileopenrequest.lua")
+include ("protocol/fileopenresponse.lua")
 include ("protocol/folderlistingrequest.lua")
 include ("protocol/folderlistingresponse.lua")
 
-include ("protocol/netclient.lua")
-include ("protocol/netclientmanager.lua")
-include ("protocol/netserverclient.lua")
-include ("protocol/netserver.lua")
+include ("protocol/endpoint.lua")
+include ("protocol/endpointmanager.lua")
 
 include ("adaptors/expression2_files.lua")
 
 if CLIENT then
 	VFS.IncludeDirectory ("vfs/ui")
 end
+
+VFS.AddReloadCommand ("vfs/vfs.lua", "vfs")
 
 --[[
 	Server:
@@ -78,20 +80,24 @@ elseif CLIENT then
 	VFS.Client = VFS.EndPointManager:GetEndPoint (GAuth.GetServerId ())
 	VFS.Root = VFS.Client:GetRoot ()
 end
+VFS.Root:MarkPredicted ()
 VFS.PermissionDictionary = GAuth.PermissionDictionary ()
 VFS.PermissionDictionary:AddPermission ("Delete")
 VFS.PermissionDictionary:AddPermission ("Read")
 VFS.PermissionDictionary:AddPermission ("View Folder")
 VFS.PermissionDictionary:AddPermission ("Write")
 VFS.Root:GetPermissionBlock ():SetPermissionDictionary (VFS.PermissionDictionary)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner", "Modify Permissions", GAuth.Access.Allow)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner", "Set Owner",          GAuth.Access.Allow)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner", "Create Folder",      GAuth.Access.Allow)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner", "Delete",             GAuth.Access.Allow)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner", "Read",               GAuth.Access.Allow)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner", "View Folder",        GAuth.Access.Allow)
-
-VFS.AddReloadCommand ("vfs/vfs.lua", "vfs")
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone",    "Modify Permissions", GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone",    "Set Owner",          GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",               GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder",        GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Modify Permissions", GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Set Owner",          GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Create Folder",      GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Delete",             GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Read",               GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "View Folder",        GAuth.Access.Allow)
+VFS.Root:ClearPredictedFlag ()
 
 if SERVER then
 	VFS.Root:CreateFolder (GAuth.GetSystemId (), "Public",
@@ -103,6 +109,7 @@ if SERVER then
 
 	VFS.Root:CreateFolder (GAuth.GetSystemId (), "Admins",
 		function (returnCode, folder)
+			folder:GetPermissionBlock ():SetInheritPermissions (GAuth.GetSystemId (), false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Administrators", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Administrators", "View Folder", GAuth.Access.Allow)
 		end
@@ -110,6 +117,7 @@ if SERVER then
 
 	VFS.Root:CreateFolder (GAuth.GetSystemId (), "Super Admins",
 		function (returnCode, folder)
+			folder:GetPermissionBlock ():SetInheritPermissions (GAuth.GetSystemId (), false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Super Administrators", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Super Administrators", "View Folder", GAuth.Access.Allow)
 		end
@@ -117,7 +125,9 @@ if SERVER then
 	
 	VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gcompute/lua",
 		function (returnCode, folder)
-			VFS.Root:Mount ("Source", folder, "Source")
+			local folder = VFS.Root:Mount ("Source", folder, "Source")
+			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Deny)
+			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Deny)
 		end
 	)
 end
@@ -132,18 +142,23 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 			VFS.Root:MountLocal (GAuth.GetLocalId (), folder)
 		else
 			-- pre-empt the NetFolder creation
-			local netClient = nil
+			local endPoint = nil
 			if SERVER then
-				netClient = VFS.EndPointManager:GetEndPoint (ply:SteamID ())
+				endPoint = VFS.EndPointManager:GetEndPoint (ply:SteamID ())
 			elseif CLIENT then
-				netClient = VFS.Client
+				endPoint = VFS.Client
 			end
-			folder = netClient:GetRoot ():CreatePredictedFolder (ply:SteamID ())
+			folder = endPoint:GetRoot ():CreatePredictedFolder (ply:SteamID ())
 		end
+		folder:MarkPredicted ()
 		folder:SetDisplayName (ply:Nick ())
-		folder:SetOwner (GAuth.GetSystemId (), ply:SteamID ())
 		if SERVER then
 			VFS.Root:Mount (ply:SteamID (), folder)
+			folder:GetPermissionBlock ():SetParentFunction (
+				function ()
+					return VFS.Root:GetPermissionBlock ()
+				end
+			)
 		elseif CLIENT then
 			if isLocalPlayer then
 				local mountPaths =
@@ -168,6 +183,17 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 				)
 			end
 		end
+		
+		-- Do permission block stuff after folder has been inserted into filesystem tree
+		folder:SetOwner (GAuth.GetSystemId (), ply:SteamID ())
+		folder:GetPermissionBlock ():SetInheritPermissions (GAuth.GetSystemId (), false)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Modify Permissions", GAuth.Access.Allow)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Set Owner",          GAuth.Access.Allow)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Create Folder",      GAuth.Access.Allow)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Delete",             GAuth.Access.Allow)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Read",               GAuth.Access.Allow)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "View Folder",        GAuth.Access.Allow)
+		folder:ClearPredictedFlag ()
 	end
 )
 

@@ -18,12 +18,11 @@ function self:HandlePacket (inBuffer)
 		local name = inBuffer:String ()
 		local displayName = inBuffer:String ()
 		if displayName == "" then displayName = nil end
-		self:DispatchEvent ("ReceivedNodeInfo", nodeType, name, displayName)
+		self:DispatchEvent ("ReceivedNodeInfo", nodeType, name, displayName, inBuffer)
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.EndOfBurst)
 		ErrorNoHalt ("Received node " .. name .. "\n")
 	elseif returnCode == VFS.ReturnCode.AccessDenied then
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.AccessDenied)
-		self:Close ()
 	elseif returnCode == VFS.ReturnCode.Finished then
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.Finished)
 		self:Close ()

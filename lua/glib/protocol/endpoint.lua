@@ -33,6 +33,7 @@ function self:CloseSession (session)
 	
 	if not session:HasQueuedPackets () then
 		ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. " closed.\n")
+		session:DispatchEvent ("Closed")
 		self.Sessions [session:GetId ()] = nil
 	end
 	

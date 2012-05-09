@@ -41,6 +41,9 @@ GAuth.PermissionBlock = GAuth.MakeConstructor (self)
 			Fired when permission inheritance has been changed
 		OwnerChanged (ownerId)
 			Fired when the owner has been changed
+			
+		PermissionsChanged ()
+			Fired when permissions have changed
 ]]
 
 function self:ctor ()
@@ -209,6 +212,7 @@ function self:RemoveGroupEntry (authId, groupId, callback)
 	
 	self.GroupEntries [groupId] = nil
 	self:DispatchEvent ("GroupEntryRemoved", groupId)
+	self:DispatchEvent ("PermissionsChanged")
 	
 	callback (GAuth.ReturnCode.Success)
 end
@@ -224,6 +228,7 @@ function self:SetGroupPermission (authId, groupId, actionId, access, callback)
 		if self.GroupEntries [groupId] [actionId] ~= access then
 			self.GroupEntries [groupId] [actionId] = access
 			self:DispatchEvent ("GroupPermissionChanged", groupId, actionId, access)
+			self:DispatchEvent ("PermissionsChanged")
 		end
 		
 		callback (GAuth.ReturnCode.Success)
@@ -234,6 +239,7 @@ function self:SetGroupPermission (authId, groupId, actionId, access, callback)
 				
 				self.GroupEntries [groupId] [actionId] = access
 				self:DispatchEvent ("GroupPermissionChanged", groupId, actionId, access)
+				self:DispatchEvent ("PermissionsChanged")
 				
 				callback (GAuth.ReturnCode.Success)
 			end
@@ -252,6 +258,7 @@ function self:SetInheritOwner (authId, inheritOwner, callback)
 	if not inheritOwner then self.OwnerId = self:GetOwner () end
 	self.InheritOwner = inheritOwner
 	self:DispatchEvent ("InheritOwnerChanged", inheritOwner)
+	self:DispatchEvent ("PermissionsChanged")
 	
 	callback (GAuth.ReturnCode.Success)
 end
@@ -266,6 +273,7 @@ function self:SetInheritPermissions (authId, inheritPermissions, callback)
 	
 	self.InheritPermissions = inheritPermissions
 	self:DispatchEvent ("InheritPermissionsChanged", inheritPermissions)
+	self:DispatchEvent ("PermissionsChanged")
 	
 	callback (GAuth.ReturnCode.Success)
 end
@@ -302,7 +310,7 @@ function self:SetOwner (authId, ownerId, callback)
 	
 	self.OwnerId = ownerId
 	self:DispatchEvent ("OwnerChanged", ownerId)
-	
+	self:DispatchEvent ("PermissionsChanged")	
 	
 	callback (GAuth.ReturnCode.Success)
 end
@@ -328,26 +336,31 @@ end
 function self:NotifyGroupEntryRemoved (groupId)
 	self.GroupEntries [groupId] = nil
 	self:DispatchEvent ("GroupEntryRemoved", groupId)
+	self:DispatchEvent ("PermissionsChanged")
 end
 
 function self:NotifyGroupPermissionChanged (groupId, actionId, access)
 	self.GroupEntries [groupId] = self.GroupEntries [groupId] or {}
 	self.GroupEntries [groupId] [actionId] = access
 	self:DispatchEvent ("GroupPermissionChanged", groupId, actionId, access)
+	self:DispatchEvent ("PermissionsChanged")
 end
 
 function self:NotifyInheritOwnerChanged (inheritOwner)
 	if not inheritOwner then self.OwnerId = self:GetOwner () end
 	self.InheritOwner = inheritOwner
 	self:DispatchEvent ("InheritOwnerChanged", inheritOwner)
+	self:DispatchEvent ("PermissionsChanged")
 end
 
 function self:NotifyInheritPermissionsChanged (inheritPermissions)
 	self.InheritPermissions = inheritPermissions
 	self:DispatchEvent ("InheritPermissionsChanged", inheritPermissions)
+	self:DispatchEvent ("PermissionsChanged")
 end
 
 function self:NotifyOwnerChanged (ownerId)
 	self.OwnerId = ownerId
 	self:DispatchEvent ("OwnerChanged", ownerId)
+	self:DispatchEvent ("PermissionsChanged")
 end

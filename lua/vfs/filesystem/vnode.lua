@@ -15,6 +15,11 @@ function self:ctor (name, parentFolder)
 	)
 	self.PermissionBlock:SetDisplayNameFunction (function () return self:GetDisplayPath () end)
 	self.PermissionBlock:SetNameFunction (function () return self:GetPath () end)
+	self.PermissionBlock:AddEventListener ("PermissionsChanged", tostring (self), function () self:DispatchEvent ("PermissionsChanged") end)
+	
+	VFS.PermissionBlockNetworker:HookBlock (self.PermissionBlock)
+	
+	self:AddEventListener ("Deleted", function () self:UnhookPermissionBlock () end)
 end
 
 function self:GetDisplayName ()
@@ -31,6 +36,18 @@ end
 
 function self:GetPermissionBlock ()
 	return self.PermissionBlock
+end
+
+function self:Rename (authId, name, callback)
+	callback = callback or VFS.NullCallback
+	
+	local oldName = self:GetName ()
+	if oldName == name then callback (VFS.ReturnCode.Success) return end
+	if not self:GetPermissionBlock ():IsAuthorized (authId, "Rename") then callback (VFS.ReturnCode.AccessDenied) return end
+	
+	self.Name = name
+	if self:GetParentFolder () then self:GetParentFolder ():RenameChild (authId, oldName, name) end
+	self:DispatchEvent ("Renamed", oldName, name)
 end
 
 function self:SetDisplayName (displayName)

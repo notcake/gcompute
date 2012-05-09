@@ -18,8 +18,11 @@ function self:HandleInitialPacket (inBuffer)
 						elseif returnCode == VFS.ReturnCode.Finished then
 							self:SendReturnCode (VFS.ReturnCode.Finished)
 							self:Close ()
+						elseif returnCode == VFS.ReturnCode.EndOfBurst then
 						else
 							self:SendReturnCode (returnCode)
+							self:SendReturnCode (VFS.ReturnCode.Finished)
+							self:Close ()
 						end
 					end
 				)
@@ -44,6 +47,14 @@ function self:SendReturnCode (returnCode, node)
 			outBuffer:String ("")
 		else
 			outBuffer:String (node:GetDisplayName ())
+		end
+		
+		-- Now the permission block (urgh)
+		local synchronizationTable = VFS.PermissionBlockNetworker:PreparePermissionBlockSynchronizationList (node:GetPermissionBlock ())
+		outBuffer:UInt16 (#synchronizationTable)
+		for _, session in ipairs (synchronizationTable) do
+			outBuffer:UInt32 (session:GetTypeId ())
+			session:GenerateInitialPacket (outBuffer)
 		end
 	end
 	

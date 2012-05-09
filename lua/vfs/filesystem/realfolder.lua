@@ -31,6 +31,10 @@ function self:GetDirectChild (authId, name, callback)
 	end
 end
 
+function self:GetDirectChildSynchronous (name)
+	return self.Children [name]
+end
+
 -- Internal callbacks
 function self:TFindCallback (searchPath, folders, files, callback)
 	-- 1. Check for deleted folders / files

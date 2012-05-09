@@ -23,6 +23,7 @@ function self:Init ()
 end
 
 function self:Remove ()
+	_R.Panel.Remove (self)
 end
 
 function self.DefaultComparator (a, b)

@@ -36,11 +36,12 @@ function self:HandlePacket (inBuffer)
 end
 
 function self:HandleTimeOut ()
-	self.Session:HandleTimeOut ()
+	if self.Session then self.Session:HandleTimeOut () end
 end
 
 function self:HasQueuedPackets ()
-	return self.Session:HasQueuedPackets ()
+	if self.Session then return self.Session:HasQueuedPackets () end
+	return false
 end
 
 function self:IsClosing ()
@@ -50,7 +51,7 @@ function self:IsClosing ()
 end
 
 function self:ResetTimeout ()
-	self.Session:ResetTimeout ()
+	if self.Session then self.Session:ResetTimeout () end
 end
 
 function self:ToString ()

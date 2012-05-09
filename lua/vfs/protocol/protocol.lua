@@ -15,16 +15,16 @@ function VFS.Protocol.RegisterResponse (packetType, ctor)
 	class.TypeId = VFS.Protocol.StringTable:HashFromString (packetType)
 end
 
-VFS.Net.RegisterChannel ("vfs_new_request",
+VFS.Net.RegisterChannel ("vfs_new_session",
 	function (senderId, inBuffer)
-		local client = VFS.NetServer:GetEndPoint (senderId)
+		local client = VFS.EndPointManager:GetEndPoint (senderId)
 		local requestId = inBuffer:UInt32 ()
 		local typeId = inBuffer:UInt32 ()
 		local packetType = VFS.Protocol.StringTable:StringFromHash (typeId)
 		
 		local ctor = VFS.Protocol.ResponseTable [packetType]
 		if not ctor then
-			ErrorNoHalt ("vfs_new_request : No handler for " .. tostring (packetType) .. " is registered!")
+			ErrorNoHalt ("vfs_new_session : No handler for " .. tostring (packetType) .. " is registered!")
 			return
 		end
 		local response = ctor ()
@@ -34,13 +34,7 @@ VFS.Net.RegisterChannel ("vfs_new_request",
 	end
 )
 
-VFS.Net.RegisterChannel ("vfs_request_data",
-	function (senderId, inBuffer)
-		local client = VFS.NetServer:GetEndPoint (senderId)
-	end
-)
-
-VFS.Net.RegisterChannel ("vfs_response_data",
+VFS.Net.RegisterChannel ("vfs_session_data",
 	function (senderId, inBuffer)
 		local client = VFS.EndPointManager:GetEndPoint (senderId)
 		client:HandleIncomingPacket (inBuffer:UInt32 (), inBuffer)

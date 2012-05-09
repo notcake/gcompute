@@ -1,7 +1,7 @@
 local self = {}
 VFS.NetFolder = VFS.MakeConstructor (self, VFS.IFolder, VFS.NetNode)
 
-function self:ctor (netClient, path, name, parentFolder)
+function self:ctor (endPoint, path, name, parentFolder)
 	self.FolderPath = self.Path .. "/"
 	if self.Path == "" then
 		self.FolderPath = ""
@@ -13,13 +13,15 @@ function self:ctor (netClient, path, name, parentFolder)
 end
 
 function self:CreatePredictedFolder (name)
-	self.Children [name] = VFS.NetFolder (self.NetClient, self.FolderPath .. name, name, self)
+	self.Children [name] = VFS.NetFolder (self.EndPoint, self.FolderPath .. name, name, self)
 	self.Children [name].Predicted = true
 	return self.Children [name]
 end
 
 function self:EnumerateChildren (authId, callback)
 	callback = callback or VFS.NullCallback
+	
+	if not self:GetPermissionBlock ():IsAuthorized (authId, "View Folder") then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	-- Enumerate received children
 	for _, node in pairs (self.Children) do
@@ -34,9 +36,10 @@ function self:EnumerateChildren (authId, callback)
 		
 		if not self.FolderListingRequest then
 			self.FolderListingRequest = VFS.Protocol.FolderListingRequest (self)
-			self.NetClient:StartSession (self.FolderListingRequest)
+			self.EndPoint:StartSession (self.FolderListingRequest)
 			
-			self.FolderListingRequest:AddEventListener ("ReceivedNodeInfo", function (request, nodeType, name, displayName)
+			self.FolderListingRequest:AddEventListener ("ReceivedNodeInfo", function (request, nodeType, name, displayName, inBuffer)
+				-- inBuffer contains the permission block data
 				local child = self.Children [name]
 				if child then
 					if child.Predicted then
@@ -44,15 +47,18 @@ function self:EnumerateChildren (authId, callback)
 					end
 				else
 					if nodeType & VFS.NodeType.Folder ~= 0 then
-						child = VFS.NetFolder (self.NetClient, self.FolderPath .. name, name, self)
-						D = child
+						child = VFS.NetFolder (self.EndPoint, self.FolderPath .. name, name, self)
 					elseif nodeType & VFS.NodeType.File ~= 0 then
-						child = VFS.NetFile (self.NetClient, self.FolderPath .. name, name, self)
+						child = VFS.NetFile (self.EndPoint, self.FolderPath .. name, name, self)
 					end
 					self.Children [name] = child
 				end
 				child:SetDisplayName (displayName or name)
+				
+				VFS.PermissionBlockNetworker:HandleNotificationForBlock (child:GetPermissionBlock (), inBuffer)
+				
 				request:DispatchEvent ("RunCallback", VFS.ReturnCode.Success, child)
+				return child
 			end)
 			
 			self.FolderListingRequest:AddEventListener ("TimedOut", function (request)
@@ -83,18 +89,24 @@ end
 function self:GetDirectChild (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
+	if not self:GetPermissionBlock ():IsAuthorized (authId, "View Folder") then callback (VFS.ReturnCode.AccessDenied) return end
+	
 	if self.Children [name] then
 		callback (VFS.ReturnCode.Success, self.Children [name])
 	elseif self.ReceivedChildren then
 		callback (VFS.ReturnCode.NotFound)
 	else
 		local folderChildRequest = VFS.Protocol.FolderChildRequest (self, name)
-		self.NetClient:StartSession (folderChildRequest)
+		self.EndPoint:StartSession (folderChildRequest)
 		
 		folderChildRequest:AddEventListener ("RunCallback", function (request, returnCode, node)
 			callback (returnCode, node)
 		end)
 	end
+end
+
+function self:GetDirectChildSynchronous (name)
+	return self.Children [name]
 end
 
 function self:MountLocal (name, node)
@@ -104,5 +116,12 @@ function self:MountLocal (name, node)
 		self.Children [name] = VFS.MountedFolder (name, node, self)
 	else
 		self.Children [name] = VFS.MountedFile (name, node, self)
+	end
+end
+
+function self:UnhookPermissionBlock ()
+	VFS.PermissionBlockNetworker:UnhookBlock (self:GetPermissionBlock ())
+	for _, node in pairs (self.Children) do
+		node:UnhookPermissionBlock ()
 	end
 end

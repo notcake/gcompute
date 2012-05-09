@@ -1,12 +1,11 @@
 local self = {}
-VFS.Protocol.NetClient = VFS.MakeConstructor (self, GLib.Protocol.EndPoint)
+VFS.Protocol.EndPoint = VFS.MakeConstructor (self, GLib.Protocol.EndPoint)
 
 function self:ctor (remoteId, systemName)
 	self.Root = VFS.NetFolder (self, "", "")
-	self.Root:FlagAsPredicted()
 	
-	self.DataChannel = "vfs_request_data"
-	self.NewSessionChannel = "vfs_new_request"
+	self.DataChannel = "vfs_session_data"
+	self.NewSessionChannel = "vfs_new_session"
 	self.NotificationChannel = "vfs_notification"
 end
 

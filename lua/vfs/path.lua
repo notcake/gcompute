@@ -5,7 +5,7 @@ function self:ctor (path)
 	if type (path) == "table" then
 		self.Path = path.Path
 		self.Segments = table.Copy (path.Segments)
-	else
+	elseif type (path) == "string" then
 		path = path:gsub ("\\", "/")
 		path = path:gsub ("//+", "/")
 		
@@ -15,6 +15,8 @@ function self:ctor (path)
 		else
 			self.Segments = self.Path:Split ("/")
 		end
+	else
+		VFS.Error ("Path:ctor : Invalid argument passed to constructor")
 	end
 end
 

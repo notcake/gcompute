@@ -100,7 +100,7 @@ function self:Remove ()
 		groupTreeNode:RemoveEventListener ("NodeRemoved", tostring (self))
 	end
 	
-	self.Menu:Remove ()
+	if self.Menu and self.Menu:IsValid () then self.Menu:Remove () end
 	_R.Panel.Remove (self)
 end
 

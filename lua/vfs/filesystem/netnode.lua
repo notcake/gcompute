@@ -1,8 +1,8 @@
 local self = {}
 VFS.NetNode = VFS.MakeConstructor (self, VFS.INode)
 
-function self:ctor (netClient, path, name, parentFolder)
-	self.NetClient = netClient
+function self:ctor (endPoint, path, name, parentFolder)
+	self.EndPoint = endPoint
 	self.Path = path
 	
 	self.Name = name
@@ -18,16 +18,11 @@ function self:ctor (netClient, path, name, parentFolder)
 	)
 	self.PermissionBlock:SetDisplayNameFunction (function () return self:GetDisplayPath () end)
 	self.PermissionBlock:SetNameFunction (function () return self:GetPath () end)
+	self.PermissionBlock:AddEventListener ("PermissionsChanged", tostring (self), function () self:DispatchEvent ("PermissionsChanged") end)
 	
-	self.Predicted = false
-end
-
-function self:ClearPredictedFlag ()
-	self.Predicted = false
-end
-
-function self:FlagAsPredicted ()
-	self.Predicted = true
+	VFS.PermissionBlockNetworker:HookRemoteBlock (self.PermissionBlock)
+	
+	self:AddEventListener ("Deleted", function () self:UnhookPermissionBlock () end)
 end
 
 function self:GetDisplayName ()

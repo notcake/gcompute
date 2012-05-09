@@ -56,6 +56,7 @@ function self:LoadFile (file)
 				fileStream:Read (fileStream:GetLength (),
 					function (returnCode, data)
 						self.CodeEditor:SetText (data)
+						fileStream:Close ()
 					end
 				)
 			end

@@ -2,19 +2,27 @@ local self = {}
 VFS.NetFolder = VFS.MakeConstructor (self, VFS.IFolder, VFS.NetNode)
 
 function self:ctor (endPoint, path, name, parentFolder)
-	self.FolderPath = self.Path .. "/"
-	if self.Path == "" then
-		self.FolderPath = ""
-	end
+	self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
 	
 	self.ReceivedChildren = false
 	self.FolderListingRequest = nil
 	self.Children = {}
+	self.LowercaseChildren = {}
+	
+	self:AddEventListener ("Renamed",
+		function ()
+			self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
+		end
+	)
 end
 
 function self:CreatePredictedFolder (name)
-	self.Children [name] = VFS.NetFolder (self.EndPoint, self.FolderPath .. name, name, self)
+	self.Children [name] = VFS.NetFolder (self.EndPoint, name, self)
 	self.Children [name].Predicted = true
+	self.LowercaseChildren [name:lower ()] = self.Children [name]
+	
+	self:DispatchEvent ("NodeCreated", self.Children [name])
+	
 	return self.Children [name]
 end
 
@@ -39,26 +47,9 @@ function self:EnumerateChildren (authId, callback)
 			self.EndPoint:StartSession (self.FolderListingRequest)
 			
 			self.FolderListingRequest:AddEventListener ("ReceivedNodeInfo", function (request, nodeType, name, displayName, inBuffer)
-				-- inBuffer contains the permission block data
-				local child = self.Children [name]
-				if child then
-					if child.Predicted then
-						child:ClearPredictedFlag ()
-					end
-				else
-					if nodeType & VFS.NodeType.Folder ~= 0 then
-						child = VFS.NetFolder (self.EndPoint, self.FolderPath .. name, name, self)
-					elseif nodeType & VFS.NodeType.File ~= 0 then
-						child = VFS.NetFile (self.EndPoint, self.FolderPath .. name, name, self)
-					end
-					self.Children [name] = child
-				end
-				child:SetDisplayName (displayName or name)
-				
-				VFS.PermissionBlockNetworker:HandleNotificationForBlock (child:GetPermissionBlock (), inBuffer)
-				
-				request:DispatchEvent ("RunCallback", VFS.ReturnCode.Success, child)
-				return child
+				self:ProcessChildInfo (nodeType, name, displayName, inBuffer)
+				request:DispatchEvent ("RunCallback", VFS.ReturnCode.Success, self.Children [name])
+				return self.Children [name]
 			end)
 			
 			self.FolderListingRequest:AddEventListener ("TimedOut", function (request)
@@ -93,30 +84,40 @@ function self:GetDirectChild (authId, name, callback)
 	
 	if self.Children [name] then
 		callback (VFS.ReturnCode.Success, self.Children [name])
+	elseif self:IsCaseInsensitive () and self.LowercaseChildren [name:lower ()] then
+		callback (VFS.ReturnCode.Success, self.LowercaseChildren [name:lower ()])
 	elseif self.ReceivedChildren then
 		callback (VFS.ReturnCode.NotFound)
 	else
-		local folderChildRequest = VFS.Protocol.FolderChildRequest (self, name)
+		local folderChildRequest = VFS.Protocol.FolderChildRequest (self, name,
+			function (returnCode, nodeType, name, displayName, inBuffer)
+				if returnCode == VFS.ReturnCode.Success then
+					self:ProcessChildInfo (nodeType, name, displayName, inBuffer)
+					callback (returnCode, self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [name:lower ()]))
+				else
+					callback (returnCode)
+				end
+			end
+		)
 		self.EndPoint:StartSession (folderChildRequest)
-		
-		folderChildRequest:AddEventListener ("RunCallback", function (request, returnCode, node)
-			callback (returnCode, node)
-		end)
 	end
 end
 
 function self:GetDirectChildSynchronous (name)
-	return self.Children [name]
+	return self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [name:lower ()] or nil)
+end
+
+function self:IsCaseSensitive ()
+	return false
 end
 
 function self:MountLocal (name, node)
 	if not node then return end
 
-	if node:IsFolder () then
-		self.Children [name] = VFS.MountedFolder (name, node, self)
-	else
-		self.Children [name] = VFS.MountedFile (name, node, self)
-	end
+	self.Children [name] = (node:IsFolder () and VFS.MountedFolder or VFS.MountedFile) (name, node, self)
+	self.LowercaseChildren [name:lower ()] = self.Children [name]
+	
+	self:DispatchEvent ("NodeCreated", self.Children [name])
 end
 
 function self:UnhookPermissionBlock ()
@@ -124,4 +125,28 @@ function self:UnhookPermissionBlock ()
 	for _, node in pairs (self.Children) do
 		node:UnhookPermissionBlock ()
 	end
+end
+
+-- Internal, do not call
+function self:ProcessChildInfo (nodeType, name, displayName, inBuffer)
+	-- inBuffer contains the permission block data
+	local child = self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [name:lower ()] or nil)
+	local newNode = false
+	if child then
+		child:ClearPredictedFlag ()
+	else
+		newNode = true
+		if nodeType & VFS.NodeType.Folder ~= 0 then
+			child = VFS.NetFolder (self.EndPoint, name, self)
+		elseif nodeType & VFS.NodeType.File ~= 0 then
+			child = VFS.NetFile (self.EndPoint, name, self)
+		end
+		self.Children [name] = child
+		self.LowercaseChildren [name:lower ()] = child
+	end
+	child:SetDisplayName (displayName or name)
+	
+	VFS.PermissionBlockNetworker:HandleNotificationForBlock (child:GetPermissionBlock (), inBuffer)
+	if newNode then self:DispatchEvent ("NodeCreated", self.Children [name]) end
+	return self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [name:lower ()] or nil)
 end

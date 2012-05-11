@@ -1,6 +1,6 @@
 VFS.OpenFlags =
 {
-	ReadOnly	= 0,
-	Write		= 1,
-	Overwrite	= 2
+	Read      = 0,
+	Write     = 1,
+	Overwrite = 2
 }

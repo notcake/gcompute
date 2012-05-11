@@ -5,6 +5,8 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 end
 
 function self:Open (authId, openFlags, callback)
+	callback = callback or VFS.NullCallback
+
 	self.MountedNode:Open (authId, openFlags,
 		function (returnCode, fileStream)
 			if returnCode == VFS.ReturnCode.Success then

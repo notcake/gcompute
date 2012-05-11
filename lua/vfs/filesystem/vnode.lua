@@ -41,6 +41,9 @@ end
 function self:Rename (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
+	name = VFS.SanifyNodeName (name)
+	if not name then callback (VFS.ReturnCode.AccessDenied) return end
+	
 	local oldName = self:GetName ()
 	if oldName == name then callback (VFS.ReturnCode.Success) return end
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Rename") then callback (VFS.ReturnCode.AccessDenied) return end

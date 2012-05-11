@@ -5,7 +5,7 @@ function self:ctor (path, name, parentFolder)
 end
 
 function self:GetSize ()
-	return (file.Read (self.Path, true) or ""):len ()
+	return (file.Read (self:GetPath (), true) or ""):len ()
 end
 
 function self:Open (authId, openFlags, callback)

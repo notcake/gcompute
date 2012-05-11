@@ -3,13 +3,13 @@ local self = {}
 --[[
 	Events
 	
-	FileSelected (IFile file)
+	SelectedFileChanged (IFile file)
 		Fired when a file is selected from the list.
-	FolderSelected (IFolder folder)
+	SelectedFolderChanged (IFolder folder)
 		Fired when a folder is selected from the list.
 	NodeOpened (INode node)
 		Fired when a file or folder is double clicked.
-	NodeSelected (INode node)
+	SelectedNodeChanged (INode node)
 		Fired when a file or folder is selected from the list.
 ]]
 
@@ -31,10 +31,12 @@ function self:Init ()
 			if self.Folder and self.Folder:IsFolder () then
 				local permissionBlock = self.Folder:GetPermissionBlock ()
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
-				self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
+				self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
+				self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0 or not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Rename"))
 			else
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
+				self.Menu:FindItem ("Rename"):SetDisabled (true)
 			end
 		end
 	)
@@ -57,6 +59,19 @@ function self:Init ()
 			end
 		end
 	):SetIcon ("gui/g_silkicons/cross")
+	self.Menu:AddOption ("Rename",
+		function (targetNodes)
+			if not targetNodes then return end
+			if #targetNodes == 0 then return end
+			Derma_StringRequest ("Rename " .. targetNodes [1]:GetName () .. "...", "Enter " .. targetNodes [1]:GetName () .. "'s new name:", targetNodes [1]:GetName (),
+				function (name)
+					name = VFS.SanifyNodeName (name)
+					if not name then return end
+					targetNodes [1]:Rename (GAuth.GetLocalId (), name)
+				end
+			)
+		end
+	):SetIcon ("gui/g_silkicons/pencil")
 	self.Menu:AddSeparator ()
 	self.Menu:AddOption ("Permissions",
 		function (targetNodes)
@@ -74,6 +89,20 @@ function self:Init ()
 			self:DispatchEvent ("NodeOpened", item.Node)
 		end
 	)
+	
+	self:AddEventListener ("SelectionChanged",
+		function (_, item)
+			local node = item and item.Node
+			self:DispatchEvent ("SelectedNodeChanged", node)
+			self:DispatchEvent ("SelectedFileChanged", node and node:IsFile () and node or nil)
+			self:DispatchEvent ("SelectedFolderChanged", node and node:IsFolder () and node or nil)
+		end
+	)
+end
+
+function self:Remove ()
+	self:SetFolder (nil)
+	_R.Panel.Remove (self)
 end
 
 function self.DefaultComparator (a, b)
@@ -93,6 +122,21 @@ function self:GetPath ()
 	return self.Folder:GetPath ()
 end
 
+function self:GetSelectedFile ()
+	local node = self:GetSelectedNode ()
+	return node:IsFile () and node or nil
+end
+
+function self:GetSelectedFolder ()
+	local node = self:GetSelectedNode ()
+	return node:IsFolder () and node or nil
+end
+
+function self:GetSelectedNode ()
+	local item = self.SelectionController:GetSelectedItem ()
+	return item and item.Node or nil
+end
+
 function self:GetSelectedNodes ()
 	local selectedNodes = {}
 	for _, item in ipairs (self.SelectionController:GetSelectedItems ()) do
@@ -108,15 +152,7 @@ function self:MergeRefresh ()
 			if self.Folder ~= folder then return end
 			
 			if returnCode == VFS.ReturnCode.Success then
-				if self.ChildNodes [node:GetName ()] then return end
-				
-				local listViewItem = self:AddLine (node:GetName ())
-				listViewItem:SetText (node:GetDisplayName ())
-				listViewItem.Node = node
-				self:UpdateIcon (listViewItem)
-				listViewItem.IsFolder = node:IsFolder ()
-				
-				self.ChildNodes [node:GetName ()] = listViewItem
+				self:AddNode (node)
 			elseif returnCode == VFS.ReturnCode.EndOfBurst then
 				self:Sort ()
 			elseif returnCode == VFS.ReturnCode.AccessDenied then
@@ -148,6 +184,8 @@ function self:MergeRefresh ()
 end
 
 function self:SetFolder (folder)
+	if self.Folder == folder then return end
+
 	self:Clear ()
 	self.ChildNodes = {}
 	if self.Folder then
@@ -168,6 +206,8 @@ function self:SetFolder (folder)
 			self.ChildNodes [newName] = self.ChildNodes [oldName]
 			self.ChildNodes [newName]:SetText (node:GetDisplayName ())
 			self.ChildNodes [oldName] = nil
+			
+			self:Sort ()
 		end
 	)
 	
@@ -198,12 +238,30 @@ end
 function self:SetPath (path)
 	VFS.Root:GetChild (GAuth.GetLocalId (), path,
 		function (returnCode, node)
-			self:SetFolder (node)
+			if node:IsFolder () then
+				self:SetFolder (node)
+			else
+				self:SetFolder (node:GetParentFolder ())
+				self:AddNode (node):Select ()
+			end
 		end
 	)
 end
 
 -- Internal, do not call
+function self:AddNode (node)
+	if self.ChildNodes [node:GetName ()] then return end
+	
+	local listViewItem = self:AddLine (node:GetName ())
+	listViewItem:SetText (node:GetDisplayName ())
+	listViewItem.Node = node
+	self:UpdateIcon (listViewItem)
+	listViewItem.IsFolder = node:IsFolder ()
+	
+	self.ChildNodes [node:GetName ()] = listViewItem
+	return listViewItem
+end
+
 function self:UpdateIcon (listViewItem)
 	local node = listViewItem.Node
 	if node:IsFolder () then

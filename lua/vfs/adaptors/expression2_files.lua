@@ -56,7 +56,7 @@ usermessage.GetTable () ["wire_expression2_request_file"] =
 			function (returnCode, node)
 				if returnCode == VFS.ReturnCode.Success then
 					if node:IsFile () then
-						node:Open (GAuth.GetLocalId (), VFS.OpenFlags.ReadOnly,
+						node:Open (GAuth.GetLocalId (), VFS.OpenFlags.Read,
 							function (returnCode, filestream)
 								if returnCode == VFS.ReturnCode.Success then
 									filestream:Read (filestream:GetLength (),

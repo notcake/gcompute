@@ -8,12 +8,30 @@ function self:ctor (path)
 	elseif type (path) == "string" then
 		path = path:gsub ("\\", "/")
 		path = path:gsub ("//+", "/")
+		if path:sub (-1, -1) == "/" then path = path:sub (1, -2) end
 		
 		self.Path = path
-		if self.Path == "" then
-			self.Segments = {}
-		else
-			self.Segments = self.Path:Split ("/")
+		local needsReformatting = false
+		self.Segments = {}
+		if self.Path ~= "" then
+			for _, segment in ipairs (self.Path:Split ("/")) do
+				if segment == "." then
+					needsReformatting = true
+				elseif segment == ".." then
+					if #self.Segments == 0 then
+						self.Segments [#self.Segments + 1] = segment
+					else
+						needsReformatting = true
+						self.Segments [#self.Segments] = nil
+					end
+				else
+					self.Segments [#self.Segments + 1] = segment
+				end
+			end
+		end
+		
+		if needsReformatting then
+			self.Path = table.concat (self.Segments, "/")
 		end
 	else
 		VFS.Error ("Path:ctor : Invalid argument passed to constructor")
@@ -28,7 +46,7 @@ function self:GetEnumerator ()
 	end
 end
 
-function self:GetPathString ()
+function self:GetPath ()
 	return self.Path
 end
 

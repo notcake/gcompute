@@ -37,7 +37,7 @@ function self:DispatchEvent (eventName, ...)
 		for callbackName, callback in pairs (self.EventListeners [eventName]) do
 			local success, r0, r1, r2 = pcall (callback, ...)
 			if not success then
-				ErrorNoHalt ("Error in hook " .. eventName .. ": " .. tostring (callbackName) .. ": " .. tostring (r0))
+				ErrorNoHalt ("Error in hook " .. eventName .. ": " .. tostring (callbackName) .. ": " .. tostring (r0) .. "\n")
 			else
 				a = a or r0
 				b = b or r1
@@ -54,7 +54,7 @@ function self:DispatchEvent (eventName, ...)
 		if parent then
 			local success, r0, r1, r2 = pcall (parent.DispatchEvent, parent, eventName, ...)
 			if not success then
-				ErrorNoHalt ("Error in hook " .. eventName .. ": Parent: " .. tostring (r0))
+				ErrorNoHalt ("Error in hook " .. eventName .. ": Parent: " .. tostring (r0) .. "\n")
 			else
 				a = a or r0
 				b = b or r1

@@ -50,7 +50,7 @@ end
 
 -- Interface
 function self:LoadFile (file)
-	file:Open (GAuth.GetLocalId (), VFS.OpenFlags.ReadOnly,
+	file:Open (GAuth.GetLocalId (), VFS.OpenFlags.Read,
 		function (returnCode, fileStream)
 			if returnCode == VFS.ReturnCode.Success then
 				fileStream:Read (fileStream:GetLength (),

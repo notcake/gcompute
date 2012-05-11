@@ -1,9 +1,8 @@
 local self = {}
 VFS.NetNode = VFS.MakeConstructor (self, VFS.INode)
 
-function self:ctor (endPoint, path, name, parentFolder)
+function self:ctor (endPoint, name, parentFolder)
 	self.EndPoint = endPoint
-	self.Path = path
 	
 	self.Name = name
 	self.DisplayName = self.Name

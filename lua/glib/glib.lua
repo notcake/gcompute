@@ -57,6 +57,21 @@ elseif CLIENT then
 end
 GLib.AddReloadCommand ("glib/glib.lua", "glib", "GLib")
 
+function GLib.EnumerateDelayed (tbl, callback, finishCallback)
+	if not callback then return end
+
+	local next, tbl, key = pairs (tbl)
+	local value = nil
+	local function timerCallback ()
+		key, value = next (tbl, key)
+		if not key and finishCallback then finishCallback () return end
+		callback (key, value)
+		if not key then return end
+		timer.Simple (0, timerCallback)
+	end
+	timer.Simple (0, timerCallback)
+end
+
 function GLib.Error (message)
 	ErrorNoHalt (message .. "\n")
 	GLib.PrintStackTrace ()

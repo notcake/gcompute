@@ -4,7 +4,6 @@ VFS.RealNode = VFS.MakeConstructor (self, VFS.INode)
 function self:ctor (path, name, parentFolder)
 	self.Name = name
 	self.ParentFolder = parentFolder
-	self.Path = path
 end
 
 function self:GetName ()
@@ -17,4 +16,28 @@ end
 
 function self:GetPermissionBlock ()
 	return nil
+end
+
+function self:Rename (authId, name, callback)
+	callback = callback or VFS.NullCallback
+	if self:GetName () == name then callback (VFS.ReturnCode.Success) return end
+	if not self:GetParentFolder () then callback (VFS.ReturnCode.AccessDenied) return end
+
+	if self:IsFolder () then callback (VFS.ReturnCode.AccessDenied) return end
+	if self:GetPath ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
+	name = VFS.SanifyNodeName (name)
+	if not name then callback (VFS.ReturnCode.AccessDenied) return end
+	if name:sub (-4, -1) ~= ".txt" then name = name .. ".txt" end
+	
+	local oldName = self:GetName ()
+	local newPath = self:GetParentFolder ().FolderPath .. name
+	if file.Exists (newPath, true) then callback (VFS.ReturnCode.AlreadyExists) return end
+	file.Write (newPath:sub (6), file.Read (self:GetPath (), true))
+	if not file.Exists (newPath, true) then callback (VFS.ReturnCode.AccessDenied) return end
+	file.Delete (self:GetPath ():sub (6))
+	self.Name = name
+	
+	self:GetParentFolder ():RenameChild (authId, oldName, name)
+	self:DispatchEvent ("Renamed", oldName, name)
+	callback (VFS.ReturnCode.Success)
 end

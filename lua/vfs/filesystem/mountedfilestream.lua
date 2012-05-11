@@ -3,8 +3,6 @@ VFS.MountedFileStream = VFS.MakeConstructor (self, VFS.IFileStream)
 
 function self:ctor (mountedFile, fileStream)
 	self.File = mountedFile
-	self.DisplayPath = self.File:GetDisplayPath ()
-	self.Path = self.File:GetPath ()
 	self.FileStream = fileStream
 end
 
@@ -17,11 +15,11 @@ function self:GetLength ()
 end
 
 function self:GetDisplayPath ()
-	return self.DisplayPath
+	return self.File:GetDisplayPath ()
 end
 
 function self:GetPath ()
-	return self.Path
+	return self.File:GetPath ()
 end
 
 function self:GetPos ()

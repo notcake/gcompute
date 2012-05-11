@@ -5,8 +5,6 @@ function self:ctor (fileOpenRequest, netFile, length)
 	self.File = netFile
 	self.Session = fileOpenRequest
 	
-	self.DisplayPath = self.File:GetDisplayPath ()
-	self.Path = self.File:GetPath ()
 	self.Length = length
 	
 	self.Contents = ""
@@ -19,7 +17,7 @@ function self:Close ()
 end
 
 function self:GetDisplayPath ()
-	return self.DisplayPath
+	return self.File:GetDisplayPath ()
 end
 
 function self:GetFile ()
@@ -31,7 +29,7 @@ function self:GetLength ()
 end
 
 function self:GetPath ()
-	return self.Path
+	return self.File:GetPath ()
 end
 
 function self:Read (size, callback)

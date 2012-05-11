@@ -12,7 +12,6 @@ VFS.Protocol.FileStreamAction =
 function self:ctor (file, openFlags, callback)
 	self.Callback = callback or VFS.NullCallback
 	self.File = file
-	self.Path = file:GetPath ()
 	self.OpenFlags = openFlags
 	self.FileStream = nil
 	
@@ -35,7 +34,7 @@ function self:CloseStream ()
 end
 
 function self:GenerateInitialPacket (outBuffer)
-	outBuffer:String (self.Path)
+	outBuffer:String (self.File:GetPath ())
 	outBuffer:UInt8 (self.OpenFlags)
 end
 
@@ -46,7 +45,7 @@ function self:HandlePacket (inBuffer)
 			local length = inBuffer:UInt32 ()
 			self.FileStream = VFS.NetFileStream (self, self.File, length)
 			self.Callback (returnCode, self.FileStream)
-			ErrorNoHalt ("Opened netfile " .. self.Path .. "\n")
+			ErrorNoHalt ("Opened netfile " .. self.File:GetPath () .. "\n")
 
 			function self:HasTimedOut ()
 				return false

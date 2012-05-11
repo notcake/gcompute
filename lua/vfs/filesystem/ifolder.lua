@@ -75,6 +75,8 @@ end
 		Creates a node at the given path, relative to this folder
 ]]
 function self:CreateNode (authId, path, isFolder, callback)
+	callback = callback or VFS.NullCallback
+
 	local path = VFS.Path (path)
 	
 	if path:IsEmpty () then
@@ -240,4 +242,35 @@ end
 
 function self:GetNodeType ()
 	return VFS.NodeType.Folder
+end
+
+--[[
+	IFolder:IsCaseInsensitive ()
+		Returns: boolean caseSensitive
+		
+		Returns whether the files and folders in this folder have case
+		sensitive names.
+		
+		Do not implement this, implement IFolder:IsCaseSensitive instead
+]]
+function self:IsCaseInsensitive ()
+	return not self:IsCaseSensitive ()
+end
+
+function self:IsCaseSensitive ()
+	return true
+end
+
+function self:OpenFile (authId, path, openFlags, callback)
+	local write = openFlags & VFS.OpenFlags.Write != 0
+	(write and self.CreateFile or self.GetChild) (self, authId, path,
+		function (returnCode, node)
+			if returnCode == VFS.ReturnCode.Success then
+				if not node:IsFile () then callback (VFS.ReturnCode.NotAFile) return end
+				node:Open (authId, openFlags, callback)
+			else
+				callback (returnCode)
+			end
+		end
+	)
 end

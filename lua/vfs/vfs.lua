@@ -45,19 +45,29 @@ include ("filesystem/mountedfilestream.lua")
 include ("protocol/protocol.lua")
 include ("protocol/fileopenrequest.lua")
 include ("protocol/fileopenresponse.lua")
+include ("protocol/folderchildrequest.lua")
+include ("protocol/folderchildresponse.lua")
 include ("protocol/folderlistingrequest.lua")
 include ("protocol/folderlistingresponse.lua")
 
 include ("protocol/endpoint.lua")
 include ("protocol/endpointmanager.lua")
 
-include ("adaptors/expression2_files.lua")
-
 if CLIENT then
 	VFS.IncludeDirectory ("vfs/ui")
+	include ("adaptors/expression2_editor.lua")
+	include ("adaptors/expression2_files.lua")
 end
 
 VFS.AddReloadCommand ("vfs/vfs.lua", "vfs")
+
+function VFS.SanifyNodeName (segment)
+	segment = segment:gsub ("\\", "_")
+	segment = segment:gsub ("/", "_")
+	if segment == "." then return nil end
+	if segment == ".." then return nil end
+	return segment
+end
 
 --[[
 	Server:
@@ -84,6 +94,7 @@ VFS.Root:MarkPredicted ()
 VFS.PermissionDictionary = GAuth.PermissionDictionary ()
 VFS.PermissionDictionary:AddPermission ("Delete")
 VFS.PermissionDictionary:AddPermission ("Read")
+VFS.PermissionDictionary:AddPermission ("Rename")
 VFS.PermissionDictionary:AddPermission ("View Folder")
 VFS.PermissionDictionary:AddPermission ("Write")
 VFS.Root:GetPermissionBlock ():SetPermissionDictionary (VFS.PermissionDictionary)
@@ -96,6 +107,7 @@ VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner"
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Create Folder",      GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Delete",             GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Read",               GAuth.Access.Allow)
+VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Rename",             GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "View Folder",        GAuth.Access.Allow)
 VFS.Root:ClearPredictedFlag ()
 
@@ -104,6 +116,12 @@ if SERVER then
 		function (returnCode, folder)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Allow)
+			
+			VFS.RealRoot:GetChild (GAuth.GetSystemId (), "data/adv_duplicator/=Public Folder=",
+				function (returnCode, node)
+					folder:Mount ("adv_duplicator", node, "adv_duplicator")
+				end
+			)
 		end
 	)
 
@@ -167,7 +185,10 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 					"data/CPUChip",
 					"data/e2files",
 					"data/Expression2",
-					"data/GPUChip"
+					"data/ExpressionGate",
+					"data/GPUChip",
+					"data/SPUChip",
+					"data/Starfall"
 				}
 				for _, realPath in ipairs (mountPaths) do
 					VFS.RealRoot:GetChild (GAuth.GetSystemId (), realPath,
@@ -192,6 +213,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Create Folder",      GAuth.Access.Allow)
 		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Delete",             GAuth.Access.Allow)
 		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Read",               GAuth.Access.Allow)
+		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Rename",             GAuth.Access.Allow)
 		folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "View Folder",        GAuth.Access.Allow)
 		folder:ClearPredictedFlag ()
 	end

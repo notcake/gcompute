@@ -4,11 +4,10 @@ VFS.Protocol.FolderListingRequest = VFS.MakeConstructor (self, VFS.Protocol.Sess
 
 function self:ctor (folder)
 	self.Folder = folder
-	self.Path = folder:GetPath ()
 end
 
 function self:GenerateInitialPacket (outBuffer)
-	outBuffer:String (self.Path)
+	outBuffer:String (self.Folder:GetPath ())
 end
 
 function self:HandlePacket (inBuffer)

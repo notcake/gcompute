@@ -32,7 +32,7 @@ elseif CLIENT then
 		if GLib.Net.IsChannelOpen (channelName) then
 			datastream.StreamToServer (channelName, packet.Data)
 		else
-			ErrorNoHalt ("GLib.Net : Channel " .. channelName .. " is not open.")
+			ErrorNoHalt ("GLib.Net : Channel " .. channelName .. " is not open.\n")
 		end
 	end
 end

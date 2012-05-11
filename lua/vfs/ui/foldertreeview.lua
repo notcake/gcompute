@@ -3,6 +3,8 @@ local self = {}
 --[[
 	Events
 	
+	FileOpened (IFile file)
+		Fired when the user tries to open a file.
 	SelectedFolderChanged (IFolder folder)
 		Fired when the selected folder is changed.
 	SelectedNodeChanged (INode node)
@@ -25,6 +27,13 @@ function self:Init ()
 	self:Populate (VFS.Root, self.FilesystemRootNode)
 	self.FilesystemRootNode:Select ()
 	self.FilesystemRootNode:SetExpanded (true)
+	self:AddEventListener ("DoubleClick",
+		function ()
+			local file = self:GetSelectedFile ()
+			if not file then return end
+			self:DispatchEvent ("FileOpened", file)
+		end
+	)
 	self:AddEventListener ("ItemSelected",
 		function (tree, treeViewNode)
 			self:DispatchEvent ("SelectedFolderChanged", self:GetSelectedFolder ())
@@ -47,24 +56,42 @@ function self:Init ()
 			end
 			
 			if not targetItem then
+				self.Menu:FindItem ("Open"):SetVisible (false)
+				self.Menu:FindItem ("OpenSeparator"):SetVisible (false)
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
+				self.Menu:FindItem ("Rename"):SetDisabled (true)
 				self.Menu:FindItem ("Permissions"):SetDisabled (true)
 				return
 			end
 			
+			self.Menu:FindItem ("Open"):SetVisible (targetItem:IsFile ())
+			self.Menu:FindItem ("OpenSeparator"):SetVisible (targetItem:IsFile ())
+			
 			local permissionBlock = targetItem:GetPermissionBlock ()
 			if not permissionBlock then
+				self.Menu:FindItem ("Open"):SetDisabled (not targetItem:IsFile ())
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not targetItem:IsFolder ())
 				self.Menu:FindItem ("Delete"):SetDisabled (false)
+				self.Menu:FindItem ("Rename"):SetDisabled (false)
 			else
+				self.Menu:FindItem ("Open"):SetDisabled (not targetItem:IsFile () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Read"))
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
+				self.Menu:FindItem ("Rename"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Rename"))
 				self.Menu:FindItem ("Delete"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
 			end
 			self.Menu:FindItem ("Permissions"):SetDisabled (not permissionBlock)
 		end
 	)
 	
+	self.Menu:AddOption ("Open",
+		function (node)
+			if not node then return end
+			if not node:IsFile () then return end
+			self:DispatchEvent ("FileOpened", node)
+		end
+	):SetIcon ("gui/g_silkicons/page_go")
+	self.Menu:AddSeparator ("OpenSeparator")
 	self.Menu:AddOption ("Create Folder",
 		function (node)
 			if not node then return end
@@ -82,6 +109,18 @@ function self:Init ()
 			node:Delete (GAuth.GetLocalId ())
 		end
 	):SetIcon ("gui/g_silkicons/cross")
+	self.Menu:AddOption ("Rename",
+		function (node)
+			if not node then return end
+			Derma_StringRequest ("Rename " .. node:GetName () .. "...", "Enter " .. node:GetName () .. "'s new name:", node:GetName (),
+				function (name)
+					name = VFS.SanifyNodeName (name)
+					if not name then return end
+					node:Rename (GAuth.GetLocalId (), name)
+				end
+			)
+		end
+	):SetIcon ("gui/g_silkicons/pencil")
 	self.Menu:AddSeparator ()
 	self.Menu:AddOption ("Permissions",
 		function (node)
@@ -112,11 +151,18 @@ function self.DefaultComparator (a, b)
 	return a:GetText ():lower () < b:GetText ():lower ()
 end
 
+function self:GetSelectedFile ()
+	local item = self:GetSelectedItem ()
+	if not item then return end
+	if not item.Node then return end
+	return item.Node:IsFile () and item.Node or nil
+end
+
 function self:GetSelectedFolder ()
 	local item = self:GetSelectedItem ()
 	if not item then return end
 	if not item.Node then return end
-	return item.Node:IsFolder () and item.Node or nil
+	return item.Node:IsFolder () and item.Node or item.Node:GetParentFolder ()
 end
 
 function self:GetSelectedNode ()
@@ -128,19 +174,32 @@ end
 function self:Populate (filesystemNode, treeViewNode)
 	treeViewNode.AddedNodes = treeViewNode.AddedNodes or {}
 	treeViewNode:SetIcon ("gui/g_silkicons/folder_explore")
+	treeViewNode:SuppressLayout (true)
+	local lastLayout = SysTime ()
 	filesystemNode:EnumerateChildren (GAuth.GetLocalId (),
 		function (returnCode, node)
+			if not self:IsValid () then return end
 			if returnCode == VFS.ReturnCode.Success then
 				self:AddFilesystemNode (treeViewNode, node)
+				
+				-- Relayout the node at intervals
+				-- if we do this every time a node is added, it creates
+				-- excessive framerate drops.
+				if treeViewNode:GetChildCount () < 10 or SysTime () - lastLayout > 0.2 then
+					treeViewNode:SuppressLayout (false)
+					lastLayout = SysTime ()
+				else
+					treeViewNode:SuppressLayout (true)
+				end
 			elseif returnCode == VFS.ReturnCode.EndOfBurst then		
 				self:LayoutNode (treeViewNode)
 				treeViewNode:SortChildren ()
 			elseif returnCode == VFS.ReturnCode.AccessDenied then
+				treeViewNode.CanView = treeViewNode:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
 				treeViewNode:MarkUnpopulated ()
 				treeViewNode:SetIcon ("gui/g_silkicons/folder_delete")
 			elseif returnCode == VFS.ReturnCode.Finished then
 				treeViewNode:SetIcon ("gui/g_silkicons/folder")
-						
 				self:LayoutNode (treeViewNode)
 	
 				self.SubscribedNodes [#self.SubscribedNodes + 1] = filesystemNode
@@ -154,14 +213,15 @@ function self:Populate (filesystemNode, treeViewNode)
 				)
 				
 				filesystemNode:AddEventListener ("NodeDeleted", tostring (self),
-					function (_, deletedNode)					
-						local childNode = treeViewNode:FindChild (deletedNode:GetName ())
+					function (_, deletedNode)
+						local childNode = treeViewNode.AddedNodes [deletedNode:GetName ()]
 						deletedNode:RemoveEventListener ("NodeCreated", tostring (self))
 						deletedNode:RemoveEventListener ("NodeDeleted", tostring (self))
 						treeViewNode.AddedNodes [deletedNode:GetName ()] = nil
-						treeViewNode:RemoveNode (childNode)
-						
-						self:LayoutNode (treeViewNode)
+						if childNode then
+							treeViewNode:RemoveNode (childNode)
+							self:LayoutNode (treeViewNode)
+						end
 					end
 				)
 			end
@@ -173,26 +233,37 @@ function self:Populate (filesystemNode, treeViewNode)
 			local childNode = treeViewNode.AddedNodes [node:GetName ()]
 			if not childNode then return end
 			
-			if node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder") then
-				childNode:SetIcon ("gui/g_silkicons/folder")
-				childNode:SetExpandable (true)
-				childNode:MarkUnpopulated ()
+			local canView = node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), node:IsFolder () and "View Folder" or "Read")
+			if childNode.CanView == canView then return end
+			childNode.CanView = canView
+			
+			if node:IsFolder () then
+				if canView then
+					childNode:SetIcon ("gui/g_silkicons/folder")
+					childNode:SetExpandable (true)
+					childNode:MarkUnpopulated ()
+				else
+					childNode:SetIcon ("gui/g_silkicons/folder_delete")
+					childNode.AddedNodes = {}
+					childNode:Clear ()
+					childNode:SetExpanded (false)
+					childNode:SetExpandable (false)
+					childNode:MarkUnpopulated ()
+				end
 			else
-				childNode:SetIcon ("gui/g_silkicons/folder_delete")
-				childNode.AddedNodes = {}
-				childNode:Clear ()
-				childNode:SetExpanded (false)
-				childNode:SetExpandable (false)
-				childNode:MarkUnpopulated ()
+				childNode:SetIcon (canView and "gui/g_silkicons/page" or "gui/g_silkicons/page_delete")
 			end
 		end
 	)
 	
 	filesystemNode:AddEventListener ("NodeRenamed", tostring (self),
 		function (_, node, oldName, newName)
+			if not treeViewNode.AddedNodes [oldName] then return end
 			treeViewNode.AddedNodes [newName] = treeViewNode.AddedNodes [oldName]
 			treeViewNode.AddedNodes [newName]:SetText (node:GetDisplayName ())
 			treeViewNode.AddedNodes [oldName] = nil
+			
+			self:SortChildren ()
 		end
 	)
 end
@@ -200,11 +271,19 @@ end
 function self:SelectPath (path)
 	self:ResolvePath (self.FilesystemRootNode, path,
 		function (returnCode, treeViewNode)
+			ErrorNoHalt ("FolderTreeView:SelectPath : Trying " .. path .. "\n")
 			if not treeViewNode then return end
+			ErrorNoHalt ("FolderTreeView:SelectPath :" .. treeViewNode.Node:GetPath () .. "\n")
 			treeViewNode:Select ()
 			treeViewNode:ExpandTo (true)
 		end
 	)
+end
+
+self.SetPath = self.SelectPath
+
+function self:SetShowFiles (showFiles)
+	self.ShowFiles = showFiles
 end
 
 -- Internal, do not call
@@ -217,15 +296,16 @@ function self:AddFilesystemNode (treeViewNode, filesystemNode)
 	local childNode = treeViewNode:AddNode (filesystemNode:GetName ())
 	childNode:SetExpandable (filesystemNode:IsFolder ())
 	childNode:SetText (filesystemNode:GetDisplayName ())
+	childNode.CanView = filesystemNode:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), filesystemNode:IsFolder () and "View Folder" or "Read")
 	if filesystemNode:IsFolder () then
-		if filesystemNode:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder") then
+		if childNode.CanView then
 			childNode:SetIcon ("gui/g_silkicons/folder")
 		else
 			childNode:SetIcon ("gui/g_silkicons/folder_delete")
 			childNode:SetExpandable (false)
 		end
 	else
-		childNode:SetIcon ("gui/g_silkicons/page")
+		childNode:SetIcon (childNode.CanView and "gui/g_silkicons/page" or "gui/g_silkicons/page_delete")
 	end
 	childNode.Node = filesystemNode
 	childNode.IsFolder = filesystemNode:IsFolder ()
@@ -250,7 +330,7 @@ function self:ResolvePath (treeViewNode, path, callback)
 	
 	local path = VFS.Path (path)
 	
-	if path:IsEmpty () then callback (treeViewNode) return end
+	if path:IsEmpty () then callback (VFS.ReturnCode.Success, treeViewNode) return end
 	
 	local segment = path:GetSegment (0)
 	path:RemoveFirstSegment ()
@@ -265,9 +345,13 @@ function self:ResolvePath (treeViewNode, path, callback)
 		treeViewNode.Node:GetDirectChild (GAuth.GetLocalId (), segment,
 			function (returnCode, node)
 				if returnCode == VFS.ReturnCode.Success then
+					if node:IsFile () and not self.ShowFiles then
+						callback (VFS.NotAFolder, node)
+						return
+					end
 					local childNode = self:AddFilesystemNode (treeViewNode, node)
 					if path:IsEmpty () then
-						callback (returnCode, treeViewNode)
+						callback (returnCode, childNode)
 					elseif node:IsFolder () then
 						self:ResolvePath (childNode, path, callback)
 					else

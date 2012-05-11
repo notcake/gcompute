@@ -7,11 +7,7 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 	self.MountedNode = mountedNode
 	self.ParentFolder = parentFolder
 	
-	self.MountedNode:AddEventListener ("Deleted", tostring (self),
-		function (_)
-			self:DispatchEvent ("Deleted")
-		end
-	)
+	self.MountedNode:AddEventListener ("Deleted", tostring (self), function (_) self:DispatchEvent ("Deleted") end)
 	self.MountedNode:AddEventListener ("PermissionsChanged", function () self:DispatchEvent ("PermissionsChanged") end)
 	self.MountedNode:AddEventListener ("Renamed", tostring (self),
 		function (_, oldName, newName)
@@ -62,21 +58,47 @@ end
 function self:Rename (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
+	name = VFS.SanifyNodeName (name)
+	if not name then callback (VFS.ReturnCode.AccessDenied) return end
+	
 	local oldName = self:GetName ()
 	if oldName == name then callback (VFS.ReturnCode.Success) return end
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Rename") then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	if self.NameOverride then
-		self.NameOverride = name
-		if self:GetParentFolder () then self:GetParentFolder ():RenameChild (authId, oldName, name) end
-		self:DispatchEvent ("Renamed", oldName, name)
-		callback (VFS.ReturnCode.Success)
+		if self:GetParentFolder () then
+			-- Temporarily set our name to the new one.
+			self.NameOverride = name
+			
+			self:GetParentFolder ():RenameChild (authId, oldName, name,
+				function (returnCode)
+					if returnCode == VFS.ReturnCode.Success then
+						self:GetParentFolder ():DispatchEvent ("NodeRenamed", self, oldName, name)
+						self:DispatchEvent ("Renamed", oldName, name)
+					else
+						self.NameOverride = oldName
+					end
+					callback (returnCode)
+				end
+			)
+		else
+			-- No parent folder, so we're free to name ourselves whatever we want
+			self.NameOverride = name
+			self:DispatchEvent ("Renamed", oldName, name)
+			callback (VFS.ReturnCode.Success)
+		end
 	else
+		-- Check that our parent folder doesn't already have a node with the same name
+		-- this check may be ineffective if the renaming operation of this node's mounted node
+		-- or the parent folder is asynchronous
+		if self:GetParentFolder () and self:GetParentFolder ():GetDirectChildSynchronous (name) then callback (VFS.ReturnCode.AlreadyExists) return end
+		
 		self.MountedNode:Rename (authId, name,
 			function (returnCode)
 				if returnCode == VFS.ReturnCode.Success then
-					if self:GetParentFolder () then self:GetParentFolder ():RenameChild (authId, oldName, name) end
-					self:DispatchEvent ("Renamed", oldName, name)
+					if self:GetParentFolder () then self:GetParentFolder ():RenameChild (authId, oldName, self.MountedNode:GetName ()) end
+					
+					self:DispatchEvent ("Renamed", oldName, self.MountedNode:GetName ())
 				end
 				callback (returnCode)
 			end

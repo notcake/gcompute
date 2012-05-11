@@ -41,6 +41,7 @@ function self:SendReturnCode (returnCode, node)
 	outBuffer:UInt8 (returnCode)
 	
 	if returnCode == VFS.ReturnCode.Success then
+		-- Warning: Duplicate code in FolderChildResponse:HandleInitialPacket
 		outBuffer:UInt8 (node:GetNodeType ())
 		outBuffer:String (node:GetName ())
 		if node:GetName () == node:GetDisplayName () then

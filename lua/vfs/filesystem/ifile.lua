@@ -14,6 +14,16 @@ function self:GetNodeType ()
 end
 
 --[[
+	IFile:GetSize ()
+		Returns: int fileSizeInBytes
+		
+		Returns the size of the file in bytes, or -1 if unavailable
+]]
+function self:GetSize ()
+	return -1
+end
+
+--[[
 	IFile:Open (authId, OpenFlags, function (ReturnCode, IFileStream))
 ]]
 function self:Open (authId, openFlags, callback)

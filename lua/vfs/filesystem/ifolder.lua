@@ -11,6 +11,9 @@ VFS.IFolder = VFS.MakeConstructor (self, VFS.INode)
 			Fired when a child node's permissions have changed.
 		NodeRenamed (INode childNode, string oldName, string newName)
 			Fired when a child file or folder has been renamed.
+		NodeUpdated (INode node)
+			Fired when a child file or folder's display name, size or other
+			attribute has been changed.
 ]]
 
 function self:ctor ()
@@ -96,7 +99,7 @@ function self:CreateNode (authId, path, isFolder, callback)
 						callback (VFS.ReturnCode.NotAFile)
 					end
 				elseif node:IsFolder () then
-					self:CreateNode (authId, path, isFolder, callback)
+					node:CreateNode (authId, path, isFolder, callback)
 				else
 					callback (VFS.ReturnCode.NotAFolder)
 				end
@@ -107,7 +110,7 @@ function self:CreateNode (authId, path, isFolder, callback)
 							if path:IsEmpty () then
 								callback (returnCode, node)
 							else
-								self:CreateNode (authId, path, isFolder, callback)
+								node:CreateNode (authId, path, isFolder, callback)
 							end
 						else
 							callback (returnCode)

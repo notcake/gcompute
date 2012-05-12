@@ -2,6 +2,7 @@ local self = {}
 VFS.MountedNode = VFS.MakeConstructor (self, VFS.INode)
 
 function self:ctor (nameOverride, mountedNode, parentFolder)
+	self.Type = "Mounted" .. (self:IsFolder () and "Folder" or "File")
 	self.NameOverride = nameOverride
 	self.DisplayNameOverride = nil
 	self.MountedNode = mountedNode
@@ -14,6 +15,12 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 			if self.NameOverride then self.NameOverride = newName end
 			self:DispatchEvent ("Renamed", oldName, newName)
 			if self:GetParentFolder () then self:GetParentFolder ():RenameChild (authId, oldName, newName) end
+		end
+	)
+	self.MountedNode:AddEventListener ("Updated", tostring (self),
+		function (_)
+			self:DispatchEvent ("Updated")
+			if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("Updated", self) end
 		end
 	)
 	
@@ -41,6 +48,10 @@ end
 
 function self:GetInner ()
 	return self.MountedNode:GetInner ()
+end
+
+function self:GetModificationTime ()
+	return self.MountedNode:GetModificationTime ()
 end
 
 function self:GetName ()
@@ -107,5 +118,9 @@ function self:Rename (authId, name, callback)
 end
 
 function self:SetDisplayName (displayName)
+	if self:GetDisplayName () == displayName then return end
 	self.DisplayNameOverride = displayName
+	
+	self:DispatchEvent ("Updated")
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
 end

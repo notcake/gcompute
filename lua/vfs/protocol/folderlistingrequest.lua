@@ -13,13 +13,8 @@ end
 function self:HandlePacket (inBuffer)
 	local returnCode = inBuffer:UInt8 ()
 	if returnCode == VFS.ReturnCode.Success then
-		local nodeType = inBuffer:UInt8 ()
-		local name = inBuffer:String ()
-		local displayName = inBuffer:String ()
-		if displayName == "" then displayName = nil end
-		self:DispatchEvent ("ReceivedNodeInfo", nodeType, name, displayName, inBuffer)
+		self:DispatchEvent ("ReceivedNodeInfo", inBuffer)
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.EndOfBurst)
-		ErrorNoHalt ("Received node " .. name .. "\n")
 	elseif returnCode == VFS.ReturnCode.AccessDenied then
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.AccessDenied)
 	elseif returnCode == VFS.ReturnCode.Finished then

@@ -49,6 +49,14 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 			self:DispatchEvent ("NodeRenamed", self.Children [newName], oldName, newName)
 		end
 	)
+	
+	self.MountedNode:AddEventListener ("NodeUpdated",
+		function (_, node)
+			local updatedNode = self.Children [node:GetName ()]
+			if not updatedNode then return end
+			self:DispatchEvent ("NodeUpdated", updatedNode)
+		end
+	)
 end
 
 function self:CreateDirectNode (authId, name, isFolder, callback)
@@ -129,8 +137,6 @@ function self:GetDirectChild (authId, name, callback)
 	
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "View Folder") then callback (VFS.ReturnCode.AccessDenied) return end
 	
-	ErrorNoHalt (name .. "\n")
-	A = self.MountedNode
 	self.MountedNode:GetDirectChild (authId, name,
 		function (returnCode, node)
 			if returnCode == VFS.ReturnCode.Success then

@@ -27,6 +27,11 @@ function self:UInt32 (n)
 	umsg.Long (n - 2147483648)
 end
 
+function self:UInt64 (n)
+	umsg.Long ((n % 4294967296) - 2147483648)
+	umsg.Long (math.floor (n / 4294967296) - 2147483648)
+end
+
 function self:Int8 (n)
 	umsg.Char (n)
 end

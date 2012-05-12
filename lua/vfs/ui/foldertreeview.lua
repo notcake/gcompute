@@ -14,6 +14,8 @@ local self = {}
 function self:Init ()
 	self.ShowFiles = false
 	self.SubscribedNodes = {}
+	
+	self.LastSelectPath = nil
 
 	-- Populate root group trees
 	self:SetPopulator (function (node)
@@ -137,6 +139,7 @@ function self:Remove ()
 		node:RemoveEventListener ("NodeDeleted", tostring (self))
 		node:RemoveEventListener ("NodePermissionsChanged", tostring (self))
 		node:RemoveEventListener ("NodeRenamed", tostring (self))
+		node:RemoveEventListener ("NodeUpdated", tostring (self))
 	end
 	
 	self.Menu:Remove ()
@@ -195,7 +198,7 @@ function self:Populate (filesystemNode, treeViewNode)
 				self:LayoutNode (treeViewNode)
 				treeViewNode:SortChildren ()
 			elseif returnCode == VFS.ReturnCode.AccessDenied then
-				treeViewNode.CanView = treeViewNode:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
+				treeViewNode.CanView = treeViewNode.Node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
 				treeViewNode:MarkUnpopulated ()
 				treeViewNode:SetIcon ("gui/g_silkicons/folder_delete")
 			elseif returnCode == VFS.ReturnCode.Finished then
@@ -266,14 +269,26 @@ function self:Populate (filesystemNode, treeViewNode)
 			self:SortChildren ()
 		end
 	)
+	
+	filesystemNode:AddEventListener ("NodeUpdated", tostring (self),
+		function (_, updatedNode)
+			local childNode = treeViewNode.AddedNodes [updatedNode:GetName ()]
+			if not childNode then return end
+			if childNode:GetText () == updatedNode:GetDisplayName () then return end
+			
+			childNode:SetText (updatedNode:GetDisplayName ())
+			self:SortChildren ()
+		end
+	)
 end
 
 function self:SelectPath (path)
+	if self.LastSelectPath == path then return end
+	self.LastSelectPath = path
 	self:ResolvePath (self.FilesystemRootNode, path,
 		function (returnCode, treeViewNode)
-			ErrorNoHalt ("FolderTreeView:SelectPath : Trying " .. path .. "\n")
 			if not treeViewNode then return end
-			ErrorNoHalt ("FolderTreeView:SelectPath :" .. treeViewNode.Node:GetPath () .. "\n")
+			if path ~= self.LastSelectPath then return end
 			treeViewNode:Select ()
 			treeViewNode:ExpandTo (true)
 		end

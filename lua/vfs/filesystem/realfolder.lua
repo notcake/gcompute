@@ -25,7 +25,7 @@ function self:CreateDirectNode (authId, name, isFolder, callback)
 		return
 	end
 	
-	if self.FolderPath:sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
+	if self.FolderPath:lower ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
 	if isFolder then
 		file.CreateDir (self.FolderPath:sub (6) .. name)
 	else
@@ -58,7 +58,7 @@ function self:DeleteDirectChild (authId, name, callback)
 		end
 	end
 	
-	if self.FolderPath:sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
+	if self.FolderPath:lower ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	file.Delete (self.FolderPath:sub (6) .. name, true)
 	if not self:CheckExists (name) then

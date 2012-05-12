@@ -14,7 +14,10 @@ function self:HandleInitialPacket (inBuffer)
 				node:EnumerateChildren (self:GetRemoteEndPoint ():GetRemoteId (),
 					function (returnCode, node)
 						if returnCode == VFS.ReturnCode.Success then
-							self:SendReturnCode (returnCode, node)
+							local outBuffer = self:CreatePacket ()
+							outBuffer:UInt8 (returnCode)
+							self:SerializeNode (node, outBuffer)							
+							self:QueuePacket (outBuffer)
 						elseif returnCode == VFS.ReturnCode.Finished then
 							self:SendReturnCode (VFS.ReturnCode.Finished)
 							self:Close ()
@@ -33,31 +36,4 @@ function self:HandleInitialPacket (inBuffer)
 			end
 		end
 	)
-end
-
-function self:SendReturnCode (returnCode, node)
-	ErrorNoHalt ("FolderListing : " .. self.FolderPath .. " : return code " .. VFS.ReturnCode [returnCode] .. ".\n")
-	local outBuffer = self:CreatePacket ()
-	outBuffer:UInt8 (returnCode)
-	
-	if returnCode == VFS.ReturnCode.Success then
-		-- Warning: Duplicate code in FolderChildResponse:HandleInitialPacket
-		outBuffer:UInt8 (node:GetNodeType ())
-		outBuffer:String (node:GetName ())
-		if node:GetName () == node:GetDisplayName () then
-			outBuffer:String ("")
-		else
-			outBuffer:String (node:GetDisplayName ())
-		end
-		
-		-- Now the permission block (urgh)
-		local synchronizationTable = VFS.PermissionBlockNetworker:PreparePermissionBlockSynchronizationList (node:GetPermissionBlock ())
-		outBuffer:UInt16 (#synchronizationTable)
-		for _, session in ipairs (synchronizationTable) do
-			outBuffer:UInt32 (session:GetTypeId ())
-			session:GenerateInitialPacket (outBuffer)
-		end
-	end
-	
-	self:QueuePacket (outBuffer)
 end

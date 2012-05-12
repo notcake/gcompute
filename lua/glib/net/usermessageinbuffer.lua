@@ -17,6 +17,10 @@ function self:UInt32 ()
 	return self.Usermessage:ReadLong () + 2147483648
 end
 
+function self:UInt64 ()
+	return self.Usermessage:ReadLong () + 2147483648 + (self.Usermessage:ReadLong () + 2147483648) * 4294967296
+end
+
 function self:Int8 ()
 	return self.Usermessage:ReadChar ()
 end

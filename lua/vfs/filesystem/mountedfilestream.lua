@@ -6,6 +6,10 @@ function self:ctor (mountedFile, fileStream)
 	self.FileStream = fileStream
 end
 
+function self:Close ()
+	self.FileStream:Close ()
+end
+
 function self:GetFile ()
 	return self.File
 end
@@ -32,4 +36,8 @@ end
 
 function self:Seek (pos)
 	self.FileStream:Seek (pos)
+end
+
+function self:Write (data, size, callback)
+	return self.FileStream:Write (data, size, callback)
 end

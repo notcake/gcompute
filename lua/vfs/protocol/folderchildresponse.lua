@@ -15,23 +15,7 @@ function self:HandleInitialPacket (inBuffer)
 			local outBuffer = self:CreatePacket ()
 			outBuffer:UInt8 (returnCode)
 			if returnCode == VFS.ReturnCode.Success then
-				-- Warning: Duplicate code in FolderListingResponse:SendReturnCode
-			
-				outBuffer:UInt8 (node:GetNodeType ())
-				outBuffer:String (node:GetName ())
-				if node:GetName () == node:GetDisplayName () then
-					outBuffer:String ("")
-				else
-					outBuffer:String (node:GetDisplayName ())
-				end
-				
-				-- Now the permission block (urgh)
-				local synchronizationTable = VFS.PermissionBlockNetworker:PreparePermissionBlockSynchronizationList (node:GetPermissionBlock ())
-				outBuffer:UInt16 (#synchronizationTable)
-				for _, session in ipairs (synchronizationTable) do
-					outBuffer:UInt32 (session:GetTypeId ())
-					session:GenerateInitialPacket (outBuffer)
-				end
+				self:SerializeNode (node, outBuffer)
 			end
 			self:QueuePacket (outBuffer)
 			self:Close ()

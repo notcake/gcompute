@@ -2,12 +2,20 @@ local self = {}
 VFS.RealNode = VFS.MakeConstructor (self, VFS.INode)
 
 function self:ctor (path, name, parentFolder)
+	self.Type = "Real" .. (self:IsFolder () and "Folder" or "File")
 	self.Name = name
 	self.ParentFolder = parentFolder
 end
 
 function self:GetName ()
 	return self.Name
+end
+
+function self:GetModificationTime ()
+	if self:GetPath ():lower ():sub (1, 5) == "data/" then
+		return file.Time (self:GetPath ():sub (6))
+	end
+	return -1
 end
 
 function self:GetParentFolder ()
@@ -24,7 +32,7 @@ function self:Rename (authId, name, callback)
 	if not self:GetParentFolder () then callback (VFS.ReturnCode.AccessDenied) return end
 
 	if self:IsFolder () then callback (VFS.ReturnCode.AccessDenied) return end
-	if self:GetPath ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
+	if self:GetPath ():lower ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
 	name = VFS.SanifyNodeName (name)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	if name:sub (-4, -1) ~= ".txt" then name = name .. ".txt" end

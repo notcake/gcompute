@@ -49,7 +49,7 @@ local function Check ()
 end
 
 -- Delay updating the editors, since the filesystem hasn't fully initialized yet.
-timer.Simple (0, Check)
+timer.Simple (1, Check)
 
 -- Expression2EditorFrame
 function Expression2EditorFrame:Init ()
@@ -135,8 +135,9 @@ function Expression2EditorFrame:Augment (path, displayPath)
 	oldBrowser:Remove ()
 	
 	newBrowser.UpdateFolders = VFS.NullCallback
+	newBrowser.Setup = VFS.NullCallback
 	newBrowser:SelectPath (path or GAuth.GetLocalId ())
-	self.Location = path or GAuth.GetLocalId ()
+	self.VFSLocation = path or GAuth.GetLocalId ()
 	self.DisplayLocation = displayPath or path or LocalPlayer ():GetName ()
 	
 	newBrowser:AddEventListener ("FileOpened",
@@ -161,6 +162,7 @@ function Expression2EditorFrame:Augment (path, displayPath)
 end
 
 function Expression2EditorFrame:ChosenFile (path, displayPath)
+	if not displayPath then VFS.Error ("NO DISPLAY PATH GIVEN FOR " .. tostring (path)) end
 	displayPath = displayPath or path
 	self:GetCurrentEditor ().chosenfile = path
 	self:GetCurrentEditor ().displaypath = displayPath
@@ -221,6 +223,54 @@ function Expression2EditorFrame:LoadFile (path, newTab)
 	)
 end
 
+-- Imported from wire/client/wire_expression2_editor.lua : Editor:OpenOldTabs
+function Expression2EditorFrame:OpenOldTabs ()
+	if not file.Exists (self.Location .. "/_tabs_.txt") then return end
+	
+	-- Read file
+	local tabs = file.Read (self.Location .. "/_tabs_.txt")
+	if not tabs or tabs == "" then return end
+	
+	-- Explode around ;
+	tabs = tabs:Split (";")
+	if not tabs or #tabs == 0 then return end
+	
+	-- Temporarily remove fade time
+	self:FixTabFadeTime ()
+	
+	local is_first = true
+	for k, v in pairs (tabs) do
+		if v and v ~= "" then
+			if file.Exists (v) then
+				-- Open it in a new tab
+				self:LoadFile (LocalPlayer ():Name () .. "/" .. v, true)
+				
+				-- If this is the first loop, close the initial tab.
+				if is_first then
+					timer.Simple (0, function ()
+						self:CloseTab (1)
+					end)
+					is_first = false
+				end
+			else
+				VFS.Root:GetChild (GAuth.GetLocalId (), v,
+					function (returnCode)
+						if returnCode == VFS.ReturnCode.Success then
+							self:LoadFile (v, true)
+							if is_first then
+								timer.Simple (0, function ()
+									self:CloseTab (1)
+								end)
+								is_first = false
+							end
+						end
+					end
+				)
+			end
+		end
+	end
+end
+
 -- Imported from wire/client/wire_expression2_editor : Editor:SaveFile
 function Expression2EditorFrame:SaveFile (path, close, saveAs)
 	self:ExtractName ()
@@ -245,7 +295,7 @@ function Expression2EditorFrame:SaveFile (path, close, saveAs)
 
 	local panel = self.C ["Val"].panel
 	local code = self:GetCode ()
-	VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Write,
+	VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
 			if returnCode == VFS.ReturnCode.Success then
 				fileStream:Write (code:len (), code,
@@ -253,23 +303,33 @@ function Expression2EditorFrame:SaveFile (path, close, saveAs)
 						local displayPath = fileStream:GetDisplayPath ()
 						fileStream:Close ()
 						if returnCode == VFS.ReturnCode.Success then
+							self.C ["Val"].panel:SetBGColor (0, 128, 0, 180)
+							self.C ["Val"].panel:SetFGColor (255, 255, 255, 128)
 							timer.Simple (0, panel.SetText, panel, "   Saved as " .. displayPath)
-							if not self.chip then self:ChosenFile (path) end
+							surface.PlaySound ("ambient/water/drip3.wav")
+							if not self.chip then self:ChosenFile (path, displayPath) end
 							if close then
-								GAMEMODE:AddNotify ((self.E2 and "Expression" or "Source code") .." saved as " .. Line.. ".", NOTIFY_GENERIC, 7)
+								GAMEMODE:AddNotify ((self.E2 and "Expression" or "Source code") .." saved as " .. displayPath .. ".", NOTIFY_GENERIC, 7)
 								self:Close ()
 							end
 						else
-							timer.Simple (0, panel.SetText, panel, "   Failed to save to " .. path)
+							self.C ["Val"].panel:SetBGColor (128, 0, 0, 180)
+							self.C ["Val"].panel:SetFGColor (255, 255, 255, 128)
+							timer.Simple (0, panel.SetText, panel, "   Failed to save to " .. path .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 							surface.PlaySound ("ambient/water/drip3.wav")
 						end
 					end
 				)
 			elseif returnCode == VFS.ReturnCode.AccessDenied then
+				VFS.Error ("")
+				self.C ["Val"].panel:SetBGColor (128, 0, 0, 180)
+				self.C ["Val"].panel:SetFGColor (255, 255, 255, 128)
 				timer.Simple (0, panel.SetText, panel, "   Failed to save to " .. path .. ": Access denied!")
 				surface.PlaySound ("ambient/water/drip3.wav")
 			else
-				timer.Simple (0, panel.SetText, panel, "   Failed to save to " .. path)
+				self.C ["Val"].panel:SetBGColor (128, 0, 0, 180)
+				self.C ["Val"].panel:SetFGColor (255, 255, 255, 128)
+				timer.Simple (0, panel.SetText, panel, "   Failed to save to " .. path .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 				surface.PlaySound ("ambient/water/drip3.wav")
 			end
 		end
@@ -301,4 +361,11 @@ function Expression2EditorFrame:SetActiveTab (tabOrTabIndex)
 			self.C ["TabHolder"].panel:InvalidateLayout ()
 		end
 	end
+end
+
+function Expression2EditorFrame:Setup (nTitle, nLocation, nEditorType)
+	self:_Setup (nTitle, nLocation, nEditorType)
+	self.VFSLocation = GAuth.GetLocalId () .. "/" .. nLocation
+	self.DisplayLocation = LocalPlayer ():Name () .. "/" .. nLocation
+	self.C ["Browser"].panel:SelectPath (self.VFSLocation or GAuth.GetLocalId ())
 end

@@ -5,9 +5,12 @@ function self:ctor (path, name, parentFolder)
 end
 
 function self:GetSize ()
-	return (file.Read (self:GetPath (), true) or ""):len ()
+	if self:GetPath ():lower ():sub (1, 5) == "data/" then
+		return file.Size (self:GetPath ():sub (6))
+	end
+	return -1
 end
 
 function self:Open (authId, openFlags, callback)
-	callback (VFS.ReturnCode.Success, VFS.RealFileStream (self))
+	callback (VFS.ReturnCode.Success, VFS.RealFileStream (self, openFlags))
 end

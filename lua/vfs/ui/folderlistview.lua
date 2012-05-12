@@ -19,7 +19,31 @@ function self:Init ()
 	self.LastAccess = false
 	
 	self:AddColumn ("Name")
-	self:AddColumn ("Owner")
+	self:AddColumn ("Size")
+		:SetAlignment (6)
+		:SetMaxWidth (128)
+	self:AddColumn ("Last Modified")
+		:SetMaxWidth (192)
+	
+	self:SetColumnComparator ("Size",
+		function (a, b)
+			-- Put folders at the top
+			if a == b then return false end
+			if a.Node:IsFolder () and not b.Node:IsFolder () then return true end
+			if b.Node:IsFolder () and not a.Node:IsFolder () then return false end
+			return a.Size < b.Size
+		end
+	)
+	
+	self:SetColumnComparator ("Last Modified",
+		function (a, b)
+			-- Put folders at the top
+			if a == b then return false end
+			if a.Node:IsFolder () and not b.Node:IsFolder () then return true end
+			if b.Node:IsFolder () and not a.Node:IsFolder () then return false end
+			return a.LastModified < b.LastModified
+		end
+	)
 
 	self.Menu = vgui.Create ("GMenu")
 	self.Menu:AddEventListener ("MenuOpening",
@@ -106,7 +130,7 @@ function self:Remove ()
 end
 
 function self.DefaultComparator (a, b)
-	-- Put group trees at the top
+	-- Put folders at the top
 	if a == b then return false end
 	if a.Node:IsFolder () and not b.Node:IsFolder () then return true end
 	if b.Node:IsFolder () and not a.Node:IsFolder () then return false end
@@ -159,14 +183,8 @@ function self:MergeRefresh ()
 			elseif returnCode == VFS.ReturnCode.Finished then				
 				self.Folder:AddEventListener ("NodeCreated", tostring (self),
 					function (_, newNode)
-						local listViewItem = self:AddLine (newNode:GetName ())
-						listViewItem:SetText (newNode:GetDisplayName ())
-						listViewItem.Node = newNode
-						self:UpdateIcon (listViewItem)
-						listViewItem.IsFolder = newNode:IsFolder ()
+						self:AddNode (newNode)
 						self:Sort ()
-						
-						self.ChildNodes [newNode:GetName ()] = listViewItem
 					end
 				)
 				
@@ -193,6 +211,7 @@ function self:SetFolder (folder)
 		self.Folder:RemoveEventListener ("NodeDeleted", tostring (self))
 		self.Folder:RemoveEventListener ("NodePermissionsChanged", tostring (self))
 		self.Folder:RemoveEventListener ("NodeRenamed", tostring (self))
+		self.Folder:RemoveEventListener ("NodeUpdated", tostring (self))
 		self.Folder:RemoveEventListener ("PermissionsChanged", tostring (self))
 		self.Folder = nil
 	end
@@ -200,6 +219,13 @@ function self:SetFolder (folder)
 	if not folder:IsFolder () then return end
 	self.Folder = folder
 	self:MergeRefresh ()
+	
+	self.Folder:AddEventListener ("NodePermissionsChanged", tostring (self),
+		function (_, node)
+			if not self.ChildNodes [node:GetName ()] then return end
+			self:UpdateIcon (self.ChildNodes [node:GetName ()])
+		end
+	)
 				
 	self.Folder:AddEventListener ("NodeRenamed", tostring (self),
 		function (_, node, oldName, newName)
@@ -211,10 +237,14 @@ function self:SetFolder (folder)
 		end
 	)
 	
-	self.Folder:AddEventListener ("NodePermissionsChanged", tostring (self),
-		function (_, node)
-			if not self.ChildNodes [node:GetName ()] then return end
-			self:UpdateIcon (self.ChildNodes [node:GetName ()])
+	self.Folder:AddEventListener ("NodeUpdated", tostring (self),
+		function (_, updatedNode)
+			local childNode = self.ChildNodes [updatedNode:GetName ()]
+			if not childNode then return end
+			if childNode:GetText () ~= updatedNode:GetDisplayName () then
+				childNode:SetText (updatedNode:GetDisplayName ())
+				self:Sort ()
+			end
 		end
 	)
 	
@@ -256,7 +286,13 @@ function self:AddNode (node)
 	listViewItem:SetText (node:GetDisplayName ())
 	listViewItem.Node = node
 	self:UpdateIcon (listViewItem)
+	
 	listViewItem.IsFolder = node:IsFolder ()
+	listViewItem.Size = node:IsFile () and node:GetSize () or -1
+	listViewItem.LastModified = node:GetModificationTime ()
+	
+	listViewItem:SetColumnText (2, listViewItem.Size ~= -1 and VFS.FormatFileSize (listViewItem.Size) or "")
+	listViewItem:SetColumnText (3, listViewItem.LastModified ~= -1 and VFS.FormatDate (listViewItem.LastModified) or "")
 	
 	self.ChildNodes [node:GetName ()] = listViewItem
 	return listViewItem

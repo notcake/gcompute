@@ -9,6 +9,9 @@ VFS.INode = VFS.MakeConstructor (self)
 			Fired when this node has been renamed.
 		PermissionsChanged ()
 			Fired when this node's permissions have changed.
+		Updated (INode node)
+			Fired when this node's display name, size or other
+			attribute has been changed.
 ]]
 
 function self:ctor ()
@@ -62,6 +65,18 @@ end
 
 function self:GetInner ()
 	return self
+end
+
+--[[
+	INode:GetModificationTime ()
+		Returns: int secondsPastUnixEpoch
+		
+		Returns the last modification time of this node
+		in seconds past 00:00:00 UTC January 1, 1970
+		or -1 if unavailable
+]]
+function self:GetModificationTime ()
+	return -1
 end
 
 function self:GetName ()

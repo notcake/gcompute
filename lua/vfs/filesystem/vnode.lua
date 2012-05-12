@@ -2,6 +2,7 @@ local self = {}
 VFS.VNode = VFS.MakeConstructor (self, VFS.INode)
 
 function self:ctor (name, parentFolder)
+	self.Type = "V" .. (self:IsFolder () and "Folder" or "File")
 	self.Name = name
 	self.DisplayName = self.Name
 	self.ParentFolder = parentFolder
@@ -54,5 +55,9 @@ function self:Rename (authId, name, callback)
 end
 
 function self:SetDisplayName (displayName)
+	if self.DisplayName == displayName then return end
 	self.DisplayName = displayName
+	
+	self:DispatchEvent ("Updated")
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
 end

@@ -2,11 +2,14 @@ local self = {}
 VFS.NetNode = VFS.MakeConstructor (self, VFS.INode)
 
 function self:ctor (endPoint, name, parentFolder)
+	self.Type = "Net" .. (self:IsFolder () and "Folder" or "File")
 	self.EndPoint = endPoint
 	
 	self.Name = name
 	self.DisplayName = self.Name
 	self.ParentFolder = parentFolder
+	
+	self.ModificationTime = -1
 	
 	self.PermissionBlock = GAuth.PermissionBlock ()
 	self.PermissionBlock:SetParentFunction (
@@ -28,6 +31,10 @@ function self:GetDisplayName ()
 	return self.DisplayName
 end
 
+function self:GetModificationTime ()
+	return self.ModificationTime
+end
+
 function self:GetName ()
 	return self.Name
 end
@@ -41,5 +48,18 @@ function self:GetPermissionBlock ()
 end
 
 function self:SetDisplayName (displayName)
+	if self.DisplayName == displayName then return end
 	self.DisplayName = displayName
+	
+	self:DispatchEvent ("Updated")
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
+end
+
+-- Internal, do not call
+function self:SetModificationTime (modificationTime)
+	if self.ModificationTime == modificationTime then return end
+	self.ModificationTime = modificationTime
+	
+	self:DispatchEvent ("Updated")
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
 end

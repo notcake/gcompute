@@ -11,6 +11,7 @@ function self:HandleInitialPacket (inBuffer)
 	VFS.Root:GetChild (self:GetRemoteEndPoint ():GetRemoteId (), self.FolderPath,
 		function (returnCode, node)
 			if returnCode == VFS.ReturnCode.Success then
+				self:GetRemoteEndPoint ():HookNode (node)
 				node:EnumerateChildren (self:GetRemoteEndPoint ():GetRemoteId (),
 					function (returnCode, node)
 						if returnCode == VFS.ReturnCode.Success then

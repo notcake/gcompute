@@ -150,21 +150,18 @@ if SERVER then
 			local mountPaths =
 			{
 				"logs",
+				"data/asslog",
 				"data/cadmin/logs",
 				"data/DarkRP_logs",
-				"data/FAdmin_logs"
+				"data/FAdmin_logs",
+				"data/ulx_logs"
 			}
-			local mountNames =
-			{
-				"",
-				"cadmin_logs",
-				"",
-				""
-			}
+			local mountNames = {}
+			mountNames [3] = "cadmin_logs"
 			for k, realPath in ipairs (mountPaths) do
 				VFS.RealRoot:GetChild (GAuth.GetSystemId (), realPath,
 					function (returnCode, node)
-						local name = mountNames [k]
+						local name = mountNames [k] or ""
 						if name == "" then name = node:GetName () end
 						folder:Mount (name, node, name)
 					end

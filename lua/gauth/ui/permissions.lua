@@ -166,7 +166,7 @@ function self:PerformLayout ()
 		y = y + self.ChangeOwner:GetTall () + 8
 		
 		self.Groups:SetPos (8, y)
-		self.Groups:SetSize (self:GetWide () - 16, self:GetTall () * 0.4)
+		self.Groups:SetSize (self:GetWide () - 16, self:GetTall () * 0.35)
 		y = y + self.Groups:GetTall () + 8
 		
 		self.PermissionList:SetPos (8, y)

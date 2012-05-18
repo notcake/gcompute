@@ -103,7 +103,7 @@ function self:Init ()
 	
 	self.Groups:AddEventListener ("SelectionChanged",
 		function (_, item)			
-			self.SelectedGroup = item and item.Group
+			self.SelectedGroup = item and item.Group or nil
 			self.SelectedGroupId = item and item.GroupId
 			self.SelectedPermissionBlock = item and item.PermissionBlock
 			self:CheckPermissions ()
@@ -268,7 +268,7 @@ end
 -- Internal, do not call
 function self:AddGroup (groupId, permissionBlock, permissionBlockIndex)
 	local group = GAuth.ResolveGroup (groupId)
-	local item = self.Groups:AddItem (group and group:GetFullDisplayName () or groupName)
+	local item = self.Groups:AddItem (group and group:GetFullDisplayName () or groupId)
 	item:SetIcon (group and group:GetIcon () or "gui/g_silkicons/group")
 	item:SetIndent (16)
 	item.Group = group
@@ -284,7 +284,7 @@ function self:CheckPermissions ()
 	self.InheritPermissions:SetDisabled (not self.PermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Modify Permissions"))
 	self.ChangeOwner:SetDisabled (not self.PermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Set Owner"))
 	
-	if not self.SelectedGroup or self.SelectedPermissionBlock ~= self.PermissionBlock then
+	if not self.SelectedGroupId or self.SelectedPermissionBlock ~= self.PermissionBlock then
 		self.PermissionList:SetDisabled (true)
 	else
 		self.PermissionList:SetDisabled (not self.PermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Modify Permissions"))
@@ -339,7 +339,7 @@ end
 function self:PopulatePermissions ()
 	self.PermissionList:SuppressEvents (true)
 	for _, permissionLine in pairs (self.PermissionList:GetItems ()) do
-		if self.SelectedGroup then
+		if self.SelectedGroupId then
 			local access = self.SelectedPermissionBlock:GetGroupPermission (self.SelectedGroupId, permissionLine.ActionId)
 			if access == GAuth.Access.Allow then
 				permissionLine:SetCheckState (2, true)

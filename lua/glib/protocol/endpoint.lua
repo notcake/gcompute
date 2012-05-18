@@ -32,7 +32,7 @@ function self:CloseSession (session)
 	if not self.Sessions [session:GetId ()] then return end
 	
 	if not session:HasQueuedPackets () then
-		ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. " closed.\n")
+		ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ": Session " .. session:ToString () .. " closed.\n")
 		session:DispatchEvent ("Closed")
 		self.Sessions [session:GetId ()] = nil
 	end
@@ -51,7 +51,7 @@ end
 function self:HandleIncomingPacket (sessionId, inBuffer)
 	local session = self.Sessions [sessionId]
 	if not session then
-		ErrorNoHalt (self.SystemName .. ".NetEndPoint:HandleIncomingPacket : Session " .. sessionId .. " not found!\n")
+		ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ":HandleIncomingPacket : Session " .. sessionId .. " not found!\n")
 		return
 	end
 	session:ResetTimeout ()
@@ -69,7 +69,7 @@ function self:ProcessSessions ()
 	for _, session in pairs (self.Sessions) do
 		local outBuffer = session:DequeuePacket ()
 		if outBuffer then
-			ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. " packet sent to " .. self.RemoteId .. ".\n")
+			ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ": Session " .. session:ToString () .. " packet sent to " .. self.RemoteId .. ".\n")
 			GLib.Net.DispatchPacket (self.RemoteId, self.DataChannel, outBuffer)
 		end
 		
@@ -83,10 +83,12 @@ function self:ProcessSessions ()
 	end
 	
 	for session, _ in pairs (timedOut) do
-		ErrorNoHalt (self.SystemName .. ": Session " .. session:ToString () .. " timed out.\n")
-		session:DispatchEvent ("TimedOut")
-		session:HandleTimeOut ()
-		session:Close ()
+		if not session:IsClosing () then
+			ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ": Session " .. session:ToString () .. " timed out.\n")
+			session:DispatchEvent ("TimedOut")
+			session:HandleTimeOut ()
+			session:Close ()
+		end
 	end
 	
 	for session, _ in pairs (closed) do
@@ -96,7 +98,7 @@ end
 
 function self:SendNotification (session)
 	session:SetRemoteEndPoint (self)
-	ErrorNoHalt (self.SystemName .. ".Net.EndPoint:SendNotification : " .. session:ToString () .. "\n")
+	ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ":SendNotification : " .. session:ToString () .. "\n")
 	
 	local outBuffer = GLib.Net.OutBuffer ()
 	outBuffer:UInt32 (session:GetTypeId ())
@@ -110,7 +112,7 @@ function self:StartSession (session)
 	session:SetId (self.NextSessionId)
 	self.NextSessionId = self.NextSessionId + 1
 	
-	ErrorNoHalt (self.SystemName .. ".Net.EndPoint:StartSession : New " .. session:ToString () .. "\n")
+	ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ":StartSession : New " .. session:ToString () .. "\n")
 	
 	self.Sessions [session:GetId ()] = session
 	

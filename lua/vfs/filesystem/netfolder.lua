@@ -9,9 +9,23 @@ function self:ctor (endPoint, path, name, parentFolder)
 	self.Children = {}
 	self.LowercaseChildren = {}
 	
+	self.LastAccess = false
+	
 	self:AddEventListener ("Renamed",
 		function ()
 			self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
+		end
+	)
+	self:AddEventListener ("PermissionsChanged",
+		function ()
+			local access = self:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
+			if self.LastAccess == access then return end
+			self.LastAccess = access
+			if not self.LastAccess then
+				self.Children = {}
+				self.LowercaseChildren = {}
+				self.ReceivedChildren = false
+			end
 		end
 	)
 end
@@ -28,7 +42,7 @@ function self:CreateDirectNode (authId, name, isFolder, callback)
 		return
 	end
 	
-	if not self:GetPermissionBlock ():IsAuthorized (authId, (isFolder and "Create Folder" or "Write")) then ErrorNoHalt ("FAIL on " .. name .. "\n") callback (VFS.ReturnCode.AccessDenied) return end
+	if not self:GetPermissionBlock ():IsAuthorized (authId, (isFolder and "Create Folder" or "Write")) then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	local nodeCreationRequest = VFS.Protocol.NodeCreationRequest (self, name, isFolder,
 		function (returnCode, inBuffer)
@@ -50,6 +64,16 @@ function self:CreatePredictedFolder (name)
 	self:DispatchEvent ("NodeCreated", self.Children [name])
 	
 	return self.Children [name]
+end
+
+function self:DeleteDirectChild (authId, name, callback)
+	callback = callback or VFS.NullCallback
+	
+	local lowercaseName = name:lower ()
+	local childNode = self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [lowercaseName] or nil)
+	if childNode and not childNode:GetPermissionBlock ():IsAuthorized (authId, "Delete") then callback (VFS.ReturnCode.AccessDenied) return end
+	
+	self.EndPoint:StartSession (VFS.Protocol.NodeDeletionRequest (self, name, callback))
 end
 
 function self:EnumerateChildren (authId, callback)
@@ -145,6 +169,15 @@ function self:MountLocal (name, node)
 	self:DispatchEvent ("NodeCreated", self.Children [name])
 end
 
+function self:RenameChild (authId, name, newName, callback)
+	callback = callback or VFS.NullCallback
+	
+	local child = self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [name:lower ()] or nil)
+	if child and not child:GetPermissionBlock ():IsAuthorized (authId, "Rename") then callback (VFS.ReturnCode.AccessDenied) return end
+	
+	self.EndPoint:StartSession (VFS.Protocol.NodeRenameRequest (self, name, newName, callback))
+end
+
 function self:UnhookPermissionBlock ()
 	VFS.PermissionBlockNetworker:UnhookBlock (self:GetPermissionBlock ())
 	for _, node in pairs (self.Children) do
@@ -181,9 +214,11 @@ function self:DeserializeNode (inBuffer)
 		self.Children [name] = child
 		self.LowercaseChildren [lowercaseName] = child
 	end
-	child:SetDisplayName (displayName or name)
-	if child:IsFile () then child:SetSize (size) end
-	child:SetModificationTime (lastModified)
+	child:SetDisplayName (displayName)
+	if child:IsNetNode () then
+		if child:IsFile () then child:SetSize (size) end
+		child:SetModificationTime (lastModified)
+	end
 	
 	VFS.PermissionBlockNetworker:HandleNotificationForBlock (child:GetPermissionBlock (), inBuffer)
 	if newNode then self:DispatchEvent ("NodeCreated", self.Children [name]) end

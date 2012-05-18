@@ -33,6 +33,10 @@ function self:HandleInitialPacket (inBuffer)
 	local systemId = inBuffer:UInt32 ()
 	local permissionBlockId = inBuffer:String ()
 	local networker = GAuth.PermissionBlockNetworkerManager:GetNetworker (systemId)
+	if not networker then
+		ErrorNoHalt ("GAuth.PermissionBlockNotification: Unknown networker " .. tostring (systemId) .. "\n")
+		return
+	end
 	self.Sessions = networker:HandleNotification (self:GetRemoteEndPoint (), permissionBlockId, inBuffer) or self.Sessions
 	self.SessionCount = #self.Sessions
 end

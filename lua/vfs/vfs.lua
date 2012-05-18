@@ -44,12 +44,22 @@ include ("filesystem/mountedfilestream.lua")
 
 include ("protocol/protocol.lua")
 include ("protocol/session.lua")
+include ("protocol/nodecreationnotification.lua")
+include ("protocol/nodedeletionnotification.lua")
+include ("protocol/noderenamenotification.lua")
+include ("protocol/nodeupdatenotification.lua")
 include ("protocol/fileopenrequest.lua")
 include ("protocol/fileopenresponse.lua")
 include ("protocol/folderchildrequest.lua")
 include ("protocol/folderchildresponse.lua")
 include ("protocol/folderlistingrequest.lua")
 include ("protocol/folderlistingresponse.lua")
+include ("protocol/nodecreationrequest.lua")
+include ("protocol/nodecreationresponse.lua")
+include ("protocol/nodedeletionrequest.lua")
+include ("protocol/nodedeletionresponse.lua")
+include ("protocol/noderenamerequest.lua")
+include ("protocol/noderenameresponse.lua")
 
 include ("protocol/endpoint.lua")
 include ("protocol/endpointmanager.lua")
@@ -115,7 +125,15 @@ VFS.PermissionDictionary:AddPermission ("Rename")
 VFS.PermissionDictionary:AddPermission ("View Folder")
 VFS.PermissionDictionary:AddPermission ("Write")
 VFS.Root:GetPermissionBlock ():SetPermissionDictionary (VFS.PermissionDictionary)
-VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",               GAuth.Access.Allow)
+if SERVER then
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Modify Permissions", GAuth.Access.Allow)
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Set Owner",          GAuth.Access.Allow)
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Create Folder",      GAuth.Access.Allow)
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Delete",             GAuth.Access.Allow)
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",               GAuth.Access.Allow)
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Rename",             GAuth.Access.Allow)
+	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Write",              GAuth.Access.Allow)
+end
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder",        GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Modify Permissions", GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Set Owner",          GAuth.Access.Allow)
@@ -161,6 +179,8 @@ if SERVER then
 			for k, realPath in ipairs (mountPaths) do
 				VFS.RealRoot:GetChild (GAuth.GetSystemId (), realPath,
 					function (returnCode, node)
+						if returnCode ~= VFS.ReturnCode.Success then return end
+						
 						local name = mountNames [k] or ""
 						if name == "" then name = node:GetName () end
 						folder:Mount (name, node, name)
@@ -268,10 +288,14 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 
 VFS.PlayerMonitor:AddEventListener ("PlayerDisconnected",
 	function (_, ply)
+		if ply:SteamID () == "" then
+			VFS.Error ("VFS.PlayerDisconnected: " .. tostring (ply) .. " has a blank steam id.")
+			return
+		end
 		if SERVER then
-			if ply:SteamID () == "" then return end
 			VFS.Root:DeleteChild (GAuth.GetSystemId (), ply:SteamID ())
 		end
+		VFS.EndPointManager:RemoveEndPoint (ply:SteamID ())
 	end
 )
 

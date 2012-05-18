@@ -277,3 +277,7 @@ function self:OpenFile (authId, path, openFlags, callback)
 		end
 	)
 end
+
+function self:RenameChild (authId, name, newName, callback)
+	VFS.Error ("IFolder:RenameChild : Not implemented")
+end

@@ -28,7 +28,7 @@ function self:ctor (endPoint, name, parentFolder)
 end
 
 function self:GetDisplayName ()
-	return self.DisplayName
+	return self.DisplayName or self:GetName ()
 end
 
 function self:GetModificationTime ()
@@ -45,6 +45,18 @@ end
 
 function self:GetPermissionBlock ()
 	return self.PermissionBlock
+end
+
+function self:IsNetNode ()
+	return true
+end
+
+function self:Rename (authId, newName, callback)
+	callback = callback or VFS.NullCallback
+	
+	if not self:GetPermissionBlock ():IsAuthorized (authId, "Rename") then callback (VFS.ReturnCode.AccessDenied) return end
+	
+	self:GetParentFolder ():RenameChild (authId, self:GetName (), newName, callback)
 end
 
 function self:SetDisplayName (displayName)

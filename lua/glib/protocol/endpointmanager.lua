@@ -44,3 +44,12 @@ end
 function self:GetSystemName ()
 	return self.SystemName
 end
+
+function self:RemoveEndPoint (endPointOrRemoteId)
+	if type (endPointOrRemoteId) == "string" then
+		endPointOrRemoteId = self.EndPoints [endPointOrRemoteId]
+	end
+	if not endPointOrRemoteId then return end
+	endPointOrRemoteId:dtor ()
+	self.EndPoints [endPointOrRemoteId:GetRemoteId ()] = nil
+end

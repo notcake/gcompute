@@ -4,8 +4,10 @@ VFS.VNode = VFS.MakeConstructor (self, VFS.INode)
 function self:ctor (name, parentFolder)
 	self.Type = "V" .. (self:IsFolder () and "Folder" or "File")
 	self.Name = name
-	self.DisplayName = self.Name
+	self.DisplayName = nil
 	self.ParentFolder = parentFolder
+	
+	self.ModificationTime = os.time ()
 	
 	self.PermissionBlock = GAuth.PermissionBlock ()
 	self.PermissionBlock:SetParentFunction (
@@ -24,7 +26,11 @@ function self:ctor (name, parentFolder)
 end
 
 function self:GetDisplayName ()
-	return self.DisplayName
+	return self.DisplayName or self:GetName ()
+end
+
+function self:GetModificationTime ()
+	return self.ModificationTime
 end
 
 function self:GetName ()
@@ -52,6 +58,8 @@ function self:Rename (authId, name, callback)
 	self.Name = name
 	if self:GetParentFolder () then self:GetParentFolder ():RenameChild (authId, oldName, name) end
 	self:DispatchEvent ("Renamed", oldName, name)
+	
+	callback (VFS.ReturnCode.Success)
 end
 
 function self:SetDisplayName (displayName)

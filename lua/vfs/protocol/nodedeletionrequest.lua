@@ -1,8 +1,8 @@
 local self = {}
-VFS.Protocol.Register ("FolderChild", self)
-VFS.Protocol.FolderChildRequest = VFS.MakeConstructor (self, VFS.Protocol.Session)
+VFS.Protocol.Register ("NodeDeletion", self)
+VFS.Protocol.NodeDeletionRequest = VFS.MakeConstructor (self, VFS.Protocol.Session)
 
-function self:ctor (folder, childName, callback)
+function self:ctor (folder, childName, isFolder, callback)
 	self.Callback = callback or VFS.NullCallback
 	self.Folder = folder
 	self.ChildName = childName
@@ -15,11 +15,7 @@ end
 
 function self:HandlePacket (inBuffer)
 	local returnCode = inBuffer:UInt8 ()
-	if returnCode == VFS.ReturnCode.Success then
-		self.Callback (returnCode, inBuffer)
-	else
-		self.Callback (returnCode)
-	end
+	self.Callback (returnCode)
 	self:Close ()
 end
 

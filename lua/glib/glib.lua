@@ -6,7 +6,7 @@ if SERVER then
 		local files = file.FindInLua (folder .. "/*")
 		for _, fileName in pairs (files) do
 			if fileName:sub (-4) == ".lua" then
-				AddCSLuaFile (folder .. "/" .. fileName)
+				-- AddCSLuaFile (folder .. "/" .. fileName)
 			end
 		end
 	end

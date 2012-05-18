@@ -43,6 +43,7 @@ function self:HandlePacket (inBuffer)
 		local returnCode = inBuffer:UInt8 ()
 		if returnCode == VFS.ReturnCode.Success then
 			local length = inBuffer:UInt32 ()
+			self.File:SetSize (length)
 			self.FileStream = VFS.NetFileStream (self, self.File, length)
 			self.Callback (returnCode, self.FileStream)
 			ErrorNoHalt ("Opened netfile " .. self.File:GetPath () .. "\n")
@@ -69,6 +70,10 @@ function self:HandlePacket (inBuffer)
 			callback (returnCode)
 		end
 	end
+end
+
+function self:HandleTimeOut ()
+	self.Callback (VFS.ReturnCode.TimedOut)
 end
 
 function self:Read (pos, size, callback)

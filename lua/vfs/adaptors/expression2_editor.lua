@@ -16,7 +16,7 @@ local function GetPreferredTitles (displayPath, code)
 	return displayPath or "[Unknown]"
 end
 
-local function AugmentEditor (editor, name, path, displayPath)
+local function ModifyEditor (editor, name, path, displayPath)
 	if not editor or not editor:IsValid () then return end
 	
 	for k, v in pairs (Expression2EditorFrame) do
@@ -26,14 +26,17 @@ local function AugmentEditor (editor, name, path, displayPath)
 	GetPreferredTitles = FindUpValue (editor._LoadFile, "getPreferredTitles") or GetPreferredTitles
 	
 	ErrorNoHalt ("Editor " .. name .. " never asked for this (" .. path .. ")\n")
-	editor:Augment (path, displayPath)
+	editor:InstallFileSystemBrowserOverride (path, displayPath)
 end
 
-local function Check ()
-	AugmentEditor (wire_expression2_editor, "wire_expression2_editor", GAuth.GetLocalId () .. "/Expression2", LocalPlayer ():Name () .. "/Expression2")
-	AugmentEditor (ZCPU_Editor,             "ZCPU_Editor",             GAuth.GetLocalId () .. "/CPUChip",     LocalPlayer ():Name () .. "/CPUChip")
-	AugmentEditor (ZGPU_Editor,             "ZGPU_Editor",             GAuth.GetLocalId () .. "/GPUChip",     LocalPlayer ():Name () .. "/GPUChip")
-	AugmentEditor (ZSPU_Editor,             "ZSPU_Editor",             GAuth.GetLocalId () .. "/SPUChip",     LocalPlayer ():Name () .. "/SPUChip")
+local function InstallFileSystemBrowserOverride ()
+	ModifyEditor (wire_expression2_editor, "wire_expression2_editor", GAuth.GetLocalId () .. "/Expression2", LocalPlayer ():Name () .. "/Expression2")
+	ModifyEditor (ZCPU_Editor,             "ZCPU_Editor",             GAuth.GetLocalId () .. "/CPUChip",     LocalPlayer ():Name () .. "/CPUChip")
+	ModifyEditor (ZGPU_Editor,             "ZGPU_Editor",             GAuth.GetLocalId () .. "/GPUChip",     LocalPlayer ():Name () .. "/GPUChip")
+	ModifyEditor (ZSPU_Editor,             "ZSPU_Editor",             GAuth.GetLocalId () .. "/SPUChip",     LocalPlayer ():Name () .. "/SPUChip")
+	if SF and SF.Editor then
+		ModifyEditor (SF.Editor.editor,        "SF.Editor.editor",        GAuth.GetLocalId () .. "/Starfall",    LocalPlayer ():Name () .. "/Starfall")
+	end
 	
 	local panelFactory = FindUpValue (vgui.Register, "PanelFactory")
 	if panelFactory and panelFactory ["Expression2EditorFrame"] then
@@ -44,20 +47,20 @@ local function Check ()
 		end
 		GetPreferredTitles = FindUpValue (editor._LoadFile, "getPreferredTitles") or GetPreferredTitles
 	else
-		timer.Simple (0, Check)
+		timer.Simple (0, InstallFileSystemBrowserOverride)
 	end
 end
 
 -- Delay updating the editors, since the filesystem hasn't fully initialized yet.
-timer.Simple (1, Check)
+timer.Simple (1, InstallFileSystemBrowserOverride)
 
 -- Expression2EditorFrame
 function Expression2EditorFrame:Init ()
 	self:_Init ()
-	self:Augment ()
+	self:InstallFileSystemBrowserOverride ()
 end
 
-function Expression2EditorFrame:Augment (path, displayPath)
+function Expression2EditorFrame:InstallFileSystemBrowserOverride (path, displayPath)
 	if editorsUpdated [self] then return end
 	editorsUpdated [self] = true
 	

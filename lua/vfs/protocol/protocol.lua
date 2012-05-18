@@ -7,6 +7,14 @@ function VFS.Protocol.Register (packetType, class)
 	class.TypeId = VFS.Protocol.StringTable:HashFromString (packetType)
 end
 
+function VFS.Protocol.RegisterNotification (packetType, ctor)
+	VFS.Protocol.StringTable:Add (packetType)
+	VFS.Protocol.ResponseTable [packetType] = ctor
+	local class = VFS.GetMetaTable (ctor)
+	class.Type = packetType
+	class.TypeId = VFS.Protocol.StringTable:HashFromString (packetType)
+end
+
 function VFS.Protocol.RegisterResponse (packetType, ctor)
 	VFS.Protocol.StringTable:Add (packetType)
 	VFS.Protocol.ResponseTable [packetType] = ctor
@@ -16,8 +24,8 @@ function VFS.Protocol.RegisterResponse (packetType, ctor)
 end
 
 VFS.Net.RegisterChannel ("vfs_new_session",
-	function (senderId, inBuffer)
-		local client = VFS.EndPointManager:GetEndPoint (senderId)
+	function (remoteId, inBuffer)
+		local remoteEndPoint = VFS.EndPointManager:GetEndPoint (remoteId)
 		local requestId = inBuffer:UInt32 ()
 		local typeId = inBuffer:UInt32 ()
 		local packetType = VFS.Protocol.StringTable:StringFromHash (typeId)
@@ -28,21 +36,32 @@ VFS.Net.RegisterChannel ("vfs_new_session",
 			return
 		end
 		local response = ctor ()
-		response:SetRemoteEndPoint (client)
+		response:SetRemoteEndPoint (remoteEndPoint)
 		response:SetId (requestId)
-		client:HandleIncomingSession (response, inBuffer)
+		remoteEndPoint:HandleIncomingSession (response, inBuffer)
 	end
 )
 
 VFS.Net.RegisterChannel ("vfs_session_data",
-	function (senderId, inBuffer)
-		local client = VFS.EndPointManager:GetEndPoint (senderId)
-		client:HandleIncomingPacket (inBuffer:UInt32 (), inBuffer)
+	function (remoteId, inBuffer)
+		local remoteEndPoint = VFS.EndPointManager:GetEndPoint (remoteId)
+		remoteEndPoint:HandleIncomingPacket (inBuffer:UInt32 (), inBuffer)
 	end
 )
 
 VFS.Net.RegisterChannel ("vfs_notification",
-	function (senderId, inBuffer)
-		local client = VFS.EndPointManager:GetEndPoint (senderId)
+	function (remoteId, inBuffer)
+		local remoteEndPoint = VFS.EndPointManager:GetEndPoint (remoteId)
+		local typeId = inBuffer:UInt32 ()
+		local packetType = VFS.Protocol.StringTable:StringFromHash (typeId)
+		
+		local ctor = VFS.Protocol.ResponseTable [packetType]
+		if not ctor then
+			ErrorNoHalt ("vfs_notification : No handler for " .. tostring (packetType) .. " is registered!\n")
+			return
+		end
+		local session = ctor ()
+		session:SetRemoteEndPoint (remoteEndPoint)
+		remoteEndPoint:HandleIncomingNotification (session, inBuffer)
 	end
 )

@@ -9,29 +9,43 @@ GAuth.PermissionBlockNetworker = GAuth.MakeConstructor (self)
 		3 functions need to be passed to this class:
 			Resolver (permissionBlockId)
 				Returns: PermissionBlock permissionBlock
+				
+				Called to convert a permission block id to a PermissionBlock.
 			
 			NotificationFilter (remoteId, permissionBlockId, permissionBlock)
-				Returns: boolean sendNotification
+				Returns: boolean shouldProcessNotification
+				
+				Called when a notification is received. If shouldProcessNotification
+				is false, the notification is ignored.
 				
 			RequestFilter (permissionBlock)
-				Returns boolean isNetworked, string destUserId
+				Returns: boolean isNetworked, string destUserId
+				
+				Called when an attempt to change permissions on a PermissionBlock
+				occurs. If isNetworked is true, a permission block request is sent
+				out to destUserId.
 ]]
+
+local everyoneTable = { "Everyone" }
 
 function self:ctor (systemName)
 	self.SystemName = systemName
 	GAuth.PermissionBlockNetworkerManager:Register (self)
 	
-	self.ResolverFunction = function ()
+	self.ResolverFunction = function (permissionBlockId)
 		GLib.Error ("PermissionBlockNetworker : No resolver function set!")
 		self.ResolverFunction = function () return nil end
 		return nil
 	end
-	self.NotificationFilter = function ()
+	self.NotificationFilter = function (remoteId, permissionBlockId, permissionBlock)
 		GLib.Error ("PermissionBlockNetworker : No notification filter set!")
 		self.NotificationFilter = function () return true end
 		return true
 	end
-	self.RequestFilter = function ()
+	self.NotificationRecipientListGenerator = function (permissionBlockId, permissionBlock, notification)
+		return everyoneTable
+	end
+	self.RequestFilter = function (permissionBlock)
 		GLib.Error ("PermissionBlockNetworker : No request filter set!")
 		self.RequestFilter = function () return true, "Server" end
 		return true, "Server"
@@ -41,32 +55,32 @@ function self:ctor (systemName)
 	
 	self.GroupEntryAdded = function (permissionBlock, groupId)
 		local session = GAuth.Protocol.PermissionBlock.GroupEntryAdditionNotification (permissionBlock, groupId)
-		GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
+		self:DispatchNotification (permissionBlock, GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
 	end
 	
 	self.GroupEntryRemoved = function (permissionBlock, groupId)
 		local session = GAuth.Protocol.PermissionBlock.GroupEntryRemovalNotification (permissionBlock, groupId)
-		GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
+		self:DispatchNotification (permissionBlock, GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
 	end
 	
 	self.GroupPermissionChanged = function (permissionBlock, groupId, actionId, access)
 		local session = GAuth.Protocol.PermissionBlock.GroupPermissionChangeNotification (permissionBlock, groupId, actionId, access)
-		GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
+		self:DispatchNotification (permissionBlock, GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
 	end
 	
 	self.InheritOwnerChanged = function (permissionBlock, inheritOwner)
 		local session = GAuth.Protocol.PermissionBlock.InheritOwnerChangeNotification (permissionBlock, inheritOwner)
-		GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
+		self:DispatchNotification (permissionBlock, GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
 	end
 	
 	self.InheritPermissionsChanged = function (permissionBlock, inheritPermissions)
 		local session = GAuth.Protocol.PermissionBlock.InheritPermissionsChangeNotification (permissionBlock, inheritPermissions)
-		GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
+		self:DispatchNotification (permissionBlock, GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
 	end
 	
 	self.OwnerChanged = function (permissionBlock, ownerId)
 		local session = GAuth.Protocol.PermissionBlock.OwnerChangeNotification (permissionBlock, ownerId)
-		GAuth.EndPointManager:GetEndPoint (GAuth.GetEveryoneId ()):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
+		self:DispatchNotification (permissionBlock, GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, session))
 	end
 	
 	self.RequestAddGroupEntry = function (permissionBlock, authId, groupId, callback)
@@ -161,38 +175,16 @@ function self:UnhookBlock (permissionBlock)
 	permissionBlock:RemoveEventListener ("RequestSetOwner",              tostring (self))
 end
 
-function self:PreparePermissionBlockSynchronizationList (permissionBlock)
-	local notifications = {}
-	notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.InheritOwnerChangeNotification (permissionBlock, permissionBlock:InheritsOwner ())
-	notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.InheritPermissionsChangeNotification (permissionBlock, permissionBlock:InheritsPermissions ())
-	if not permissionBlock:InheritsOwner () then
-		notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.OwnerChangeNotification (permissionBlock, permissionBlock:GetOwner ())
+function self:DispatchNotification (permissionBlock, notification)
+	for _, recipient in ipairs (self:GetNotificationRecipientList (permissionBlock:GetName (), permissionBlock, notification)) do
+		GAuth.EndPointManager:GetEndPoint (recipient):SendNotification (notification)
 	end
-	
-	for groupId in permissionBlock:GetGroupEntryEnumerator () do
-		if permissionBlock:GetPermissionDictionary () then
-			for actionId in permissionBlock:GetPermissionDictionary ():GetPermissionEnumerator () do
-				local access = permissionBlock:GetGroupPermission (groupId, actionId)
-				if access ~= GAuth.Access.None then
-					notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.GroupPermissionChangeNotification (permissionBlock, groupId, actionId, access)
-				end
-			end
-		else
-			GAuth.Error ("PermissionBlock (" .. permissionBlock:GetName () .. ") has no dictionary!")
-		end
-	end
-	
-	return notifications
 end
 
---[[
-	PermissionBlockNetworker:SerializeBlock (PermissionBlock permissionBlock)
-		
-		Sends a series of notifications that will synchronize the state of a
-		remote permission block to match the given local permission block.
-]]
-function self:SynchronizeBlock (destUserId, permissionBlock)	
-	GAuth.EndPointManager:GetEndPoint (destUserId):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, self:PreparePermissionBlockSynchronizationList (permissionBlock)))
+function self:GetNotificationRecipientList (permissionBlockId, permissionBlock, notification)
+	local recipientList = self.NotificationRecipientListGenerator (permissionBlockId, permissionBlock, notification)
+	if type (recipientList) ~= "table" then recipientList = { recipientList } end
+	return recipientList
 end
 
 function self:GetSystemName ()
@@ -265,8 +257,53 @@ function self:HandleRequest (permissionBlockResponse, permissionBlockId, inBuffe
 	return session
 end
 
+function self:PreparePermissionBlockSynchronizationList (permissionBlock)
+	local notifications = {}
+	notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.InheritOwnerChangeNotification (permissionBlock, permissionBlock:InheritsOwner ())
+	notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.InheritPermissionsChangeNotification (permissionBlock, permissionBlock:InheritsPermissions ())
+	if not permissionBlock:InheritsOwner () then
+		notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.OwnerChangeNotification (permissionBlock, permissionBlock:GetOwner ())
+	end
+	
+	for groupId in permissionBlock:GetGroupEntryEnumerator () do
+		local groupEntryAdditionNeeded = true
+		if permissionBlock:GetPermissionDictionary () then
+			for actionId in permissionBlock:GetPermissionDictionary ():GetPermissionEnumerator () do
+				local access = permissionBlock:GetGroupPermission (groupId, actionId)
+				if access ~= GAuth.Access.None then
+					groupEntryAdditionNeeded = false
+					notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.GroupPermissionChangeNotification (permissionBlock, groupId, actionId, access)
+				end
+			end
+		else
+			GAuth.Error ("PermissionBlock (" .. permissionBlock:GetName () .. ") has no dictionary!")
+		end
+		if groupEntryAdditionNeeded then
+			notifications [#notifications + 1] = GAuth.Protocol.PermissionBlock.GroupEntryAdditionNotification (permissionBlock, groupId)
+		end
+	end
+	
+	return notifications
+end
+
 function self:ResolvePermissionBlock (permissionBlockId)
 	return self.ResolverFunction (permissionBlockId)
+end
+
+function self:SetNotificationFilter (notificationFilter)
+	self.NotificationFilter = notificationFilter or function () return true end
+end
+
+function self:SetNotificationRecipientListGenerator (notificationRecipientListGenerator)
+	self.NotificationRecipientListGenerator = notificationRecipientListGenerator or function () return everyoneTable end
+end
+
+function self:SetRequestFilter (requestFilter)
+	self.RequestFilter = requestFilter or function () return false end
+end
+
+function self:SetResolver (resolver)
+	self.ResolverFunction = resolver or GAuth.NullCallback
 end
 
 function self:ShouldProcessNotification (remoteId, permissionBlockId, permissionBlock)
@@ -282,16 +319,14 @@ function self:ShouldSendRequest (permissionBlock)
 	return sendRequest, destUserId
 end
 
-function self:SetNotificationFilter (notificationFilter)
-	self.NotificationFilter = notificationFilter or function () return true end
-end
-
-function self:SetRequestFilter (requestFilter)
-	self.RequestFilter = requestFilter or function () return false end
-end
-
-function self:SetResolver (resolver)
-	self.ResolverFunction = resolver or GAuth.NullCallback
+--[[
+	PermissionBlockNetworker:SerializeBlock (PermissionBlock permissionBlock)
+		
+		Sends a series of notifications that will synchronize the state of a
+		remote permission block to match the given local permission block.
+]]
+function self:SynchronizeBlock (destUserId, permissionBlock)	
+	GAuth.EndPointManager:GetEndPoint (destUserId):SendNotification (GAuth.Protocol.PermissionBlockNotification (self:GetSystemName (), permissionBlock, self:PreparePermissionBlockSynchronizationList (permissionBlock)))
 end
 
 -- Events

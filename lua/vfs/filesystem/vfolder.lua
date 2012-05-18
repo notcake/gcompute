@@ -112,6 +112,8 @@ function self:RenameChild (authId, name, newName, callback)
 	end
 	node:Rename (authId, newName)
 	self:DispatchEvent ("NodeRenamed", node, name, newName)
+	
+	callback (VFS.ReturnCode.Success)
 end
 
 function self:UnhookPermissionBlock ()

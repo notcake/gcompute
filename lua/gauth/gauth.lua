@@ -63,6 +63,7 @@ end
 
 function GAuth.IsUserInGroup (groupId, authId, permissionBlock)
 	local groupTreeNode = GAuth.ResolveGroupTreeNode (groupId)
+	if not groupTreeNode then return false end
 	return groupTreeNode:ContainsUser (authId, permissionBlock)
 end
 
@@ -288,9 +289,14 @@ GAuth.PlayerMonitor:AddEventListener ("PlayerConnected",
 
 GAuth.PlayerMonitor:AddEventListener ("PlayerDisconnected",
 	function (_, ply)
+		if ply:SteamID () == "" then
+			GAuth.Error ("GAuth.PlayerDisconnected: " .. tostring (ply) .. " has a blank steam id.")
+			return
+		end
 		if SERVER then
 			GAuth.Groups:RemoveNode (GAuth.GetSystemId (), ply:SteamID ())
 		end
+		GAuth.EndPointManager:RemoveEndPoint (ply:SteamID ())
 	end
 )
 

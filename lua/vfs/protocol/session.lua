@@ -7,6 +7,7 @@ end
 -- The corresponding DeserializeNode function is in
 -- vfs/filesystem/netfolder.lua : NetFolder:DeserializeNode
 function self:SerializeNode (node, outBuffer)
+	ErrorNoHalt ("\tSerializeNode: " .. node:GetPath () .. "\n")
 	outBuffer:UInt8 (node:GetNodeType ())
 	outBuffer:String (node:GetName ())
 	if node:GetName () == node:GetDisplayName () then
@@ -25,6 +26,7 @@ function self:SerializeNode (node, outBuffer)
 	outBuffer:UInt16 (#synchronizationTable)
 	for _, session in ipairs (synchronizationTable) do
 		outBuffer:UInt32 (session:GetTypeId ())
+		ErrorNoHalt ("\t" .. session:ToString () .. "\n")
 		session:GenerateInitialPacket (outBuffer)
 	end
 	
@@ -35,4 +37,6 @@ function self:SendReturnCode (returnCode)
 	local outBuffer = self:CreatePacket ()
 	outBuffer:UInt8 (returnCode)
 	self:QueuePacket (outBuffer)
+	
+	ErrorNoHalt (self:ToString () .. ": " .. VFS.ReturnCode [returnCode] .. "\n")
 end

@@ -127,8 +127,20 @@ function self:IsFolder ()
 	return self:GetNodeType () & VFS.NodeType.Folder ~= 0
 end
 
+function self:IsMountedNode ()
+	return false
+end
+
+function self:IsNetNode ()
+	return false
+end
+
 function self:IsPredicted ()
 	return self.Predicted
+end
+
+function self:IsRoot ()
+	return VFS.Root == self
 end
 
 function self:MarkPredicted ()

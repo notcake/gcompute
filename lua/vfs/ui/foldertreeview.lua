@@ -13,7 +13,7 @@ local self = {}
 
 function self:Init ()
 	self.ShowFiles = false
-	self.SubscribedNodes = {}
+	self.SubscribedNodes = VFS.WeakKeyTable ()
 	
 	self.LastSelectPath = nil
 
@@ -134,7 +134,7 @@ function self:Init ()
 end
 
 function self:Remove ()
-	for _, node in ipairs (self.SubscribedNodes) do
+	for node, _ in pairs (self.SubscribedNodes) do
 		node:RemoveEventListener ("NodeCreated", tostring (self))
 		node:RemoveEventListener ("NodeDeleted", tostring (self))
 		node:RemoveEventListener ("NodePermissionsChanged", tostring (self))
@@ -175,6 +175,8 @@ function self:GetSelectedNode ()
 end
 
 function self:Populate (filesystemNode, treeViewNode)
+	self.SubscribedNodes [filesystemNode] = true
+	
 	treeViewNode.AddedNodes = treeViewNode.AddedNodes or {}
 	treeViewNode:SetIcon ("gui/g_silkicons/folder_explore")
 	treeViewNode:SuppressLayout (true)
@@ -205,7 +207,6 @@ function self:Populate (filesystemNode, treeViewNode)
 				treeViewNode:SetIcon ("gui/g_silkicons/folder")
 				self:LayoutNode (treeViewNode)
 	
-				self.SubscribedNodes [#self.SubscribedNodes + 1] = filesystemNode
 				filesystemNode:AddEventListener ("NodeCreated", tostring (self),
 					function (_, newNode)
 						self:AddFilesystemNode (treeViewNode, newNode)
@@ -220,6 +221,11 @@ function self:Populate (filesystemNode, treeViewNode)
 						local childNode = treeViewNode.AddedNodes [deletedNode:GetName ()]
 						deletedNode:RemoveEventListener ("NodeCreated", tostring (self))
 						deletedNode:RemoveEventListener ("NodeDeleted", tostring (self))
+						deletedNode:RemoveEventListener ("NodePermissionsChanged", tostring (self))
+						deletedNode:RemoveEventListener ("NodeRenamed", tostring (self))
+						deletedNode:RemoveEventListener ("NodeUpdated", tostring (self))
+						self.SubscribedNodes [deletedNode] = nil
+						
 						treeViewNode.AddedNodes [deletedNode:GetName ()] = nil
 						if childNode then
 							treeViewNode:RemoveNode (childNode)

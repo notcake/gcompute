@@ -239,11 +239,19 @@ function self:SetFolder (folder)
 	
 	self.Folder:AddEventListener ("NodeUpdated", tostring (self),
 		function (_, updatedNode)
-			local childNode = self.ChildNodes [updatedNode:GetName ()]
-			if not childNode then return end
-			if childNode:GetText () ~= updatedNode:GetDisplayName () then
-				childNode:SetText (updatedNode:GetDisplayName ())
+			local listViewItem = self.ChildNodes [updatedNode:GetName ()]
+			if not listViewItem then return end
+			if listViewItem:GetText () ~= updatedNode:GetDisplayName () then
+				listViewItem:SetText (updatedNode:GetDisplayName ())
 				self:Sort ()
+			end
+			if updatedNode:IsFile () and listViewItem.Size ~= updatedNode:GetSize () then
+				listViewItem.Size = updatedNode:GetSize ()
+				listViewItem:SetColumnText (2, listViewItem.Size ~= -1 and VFS.FormatFileSize (listViewItem.Size) or "")
+			end
+			if listViewItem.LastModified ~= updatedNode:GetModificationTime () then
+				listViewItem.LastModified = updatedNode:GetModificationTime ()
+				listViewItem:SetColumnText (3, listViewItem.LastModified ~= -1 and VFS.FormatDate (listViewItem.LastModified) or "")
 			end
 		end
 	)

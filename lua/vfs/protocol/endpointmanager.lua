@@ -25,6 +25,26 @@ VFS.PermissionBlockNetworker:SetNotificationFilter (
 	end
 )
 
+VFS.PermissionBlockNetworker:SetNotificationRecipientListGenerator (
+	function (permissionBlockId, permissionBlock, notification)
+		local node = VFS.Root:GetChildSynchronous (permissionBlockId)
+		if not node then return {} end
+		if node:IsRoot () then return player.GetAll () end
+		local parentNode = node:GetParentFolder ()
+		
+		local recipientList = {}
+		for _, endPoint in VFS.EndPointManager:GetEndPointEnumerator () do
+			if endPoint:GetRemoteId () ~= GAuth.GetEveryoneId () then
+				if endPoint:IsNodeHooked (node) and parentNode:GetPermissionBlock ():IsAuthorized (endPoint:GetRemoteId (), "View Folder") then
+					ErrorNoHalt (node:GetPath () .. " is hooked by " .. endPoint:GetRemoteId () .. "\n")
+					recipientList [#recipientList + 1] = endPoint:GetRemoteId ()
+				end
+			end
+		end
+		return recipientList
+	end
+)
+
 VFS.PermissionBlockNetworker:SetRequestFilter (
 	function (permissionBlock)
 		local path = permissionBlock:GetName ()

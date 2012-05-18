@@ -10,6 +10,7 @@ end
 
 function self:Open (authId, openFlags, callback)
 	callback = callback or VFS.NullCallback
+	openFlags = VFS.SanitizeOpenFlags (openFlags)
 	
 	if not self:GetPermissionBlock ():IsAuthorized (authId, "Read") then callback (VFS.ReturnCode.AccessDenied) return end
 	if openFlags & VFS.OpenFlags.Write ~= 0 and not self:GetPermissionBlock ():IsAuthorized (authId, "Write") then callback (VFS.ReturnCode.AccessDenied) return end

@@ -24,7 +24,7 @@ function self:ctor (endPoint, name, parentFolder)
 	
 	VFS.PermissionBlockNetworker:HookRemoteBlock (self.PermissionBlock)
 	
-	self:AddEventListener ("Deleted", function () self:UnhookPermissionBlock () end)
+	self:AddEventListener ("Deleted", self.UnhookPermissionBlock)
 end
 
 function self:GetDisplayName ()
@@ -63,8 +63,8 @@ function self:SetDisplayName (displayName)
 	if self.DisplayName == displayName then return end
 	self.DisplayName = displayName
 	
-	self:DispatchEvent ("Updated")
-	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
+	self:DispatchEvent ("Updated", VFS.UpdateFlags.DisplayName)
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self, VFS.UpdateFlags.DisplayName) end
 end
 
 -- Internal, do not call
@@ -72,6 +72,6 @@ function self:SetModificationTime (modificationTime)
 	if self.ModificationTime == modificationTime then return end
 	self.ModificationTime = modificationTime
 	
-	self:DispatchEvent ("Updated")
-	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
+	self:DispatchEvent ("Updated", VFS.UpdateFlags.ModificationTime)
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self, VFS.UpdateFlags.ModificationTime) end
 end

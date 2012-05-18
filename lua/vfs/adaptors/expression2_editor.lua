@@ -165,7 +165,6 @@ function Expression2EditorFrame:InstallFileSystemBrowserOverride (path, displayP
 end
 
 function Expression2EditorFrame:ChosenFile (path, displayPath)
-	if not displayPath then VFS.Error ("NO DISPLAY PATH GIVEN FOR " .. tostring (path)) end
 	displayPath = displayPath or path
 	self:GetCurrentEditor ().chosenfile = path
 	self:GetCurrentEditor ().displaypath = displayPath
@@ -277,6 +276,12 @@ end
 -- Imported from wire/client/wire_expression2_editor : Editor:SaveFile
 function Expression2EditorFrame:SaveFile (path, close, saveAs)
 	self:ExtractName ()
+	
+	local suggestedName = self.savefilefn:gsub ("[ \r\n\t\\/:*?|<>\"]", "_")
+	if suggestedName:sub (-1, -4):lower () ~= ".txt" then
+		suggestedName = suggestedName .. ".txt"
+	end
+	
 	if close and self.chip then
 		if not self:Validate (true) then return end
 		wire_expression2_upload ()
@@ -292,7 +297,9 @@ function Expression2EditorFrame:SaveFile (path, close, saveAs)
 				if not path then return end
 				self:SaveFile (path, close)
 			end
-		):SetPath (path)
+		)
+		:SetPath (path)
+		:SetSuggestedName (suggestedName)
 		return
 	end
 
@@ -324,7 +331,6 @@ function Expression2EditorFrame:SaveFile (path, close, saveAs)
 					end
 				)
 			elseif returnCode == VFS.ReturnCode.AccessDenied then
-				VFS.Error ("")
 				self.C ["Val"].panel:SetBGColor (128, 0, 0, 180)
 				self.C ["Val"].panel:SetFGColor (255, 255, 255, 128)
 				timer.Simple (0, panel.SetText, panel, "   Failed to save to " .. path .. ": Access denied!")

@@ -12,5 +12,6 @@ function self:GetSize ()
 end
 
 function self:Open (authId, openFlags, callback)
+	openFlags = VFS.SanitizeOpenFlags (openFlags)
 	callback (VFS.ReturnCode.Success, VFS.RealFileStream (self, openFlags))
 end

@@ -10,7 +10,7 @@ function self:GetNetworker (systemId)
 	local systemName = self.StringTable:StringFromHash (systemId)
 	local networker = self.SystemNetworkers [systemName]
 	if not networker then
-		GAuth.Error ("PermissionBlockNetworkerManager:GetNetworker : " .. tostring (systemId) .. " not found.")
+		ErrorNoHalt ("PermissionBlockNetworkerManager:GetNetworker : " .. tostring (systemId) .. " not found.\n")
 	end
 	return networker
 end

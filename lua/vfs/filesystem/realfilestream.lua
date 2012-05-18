@@ -28,6 +28,11 @@ function self:Flush ()
 	if self.File:GetPath ():lower ():sub (1, 5) == "data/" then
 		file.Write (self.File:GetPath ():sub (6), self.Contents)
 		self.ContentsChanged = false
+		
+		self.File:DispatchEvent ("Updated", VFS.UpdateFlags.Size | VFS.UpdateFlags.ModificationTime)
+		if self.File:GetParentFolder () then
+			self.File:GetParentFolder ():DispatchEvent ("NodeUpdated", self.File, VFS.UpdateFlags.Size | VFS.UpdateFlags.ModificationTime)
+		end
 	end
 end
 
@@ -56,7 +61,7 @@ end
 
 function self:Write (size, data, callback)
 	if not self:CanWrite () then callback (VFS.ReturnCode.AccessDenied) return end
-	if size == 0 then ErrorNoHalt ("ZERO\n")callback (VFS.ReturnCode.Success) return end
+	if size == 0 then callback (VFS.ReturnCode.Success) return end
 	
 	self.Contents = self.Contents or file.Read (self.File:GetPath (), true) or ""
 	if data:len () < size then data = data .. string.rep ("\0", size - data:len ()) end

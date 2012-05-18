@@ -8,6 +8,7 @@ VFS.ReturnCode =
 	NotFound        = 5,
 	NotAFile        = 6,
 	NotAFolder      = 7,
-	AlreadyExists   = 8
+	AlreadyExists   = 8,
+	Progress        = 9
 }
 VFS.InvertTable (VFS.ReturnCode)

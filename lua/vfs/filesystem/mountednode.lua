@@ -18,9 +18,9 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 		end
 	)
 	self.MountedNode:AddEventListener ("Updated", tostring (self),
-		function (_)
-			self:DispatchEvent ("Updated")
-			if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("Updated", self) end
+		function (_, updateFlags)
+			self:DispatchEvent ("Updated", updateFlags)
+			if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("Updated", self, updateFlags) end
 		end
 	)
 	
@@ -73,7 +73,7 @@ end
 function self:Rename (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
-	name = VFS.SanifyNodeName (name)
+	name = VFS.SanitizeNodeName (name)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	local oldName = self:GetName ()
@@ -125,6 +125,6 @@ function self:SetDisplayName (displayName)
 	if self:GetDisplayName () == displayName then return end
 	self.DisplayNameOverride = displayName
 	
-	self:DispatchEvent ("Updated")
-	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
+	self:DispatchEvent ("Updated", VFS.UpdateFlags.DisplayName)
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self, VFS.UpdateFlags.DisplayName) end
 end

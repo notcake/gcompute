@@ -22,7 +22,7 @@ function self:ctor (name, parentFolder)
 	
 	VFS.PermissionBlockNetworker:HookBlock (self.PermissionBlock)
 	
-	self:AddEventListener ("Deleted", function () self:UnhookPermissionBlock () end)
+	self:AddEventListener ("Deleted", self.UnhookPermissionBlock)
 end
 
 function self:GetDisplayName ()
@@ -48,7 +48,7 @@ end
 function self:Rename (authId, name, callback)
 	callback = callback or VFS.NullCallback
 	
-	name = VFS.SanifyNodeName (name)
+	name = VFS.SanitizeNodeName (name)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	local oldName = self:GetName ()
@@ -66,6 +66,14 @@ function self:SetDisplayName (displayName)
 	if self.DisplayName == displayName then return end
 	self.DisplayName = displayName
 	
-	self:DispatchEvent ("Updated")
-	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self) end
+	self:DispatchEvent ("Updated", VFS.UpdateFlags.DisplayName)
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self, VFS.UpdateFlags.DisplayName) end
+end
+
+function self:SetModificationTime (modificationTime)
+	if self.ModificationTime == modificationTime then return end
+	self.ModificationTime = modificationTime
+	
+	self:DispatchEvent ("Updated", VFS.UpdateFlags.ModificationTime)
+	if self:GetParentFolder () then self:GetParentFolder ():DispatchEvent ("NodeUpdated", self, VFS.UpdateFlags.ModificationTime) end
 end

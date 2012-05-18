@@ -89,3 +89,20 @@ function self:Read (pos, size, callback)
 	
 	self.NextSubRequestId = self.NextSubRequestId + 1
 end
+
+function self:Write (pos, size, data, callback)
+	if self.OpenFlags & VFS.OpenFlags.Write == 0 then callback (VFS.ReturnCode.AccessDenied) return end
+
+	self.SubRequestCallbacks [self.NextSubRequestId] = callback
+	self.SubRequestTypes [self.NextSubRequestId] = VFS.Protocol.FileStreamAction.Write
+	
+	local outBuffer = self:CreatePacket ()
+	outBuffer:UInt32 (self.NextSubRequestId)
+	outBuffer:UInt8 (VFS.Protocol.FileStreamAction.Write)
+	outBuffer:UInt32 (pos)
+	outBuffer:UInt32 (size)
+	outBuffer:String (data)
+	self:QueuePacket (outBuffer)
+	
+	self.NextSubRequestId = self.NextSubRequestId + 1
+end

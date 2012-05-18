@@ -11,23 +11,8 @@ function self:ctor (endPoint, path, name, parentFolder)
 	
 	self.LastAccess = false
 	
-	self:AddEventListener ("Renamed",
-		function ()
-			self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
-		end
-	)
-	self:AddEventListener ("PermissionsChanged",
-		function ()
-			local access = self:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
-			if self.LastAccess == access then return end
-			self.LastAccess = access
-			if not self.LastAccess then
-				self.Children = {}
-				self.LowercaseChildren = {}
-				self.ReceivedChildren = false
-			end
-		end
-	)
+	self:AddEventListener ("PermissionsChanged", self.PermissionsChanged)
+	self:AddEventListener ("Renamed", self.Renamed)
 end
 
 function self:CreateDirectNode (authId, name, isFolder, callback)
@@ -223,4 +208,20 @@ function self:DeserializeNode (inBuffer)
 	VFS.PermissionBlockNetworker:HandleNotificationForBlock (child:GetPermissionBlock (), inBuffer)
 	if newNode then self:DispatchEvent ("NodeCreated", self.Children [name]) end
 	return self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [lowercaseName] or nil)
+end
+
+-- Events
+function self:PermissionsChanged ()
+	local access = self:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
+	if self.LastAccess == access then return end
+	self.LastAccess = access
+	if not self.LastAccess then
+		self.Children = {}
+		self.LowercaseChildren = {}
+		self.ReceivedChildren = false
+	end
+end
+
+function self:Renamed ()
+	self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
 end

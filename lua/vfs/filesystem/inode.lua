@@ -9,7 +9,7 @@ VFS.INode = VFS.MakeConstructor (self)
 			Fired when this node has been renamed.
 		PermissionsChanged ()
 			Fired when this node's permissions have changed.
-		Updated (INode node)
+		Updated (INode node, UpdateFlags updateFlags)
 			Fired when this node's display name, size or other
 			attribute has been changed.
 ]]

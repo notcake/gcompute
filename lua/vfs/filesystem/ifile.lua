@@ -24,7 +24,7 @@ function self:GetSize ()
 end
 
 --[[
-	IFile:Open (authId, OpenFlags, function (ReturnCode, IFileStream))
+	IFile:Open (authId, OpenFlags, function (returnCode, IFileStream))
 ]]
 function self:Open (authId, openFlags, callback)
 	VFS.Error ("IFile:Open : Not implemented")

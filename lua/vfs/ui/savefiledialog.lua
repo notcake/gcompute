@@ -8,6 +8,7 @@ function self:Init ()
 	self:SetDeleteOnClose (true)
 	self:MakePopup ()
 	
+	self.SuggestedName = ""
 	self.Callback = GAuth.NullCallback
 	
 	self.Folders = vgui.Create ("VFSFolderTreeView", self)
@@ -57,7 +58,8 @@ function self:Init ()
 					if returnCode == VFS.ReturnCode.Success then
 						if node:IsFolder () then
 							self:SetFolder (node)
-							self.FileName:SetText ("")
+							self.FileName:SetText (self:GetSuggestedName ())
+							self:SelectAll ()
 							self:ClearError ()
 						else
 							self.Callback (path)
@@ -105,7 +107,7 @@ function self:Remove ()
 end
 
 function self:ClearError ()
-	self.Error:SetText ("")
+	self.ErrorText:SetText ("")
 end
 
 function self:Error (message)
@@ -113,11 +115,15 @@ function self:Error (message)
 end
 
 function self:GetFileName ()
-	return self.FileName:GetText ()
+	return self.FileName:GetText ():gsub ("[\r\n\t\\/:*?|<>\"]", "_")
 end
 
 function self:GetFolder ()
 	return self.Folders:GetSelectedFolder ()
+end
+
+function self:GetSuggestedName ()
+	return self.SuggestedName
 end
 
 function self:PerformLayout ()
@@ -144,23 +150,48 @@ function self:PerformLayout ()
 	end
 end
 
+function self:SelectAll ()
+	timer.Simple (0,
+		function ()
+			if not self or not self:IsValid () then return end
+			if not self.FileName or not self.FileName:IsValid () then return end
+			
+			self.FileName:SelectAll ()
+			self.FileName:SetCaretPos (GLib.UTF8.Length (self.FileName:GetText ()))
+		end
+	)
+end
+
 function self:SetCallback (callback)
 	self.Callback = callback or VFS.NullCallback
 end
 
 function self:SetFileName (name)
 	self.FileName:SetText (name)
+	
+	return self
 end
 
 function self:SetFolder (folder)
 	if not folder:IsFolder () then folder = folder:GetParentFolder () end
 	self.Folders:SetPath (folder:GetPath ())
 	self.Files:SetFolder (folder)
+	
+	return self
 end
 
 function self:SetPath (path)
 	self.Folders:SetPath (path)
 	self.Files:SetPath (path)
+	
+	return self
+end
+
+function self:SetSuggestedName (suggestedName)
+	self.SuggestedName = suggestedName
+	self:SetFileName (suggestedName)
+	
+	return self
 end
 
 vgui.Register ("VFSSaveFileDialog", self, "DFrame")
@@ -169,6 +200,7 @@ function VFS.OpenSaveFileDialog (callback)
 	local dialog = vgui.Create ("VFSSaveFileDialog")
 	dialog:SetCallback (callback)
 	dialog:SetVisible (true)
+	dialog:SelectAll ()
 	
 	return dialog
 end

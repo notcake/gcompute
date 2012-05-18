@@ -91,8 +91,8 @@ end
 function self:RenameChild (authId, name, newName, callback)
 	callback = callback or VFS.NullCallback
 	
-	name = VFS.SanifyNodeName (name)
-	newName = VFS.SanifyNodeName (newName)
+	name = VFS.SanitizeNodeName (name)
+	newName = VFS.SanitizeNodeName (newName)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	if not newName then callback (VFS.ReturnCode.AccessDenied) return end
 	

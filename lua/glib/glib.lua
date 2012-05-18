@@ -239,6 +239,7 @@ end
 
 include ("eventprovider.lua")
 include ("playermonitor.lua")
+include ("utf8.lua")
 
 include ("net/net.lua")
 include ("net/datatype.lua")

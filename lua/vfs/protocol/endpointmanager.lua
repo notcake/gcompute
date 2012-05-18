@@ -29,7 +29,7 @@ VFS.PermissionBlockNetworker:SetNotificationRecipientListGenerator (
 	function (permissionBlockId, permissionBlock, notification)
 		local node = VFS.Root:GetChildSynchronous (permissionBlockId)
 		if not node then return {} end
-		if node:IsRoot () then return player.GetAll () end
+		if node:IsRoot () then return "Everyone" end
 		local parentNode = node:GetParentFolder ()
 		
 		local recipientList = {}

@@ -26,6 +26,11 @@ end
 
 function self:dtor ()
 	timer.Destroy (self.SystemName .. ".Net.EndPoint." .. self.UniqueId)
+	
+	for _, session in pairs (self.Sessions) do
+		session:HandleTimeOut ()
+		session:Close ()
+	end
 end
 
 function self:CloseSession (session)

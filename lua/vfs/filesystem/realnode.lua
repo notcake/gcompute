@@ -33,7 +33,7 @@ function self:Rename (authId, name, callback)
 
 	if self:IsFolder () then callback (VFS.ReturnCode.AccessDenied) return end
 	if self:GetPath ():lower ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
-	name = VFS.SanifyNodeName (name)
+	name = VFS.SanitizeNodeName (name)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	if name:sub (-4, -1) ~= ".txt" then name = name .. ".txt" end
 	

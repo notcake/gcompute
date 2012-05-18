@@ -17,5 +17,6 @@ function self:HandleInitialPacket (inBuffer)
 	
 	local folder = self:GetRemoteEndPoint ():GetRoot ():GetChildSynchronous (self.FolderPath)
 	if not folder then return end
+	if not folder:IsNetNode () then return end
 	folder:DeserializeNode (inBuffer)
 end

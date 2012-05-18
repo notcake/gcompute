@@ -27,6 +27,12 @@ function self:ctor (remoteId, systemName)
 	
 		self:SendNotification (VFS.Protocol.NodeRenameNotification (folder, oldName, newName))
 	end
+	
+	self.NodeUpdated = function (folder, childNode, updateFlags)
+		if not folder:GetPermissionBlock ():IsAuthorized (self:GetRemoteId (), "View Folder") then return end
+	
+		self:SendNotification (VFS.Protocol.NodeUpdateNotification (childNode, updateFlags))
+	end
 end
 
 function self:dtor ()

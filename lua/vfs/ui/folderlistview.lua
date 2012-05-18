@@ -89,7 +89,7 @@ function self:Init ()
 			if #targetNodes == 0 then return end
 			Derma_StringRequest ("Rename " .. targetNodes [1]:GetName () .. "...", "Enter " .. targetNodes [1]:GetName () .. "'s new name:", targetNodes [1]:GetName (),
 				function (name)
-					name = VFS.SanifyNodeName (name)
+					name = VFS.SanitizeNodeName (name)
 					if not name then return end
 					targetNodes [1]:Rename (GAuth.GetLocalId (), name)
 				end
@@ -238,18 +238,18 @@ function self:SetFolder (folder)
 	)
 	
 	self.Folder:AddEventListener ("NodeUpdated", tostring (self),
-		function (_, updatedNode)
+		function (_, updatedNode, updateFlags)
 			local listViewItem = self.ChildNodes [updatedNode:GetName ()]
 			if not listViewItem then return end
-			if listViewItem:GetText () ~= updatedNode:GetDisplayName () then
+			if updateFlags & VFS.UpdateFlags.DisplayName ~= 0 then
 				listViewItem:SetText (updatedNode:GetDisplayName ())
 				self:Sort ()
 			end
-			if updatedNode:IsFile () and listViewItem.Size ~= updatedNode:GetSize () then
-				listViewItem.Size = updatedNode:GetSize ()
+			if updateFlags & VFS.UpdateFlags.Size ~= 0 then
+				listViewItem.Size = updatedNode:IsFile () and updatedNode:GetSize () or -1
 				listViewItem:SetColumnText (2, listViewItem.Size ~= -1 and VFS.FormatFileSize (listViewItem.Size) or "")
 			end
-			if listViewItem.LastModified ~= updatedNode:GetModificationTime () then
+			if updateFlags & VFS.UpdateFlags.ModificationTime ~= 0 then
 				listViewItem.LastModified = updatedNode:GetModificationTime ()
 				listViewItem:SetColumnText (3, listViewItem.LastModified ~= -1 and VFS.FormatDate (listViewItem.LastModified) or "")
 			end

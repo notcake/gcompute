@@ -35,3 +35,7 @@ end
 function self:Read (size, callback)
 	self.Session:Read (self:GetPos (), size, callback)
 end
+
+function self:Write (size, data, callback)
+	self.Session:Write (self:GetPos (), size, data, callback)
+end

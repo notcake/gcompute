@@ -116,7 +116,7 @@ function self:Init ()
 			if not node then return end
 			Derma_StringRequest ("Rename " .. node:GetName () .. "...", "Enter " .. node:GetName () .. "'s new name:", node:GetName (),
 				function (name)
-					name = VFS.SanifyNodeName (name)
+					name = VFS.SanitizeNodeName (name)
 					if not name then return end
 					node:Rename (GAuth.GetLocalId (), name)
 				end
@@ -277,10 +277,10 @@ function self:Populate (filesystemNode, treeViewNode)
 	)
 	
 	filesystemNode:AddEventListener ("NodeUpdated", tostring (self),
-		function (_, updatedNode)
+		function (_, updatedNode, updateFlags)
 			local childNode = treeViewNode.AddedNodes [updatedNode:GetName ()]
 			if not childNode then return end
-			if childNode:GetText () == updatedNode:GetDisplayName () then return end
+			if updateFlags & VFS.UpdateFlags.DisplayName == 0 then return end
 			
 			childNode:SetText (updatedNode:GetDisplayName ())
 			self:SortChildren ()

@@ -7,11 +7,7 @@ function self:ctor (path, name, parentFolder)
 	self.Children = {}
 	self.LowercaseChildren = {}
 	
-	self:AddEventListener ("Renamed",
-		function ()
-			self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
-		end
-	)
+	self:AddEventListener ("Renamed", self.Renamed)
 end
 
 function self:CreateDirectNode (authId, name, isFolder, callback)
@@ -93,8 +89,8 @@ end
 function self:RenameChild (authId, name, newName, callback)
 	callback = callback or VFS.NullCallback
 	
-	name = VFS.SanifyNodeName (name)
-	newName = VFS.SanifyNodeName (newName)
+	name = VFS.SanitizeNodeName (name)
+	newName = VFS.SanitizeNodeName (newName)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	if not newName then callback (VFS.ReturnCode.AccessDenied) return end
 	
@@ -139,7 +135,7 @@ function self:CheckExists (name)
 		local node = self.Children [name]
 		if node then
 			self.Children [name] = nil
-			self.LowercaseChildren [lowercaseName] = nil
+			self.LowercaseChildren [name:lower ()] = nil
 			self:DispatchEvent ("NodeDeleted", node)
 			node:DispatchEvent ("Deleted")
 		end
@@ -201,4 +197,9 @@ end
 
 function self:TFindCallbackPCall (searchPath, folders, files, callback)
 	PCallError (self.TFindCallback, self, searchPath, folders, files, callback)
+end
+
+-- Events
+function self:Renamed ()
+	self.FolderPath = self:GetPath () == "" and "" or self:GetPath () .. "/"
 end

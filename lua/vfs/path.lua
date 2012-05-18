@@ -34,7 +34,7 @@ function self:ctor (path)
 			self.Path = table.concat (self.Segments, "/")
 		end
 	else
-		VFS.Error ("Path:ctor : Invalid argument passed to constructor")
+		VFS.Error ("Path:ctor : Invalid argument (" .. type (path) .. ") passed to constructor!")
 	end
 end
 

@@ -51,10 +51,10 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 	)
 	
 	self.MountedNode:AddEventListener ("NodeUpdated",
-		function (_, node)
+		function (_, node, updateFlags)
 			local updatedNode = self.Children [node:GetName ()]
 			if not updatedNode then return end
-			self:DispatchEvent ("NodeUpdated", updatedNode)
+			self:DispatchEvent ("NodeUpdated", updatedNode, updateFlags)
 		end
 	)
 end
@@ -173,8 +173,8 @@ end
 function self:RenameChild (authId, name, newName, callback)
 	callback = callback or VFS.NullCallback
 	
-	name = VFS.SanifyNodeName (name)
-	newName = VFS.SanifyNodeName (newName)
+	name = VFS.SanitizeNodeName (name)
+	newName = VFS.SanitizeNodeName (newName)
 	if not name then callback (VFS.ReturnCode.AccessDenied) return end
 	if not newName then callback (VFS.ReturnCode.AccessDenied) return end
 	

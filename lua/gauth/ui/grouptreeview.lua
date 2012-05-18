@@ -19,12 +19,7 @@ function self:Init ()
 		end
 	end)
 	self:Populate (GAuth.Groups, self)
-	self:AddEventListener ("ItemSelected",
-		function (tree, item)
-			self:DispatchEvent ("SelectedGroupChanged", self:GetSelectedGroup ())
-			self:DispatchEvent ("SelectedGroupTreeNodeChanged", item and item.Item or nil)
-		end
-	)
+	self:AddEventListener ("ItemSelected", self.ItemSelected)
 	
 	-- Menu
 	self.Menu = vgui.Create ("GMenu")
@@ -161,6 +156,12 @@ function self:Populate (groupTreeNode, treeViewNode)
 			treeViewNode:RemoveNode (childNode)
 		end
 	)
+end
+
+-- Events
+function self:ItemSelected (item)
+	self:DispatchEvent ("SelectedGroupChanged", self:GetSelectedGroup ())
+	self:DispatchEvent ("SelectedGroupTreeNodeChanged", item and item.Item or nil)
 end
 
 vgui.Register ("GAuthGroupTreeView", self, "GTreeView")

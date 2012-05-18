@@ -1,3 +1,4 @@
+if VFS then return end
 if VFS then
 	if type (VFS.DispatchEvent) == "function" then
 		VFS:DispatchEvent ("Unloaded")
@@ -21,6 +22,7 @@ include ("path.lua")
 include ("openflags.lua")
 include ("returncode.lua")
 include ("seektype.lua")
+include ("updateflags.lua")
 include ("filesystem/nodetype.lua")
 include ("filesystem/inode.lua")
 include ("filesystem/ifile.lua")
@@ -37,6 +39,7 @@ include ("filesystem/netfilestream.lua")
 include ("filesystem/vnode.lua")
 include ("filesystem/vfile.lua")
 include ("filesystem/vfolder.lua")
+include ("filesystem/vfilestream.lua")
 include ("filesystem/mountednode.lua")
 include ("filesystem/mountedfile.lua")
 include ("filesystem/mountedfolder.lua")
@@ -70,7 +73,7 @@ if CLIENT then
 	include ("adaptors/expression2_files.lua")
 end
 
-VFS.AddReloadCommand ("vfs/vfs.lua", "vfs")
+VFS.AddReloadCommand ("vfs/vfs.lua", "vfs", "VFS")
 
 function VFS.FormatDate (date)
 	local dateTable = os.date ("*t", date)
@@ -87,12 +90,19 @@ function VFS.FormatFileSize (size)
 	return tostring (math.floor (size * 100 + 0.5) / 100) .. " " .. units [unitIndex]
 end
 
-function VFS.SanifyNodeName (segment)
+function VFS.SanitizeNodeName (segment)
 	segment = segment:gsub ("\\", "_")
 	segment = segment:gsub ("/", "_")
 	if segment == "." then return nil end
 	if segment == ".." then return nil end
 	return segment
+end
+
+function VFS.SanitizeOpenFlags (openFlags)
+	if openFlags & VFS.OpenFlags.Overwrite ~= 0 and openFlags & VFS.OpenFlags.Write == 0 then
+		openFlags = openFlags - VFS.OpenFlags.Overwrite
+	end
+	return openFlags
 end
 
 --[[
@@ -125,15 +135,6 @@ VFS.PermissionDictionary:AddPermission ("Rename")
 VFS.PermissionDictionary:AddPermission ("View Folder")
 VFS.PermissionDictionary:AddPermission ("Write")
 VFS.Root:GetPermissionBlock ():SetPermissionDictionary (VFS.PermissionDictionary)
-if SERVER then
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Modify Permissions", GAuth.Access.Allow)
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Set Owner",          GAuth.Access.Allow)
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Create Folder",      GAuth.Access.Allow)
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Delete",             GAuth.Access.Allow)
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",               GAuth.Access.Allow)
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Rename",             GAuth.Access.Allow)
-	VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Write",              GAuth.Access.Allow)
-end
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder",        GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Modify Permissions", GAuth.Access.Allow)
 VFS.Root:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Owner",    "Set Owner",          GAuth.Access.Allow)

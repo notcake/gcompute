@@ -60,9 +60,11 @@ function self:ctor (systemName)
 		self.QueuedPlayers [ply] = true
 	end
 
-	self:AddEventListener ("Unloaded", function ()
-		self:dtor ()
-	end)
+	if type (_G [systemName]) == "table" and type (_G [systemName].AddEventListener) == "function" then
+		_G [systemName]:AddEventListener ("Unloaded", function ()
+			self:dtor ()
+		end)
+	end
 end
 
 function self:dtor ()

@@ -35,6 +35,15 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 		)
 		self.PermissionBlock:SetDisplayNameFunction (function () return self:GetDisplayPath () end)
 		self.PermissionBlock:SetNameFunction (function () return self:GetPath () end)
+		
+		self.PermissionBlock:AddEventListener ("PermissionsChanged",
+			function (_)
+				self:DispatchEvent ("PermissionsChanged")
+				if self:GetParentFolder () then
+					self:GetParentFolder ():DispatchEvent ("NodePermissionsChanged", self)
+				end
+			end
+		)
 	
 		VFS.PermissionBlockNetworker:HookBlock (self.PermissionBlock)
 	end

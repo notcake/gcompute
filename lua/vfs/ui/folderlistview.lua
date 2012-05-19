@@ -78,9 +78,25 @@ function self:Init ()
 			if not self.Folder then return end
 			if not targetNodes then return end
 			if #targetNodes == 0 then return end
-			for _, node in ipairs (targetNodes) do
-				node:Delete (GAuth.GetLocalId ())
+			local names = ""
+			for i = 1, 3 do
+				if i > 1 then
+					if i == #targetNodes then names = names .. " and "
+					else names = names .. ", " end
+				end
+				names = names .. targetNodes [i]:GetDisplayName ()
+				if i == #targetNodes then break end
 			end
+			if #targetNodes > 3 then names = names .. " and " .. (#targetNodes - 3) .. " more item" .. ((#targetNodes - 3) > 1 and "s" or "") end
+			Derma_Query ("Are you sure you want to delete " .. names .. "?", "Confirm deletion",
+				"Yes",
+					function ()					
+						for _, node in ipairs (targetNodes) do
+							node:Delete (GAuth.GetLocalId ())
+						end
+					end,
+				"No", VFS.NullCallback
+			)
 		end
 	):SetIcon ("gui/g_silkicons/cross")
 	self.Menu:AddOption ("Rename",

@@ -282,6 +282,8 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 					end
 				)
 				folder:CreateFolder (GAuth.GetSystemId (), "tmp")
+				
+				VFS.EndPointManager:GetEndPoint ("Server"):HookNode (folder)
 			end
 		end
 		

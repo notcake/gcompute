@@ -108,7 +108,10 @@ function self:Init ()
 	self.Menu:AddOption ("Delete",
 		function (node)
 			if not node then return end
-			node:Delete (GAuth.GetLocalId ())
+			Derma_Query ("Are you sure you want to delete " .. node:GetDisplayPath () .. "?", "Confirm deletion",
+				"Yes", function () node:Delete (GAuth.GetLocalId ()) end,
+				"No", VFS.NullCallback
+			)
 		end
 	):SetIcon ("gui/g_silkicons/cross")
 	self.Menu:AddOption ("Rename",

@@ -71,12 +71,12 @@ function self:Init ()
 	self.Groups.Menu:AddEventListener ("MenuOpening",
 		function (_, targetItem)
 			self.Groups.Menu:FindItem ("Add"):SetDisabled (not self.PermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Modify Permissions"))
-			if not targetItem or not targetItem.Group then
+			if not targetItem or not targetItem.GroupId then
 				self.Groups.Menu:FindItem ("Remove"):SetDisabled (true)
 				return
 			end
-			self.Groups.Menu:SetTargetItem (targetItem.Group)
-			local targetGroup = targetItem.Group
+			self.Groups.Menu:SetTargetItem (targetItem.GroupId)
+			local targetGroupId = targetItem.GroupId
 			if targetItem.PermissionBlock ~= self.PermissionBlock then
 				self.Groups.Menu:FindItem ("Remove"):SetDisabled (true)
 			else
@@ -96,8 +96,9 @@ function self:Init ()
 		end
 	):SetIcon ("gui/g_silkicons/group_add")
 	self.Groups.Menu:AddOption ("Remove",
-		function (targetGroup)
-			self.PermissionBlock:RemoveGroupEntry (GAuth.GetLocalId (), targetGroup:GetFullName ())
+		function (targetGroupId)
+			if not targetGroupId then return end
+			self.PermissionBlock:RemoveGroupEntry (GAuth.GetLocalId (), targetGroupId)
 		end
 	):SetIcon ("gui/g_silkicons/group_delete")
 	

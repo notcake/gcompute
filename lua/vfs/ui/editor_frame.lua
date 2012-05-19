@@ -1,7 +1,7 @@
 local self = {}
 
 function self:Init ()
-	self:SetTitle ("Editor")
+	self:SetTitle ("Editor (WIP, not working)")
 
 	self:SetSize (ScrW () * 0.75, ScrH () * 0.75)
 	self:Center ()

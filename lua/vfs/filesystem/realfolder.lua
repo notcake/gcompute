@@ -53,6 +53,8 @@ function self:DeleteDirectChild (authId, name, callback)
 			return
 		end
 	end
+	node = self.Children [name] or self.Children [lowercaseName]
+	if not node:CanDelete () then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	if self.FolderPath:lower ():sub (1, 5) ~= "data/" then callback (VFS.ReturnCode.AccessDenied) return end
 	

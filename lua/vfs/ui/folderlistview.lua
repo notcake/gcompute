@@ -17,6 +17,7 @@ function self:Init ()
 	self.Folder = nil
 	self.ChildNodes = {}
 	self.LastAccess = false
+	self.LastReadAccess = false
 	
 	self:AddColumn ("Name")
 	self:AddColumn ("Size")
@@ -54,9 +55,15 @@ function self:Init ()
 			
 			if self.Folder and self.Folder:IsFolder () then
 				local permissionBlock = self.Folder:GetPermissionBlock ()
-				self.Menu:FindItem ("Create Folder"):SetDisabled (permissionBlock and not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
-				self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
-				self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0 or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Rename"))
+				if not permissionBlock then
+					self.Menu:FindItem ("Create Folder"):SetDisabled (false)
+					self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not targetItem [1]:CanDelete ())
+					self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0)
+				else
+					self.Menu:FindItem ("Create Folder"):SetDisabled (permissionBlock and not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
+					self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not targetItem [1]:CanDelete () or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
+					self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0 or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Rename"))
+				end
 			else
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
@@ -275,13 +282,23 @@ function self:SetFolder (folder)
 	self.Folder:AddEventListener ("PermissionsChanged", tostring (self),
 		function (_)
 			local access = self.Folder:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
-			if self.LastAccess == access then return end
-			self.LastAccess = access
-			if self.LastAccess then
-				self:MergeRefresh ()
-			else
-				self:Clear ()
-				self.ChildNodes = {}
+			local readAccess = self.Folder:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Read")
+			if self.LastAccess ~= access then
+				self.LastAccess = access
+				if self.LastAccess then
+					self:MergeRefresh ()
+				else
+					self:Clear ()
+					self.ChildNodes = {}
+				end
+			end
+			if self.LastReadAccess ~= readAccess then
+				self.LastReadAccess = readAccess
+				for _, listViewItem in pairs (self.ChildNodes) do
+					if listViewItem.IsFile then
+						self:UpdateIcon (listViewItem)
+					end
+				end
 			end
 		end
 	)
@@ -312,6 +329,7 @@ function self:AddNode (node)
 	self:UpdateIcon (listViewItem)
 	
 	listViewItem.IsFolder = node:IsFolder ()
+	listViewItem.IsFile = node:IsFile ()
 	listViewItem.Size = node:IsFile () and node:GetSize () or -1
 	listViewItem.LastModified = node:GetModificationTime ()
 	

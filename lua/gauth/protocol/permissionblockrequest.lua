@@ -24,7 +24,7 @@ function self:DequeuePacket ()
 end
 
 function self:GenerateInitialPacket (outBuffer)
-	outBuffer:UInt32 (GAuth.PermissionBlockNetworkerManager:GetSystemId (self.SystemName))
+	outBuffer:UInt32 (GAuth.PermissionBlockNetworkerManager:GetSystemId (self.SystemName) or 0xFFFFFFFF)
 	outBuffer:String (self.PermissionBlock:GetName ())
 	outBuffer:UInt32 (self.Session:GetTypeId ())
 	self.Session:GenerateInitialPacket (outBuffer)

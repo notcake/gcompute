@@ -51,6 +51,10 @@ function self:ctor (nameOverride, mountedNode, parentFolder)
 	self:AddEventListener ("Deleted", self.UnhookPermissionBlock)
 end
 
+function self:CanDelete ()
+	return self.MountedNode:CanDelete ()
+end
+
 function self:GetDisplayName ()
 	return self.DisplayNameOverride or self.MountedNode:GetDisplayName ()
 end
@@ -128,6 +132,10 @@ function self:Rename (authId, name, callback)
 			end
 		)
 	end
+end
+
+function self:SetDeletable (deletable)
+	self.MountedNode:SetDeletable (deletable)
 end
 
 function self:SetDisplayName (displayName)

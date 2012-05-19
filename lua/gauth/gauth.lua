@@ -182,6 +182,7 @@ if CLIENT then
 end
 
 GAuth.Groups = GAuth.GroupTree ()
+GAuth.Groups:SetRemovable (false)
 GAuth.Groups:SetHost (GAuth.GetServerId ())
 
 -- Set up notification sending
@@ -209,6 +210,7 @@ GAuth.Groups:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Ow
 
 GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Administrators",
 	function (returnCode, group)
+		group:SetRemovable (false)
 		group:SetMembershipFunction (
 			function (userId, permissionBlock)
 				local ply = GAuth.PlayerMonitor:GetUserEntity (userId)
@@ -222,6 +224,7 @@ GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Administrators",
 
 GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Super Administrators",
 	function (returnCode, group)
+		group:SetRemovable (false)
 		group:SetMembershipFunction (
 			function (userId, permissionBlock)
 				local ply = GAuth.PlayerMonitor:GetUserEntity (userId)
@@ -235,6 +238,7 @@ GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Super Administrators",
 
 GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Everyone",
 	function (returnCode, group)
+		group:SetRemovable (false)
 		group:SetMembershipFunction (
 			function (userId, permissionBlock)
 				return true
@@ -246,6 +250,7 @@ GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Everyone",
 
 GAuth.Groups:AddGroup (GAuth.GetSystemId (), "Owner",
 	function (returnCode, group)
+		group:SetRemovable (false)
 		group:SetMembershipFunction (
 			function (userId, permissionBlock)
 				if not permissionBlock then return false end
@@ -263,18 +268,31 @@ GAuth.PlayerMonitor:AddEventListener ("PlayerConnected",
 		GAuth.Groups:MarkPredicted ()
 		GAuth.Groups:AddGroupTree (GAuth.GetSystemId (), userId,
 			function (returnCode, groupTree)
+				groupTree:SetRemovable (false)
 				groupTree:SetHost (userId)
 				groupTree:MarkPredicted ()
 				groupTree:GetPermissionBlock ():SetOwner (GAuth.GetSystemId (), userId)
 				groupTree:SetDisplayName (ply:Name ())
 				groupTree:AddGroup (GAuth.GetSystemId (), "Player",
 					function (returnCode, playerGroup)
+						playerGroup:SetRemovable (false)
 						playerGroup:MarkPredicted ()
 						playerGroup:AddUser (GAuth.GetSystemId (), userId)
 						playerGroup:ClearPredictedFlag ()
 					end
 				)
-				groupTree:AddGroup (GAuth.GetSystemId (), "Friends")
+				groupTree:AddGroup (GAuth.GetSystemId (), "Friends",
+					function (returnCode, playerGroup)
+						playerGroup:SetRemovable (false)
+						if isLocalPlayer then
+							for _, ply in ipairs (player.GetAll ()) do
+								if ply:GetFriendStatus () == "friend" then
+									GAuth.ResolveGroup (GAuth.GetLocalId () .. "/Friends"):AddUser (GAuth.GetSystemId (), userId)
+								end
+							end
+						end
+					end
+				)
 				groupTree:ClearPredictedFlag ()
 			end
 		)
@@ -283,6 +301,12 @@ GAuth.PlayerMonitor:AddEventListener ("PlayerConnected",
 		if isLocalPlayer then
 			GAuth.EndPointManager:GetEndPoint ("Server"):SendNotification (GAuth.Protocol.InitialSyncRequest ())
 			GAuth.GroupTreeSender:SendNode ("Server", GAuth.Groups)
+		end
+		if CLIENT then
+			local friendsGroup = GAuth.ResolveGroup (GAuth.GetLocalId () .. "/Friends")
+			if friendsGroup then
+				(ply:GetFriendStatus () == "friend" and friendsGroup.AddUser or friendsGroup.RemoveUser) (friendsGroup, GAuth.GetSystemId (), userId)
+			end
 		end
 	end
 )
@@ -294,6 +318,7 @@ GAuth.PlayerMonitor:AddEventListener ("PlayerDisconnected",
 			return
 		end
 		if SERVER then
+			GAuth.Groups:GetChild (ply:SteamID ()):SetRemovable (true)
 			GAuth.Groups:RemoveNode (GAuth.GetSystemId (), ply:SteamID ())
 		end
 		GAuth.EndPointManager:RemoveEndPoint (ply:SteamID ())

@@ -17,9 +17,14 @@ VFS.INode = VFS.MakeConstructor (self)
 function self:ctor ()
 	VFS.EventProvider (self)
 	
+	self.Deletable = true
 	self.Predicted = false
 	
 	self:AddEventListener ("PermissionsChanged", self.PermissionsChanged)
+end
+
+function self:CanDelete ()
+	return self.Deletable
 end
 
 function self:ClearPredictedFlag ()
@@ -35,8 +40,6 @@ end
 function self:Delete (authId, callback)
 	if not self:GetParentFolder () then
 		VFS.Error ("IFolder:Delete : " .. self:GetPath () .. " has no parent folder from which to delete.")
-		PrintTable (self)
-		PrintTable (debug.getinfo (self.ctor))
 		return
 	end
 	self:GetParentFolder ():DeleteDirectChild (authId, self:GetName (), callback)
@@ -149,6 +152,10 @@ end
 
 function self:Rename (authId, name)
 	VFS.Error ("INode:Rename : Not implemented")
+end
+
+function self:SetDeletable (deletable)
+	self.Deletable = deletable
 end
 
 function self:SetDisplayName (displayName)

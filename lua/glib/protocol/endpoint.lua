@@ -57,6 +57,18 @@ function self:HandleIncomingPacket (sessionId, inBuffer)
 	local session = self.Sessions [sessionId]
 	if not session then
 		ErrorNoHalt (self.SystemName .. ".Net.EndPoint." .. self.UniqueId .. ":HandleIncomingPacket : Session " .. sessionId .. " not found!\n")
+		local data = ""
+		for i = 1, 16 do
+			local byte = inBuffer:Int8 ()
+			if byte < 0 then byte = byte + 256 end
+			if byte < 32 or byte >= 127 then
+				data = data .. string.format ("[%02x]", byte)
+			else
+				data = data .. string.char (byte)
+			end
+		end
+		PrintTable (inBuffer)
+		ErrorNoHalt ("Data: " .. data .. "\n")
 		return
 	end
 	session:ResetTimeout ()

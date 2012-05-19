@@ -131,6 +131,7 @@ function self:RemoveNode (authId, name, callback)
 	local node = self.Children [name]
 	if not node then callback (GAuth.ReturnCode.Success) return end
 	if not node:GetPermissionBlock ():IsAuthorized (authId, "Delete") then callback (GAuth.ReturnCode.AccessDenied) return end
+	if not node:CanRemove () then callback (GAuth.ReturnCode.AccessDenied) return end
 	
 	if not self:IsPredicted () and not self:IsHostedLocally () then
 		local nodeRemovalRequest = GAuth.Protocol.NodeRemovalRequest (self, node, callback)

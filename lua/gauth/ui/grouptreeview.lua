@@ -36,6 +36,7 @@ function self:Init ()
 			end
 			
 			if not targetItem then
+				self.Menu:FindItem ("Browse"):SetDisabled (true)
 				self.Menu:FindItem ("Create Group"):SetDisabled (true)
 				self.Menu:FindItem ("Create Group Tree"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
@@ -44,13 +45,24 @@ function self:Init ()
 			end
 			
 			local permissionBlock = targetItem:GetPermissionBlock ()
+			self.Menu:FindItem ("Browse"):SetDisabled (false)
 			self.Menu:FindItem ("Create Group"):SetDisabled (not targetItem:IsGroupTree () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Group"))
 			self.Menu:FindItem ("Create Group Tree"):SetDisabled (not targetItem:IsGroupTree () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Group"))
-			self.Menu:FindItem ("Delete"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
+			self.Menu:FindItem ("Delete"):SetDisabled (not targetItem:CanRemove () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
 			self.Menu:FindItem ("Permissions"):SetDisabled (false)
 		end
 	)
 	
+	self.Menu:AddOption ("Browse",
+		function (groupTreeNode)
+			if not groupTreeNode then return end
+			GAuth.GroupBrowser ():GetFrame ():SetGroupTree (groupTreeNode)
+			GAuth.GroupBrowser ():GetFrame ():SetVisible (true)
+			GAuth.GroupBrowser ():GetFrame ():MoveToFront ()
+			GAuth.GroupBrowser ():GetFrame ():RequestFocus ()
+		end
+	):SetIcon ("gui/g_silkicons/group_go")
+	self.Menu:AddSeparator ()
 	self.Menu:AddOption ("Create Group",
 		function (groupTreeNode)
 			if not groupTreeNode then return end
@@ -62,7 +74,6 @@ function self:Init ()
 			)
 		end
 	):SetIcon ("gui/g_silkicons/group_add")
-	
 	self.Menu:AddOption ("Create Group Tree",
 		function (groupTreeNode)
 			if not groupTreeNode then return end
@@ -112,6 +123,10 @@ function self:GetSelectedGroupTreeNode ()
 	return item.Item
 end
 
+function self:IsPopulated ()
+	return true
+end
+
 function self.ItemComparator (a, b)
 	-- Put group trees at the top
 	if a == b then return false end
@@ -156,6 +171,30 @@ function self:Populate (groupTreeNode, treeViewNode)
 			treeViewNode:RemoveNode (childNode)
 		end
 	)
+end
+
+--[[
+	GroupTreeView:Select ()
+	
+		Don't call this, it's used to simulate a GTreeViewNode
+]]
+function self:Select ()
+end
+
+function self:SelectGroup (group)
+	local groupId = group:GetFullName ()
+	local parts = groupId:Split ("/")
+	local currentNode = self
+	for _, part in ipairs (parts) do
+		if not currentNode:IsPopulated () then
+			currentNode:Populate ()
+		end
+		local childNode = currentNode:FindChild (part)
+		if not childNode then break end
+		currentNode = childNode
+	end
+	currentNode:Select ()
+	currentNode:ExpandTo (true)
 end
 
 -- Events

@@ -1,33 +1,39 @@
 GLib.UTF8 = {}
 
-function GLib.UTF8.Byte (char)
+function GLib.UTF8.Byte (char, offset)
 	if char == "" then return -1 end
-	local byte = string.byte (char)
+	offset = offset or 1
+	
+	local byte = string.byte (char, offset)
+	local length = 1
 	if byte >= 128 then
 		if byte >= 240 then
 			-- 4 byte sequence
-			if string.len (char) < 4 then return -1 end
+			length = 4
+			if string.len (char) < 4 then return -1, length end
 			byte = (byte & 7) * 262144
-			byte = byte + (string.byte (char, 2) & 63) * 4096
-			byte = byte + (string.byte (char, 3) & 63) * 64
-			byte = byte + (string.byte (char, 4) & 63)
+			byte = byte + (string.byte (char, offset + 2) & 63) * 4096
+			byte = byte + (string.byte (char, offset + 3) & 63) * 64
+			byte = byte + (string.byte (char, offset + 4) & 63)
 		elseif byte >= 224 then
 			-- 3 byte sequence
-			if string.len (char) < 3 then return -1 end
+			length = 3
+			if string.len (char) < 3 then return -1, length end
 			byte = (byte & 15) * 4096
-			byte = byte + (string.byte (char, 2) & 63) * 64
-			byte = byte + (string.byte (char, 3) & 63)
+			byte = byte + (string.byte (char, offset + 2) & 63) * 64
+			byte = byte + (string.byte (char, offset + 3) & 63)
 		elseif byte >= 192 then
 			-- 2 byte sequence
-			if string.len (char) < 2 then return -1 end
+			length = 2
+			if string.len (char) < 2 then return -1, length end
 			byte = (byte & 31) * 64
-			byte = byte + (string.byte (char, 2) & 63)
+			byte = byte + (string.byte (char, offset + 2) & 63)
 		else
 			-- invalid sequence
 			byte = -1
 		end
 	end
-	return byte
+	return byte, length
 end
 
 function GLib.UTF8.Char (byte)

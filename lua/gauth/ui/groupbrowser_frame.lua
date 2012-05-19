@@ -8,8 +8,6 @@ function self:Init ()
 	self:SetDeleteOnClose (false)
 	self:MakePopup ()
 	
-	self.SelectedGroup = nil
-	
 	self.Groups = vgui.Create ("GAuthGroupTreeView", self)
 	self.Groups:AddEventListener ("SelectedGroupTreeNodeChanged",
 		function (_, groupTreeNode)
@@ -32,6 +30,12 @@ function self:PerformLayout ()
 		self.Users:SetPos (self:GetWide () * 0.2 + 16, 30)
 		self.Users:SetSize (self:GetWide () - self.Groups:GetWide () - 24, self:GetTall () - 38)
 	end
+end
+
+function self:SetGroupTree (groupTree)
+	if not groupTree then return end
+	self.Groups:SelectGroup (groupTree)
+	self.Users:SetGroup (groupTree)
 end
 
 vgui.Register ("GAuthGroupBrowserFrame", self, "DFrame")

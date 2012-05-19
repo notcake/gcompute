@@ -20,6 +20,7 @@ function self:ctor (name)
 	self.Host = GAuth.GetSystemId ()
 	
 	self.Icon = nil
+	self.Removable = true
 	self.Predicted = false
 	
 	self.PermissionBlock = GAuth.PermissionBlock ()
@@ -33,6 +34,10 @@ function self:ctor (name)
 	)
 	
 	GAuth.EventProvider (self)
+end
+
+function self:CanRemove ()
+	return self.Removable
 end
 
 function self:ClearPredictedFlag ()
@@ -131,6 +136,9 @@ end
 
 function self:Remove (authId, callback)
 	callback = callback or GAuth.NullCallback
+	
+	if not self:CanRemove () then callback (VFS.ReturnCode.AccessDenied) return end
+	
 	self:GetParentNode ():RemoveNode (authId, self:GetName (), callback)
 end
 
@@ -167,4 +175,8 @@ end
 function self:SetParentNode (parentNode)
 	if self.ParentNode == parentNode then return end
 	self.ParentNode = parentNode
+end
+
+function self:SetRemovable (removable)
+	self.Removable = removable
 end

@@ -87,6 +87,29 @@ function self:AddGroupEntry (authId, groupId, callback)
 	callback (GAuth.ReturnCode.Success)
 end
 
+function self:CopyFrom (permissionBlock)
+	self.OwnerId = permissionBlock.OwnerId
+	self.GroupEntries = {}
+	
+	self.InheritOwner = permissionBlock.InheritOwner
+	self.InheritPermissions = permissionBlock.InheritPermissions
+	
+	self.Parent = permissionBlock.Parent
+	self.ParentFunction = permissionBlock.ParentFunction
+	
+	self.Name = permissionBlock.Name
+	self.NameFunction = permissionBlock.NameFunction
+	self.DisplayName = permissionBlock.DisplayName
+	self.DisplayNameFunction = permissionBlock.DisplayNameFunction
+	
+	for groupId, groupEntry in pairs (permissionBlock.GroupEntries) do
+		self.GroupEntries [groupId] = {}
+		for actionId, access in pairs (groupEntry) do
+			self.GroupEntries [groupId] [actionId] = access
+		end
+	end
+end
+
 function self:GetAccess (authId, actionId, permissionBlock)
 	if authId == GAuth.GetSystemId () or
 		authId == GAuth.GetServerId () then
@@ -297,7 +320,7 @@ end
 function self:SetOwner (authId, ownerId, callback)
 	callback = callback or GAuth.NullCallback
 
-	if self.OwnerId == ownerId then callback (GAuth.ReturnCode.Success) return end
+	if self:GetOwner () == ownerId then callback (GAuth.ReturnCode.Success) return end
 	if not self:IsAuthorized (authId, "Set Owner") then callback (GAuth.ReturnCode.AccessDenied) return end
 
 	if self:DispatchEvent ("RequestSetOwner", authId, ownerId, callback) then return end

@@ -59,6 +59,7 @@ function self:Init ()
 			
 			if not targetItem then
 				self.Menu:FindItem ("Open"):SetVisible (false)
+				self.Menu:FindItem ("Browse"):SetVisible (false)
 				self.Menu:FindItem ("OpenSeparator"):SetVisible (false)
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
@@ -68,24 +69,37 @@ function self:Init ()
 			end
 			
 			self.Menu:FindItem ("Open"):SetVisible (targetItem:IsFile ())
-			self.Menu:FindItem ("OpenSeparator"):SetVisible (targetItem:IsFile ())
+			self.Menu:FindItem ("Browse"):SetVisible (targetItem:IsFolder () and not targetItem:IsRoot ())
+			self.Menu:FindItem ("OpenSeparator"):SetVisible (not targetItem:IsRoot ())
 			
 			local permissionBlock = targetItem:GetPermissionBlock ()
 			if not permissionBlock then
+				self.Menu:FindItem ("Browse"):SetDisabled (not targetItem:IsFolder ())
 				self.Menu:FindItem ("Open"):SetDisabled (not targetItem:IsFile ())
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not targetItem:IsFolder ())
-				self.Menu:FindItem ("Delete"):SetDisabled (false)
+				self.Menu:FindItem ("Delete"):SetDisabled (not targetItem:CanDelete ())
 				self.Menu:FindItem ("Rename"):SetDisabled (false)
 			else
+				self.Menu:FindItem ("Browse"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "View Folder"))
 				self.Menu:FindItem ("Open"):SetDisabled (not targetItem:IsFile () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Read"))
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
+				self.Menu:FindItem ("Delete"):SetDisabled (not targetItem:CanDelete () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
 				self.Menu:FindItem ("Rename"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Rename"))
-				self.Menu:FindItem ("Delete"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
 			end
 			self.Menu:FindItem ("Permissions"):SetDisabled (not permissionBlock)
 		end
 	)
 	
+	self.Menu:AddOption ("Browse",
+		function (node)
+			if not node then return end
+			if not node:IsFolder () then return end
+			VFS.FileSystemBrowser ():GetFrame ():SetFolder (node)
+			VFS.FileSystemBrowser ():GetFrame ():SetVisible (true)
+			VFS.FileSystemBrowser ():GetFrame ():MoveToFront ()
+			VFS.FileSystemBrowser ():GetFrame ():RequestFocus ()
+		end
+	):SetIcon ("gui/g_silkicons/folder_go")
 	self.Menu:AddOption ("Open",
 		function (node)
 			if not node then return end

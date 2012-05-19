@@ -13,20 +13,23 @@ function self:HandleInitialPacket (inBuffer)
 				if node:IsFolder () then
 					self:GetRemoteEndPoint ():HookNode (node)
 					
+					local lastChildName = ""
 					node:EnumerateChildren (self:GetRemoteEndPoint ():GetRemoteId (),
 						function (returnCode, node)
 							if returnCode == VFS.ReturnCode.Success then
+								lastChildName = node:GetName ()
+							
 								local outBuffer = self:CreatePacket ()
 								outBuffer:UInt8 (returnCode)
 								self:SerializeNode (node, outBuffer)							
 								self:QueuePacket (outBuffer)
 							elseif returnCode == VFS.ReturnCode.Finished then
-								self:SendReturnCode (VFS.ReturnCode.Finished)
+								self:SendFinished (lastChildName)
 								self:Close ()
 							elseif returnCode == VFS.ReturnCode.EndOfBurst then
 							else
 								self:SendReturnCode (returnCode)
-								self:SendReturnCode (VFS.ReturnCode.Finished)
+								self:SendFinished (lastChildName)
 								self:Close ()
 							end
 						end
@@ -42,9 +45,19 @@ function self:HandleInitialPacket (inBuffer)
 				end
 			else
 				self:SendReturnCode (returnCode)
-				self:SendReturnCode (VFS.ReturnCode.Finished)
+				self:SendFinished ()
 				self:Close ()
 			end
 		end
 	)
+end
+
+function self:SendFinished (lastChildName)
+	lastChildName = lastChildName or ""
+	local outBuffer = self:CreatePacket ()
+	outBuffer:UInt8 (VFS.ReturnCode.Finished)
+	outBuffer:String (lastChildName)
+	self:QueuePacket (outBuffer)
+	
+	VFS.Debug (self:ToString () .. ": " .. VFS.ReturnCode [VFS.ReturnCode.Finished])
 end

@@ -9,6 +9,7 @@ function self:Init ()
 	self:MakePopup ()
 	
 	self.PermissionBlock = nil
+	self.TestPermissionBlock = nil
 	self.SelectedGroup = nil
 	self.SelectedGroupId = nil
 	self.SelectedPermissionBlock = nil
@@ -24,10 +25,16 @@ function self:Init ()
 	self.ChangeOwner:AddEventListener ("Click",
 		function (_)
 			local permissionBlock = self.PermissionBlock
+			local testPermissionBlock = self.TestPermissionBlock
 			local dialog = GAuth.OpenUserSelectionDialog (
 				function (userId)
 					if not userId then return end
-					permissionBlock:SetOwner (GAuth.GetLocalId (), userId)
+					self:Confirm ("Are you sure you want to change the owner to " .. userId .. "?", "Confirm owner change",
+						function (permissionBlock) permissionBlock:SetOwner (GAuth.GetLocalId (), userId) end,
+						GAuth.NullCallback,
+						permissionBlock,
+						testPermissionBlock
+					)
 				end
 			)
 			dialog:SetTitle ("Change owner...")
@@ -42,13 +49,19 @@ function self:Init ()
 	
 	self.InheritOwner:AddEventListener ("CheckStateChanged",
 		function (_, checked)
-			self.PermissionBlock:SetInheritOwner (GAuth.GetLocalId (), checked)
+			self:Confirm ("Are you sure you want to " .. (checked and "enable" or "disable") .. " owner inheritance?", "Confirm owner inheritance change",
+				function (permissionBlock) permissionBlock:SetInheritOwner (GAuth.GetLocalId (), checked) end,
+				function () self.InheritOwner:SetChecked (not checked) end
+			)
 		end
 	)
 	
 	self.InheritPermissions:AddEventListener ("CheckStateChanged",
 		function (_, checked)
-			self.PermissionBlock:SetInheritPermissions (GAuth.GetLocalId (), checked)
+			self:Confirm ("Are you sure you want to " .. (checked and "enable" or "disable") .. " permission inheritance?", "Confirm permission inheritance change",
+				function (permissionBlock) permissionBlock:SetInheritPermissions (GAuth.GetLocalId (), checked) end,
+				function () self.InheritPermissions:SetChecked (not checked) end
+			)
 		end
 	)
 	
@@ -98,7 +111,11 @@ function self:Init ()
 	self.Groups.Menu:AddOption ("Remove",
 		function (targetGroupId)
 			if not targetGroupId then return end
-			self.PermissionBlock:RemoveGroupEntry (GAuth.GetLocalId (), targetGroupId)
+			local groupTreeNode = GAuth.ResolveGroupTreeNode (targetGroupId)
+			local groupDisplayName = groupTreeNode and groupTreeNode:GetFullDisplayName () or targetGroupId
+			self:Confirm ("Are you sure you want to remove " .. groupDisplayName .. "'s permissions?", "Confirm group entry removal",
+				function (permissionBlock) permissionBlock:RemoveGroupEntry (GAuth.GetLocalId (), targetGroupId) end
+			)
 		end
 	):SetIcon ("gui/g_silkicons/group_delete")
 	
@@ -121,16 +138,36 @@ function self:Init ()
 		if not self.SelectedGroupId then return end
 		if self.SelectedPermissionBlock ~= self.PermissionBlock then return end
 		self.PermissionList:SuppressEvents (true)
+		local newAccess = nil
 		if checked then
 			if i == 2 then
 				line:SetCheckState (3, false)
-				self.PermissionBlock:SetGroupPermission (GAuth.GetLocalId (), self.SelectedGroupId, line.ActionId, GAuth.Access.Allow)
+				newAccess = GAuth.Access.Allow
 			elseif i == 3 then
 				line:SetCheckState (2, false)
-				self.PermissionBlock:SetGroupPermission (GAuth.GetLocalId (), self.SelectedGroupId, line.ActionId, GAuth.Access.Deny)
+				newAccess = GAuth.Access.Deny
 			end
 		else
-			self.PermissionBlock:SetGroupPermission (GAuth.GetLocalId (), self.SelectedGroupId, line.ActionId, GAuth.Access.None)
+			newAccess = GAuth.Access.None
+		end
+		
+		local selectedGroupId = self.SelectedGroupId
+		if newAccess then
+			self:Confirm ("Are you sure?", "Confirm group permission change",
+				function (permissionBlock) permissionBlock:SetGroupPermission (GAuth.GetLocalId (), selectedGroupId, line.ActionId, newAccess) end,
+				function ()
+					if not line:IsValid () then return end
+					self.PermissionList:SuppressEvents (true)
+					if i == 2 then
+						line:SetCheckState (2, not checked)
+						line:SetCheckState (3, checked)
+					elseif i == 3 then
+						line:SetCheckState (2, checked)
+						line:SetCheckState (3, not checked)
+					end
+					self.PermissionList:SuppressEvents (false)
+				end
+			)
 		end
 		self.PermissionList:SuppressEvents (false)
 	end)
@@ -187,10 +224,31 @@ function self:Remove ()
 	_R.Panel.Remove (self)
 end
 
+function self:Confirm (query, title, yesCallback, noCallback, permissionBlock, testPermissionBlock)
+	noCallback = noCallback or GAuth.NullCallback
+
+	permissionBlock = permissionBlock or self.PermissionBlock
+	testPermissionBlock = testPermissionBlock or self.TestPermissionBlock
+	local testAccess = testPermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Modify Permissions")
+	yesCallback (testPermissionBlock)
+	local newAccess = testPermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Modify Permissions")
+	if newAccess or testAccess == newAccess then
+		yesCallback (permissionBlock)
+	else
+		Derma_Query ("This will lock you out of this permission block.\n\n" .. query, title,
+			"Yes", function () yesCallback (permissionBlock) end,
+			"No", function () testPermissionBlock:CopyFrom (permissionBlock) noCallback () end
+		)
+	end
+end
+
 function self:SetPermissionBlock (permissionBlock)
 	if self.PermissionBlock then return end
 
 	self.PermissionBlock = permissionBlock
+	self.TestPermissionBlock = GAuth.PermissionBlock ()
+	self.TestPermissionBlock:CopyFrom (self.PermissionBlock)
+	self.TestAccess = self.TestPermissionBlock:IsAuthorized (GAuth.GetLocalId (), "Modify Permissions")
 	self:SetTitle ("Permissions - " .. permissionBlock:GetDisplayName ())
 	
 	self:UpdateInheritOwner ()
@@ -212,7 +270,9 @@ function self:SetPermissionBlock (permissionBlock)
 	
 	-- Events
 	self.PermissionBlock:AddEventListener ("GroupEntryAdded", tostring (self),
-		function (_, groupId)
+		function (permissionBlock, groupId)
+			self.TestPermissionBlock:AddGroupEntry (GAuth.GetSystemId (), groupId)
+			
 			self:AddGroup (groupId, self.PermissionBlock, 1)
 			self.Groups:Sort ()
 		end
@@ -220,6 +280,8 @@ function self:SetPermissionBlock (permissionBlock)
 	
 	self.PermissionBlock:AddEventListener ("GroupEntryRemoved", tostring (self),
 		function (permissionBlock, groupId)
+			self.TestPermissionBlock:RemoveGroupEntry (GAuth.GetSystemId (), groupId)
+			
 			for _, item in pairs (self.Groups:GetItems ()) do
 				if item.GroupId == groupId and
 					item.PermissionBlock == permissionBlock then
@@ -234,13 +296,17 @@ function self:SetPermissionBlock (permissionBlock)
 	
 	self.PermissionBlock:AddEventListener ("GroupPermissionChanged", tostring (self),
 		function (permissionBlock, groupId, actionId, access)
+			self.TestPermissionBlock:SetGroupPermission (GAuth.GetSystemId (), groupId, actionId, access)
+			
 			self:CheckPermissions ()
 			self:PopulatePermissions ()
 		end
 	)
 	
 	self.PermissionBlock:AddEventListener ("InheritOwnerChanged", tostring (self),
-		function (permissionBlock, groupId, actionId, access)
+		function (permissionBlock, inheritOwner)
+			self.TestPermissionBlock:SetInheritOwner (GAuth.GetSystemId (), inheritOwner)
+			
 			self:CheckPermissions ()
 			self:PopulatePermissions ()
 			self:UpdateInheritOwner ()
@@ -249,7 +315,9 @@ function self:SetPermissionBlock (permissionBlock)
 	)
 	
 	self.PermissionBlock:AddEventListener ("InheritPermissionsChanged", tostring (self),
-		function (permissionBlock, groupId, actionId, access)
+		function (permissionBlock, inheritPermissions)
+			self.TestPermissionBlock:SetInheritPermissions (GAuth.GetSystemId (), inheritPermissions)
+			
 			self:CheckPermissions ()
 			self:PopulateGroupEntries ()
 			self:PopulatePermissions ()
@@ -258,7 +326,9 @@ function self:SetPermissionBlock (permissionBlock)
 	)
 	
 	self.PermissionBlock:AddEventListener ("OwnerChanged", tostring (self),
-		function (permissionBlock, groupId, actionId, access)
+		function (permissionBlock, ownerId)
+			self.TestPermissionBlock:SetOwner (GAuth.GetSystemId (), ownerId)
+		
 			self:CheckPermissions ()
 			self:PopulatePermissions ()
 			self:UpdateOwner ()

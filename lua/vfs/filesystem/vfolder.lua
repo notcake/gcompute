@@ -34,6 +34,7 @@ function self:DeleteDirectChild (authId, name, callback)
 	local node = self.Children [name] or (self:IsCaseInsensitive () and self.LowercaseChildren [lowercaseName] or nil)
 	if not node then callback (VFS.ReturnCode.Success) return end
 	if not node:GetPermissionBlock ():IsAuthorized (authId, "Delete") then callback (VFS.ReturnCode.AccessDenied) return end
+	if not node:CanDelete () then callback (VFS.ReturnCode.AccessDenied) return end
 	
 	self.Children [name] = nil
 	self.LowercaseChildren [lowercaseName] = nil

@@ -20,7 +20,7 @@ function self:ctor (systemName, permissionBlock, permissionBlockNotifications)
 end
 
 function self:GenerateInitialPacket (outBuffer)
-	outBuffer:UInt32 (GAuth.PermissionBlockNetworkerManager:GetSystemId (self.SystemName))
+	outBuffer:UInt32 (GAuth.PermissionBlockNetworkerManager:GetSystemId (self.SystemName) or 0xFFFFFFFF)
 	outBuffer:String (self.PermissionBlock:GetName ())
 	outBuffer:UInt16 (self.SessionCount)
 	for _, session in ipairs (self.Sessions) do

@@ -134,6 +134,7 @@ elseif CLIENT then
 	VFS.Client = VFS.EndPointManager:GetEndPoint (GAuth.GetServerId ())
 	VFS.Root = VFS.Client:GetRoot ()
 end
+VFS.Root:SetDeletable (false)
 VFS.Root:MarkPredicted ()
 VFS.PermissionDictionary = GAuth.PermissionDictionary ()
 VFS.PermissionDictionary:AddPermission ("Create Folder")
@@ -157,6 +158,7 @@ VFS.Root:ClearPredictedFlag ()
 if SERVER then
 	VFS.Root:CreateFolder (GAuth.GetSystemId (), "Public",
 		function (returnCode, folder)
+			folder:SetDeletable (false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Allow)
 			
@@ -170,6 +172,7 @@ if SERVER then
 
 	VFS.Root:CreateFolder (GAuth.GetSystemId (), "Admins",
 		function (returnCode, folder)
+			folder:SetDeletable (false)
 			folder:GetPermissionBlock ():SetInheritPermissions (GAuth.GetSystemId (), false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Administrators", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Administrators", "View Folder", GAuth.Access.Allow)
@@ -201,6 +204,7 @@ if SERVER then
 
 	VFS.Root:CreateFolder (GAuth.GetSystemId (), "Super Admins",
 		function (returnCode, folder)
+			folder:SetDeletable (false)
 			folder:GetPermissionBlock ():SetInheritPermissions (GAuth.GetSystemId (), false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Super Administrators", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Super Administrators", "View Folder", GAuth.Access.Allow)
@@ -209,7 +213,9 @@ if SERVER then
 	
 	VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gcompute/lua",
 		function (returnCode, folder)
+			if not folder then return end
 			local folder = VFS.Root:Mount ("Source", folder, "Source")
+			folder:SetDeletable (false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Allow)
 		end
@@ -217,7 +223,9 @@ if SERVER then
 	
 	VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gooey/lua",
 		function (returnCode, folder)
+			if not folder then return end
 			local folder = VFS.Root:Mount ("UI Source", folder, "UI Source")
+			folder:SetDeletable (false)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Allow)
 			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Allow)
 		end
@@ -242,6 +250,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 			end
 			folder = endPoint:GetRoot ():CreatePredictedFolder (ply:SteamID ())
 		end
+		folder:SetDeletable (false)
 		folder:MarkPredicted ()
 		folder:SetDisplayName (ply:Nick ())
 		if SERVER then
@@ -252,7 +261,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 				end
 			)
 		elseif CLIENT then
-			if isLocalPlayer then
+			if isLocalPlayer then				
 				local mountPaths =
 				{
 					"data/adv_duplicator",
@@ -268,20 +277,27 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 					VFS.RealRoot:GetChild (GAuth.GetSystemId (), realPath,
 						function (returnCode, node)
 							folder:Mount (node:GetName (), node)
+								:SetDeletable (false)
 						end
 					)
 				end
 				VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gcompute/lua",
 					function (returnCode, node)
 						folder:Mount ("Source", node, "Source")
+							:SetDeletable (false)
 					end
 				)
 				VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gooey/lua",
 					function (returnCode, node)
 						folder:Mount ("UI Source", node, "UI Source")
+							:SetDeletable (false)
 					end
 				)
-				folder:CreateFolder (GAuth.GetSystemId (), "tmp")
+				folder:CreateFolder (GAuth.GetSystemId (), "tmp",
+					function (returnCode, node)
+						if node then node:SetDeletable (false) end
+					end
+				)
 				
 				VFS.EndPointManager:GetEndPoint ("Server"):HookNode (folder)
 			end
@@ -309,6 +325,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerDisconnected",
 			return
 		end
 		if SERVER then
+			VFS.Root:GetChildSynchronous (ply:SteamID ()):SetDeletable (true)
 			VFS.Root:DeleteChild (GAuth.GetSystemId (), ply:SteamID ())
 		end
 		VFS.EndPointManager:RemoveEndPoint (ply:SteamID ())

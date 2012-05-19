@@ -134,7 +134,7 @@ end
 
 -- Permission block hooks
 function self:HookBlock (permissionBlock)
-	ErrorNoHalt (self.SystemName .. ".PermissionBlockNetworker:HookBlock : " .. permissionBlock:GetName () .. "\n")
+	GAuth.Debug (self.SystemName .. ".PermissionBlockNetworker:HookBlock : " .. permissionBlock:GetName ())
 
 	permissionBlock:AddEventListener ("GroupEntryAdded",           tostring (self), self.GroupEntryAdded)
 	permissionBlock:AddEventListener ("GroupEntryRemoved",         tostring (self), self.GroupEntryRemoved)
@@ -145,7 +145,7 @@ function self:HookBlock (permissionBlock)
 end
 
 function self:HookRemoteBlock (permissionBlock)
-	ErrorNoHalt (self.SystemName .. ".PermissionBlockNetworker:HookRemoteBlock : " .. permissionBlock:GetName () .. "\n")
+	GAuth.Debug (self.SystemName .. ".PermissionBlockNetworker:HookRemoteBlock : " .. permissionBlock:GetName ())
 	
 	permissionBlock:AddEventListener ("RequestAddGroupEntry",         tostring (self), self.RequestAddGroupEntry)
 	permissionBlock:AddEventListener ("RequestRemoveGroupEntry",      tostring (self), self.RequestRemoveGroupEntry)
@@ -158,7 +158,7 @@ function self:HookRemoteBlock (permissionBlock)
 end
 
 function self:UnhookBlock (permissionBlock)
-	ErrorNoHalt (self.SystemName .. ".PermissionBlockNetworker:UnhookBlock : " .. permissionBlock:GetName () .. "\n")
+	GAuth.Debug (self.SystemName .. ".PermissionBlockNetworker:UnhookBlock : " .. permissionBlock:GetName ())
 	
 	permissionBlock:RemoveEventListener ("GroupEntryAdded",              tostring (self))
 	permissionBlock:RemoveEventListener ("GroupEntryRemoved",            tostring (self))

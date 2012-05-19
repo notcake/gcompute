@@ -54,9 +54,9 @@ function self:Init ()
 			
 			if self.Folder and self.Folder:IsFolder () then
 				local permissionBlock = self.Folder:GetPermissionBlock ()
-				self.Menu:FindItem ("Create Folder"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
-				self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
-				self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0 or not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Rename"))
+				self.Menu:FindItem ("Create Folder"):SetDisabled (permissionBlock and not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
+				self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
+				self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0 or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Rename"))
 			else
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
@@ -309,13 +309,13 @@ end
 function self:UpdateIcon (listViewItem)
 	local node = listViewItem.Node
 	if node:IsFolder () then
-		if node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder") then
+		if not node:GetPermissionBlock () or node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder") then
 			listViewItem:SetIcon ("gui/g_silkicons/folder")
 		else
 			listViewItem:SetIcon ("gui/g_silkicons/folder_delete")
 		end
 	else
-		if node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Read") then
+		if not node:GetPermissionBlock () or node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Read") then
 			listViewItem:SetIcon ("gui/g_silkicons/page")
 		else
 			listViewItem:SetIcon ("gui/g_silkicons/page_delete")

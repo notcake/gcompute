@@ -7,7 +7,6 @@ end
 
 function self:HandleInitialPacket (inBuffer)
 	self.FolderPath = inBuffer:String ()
-	ErrorNoHalt ("FolderListing: Request for " .. self.FolderPath .. " received.\n")
 	VFS.Root:GetChild (self:GetRemoteEndPoint ():GetRemoteId (), self.FolderPath,
 		function (returnCode, node)
 			if returnCode == VFS.ReturnCode.Success then

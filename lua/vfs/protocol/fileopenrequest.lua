@@ -18,6 +18,7 @@ function self:ctor (file, openFlags, callback)
 	self.NextSubRequestId = 0
 	self.SubRequestCallbacks = {}
 	self.SubRequestTypes = {}
+	self.SubRequestData = {}
 end
 
 function self:CloseStream ()
@@ -46,7 +47,6 @@ function self:HandlePacket (inBuffer)
 			self.File:SetSize (length)
 			self.FileStream = VFS.NetFileStream (self, self.File, length)
 			self.Callback (returnCode, self.FileStream)
-			ErrorNoHalt ("Opened netfile " .. self.File:GetPath () .. "\n")
 
 			function self:HasTimedOut ()
 				return false
@@ -59,15 +59,11 @@ function self:HandlePacket (inBuffer)
 		local subRequestId = inBuffer:UInt32 ()
 		local returnCode = inBuffer:UInt8 ()
 		local callback = self.SubRequestCallbacks [subRequestId]
-		local subRequestType = self.SubRequestTypes [subRequestId]
-		self.SubRequestCallbacks [subRequestId] = nil
-		self.SubRequestTypes [subRequestId] = nil
-		if not subRequestType then return end
-		if subRequestType == VFS.Protocol.FileStreamAction.Read then
-			local data = inBuffer:String ()
-			callback (returnCode, data)
-		else
-			callback (returnCode)
+		if not callback then return end
+		if not callback (returnCode, inBuffer) then
+			self.SubRequestCallbacks [subRequestId] = nil
+			self.SubRequestTypes [subRequestId] = nil
+			self.SubRequestData [subRequestId] = nil
 		end
 	end
 end
@@ -77,8 +73,27 @@ function self:HandleTimeOut ()
 end
 
 function self:Read (pos, size, callback)
-	self.SubRequestCallbacks [self.NextSubRequestId] = callback
+	local dataTable =
+	{
+		Position = pos,
+		ReadSize = size,
+		ReceivedSize = 0,
+		Blocks = {}
+	}
 	self.SubRequestTypes [self.NextSubRequestId] = VFS.Protocol.FileStreamAction.Read
+	self.SubRequestData [self.NextSubRequestId] = dataTable
+	self.SubRequestCallbacks [self.NextSubRequestId] = function (returnCode, inBuffer)
+		local index = inBuffer:UInt16 ()
+		local data = inBuffer:String ()
+		dataTable.Blocks [index] = data
+		dataTable.ReceivedSize = dataTable.ReceivedSize + data:len ()
+		if dataTable.ReceivedSize >= dataTable.ReadSize then
+			callback (VFS.ReturnCode.Success, table.concat (dataTable.Blocks))
+		else
+			callback (VFS.ReturnCode.Progress, dataTable.ReceivedSize / dataTable.ReadSize)
+		end
+		return true
+	end
 	
 	local outBuffer = self:CreatePacket ()
 	outBuffer:UInt32 (self.NextSubRequestId)
@@ -88,6 +103,18 @@ function self:Read (pos, size, callback)
 	self:QueuePacket (outBuffer)
 	
 	self.NextSubRequestId = self.NextSubRequestId + 1
+end
+
+function self:Tick ()
+	for _, dataTable in pairs (self.SubRequestData) do
+		if dataTable.Tick then
+			local deltaTime = SysTime () - (dataTable.LastTick or 0)
+			if deltaTime > (dataTable.TickInterval or 0) then
+				dataTable.Tick ()
+				dataTable.LastTick = SysTime ()
+			end
+		end
+	end
 end
 
 function self:Write (pos, size, data, callback)

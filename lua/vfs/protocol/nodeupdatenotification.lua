@@ -15,7 +15,7 @@ function self:GenerateInitialPacket (outBuffer)
 		outBuffer:String (self.Node:GetDisplayName () or "")
 	end
 	if self.UpdateFlags & VFS.UpdateFlags.Size then
-		local size = self.Node:IsFile () and self.Node:GetSize ()
+		local size = self.Node:IsFile () and self.Node:GetSize () or -1
 		if size == -1 then size = 0xFFFFFFFF end
 		outBuffer:UInt32 (size)
 	end

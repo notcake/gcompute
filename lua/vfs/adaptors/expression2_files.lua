@@ -1,3 +1,5 @@
+if not CLIENT then return end
+
 local commandQueue = {}
 local nextRunItem = 1
 
@@ -50,7 +52,7 @@ end
 
 local function wire_expression2_request_file (filePath)
 	if filePath:sub (-5, -1) == "\\.txt" then filePath = filePath:sub (1, -6) end
-	ErrorNoHalt ("[VFS] expression2_files: request_file: " .. filePath)
+	VFS.Debug ("[VFS] expression2_files: request_file: " .. filePath)
 	VFS.Root:GetChild (GAuth.GetLocalId (), filePath,
 		function (returnCode, node)
 			if returnCode == VFS.ReturnCode.Success then
@@ -75,23 +77,23 @@ local function wire_expression2_request_file (filePath)
 											timer.Create ("wire_expression2_file_upload", 1 / 60, upload_buffer.chunks, upload_callback)
 										else
 											filestream:Close ()
-											ErrorNoHalt ("[VFS] expression2_files: Cannot read " .. filePath .. " (" .. VFS.ReturnCode [returnCode] .. ")\n")
+											VFS.Debug ("[VFS] expression2_files: Cannot read " .. filePath .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 											QueueConsoleCommand ("wire_expression2_file_begin", "0")
 										end
 									end
 								)
 							else
-								ErrorNoHalt ("[VFS] expression2_files: Cannot open " .. filePath .. " (" .. VFS.ReturnCode [returnCode] .. ")\n")
+								VFS.Debug ("[VFS] expression2_files: Cannot open " .. filePath .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 								QueueConsoleCommand ("wire_expression2_file_begin", "0")
 							end
 						end
 					)
 				else
-					ErrorNoHalt ("[VFS] expression2_files: " .. filePath .. " is not a file!\n")
+					VFS.Debug ("[VFS] expression2_files: " .. filePath .. " is not a file!")
 					QueueConsoleCommand ("wire_expression2_file_begin", "0")
 				end
 			else
-				ErrorNoHalt ("[VFS] expression2_files: Error when resolving " .. filePath .. " (" .. VFS.ReturnCode [returnCode] .. ")\n")
+				VFS.Debug ("[VFS] expression2_files: Error when resolving " .. filePath .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 				QueueConsoleCommand ("wire_expression2_file_begin", "0")
 			end
 		end
@@ -117,7 +119,7 @@ local function InstallFileSystemOverride ()
 	{
 		Function = function (umsg)
 			local folderPath = umsg:ReadString () or ""
-			ErrorNoHalt ("[VFS] expression2_files: request_list: " .. folderPath .. "\n")
+			VFS.Debug ("[VFS] expression2_files: request_list: " .. folderPath)
 			VFS.Root:GetChild (GAuth.GetLocalId (), folderPath,
 				function (returnCode, node)
 					if returnCode == VFS.ReturnCode.Success then
@@ -132,13 +134,13 @@ local function InstallFileSystemOverride ()
 								elseif returnCode == VFS.ReturnCode.Finished then
 									QueueConsoleCommand ("wire_expression2_file_list", "0")
 								else
-									ErrorNoHalt ("[VFS] expression2_files: Error when enumerating contents of " .. folderPath .. " (" .. VFS.ReturnCode [returnCode] .. ")\n")
+									VFS.Debug ("[VFS] expression2_files: Error when enumerating contents of " .. folderPath .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 									QueueConsoleCommand ("wire_expression2_file_list", "0")
 								end
 							end
 						)
 					else
-						ErrorNoHalt ("[VFS] expression2_files: Error when resolving folder " .. folderPath .. " (" .. VFS.ReturnCode [returnCode] .. ")\n")
+						VFS.Debug ("[VFS] expression2_files: Error when resolving folder " .. folderPath .. " (" .. VFS.ReturnCode [returnCode] .. ")")
 						QueueConsoleCommand ("wire_expression2_file_list", "0")
 					end
 				end

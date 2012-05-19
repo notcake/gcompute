@@ -11,7 +11,6 @@ function self:HandleInitialPacket (inBuffer)
 	self.FolderPath = inBuffer:String ()
 	self.ChildName = VFS.SanitizeNodeName (inBuffer:String ())
 	self.IsFolder = inBuffer:Boolean ()
-	ErrorNoHalt ("NodeCreation: Request for " .. self.FolderPath .. "/" .. self.ChildName .. " received.\n")
 	VFS.Root:GetChild (self:GetRemoteEndPoint ():GetRemoteId (), self.FolderPath,
 		function (returnCode, node)
 			if returnCode == VFS.ReturnCode.Success then

@@ -1,5 +1,6 @@
 GLib.Net = {}
 GLib.Net.PlayerMonitor = GLib.PlayerMonitor ("GLib.Net")
+GLib.Net.ChannelHandlers = {}
 GLib.Net.OpenChannels = {}
 
 local function PlayerFromId (userId)
@@ -30,7 +31,7 @@ elseif CLIENT then
 	function GLib.Net.DispatchPacket (destinationId, channelName, packet)
 		-- datastream time.
 		if GLib.Net.IsChannelOpen (channelName) then
-			datastream.StreamToServer (channelName, packet.Data)
+			GLib.Net.ConCommandDispatcher:Dispatch (destinationId, channelName, packet)
 		else
 			ErrorNoHalt ("GLib.Net : Channel " .. channelName .. " is not open.\n")
 		end
@@ -43,6 +44,8 @@ end
 
 -- Packet reception
 function GLib.Net.RegisterChannel (channelName, handler)
+	GLib.Net.ChannelHandlers [channelName] = handler
+
 	if SERVER then
 		datastream.Hook (channelName,
 			function (ply, channelName, _, _, data)
@@ -73,6 +76,8 @@ function GLib.Net.RegisterChannel (channelName, handler)
 end
 
 if SERVER then
+	GLib.Net.ConCommandBuffers = {}
+
 	GLib.Net.PlayerMonitor:AddEventListener ("PlayerConnected",
 		function (_, ply)
 			for channelName, _ in pairs (GLib.Net.OpenChannels) do
@@ -80,6 +85,12 @@ if SERVER then
 					umsg.String (channelName)
 				umsg.End ()
 			end
+		end
+	)
+
+	GLib.Net.PlayerMonitor:AddEventListener ("PlayerDisconnected",
+		function (_, ply)
+			GLib.Net.ConCommandBuffers [ply:SteamID ()] = nil
 		end
 	)
 	
@@ -91,6 +102,29 @@ if SERVER then
 					umsg.String (channelName)
 				umsg.End ()
 			end
+		end
+	)
+	
+	concommand.Add ("glib_data",
+		function (ply, _, args)
+			local steamId = ply:SteamID ()
+			if not args [1] then return end
+			
+			GLib.Net.ConCommandBuffers [steamId] = GLib.Net.ConCommandBuffers [steamId] or ""
+			
+			if args [1]:sub (1, 1) == "\2" or args [1]:sub (1, 1) == "\3" then
+				if GLib.Net.ConCommandBuffers [steamId] ~= "" then
+					local inBuffer = GLib.Net.ConCommandInBuffer (GLib.Net.ConCommandBuffers [steamId])
+					local channelName = inBuffer:String ()
+					local handler = GLib.Net.ChannelHandlers [channelName]
+					if not handler then
+						ErrorNoHalt ("No handler for " .. channelName .. "\n")
+					end
+					if handler then PCallError (handler, steamId, inBuffer) end
+					GLib.Net.ConCommandBuffers [steamId] = ""
+				end
+			end
+			GLib.Net.ConCommandBuffers [steamId] = GLib.Net.ConCommandBuffers [steamId] .. args [1]:sub (2)
 		end
 	)
 elseif CLIENT then

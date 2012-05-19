@@ -1,15 +1,7 @@
+if not CLIENT then return end
+
 local editorsUpdated = VFS.WeakKeyTable ()
 local Expression2EditorFrame = {}
-
-local function FindUpValue (f, name)
-	local i = 1
-	local a, b = true, nil
-	while a ~= nil do
-		a, b = debug.getupvalue (f, i)
-		if a == name then return b end
-		i = i + 1
-	end
-end
 
 -- This gets overridden with the version from the editor
 local function GetPreferredTitles (displayPath, code)
@@ -23,9 +15,9 @@ local function ModifyEditor (editor, name, path, displayPath)
 		editor ["_" .. k] = editor ["_" .. k] or editor [k]
 		editor [k] = v
 	end
-	GetPreferredTitles = FindUpValue (editor._LoadFile, "getPreferredTitles") or GetPreferredTitles
+	GetPreferredTitles = VFS.FindUpValue (editor._LoadFile, "getPreferredTitles") or GetPreferredTitles
 	
-	ErrorNoHalt ("Editor " .. name .. " never asked for this (" .. path .. ")\n")
+	VFS.Debug ("[VFS] Editor " .. name .. " never asked for this (" .. path .. ")")
 	editor:InstallFileSystemBrowserOverride (path, displayPath)
 end
 
@@ -38,14 +30,14 @@ local function InstallFileSystemBrowserOverride ()
 		ModifyEditor (SF.Editor.editor,        "SF.Editor.editor",        GAuth.GetLocalId () .. "/Starfall",    LocalPlayer ():Name () .. "/Starfall")
 	end
 	
-	local panelFactory = FindUpValue (vgui.Register, "PanelFactory")
+	local panelFactory = VFS.FindUpValue (vgui.Register, "PanelFactory")
 	if panelFactory and panelFactory ["Expression2EditorFrame"] then
 		local editor = panelFactory ["Expression2EditorFrame"]
 		for k, v in pairs (Expression2EditorFrame) do
 			editor ["_" .. k] = editor ["_" .. k] or editor [k]
 			editor [k] = v
 		end
-		GetPreferredTitles = FindUpValue (editor._LoadFile, "getPreferredTitles") or GetPreferredTitles
+		GetPreferredTitles = VFS.FindUpValue (editor._LoadFile, "getPreferredTitles") or GetPreferredTitles
 	else
 		timer.Simple (0, InstallFileSystemBrowserOverride)
 	end
@@ -180,12 +172,16 @@ function Expression2EditorFrame:GetChosenDisplayPath ()
 	return self:GetCurrentEditor ().displaypath or self:GetChosenFile ()
 end
 
-function Expression2EditorFrame:LoadFile (path, newTab)
+function Expression2EditorFrame:LoadFile (path, newTab, callback)
+	callback = callback or VFS.NullCallback
+	
 	VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Read,
 		function (returnCode, fileStream)
-			if returnCode ~= VFS.ReturnCode.Success then return end
+			if returnCode ~= VFS.ReturnCode.Success then callback (returnCode) return end
 			fileStream:Read (fileStream:GetLength (),
 				function (returnCode, data)
+					if returnCode == VFS.ReturnCode.Progress then return end
+				
 					local displayPath = fileStream:GetDisplayPath ()
 					fileStream:Close ()
 					
@@ -219,6 +215,8 @@ function Expression2EditorFrame:LoadFile (path, newTab)
 						end
 						self:SetCode (data)
 					end
+					
+					callback (returnCode)
 				end
 			)
 		end
@@ -226,26 +224,34 @@ function Expression2EditorFrame:LoadFile (path, newTab)
 end
 
 -- Imported from wire/client/wire_expression2_editor.lua : Editor:OpenOldTabs
-function Expression2EditorFrame:OpenOldTabs ()
-	if not file.Exists (self.Location .. "/_tabs_.txt") then return end
+function Expression2EditorFrame:OpenOldTabs (callback)
+	callback = callback or VFS.NullCallback
+
+	if not file.Exists (self.Location .. "/_tabs_.txt") then callback (VFS.ReturnCode.Finished) return end
 	
 	-- Read file
 	local tabs = file.Read (self.Location .. "/_tabs_.txt")
-	if not tabs or tabs == "" then return end
+	if not tabs or tabs == "" then callback (VFS.ReturnCode.Finished) return end
 	
 	-- Explode around ;
 	tabs = tabs:Split (";")
-	if not tabs or #tabs == 0 then return end
+	if not tabs or #tabs == 0 then callback (VFS.ReturnCode.Finished) return end
 	
 	-- Temporarily remove fade time
 	self:FixTabFadeTime ()
 	
 	local is_first = true
-	for k, v in pairs (tabs) do
-		if v and v ~= "" then
-			if file.Exists (v) then
+	local tabsDone = 0
+	for _, filePath in ipairs (tabs) do
+		if filePath and filePath ~= "" then
+			if file.Exists (filePath) then
 				-- Open it in a new tab
-				self:LoadFile (LocalPlayer ():Name () .. "/" .. v, true)
+				self:LoadFile (LocalPlayer ():Name () .. "/" .. filePath, true,
+					function (returnCode)
+						tabsDone = tabsDone + 1
+						if tabsDone >= #tabs then callback (VFS.ReturnCode.Finished) end
+					end
+				)
 				
 				-- If this is the first loop, close the initial tab.
 				if is_first then
@@ -255,10 +261,15 @@ function Expression2EditorFrame:OpenOldTabs ()
 					is_first = false
 				end
 			else
-				VFS.Root:GetChild (GAuth.GetLocalId (), v,
+				VFS.Root:GetChild (GAuth.GetLocalId (), filePath,
 					function (returnCode)
 						if returnCode == VFS.ReturnCode.Success then
-							self:LoadFile (v, true)
+							self:LoadFile (filePath, true,
+								function (returnCode)
+									tabsDone = tabsDone + 1
+									if tabsDone >= #tabs then callback (VFS.ReturnCode.Finished) end
+								end
+							)
 							if is_first then
 								timer.Simple (0, function ()
 									self:CloseTab (1)

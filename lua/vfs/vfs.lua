@@ -69,9 +69,11 @@ include ("protocol/endpointmanager.lua")
 
 if CLIENT then
 	VFS.IncludeDirectory ("vfs/ui")
-	include ("adaptors/expression2_editor.lua")
-	include ("adaptors/expression2_files.lua")
 end
+	
+include ("adaptors/expression2_editor.lua")
+include ("adaptors/expression2_files.lua")
+include ("adaptors/expression2_upload.lua")
 
 VFS.AddReloadCommand ("vfs/vfs.lua", "vfs", "VFS")
 
@@ -88,6 +90,12 @@ function VFS.FormatFileSize (size)
 		unitIndex = unitIndex + 1
 	end
 	return tostring (math.floor (size * 100 + 0.5) / 100) .. " " .. units [unitIndex]
+end
+
+local nextUniqueName = -1
+function VFS.GetUniqueName ()
+	nextUniqueName = nextUniqueName + 1
+	return string.format ("%08x%02x", os.time (), nextUniqueName % 256)
 end
 
 function VFS.SanitizeNodeName (segment)
@@ -202,12 +210,16 @@ if SERVER then
 	VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gcompute/lua",
 		function (returnCode, folder)
 			local folder = VFS.Root:Mount ("Source", folder, "Source")
+			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Allow)
+			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Allow)
 		end
 	)
 	
 	VFS.RealRoot:GetChild (GAuth.GetSystemId (), "addons/gooey/lua",
 		function (returnCode, folder)
 			local folder = VFS.Root:Mount ("UI Source", folder, "UI Source")
+			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "Read",        GAuth.Access.Allow)
+			folder:GetPermissionBlock ():SetGroupPermission (GAuth.GetSystemId (), "Everyone", "View Folder", GAuth.Access.Allow)
 		end
 	)
 end
@@ -269,6 +281,7 @@ VFS.PlayerMonitor:AddEventListener ("PlayerConnected",
 						folder:Mount ("UI Source", node, "UI Source")
 					end
 				)
+				folder:CreateFolder (GAuth.GetSystemId (), "tmp")
 			end
 		end
 		

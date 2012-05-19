@@ -6,7 +6,7 @@ if SERVER then
 		local files = file.FindInLua (folder .. "/*")
 		for _, fileName in pairs (files) do
 			if fileName:sub (-4) == ".lua" then
-				-- AddCSLuaFile (folder .. "/" .. fileName)
+				AddCSLuaFile (folder .. "/" .. fileName)
 			end
 		end
 	end
@@ -23,19 +23,23 @@ if SERVER then
 		includePath = includePath or (systemName .. "/" .. systemName .. ".lua")
 		
 		concommand.Add (systemName .. "_reload_sv", function (ply, _, arg)
+			if ply and ply:IsValid () and not ply:IsSuperAdmin () then return end
+		
 			local startTime = SysTime ()
 			GLib.UnloadSystem (systemTableName)
 			include (includePath)
-			ErrorNoHalt (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.\n")
+			GLib.Debug (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.")
 		end)
 		concommand.Add (systemName .. "_reload_sh", function (ply, _, arg)
+			if ply and ply:IsValid () and not ply:IsSuperAdmin () then return end
+			
 			local startTime = SysTime ()
 			GLib.UnloadSystem (systemTableName)
 			include (includePath)
 			for _, ply in ipairs (player.GetAll ()) do
 				ply:ConCommand (systemName .. "_reload")
 			end
-			ErrorNoHalt (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.\n")
+			GLib.Debug (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.")
 		end)
 	end
 	
@@ -51,11 +55,15 @@ elseif CLIENT then
 			local startTime = SysTime ()
 			GLib.UnloadSystem (systemTableName)
 			include (includePath)
-			ErrorNoHalt (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.\n")
+			GLib.Debug (systemName .. "_reload took " .. tostring ((SysTime () - startTime) * 1000) .. " ms.")
 		end)
 	end
 end
 GLib.AddReloadCommand ("glib/glib.lua", "glib", "GLib")
+
+function GLib.Debug (message)
+	-- ErrorNoHalt (message .. "\n")
+end
 
 function GLib.EnumerateDelayed (tbl, callback, finishCallback)
 	if not callback then return end
@@ -75,6 +83,16 @@ end
 function GLib.Error (message)
 	ErrorNoHalt (message .. "\n")
 	GLib.PrintStackTrace ()
+end
+
+function GLib.FindUpValue (func, name)
+	local i = 1
+	local a, b = true, nil
+	while a ~= nil do
+		a, b = debug.getupvalue (func, i)
+		if a == name then return b end
+		i = i + 1
+	end
 end
 
 function GLib.GetMetaTable (constructor)
@@ -244,7 +262,9 @@ include ("utf8.lua")
 include ("net/net.lua")
 include ("net/datatype.lua")
 include ("net/outbuffer.lua")
+include ("net/concommanddispatcher.lua")
 include ("net/usermessagedispatcher.lua")
+include ("net/concommandinbuffer.lua")
 include ("net/datastreaminbuffer.lua")
 include ("net/usermessageinbuffer.lua")
 include ("net/stringtable.lua")

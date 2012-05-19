@@ -65,6 +65,7 @@ function self:Write (size, data, callback)
 	
 	self.Contents = self.Contents or file.Read (self.File:GetPath (), true) or ""
 	if data:len () < size then data = data .. string.rep ("\0", size - data:len ()) end
+	if data:len () > size then data = data:sub (1, size) end
 	self.Contents = self.Contents:sub (1, self:GetPos ()) .. data .. self.Contents:sub (self:GetPos () + size + 1)
 	if self:GetPos () + size > self.Length then self.Length = self:GetPos () + size end
 	self:Seek (self:GetPos () + size)

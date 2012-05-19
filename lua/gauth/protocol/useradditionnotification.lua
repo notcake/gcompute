@@ -16,8 +16,6 @@ function self:HandleInitialPacket (inBuffer)
 	self.GroupId = inBuffer:String ()
 	self.UserId = inBuffer:String ()
 	
-	ErrorNoHalt ("UserAdditionNotification: " .. self.GroupId .. " " .. self.UserId .. "\n")
-	
 	local group = GAuth.ResolveGroup (self.GroupId)
 	if not group then return end
 	if not self:ShouldProcessNotification (group) then return end

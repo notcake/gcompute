@@ -47,6 +47,7 @@ function self:Write (size, data, callback)
 	if size == 0 then callback (VFS.ReturnCode.Success) return end
 	
 	if data:len () < size then data = data .. string.rep ("\0", size - data:len ()) end
+	if data:len () > size then data = data:sub (1, size) end
 	self.File.Contents = self.File.Contents:sub (1, self:GetPos ()) .. data .. self.File.Contents:sub (self:GetPos () + size + 1)
 	if self:GetPos () + size > self.File:GetSize () then
 		self.File:SetSize (self:GetPos () + size)

@@ -36,7 +36,7 @@ VFS.PermissionBlockNetworker:SetNotificationRecipientListGenerator (
 		for _, endPoint in VFS.EndPointManager:GetEndPointEnumerator () do
 			if endPoint:GetRemoteId () ~= GAuth.GetEveryoneId () then
 				if endPoint:IsNodeHooked (node) and parentNode:GetPermissionBlock ():IsAuthorized (endPoint:GetRemoteId (), "View Folder") then
-					ErrorNoHalt (node:GetPath () .. " is hooked by " .. endPoint:GetRemoteId () .. "\n")
+					VFS.Debug (node:GetPath () .. " is hooked by " .. endPoint:GetRemoteId ())
 					recipientList [#recipientList + 1] = endPoint:GetRemoteId ()
 				end
 			end
@@ -53,9 +53,9 @@ VFS.PermissionBlockNetworker:SetRequestFilter (
 		node = node:GetInner ()
 		
 		if not node.EndPoint then VFS.Error ("Non networked node " .. path) return false end
-		if node:IsPredicted () then ErrorNoHalt (path .. " is predicted.\n") return false end
+		if node:IsPredicted () then VFS.Debug (path .. " is predicted.") return false end
 		
-		ErrorNoHalt ("Remote: " .. node.EndPoint:GetRemoteId () .. ": " .. path .. "\n")
+		VFS.Debug ("Remote: " .. node.EndPoint:GetRemoteId () .. ": " .. path)
 		return true, node.EndPoint:GetRemoteId ()
 	end
 )

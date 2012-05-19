@@ -11,7 +11,6 @@ function self:HandleInitialPacket (inBuffer)
 	self.FolderPath = inBuffer:String ()
 	self.OldName = VFS.SanitizeNodeName (inBuffer:String ())
 	self.NewName = VFS.SanitizeNodeName (inBuffer:String ())
-	ErrorNoHalt ("NodeRename: Request for " .. self.FolderPath .. "/" .. self.OldName .. " -> " .. self.NewName .. " received.\n")
 	VFS.Root:GetChild (self:GetRemoteEndPoint ():GetRemoteId (), self.FolderPath,
 		function (returnCode, node)
 			if returnCode == VFS.ReturnCode.Success then

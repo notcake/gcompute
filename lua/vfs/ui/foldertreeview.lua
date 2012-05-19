@@ -200,7 +200,7 @@ function self:Populate (filesystemNode, treeViewNode)
 				self:LayoutNode (treeViewNode)
 				treeViewNode:SortChildren ()
 			elseif returnCode == VFS.ReturnCode.AccessDenied then
-				treeViewNode.CanView = treeViewNode.Node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
+				treeViewNode.CanView = not treeViewNode.Node:GetPermissionBlock () or treeViewNode.Node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "View Folder")
 				treeViewNode:MarkUnpopulated ()
 				treeViewNode:SetIcon ("gui/g_silkicons/folder_delete")
 			elseif returnCode == VFS.ReturnCode.Finished then
@@ -242,7 +242,7 @@ function self:Populate (filesystemNode, treeViewNode)
 			local childNode = treeViewNode.AddedNodes [node:GetName ()]
 			if not childNode then return end
 			
-			local canView = node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), node:IsFolder () and "View Folder" or "Read")
+			local canView = not node:GetPermissionBlock () or node:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), node:IsFolder () and "View Folder" or "Read")
 			if childNode.CanView == canView then return end
 			childNode.CanView = canView
 			
@@ -317,7 +317,7 @@ function self:AddFilesystemNode (treeViewNode, filesystemNode)
 	local childNode = treeViewNode:AddNode (filesystemNode:GetName ())
 	childNode:SetExpandable (filesystemNode:IsFolder ())
 	childNode:SetText (filesystemNode:GetDisplayName ())
-	childNode.CanView = filesystemNode:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), filesystemNode:IsFolder () and "View Folder" or "Read")
+	childNode.CanView = not filesystemNode:GetPermissionBlock () or filesystemNode:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), filesystemNode:IsFolder () and "View Folder" or "Read")
 	if filesystemNode:IsFolder () then
 		if childNode.CanView then
 			childNode:SetIcon ("gui/g_silkicons/folder")

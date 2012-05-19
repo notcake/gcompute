@@ -54,7 +54,7 @@ function self:HookNode (node)
 	node:AddEventListener ("NodeRenamed", tostring (self), self.NodeRenamed)
 	node:AddEventListener ("NodeUpdated", tostring (self), self.NodeUpdated)
 	
-	ErrorNoHalt ("VFS.EndPoint:HookNode : " .. node:GetPath () .. "\n")
+	VFS.Debug ("VFS.EndPoint:HookNode : " .. node:GetPath ())
 end
 
 function self:IsNodeHooked (node)
@@ -69,7 +69,7 @@ function self:UnhookNode (node)
 	node:RemoveEventListener ("NodeRenamed", tostring (self))
 	node:RemoveEventListener ("NodeUpdated", tostring (self))
 	
-	ErrorNoHalt ("VFS.EndPoint:UnhookNode : " .. node:GetPath () .. "\n")
+	VFS.Debug ("VFS.EndPoint:UnhookNode : " .. node:GetPath ())
 end
 
 self.NodeCreated = VFS.NullCallback

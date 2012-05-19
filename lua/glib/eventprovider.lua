@@ -45,8 +45,7 @@ function self:DispatchEvent (eventName, ...)
 			end
 		end
 	elseif type (eventName) ~= "string" then
-		ErrorNoHalt ("EventProvider:DispatchEvent called incorrectly.\n")
-		error (debug.traceback () .. "\n")
+		GLib.Error ("EventProvider:DispatchEvent called incorrectly.")
 	end
 	
 	if self.GetParentEventProvider then

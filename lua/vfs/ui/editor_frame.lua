@@ -55,6 +55,8 @@ function self:LoadFile (file)
 			if returnCode == VFS.ReturnCode.Success then
 				fileStream:Read (fileStream:GetLength (),
 					function (returnCode, data)
+						if returnCode == VFS.ReturnCode.Progress then return end
+						
 						self.CodeEditor:SetText (data)
 						fileStream:Close ()
 					end

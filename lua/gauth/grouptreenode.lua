@@ -143,7 +143,7 @@ end
 function self:SetHost (hostId)
 	if self.Host == hostId then return end
 
-	ErrorNoHalt (self:GetFullName () .. ": Host is now " .. hostId .. "\n")
+	GAuth.Debug (self:GetFullName () .. ": Host is now " .. hostId)
 	self.Host = hostId
 	
 	self:DispatchEvent ("HostChanged", self.Host)

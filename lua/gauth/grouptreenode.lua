@@ -146,6 +146,9 @@ function self:SetDisplayName (displayName)
 	self.DisplayName = displayName
 	
 	self:DispatchEvent ("DisplayNameChanged", displayName)
+	if self:GetParentNode () then
+		self:GetParentNode ():DispatchEvent ("NodeDisplayNameChanged", self, displayName)
+	end
 end
 
 function self:SetHost (hostId)

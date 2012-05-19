@@ -103,6 +103,7 @@ end
 function self:Remove ()
 	for _, groupTreeNode in ipairs (self.SubscribedNodes) do
 		groupTreeNode:RemoveEventListener ("NodeAdded", tostring (self))
+		groupTreeNode:RemoveEventListener ("NodeDisplayNameChanged", tostring (self))
 		groupTreeNode:RemoveEventListener ("NodeRemoved", tostring (self))
 	end
 	
@@ -159,6 +160,15 @@ function self:Populate (groupTreeNode, treeViewNode)
 			childNode:SetIcon (newNode:GetIcon ())
 			childNode.Item = newNode
 			childNode.IsGroupTree = newNode:IsGroupTree ()
+			treeViewNode:SortChildren (self.ItemComparator)
+		end
+	)
+	
+	groupTreeNode:AddEventListener ("NodeDisplayNameChanged", tostring (self),
+		function (_, childNode, displayName)
+			local node = treeViewNode:FindChild (childNode:GetName ())
+			if not node then return end
+			node:SetText (displayName)
 			treeViewNode:SortChildren (self.ItemComparator)
 		end
 	)

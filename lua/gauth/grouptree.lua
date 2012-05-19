@@ -16,6 +16,8 @@ GAuth.GroupTree = GAuth.MakeConstructor (self, GAuth.GroupTreeNode)
 			Fired when a child group tree has been added
 		NodeAdded (GroupTreeNode groupTreeNode)
 			Fired when a child node has been added
+		NodeDisplayNameChanged (GroupTreeNode groupTreeNode, displayName)
+			Fired when a child node's display name has been changed
 		NodeRemoved (GroupTreeNode groupTreeNode)
 			Fired when a child node has been removed
 ]]

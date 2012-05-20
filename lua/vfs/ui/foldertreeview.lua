@@ -61,6 +61,8 @@ function self:Init ()
 				self.Menu:FindItem ("Open"):SetVisible (false)
 				self.Menu:FindItem ("Browse"):SetVisible (false)
 				self.Menu:FindItem ("OpenSeparator"):SetVisible (false)
+				self.Menu:FindItem ("Copy"):SetDisabled (true)
+				self.Menu:FindItem ("Paste"):SetDisabled (true)
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
 				self.Menu:FindItem ("Rename"):SetDisabled (true)
@@ -70,18 +72,27 @@ function self:Init ()
 			
 			self.Menu:FindItem ("Open"):SetVisible (targetItem:IsFile ())
 			self.Menu:FindItem ("Browse"):SetVisible (targetItem:IsFolder () and not targetItem:IsRoot ())
+			self.Menu:FindItem ("Refresh"):SetVisible (targetItem:IsFolder ())
 			self.Menu:FindItem ("OpenSeparator"):SetVisible (not targetItem:IsRoot ())
 			
+			local pasteFolder = targetItem
+			if not pasteFolder:IsFolder () then pasteFolder = pasteFolder:GetParentNode () end
 			local permissionBlock = targetItem:GetPermissionBlock ()
 			if not permissionBlock then
-				self.Menu:FindItem ("Browse"):SetDisabled (not targetItem:IsFolder ())
 				self.Menu:FindItem ("Open"):SetDisabled (not targetItem:IsFile ())
+				self.Menu:FindItem ("Browse"):SetDisabled (not targetItem:IsFolder ())
+				self.Menu:FindItem ("Refresh"):SetDisabled (not targetItem:IsFolder ())
+				self.Menu:FindItem ("Copy"):SetDisabled (false)
+				self.Menu:FindItem ("Paste"):SetDisabled (false)
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not targetItem:IsFolder ())
 				self.Menu:FindItem ("Delete"):SetDisabled (not targetItem:CanDelete ())
 				self.Menu:FindItem ("Rename"):SetDisabled (false)
 			else
-				self.Menu:FindItem ("Browse"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "View Folder"))
 				self.Menu:FindItem ("Open"):SetDisabled (not targetItem:IsFile () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Read"))
+				self.Menu:FindItem ("Browse"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "View Folder"))
+				self.Menu:FindItem ("Refresh"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "View Folder"))
+				self.Menu:FindItem ("Copy"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Read") and not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "View Folder"))
+				self.Menu:FindItem ("Paste"):SetDisabled (not VFS.Clipboard:CanPaste (pasteFolder))
 				self.Menu:FindItem ("Create Folder"):SetDisabled (not targetItem:IsFolder () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
 				self.Menu:FindItem ("Delete"):SetDisabled (not targetItem:CanDelete () or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Delete"))
 				self.Menu:FindItem ("Rename"):SetDisabled (not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Rename"))
@@ -90,6 +101,13 @@ function self:Init ()
 		end
 	)
 	
+	self.Menu:AddOption ("Open",
+		function (node)
+			if not node then return end
+			if not node:IsFile () then return end
+			self:DispatchEvent ("FileOpened", node)
+		end
+	):SetIcon ("gui/g_silkicons/page_go")
 	self.Menu:AddOption ("Browse",
 		function (node)
 			if not node then return end
@@ -100,14 +118,31 @@ function self:Init ()
 			VFS.FileSystemBrowser ():GetFrame ():RequestFocus ()
 		end
 	):SetIcon ("gui/g_silkicons/folder_go")
-	self.Menu:AddOption ("Open",
+	self.Menu:AddOption ("Refresh",
 		function (node)
 			if not node then return end
-			if not node:IsFile () then return end
-			self:DispatchEvent ("FileOpened", node)
+			if not node:IsFolder () then return end
+			node:EnumerateChildren (GAuth.GetLocalId ())
 		end
-	):SetIcon ("gui/g_silkicons/page_go")
+	):SetIcon ("gui/g_silkicons/arrow_refresh")
 	self.Menu:AddSeparator ("OpenSeparator")
+	self.Menu:AddOption ("Copy",
+		function (node)
+			if not node then return end
+			VFS.Clipboard:Clear ()
+			VFS.Clipboard:Add (node)
+		end
+	):SetIcon ("gui/g_silkicons/page_white_copy")
+	self.Menu:AddOption ("Paste",
+		function (node)
+			if not node then return end
+			if not node:IsFolder () then node = node:GetParentFolder () end
+			if not node then return end
+			
+			VFS.Clipboard:Paste (node)
+		end
+	):SetIcon ("gui/g_silkicons/paste_plain")
+	self.Menu:AddSeparator ()
 	self.Menu:AddOption ("Create Folder",
 		function (node)
 			if not node then return end

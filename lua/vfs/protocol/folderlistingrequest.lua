@@ -5,7 +5,7 @@ VFS.Protocol.FolderListingRequest = VFS.MakeConstructor (self, VFS.Protocol.Sess
 function self:ctor (folder)
 	self.Folder = folder
 	self.LastChildName = ""
-	self.LastChildReceived = ""
+	self.ReceivedChildren = {}
 end
 
 function self:GenerateInitialPacket (outBuffer)
@@ -16,9 +16,9 @@ end
 function self:HandlePacket (inBuffer)
 	local returnCode = inBuffer:UInt8 ()
 	if returnCode == VFS.ReturnCode.Success then
-		self.LastChildReceived = self:DispatchEvent ("ReceivedNodeInfo", inBuffer):GetName ()
+		self.ReceivedChildren [self:DispatchEvent ("ReceivedNodeInfo", inBuffer):GetName ()] = true
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.EndOfBurst)
-		if self.LastChildName == self.LastChildReceived then
+		if self.ReceivedChildren [self.LastChildName] then
 			self:DispatchEvent ("RunCallback", VFS.ReturnCode.Finished)
 			self:Close ()
 		end
@@ -26,7 +26,7 @@ function self:HandlePacket (inBuffer)
 		self:DispatchEvent ("RunCallback", VFS.ReturnCode.AccessDenied)
 	elseif returnCode == VFS.ReturnCode.Finished then
 		self.LastChildName = inBuffer:String ()
-		if self.LastChildName == self.LastChildReceived then
+		if self.LastChildName == "" or self.ReceivedChildren [self.LastChildName] then
 			self:DispatchEvent ("RunCallback", VFS.ReturnCode.Finished)
 			self:Close ()
 		else

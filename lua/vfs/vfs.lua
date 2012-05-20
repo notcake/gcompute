@@ -18,6 +18,7 @@ VFS.PlayerMonitor = VFS.PlayerMonitor ("VFS")
 
 function VFS.NullCallback () end
 
+include ("clipboard.lua")
 include ("path.lua")
 include ("openflags.lua")
 include ("returncode.lua")

@@ -56,21 +56,42 @@ function self:Init ()
 			if self.Folder and self.Folder:IsFolder () then
 				local permissionBlock = self.Folder:GetPermissionBlock ()
 				if not permissionBlock then
+					self.Menu:FindItem ("Copy"):SetDisabled (#targetItem == 0)
+					self.Menu:FindItem ("Paste"):SetDisabled (false)
 					self.Menu:FindItem ("Create Folder"):SetDisabled (false)
 					self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not targetItem [1]:CanDelete ())
 					self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0)
 				else
+					self.Menu:FindItem ("Copy"):SetDisabled (#targetItem == 0 or not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Read") and not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "View Folder"))
+					self.Menu:FindItem ("Paste"):SetDisabled (not VFS.Clipboard:CanPaste (self.Folder))
 					self.Menu:FindItem ("Create Folder"):SetDisabled (permissionBlock and not permissionBlock:IsAuthorized (GAuth.GetLocalId (), "Create Folder"))
 					self.Menu:FindItem ("Delete"):SetDisabled (#targetItem == 0 or not targetItem [1]:CanDelete () or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Delete"))
 					self.Menu:FindItem ("Rename"):SetDisabled (#targetItem == 0 or targetItem [1]:GetPermissionBlock () and not targetItem [1]:GetPermissionBlock ():IsAuthorized (GAuth.GetLocalId (), "Rename"))
 				end
 			else
+				self.Menu:FindItem ("Copy"):SetDisabled (true)
+				self.Menu:FindItem ("Paste"):SetDisabled (true)
 				self.Menu:FindItem ("Create Folder"):SetDisabled (true)
 				self.Menu:FindItem ("Delete"):SetDisabled (true)
 				self.Menu:FindItem ("Rename"):SetDisabled (true)
 			end
 		end
 	)
+	self.Menu:AddOption ("Copy",
+		function (targetNodes)
+			if #targetNodes == 0 then return end
+			VFS.Clipboard:Clear ()
+			for _, node in ipairs (targetNodes) do
+				VFS.Clipboard:Add (node)
+			end
+		end
+	):SetIcon ("gui/g_silkicons/page_white_copy")
+	self.Menu:AddOption ("Paste",
+		function ()
+			VFS.Clipboard:Paste (self.Folder)
+		end
+	):SetIcon ("gui/g_silkicons/paste_plain")
+	self.Menu:AddSeparator ()
 	self.Menu:AddOption ("Create Folder",
 		function ()
 			if not self.Folder then return end

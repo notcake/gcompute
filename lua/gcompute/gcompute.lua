@@ -1,9 +1,10 @@
 GCompute = GCompute or {}
+GCompute.Reflection = GCompute.Reflection or {}
 include ("glib/glib.lua")
 GLib.Import (GCompute)
 GCompute.AddCSLuaFolderRecursive ("gcompute")
 
-GCompute.GlobalScope = nil
+GCompute.GlobalNamespace = nil
 
 function GCompute.ClearDebug ()
 	if LMsgConsoleClear then
@@ -21,17 +22,29 @@ function GCompute.PrintDebug (Message)
 	end
 end
 
+function GCompute.Enum (enum)
+	GCompute.InvertTable (enum)
+	return enum
+end
+
+function GCompute.NullCallback () return end
+
+include ("callbackchain.lua")
+
 -- compiler
 include ("ast.lua")
+include ("astvisitor.lua")
 include ("containers.lua")
-include ("tokenizer.lua")
-include ("preprocessor.lua")
-include ("parser.lua")
-include ("astbuilder.lua")
+include ("compiler/tokenizer.lua")
+include ("compiler/preprocessor.lua")
+include ("compiler/parserjobgenerator.lua")
+include ("compiler/parser.lua")
+include ("compiler/namespacebuilder.lua")
 
 -- compiler passes
 include ("compiler/compilationgroup.lua")
 include ("compiler/compilationunit.lua")
+include ("compiler/compilerpasstype.lua")
 include ("compiler/passes/compilerpass.lua")
 include ("compiler/passes/declarationpass.lua")
 include ("compiler/passes/nameresolutionpass.lua")
@@ -62,6 +75,25 @@ include ("nameresolutionresults.lua")
 include ("textoutputbuffer.lua")
 include ("nulloutputbuffer.lua")
 
+-- compile time and reflection
+include ("metadata/metadataobject.lua")
+include ("metadata/namespacedefinition.lua")
+include ("metadata/typedefinition.lua")
+include ("metadata/functiondefinition.lua")
+include ("metadata/overloadedtypedefinition.lua")
+include ("metadata/overloadedfunctiondefinition.lua")
+include ("metadata/mergednamespacedefinition.lua")
+include ("metadata/mergedoverloadedtypedefinition.lua")
+include ("metadata/mergedoverloadedfunctiondefinition.lua")
+include ("metadata/typeparameterlist.lua")
+include ("metadata/parameterlist.lua")
+include ("metadata/usingdirective.lua")
+include ("reflection/memberinfo.lua")
+include ("reflection/membertypes.lua")
+
+GCompute.EmptyTypeParameterList = GCompute.TypeParameterList ()
+GCompute.EmptyParameterList = GCompute.ParameterList ()
+
 -- runtime
 include ("function.lua")
 include ("functionlist.lua")
@@ -74,6 +106,7 @@ include ("languages.lua")
 include ("language.lua")
 include ("languages/brainfuck.lua")
 include ("languages/derpscript.lua")
+include ("languages/expression2.lua")
 
 -- runtime
 include ("runtime/process.lua")
@@ -82,6 +115,8 @@ include ("runtime/module.lua")
 
 GCompute.GlobalScope = GCompute.Scope ()
 GCompute.GlobalScope:SetGlobalScope (GCompute.GlobalScope)
+
+GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
 
 include ("corelibrary.lua")
 GCompute.IncludeDirectory ("gcompute/libraries", true)

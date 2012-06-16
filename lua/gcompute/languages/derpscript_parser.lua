@@ -1,6 +1,7 @@
 local Parser = Parser
 --[[
 	Parsing structure
+	Based off expression 2
 
 	Root
 	 1 : q1
@@ -70,6 +71,7 @@ function Parser:Root ()
 	end
 	]]
 	self:Sequence ()
+	return self.ParseTreeStack.Top
 end
 
 -- Sequence

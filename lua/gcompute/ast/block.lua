@@ -1,6 +1,6 @@
-local Block = {}
-Block.__Type = "Block"
-GCompute.AST.Block = GCompute.AST.MakeConstructor (Block)
+local self = {}
+self.__Type = "Block"
+GCompute.AST.Block = GCompute.AST.MakeConstructor (self)
 
 local BlockType =
 {
@@ -19,10 +19,13 @@ local BlockTypeLookup =
 	[BlockType.Block]				= "Block"
 }
 
-function Block:ctor ()
-	self.Children = {}
-	self.Count = 0
+function self:ctor ()
+	self.Statements = {}
+	self.StatementCount = 0
 	
+	self.NamespaceDefinition = nil -- NamespaceDefinition or TypeDefinition
+	
+	-- TODO: Remove this
 	self.Scope = GCompute.Scope ()	-- definition Scope
 	self.BlockType = BlockType.Block
 	
@@ -30,12 +33,19 @@ function Block:ctor ()
 	self.Optimized = false
 end
 
-function Block:AddNode (node)
-	self.Children [#self.Children + 1] = node
-	self.Count = self.Count + 1
+function self:AddStatement (node)
+	self.Statements [#self.Statements + 1] = node
+	self.StatementCount = self.StatementCount + 1
 end
 
-function Block:Evaluate (executionContext)
+function self:AddStatements (statements)
+	for _, statement in ipairs (statements) do
+		self.Statements [#self.Statements + 1] = statement
+		self.StatemetCount = self.StatementCount + 1
+	end
+end
+
+function self:Evaluate (executionContext)
 	-- Function scopes are pushed onto the stack by the Function class in order to set parameters, not here.
 	local pushedScope = false
 	if self.Scope:HasVariables () and self.BlockType ~= BlockType.Function then
@@ -43,7 +53,7 @@ function Block:Evaluate (executionContext)
 		executionContext:PushBlockScope (self.Scope)
 	end
 	
-	local statements = self:GetOptimizedBlock ():GetNodes ()
+	local statements = self:GetOptimizedBlock ():GetStatements ()
 	local statementCount = #statements
 	for i = 1, statementCount do
 		statements [i]:Evaluate (executionContext)
@@ -57,52 +67,74 @@ function Block:Evaluate (executionContext)
 	end
 end
 
-function Block:GetBlockType ()
+function self:GetBlockType ()
 	return self.BlockType
 end
 
-function Block:GetEnumerator ()
+function self:GetEnumerator ()
 	local i = 0
 	return function ()
 		i = i + 1
-		return self.Children [i]
+		return self.Statements [i]
 	end
 end
 
-function Block:GetNodes ()
-	return self.Children
+function self:GetNamespace ()
+	return self.NamespaceDefinition
 end
 
-function Block:GetOptimizedBlock ()
+function self:GetStatement (index)
+	return self.Statements [index]
+end
+
+function self:GetStatementCount ()
+	return self.StatementCount
+end
+
+function self:GetStatements ()
+	return self.Statements
+end
+
+function self:GetOptimizedBlock ()
 	return self.OptimizedBlock or self
 end
 
-function Block:GetScope ()
+function self:GetScope ()
 	return self.Scope
 end
 
-function Block:IsOptimized ()
+function self:IsOptimized ()
 	return self.Optimized
 end
 
-function Block:SetBlockType (blockType)
+function self:SetBlockType (blockType)
 	self.BlockType = blockType
 end
 
-function Block:SetOptimized (optimized)
+function self:SetNamespace (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
+end
+
+function self:SetOptimized (optimized)
 	self.Optimized = optimized
 end
 
-function Block:SetOptimizedBlock (optimizedBlock)
+function self:SetOptimizedBlock (optimizedBlock)
 	self.OptimizedBlock = optimizedBlock
 end
 
-function Block:ToString ()
+function self:SetStatement (index, statement)
+	self.Statements [index] = statement
+end
+
+function self:ToString ()
 	local content = ""
 	for item in self:GetEnumerator () do
 		content = content .. "\n    " .. item:ToString ():gsub ("\n", "\n    ")
-		if item:Is ("Expression") or item:Is ("VariableDeclaration") or item:Is ("Control") then
-			content = content .. ";"
+		if item.Is then
+			if item:Is ("Expression") or item:Is ("VariableDeclaration") or item:Is ("Control") then
+				content = content .. ";"
+			end
 		end
 	end
 	return "[" .. (BlockTypeLookup [self.BlockType] or "?") .. "]\n{" .. content .. "\n}"

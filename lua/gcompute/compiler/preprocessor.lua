@@ -67,18 +67,18 @@ end
 
 function self:ProcessDirective (compilationUnit, token)
 	local length = 0
-	local initialTokenNode = tokenNode
-	while tokenNode.TokenType ~= GCompute.TokenType.Newline do
+	local initialToken = token
+	while token.TokenType ~= GCompute.TokenType.Newline do
 		length = length + 1
 		token = token.Next
 	end
-	token = initialTokenNode
+	token = initialToken
 	if length == 1 then
-		compilerUnit:Error ("Preprocessor directive is missing.", token.Line, token.Character)
+		compilationUnit:Error ("Preprocessor directive is missing.", token.Line, token.Character)
 		return length
 	end
 	local directive = token.Next.Value
-	compilerUnit:Debug ("Found preprocessor directive \"" .. directive .. "\".", initialTokenNode.Line, initialTokenNode.Character)
+	compilationUnit:Debug ("Found preprocessor directive \"" .. directive .. "\".", initialToken.Line, initialToken.Character)
 	return length
 end
 

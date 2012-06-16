@@ -1,0 +1,1 @@
+local self = {}GCompute.NamespaceBuilder = GCompute.MakeConstructor (self, GCompute.ASTVisitor)function self:ctor (compilationUnit, ast)	self.CompilationUnit = compilationUnit	self.AST = astendfunction self:VisitRoot ()	end

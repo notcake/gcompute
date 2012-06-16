@@ -1,6 +1,6 @@
-local BinaryOperator = {}
-BinaryOperator.__Type = "BinaryOperator"
-GCompute.AST.BinaryOperator = GCompute.AST.MakeConstructor (BinaryOperator, GCompute.AST.Expression)
+local self = {}
+self.__Type = "BinaryOperator"
+GCompute.AST.BinaryOperator = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
 local EvaluationFunctions = 
 {
@@ -17,32 +17,32 @@ local EvaluationFunctions =
 	["=="] = function (self, executionContext, left, right) return left == right end
 }
 
-function BinaryOperator:ctor ()
-	self.Left = nil
-	self.Right = nil
+function self:ctor ()
+	self.LeftExpression = nil
+	self.RightExpression = nil
 	
-	self.Operator = "[unknown operator]"
+	self.Operator = "[Unknown Operator]"
 	self.Precedence = 0
 	
 	self.EvaluationFunction = EvaluationFunctions.default
 end
 
-function BinaryOperator:Evaluate (executionContext)
-	local left, leftReference = self.Left:Evaluate (executionContext)
-	local right, rightReference = self.Right:Evaluate (executionContext)
+function self:Evaluate (executionContext)
+	local left, leftReference = self.LeftExpression:Evaluate (executionContext)
+	local right, rightReference = self.RightExpression:Evaluate (executionContext)
 	
 	if left == nil then
 		if not leftReference then
-			executionContext:Error ("Failed to evaluate " .. self.Left:ToString () .. " in " .. self:ToString () .. ".")
+			executionContext:Error ("Failed to evaluate " .. self.LeftExpression:ToString () .. " in " .. self:ToString () .. ".")
 		else
-			executionContext:Error (self.Left:ToString () .. " is nil in " .. self:ToString () .. ".")
+			executionContext:Error (self.LeftExpression:ToString () .. " is nil in " .. self:ToString () .. ".")
 		end
 	end
 	if right == nil then
 		if not rightReference then
-			executionContext:Error ("Failed to evaluate " .. self.Right:ToString () .. " in " .. self:ToString () .. ".")
+			executionContext:Error ("Failed to evaluate " .. self.RightExpression:ToString () .. " in " .. self:ToString () .. ".")
 		else
-			executionContext:Error (self.Right:ToString () .. " is nil in " .. self:ToString () .. ".")
+			executionContext:Error (self.RightExpression:ToString () .. " is nil in " .. self:ToString () .. ".")
 		end
 	end
 	
@@ -53,28 +53,44 @@ function BinaryOperator:Evaluate (executionContext)
 	return self:EvaluationFunction (executionContext, left, right, leftReference, rightReference)
 end
 
-function BinaryOperator:SetOperator (operator)
+function self:GetLeftExpression ()
+	return self.LeftExpression
+end
+
+function self:GetRightExpression ()
+	return self.RightExpression
+end
+
+function self:SetLeftExpression (leftExpression)
+	self.LeftExpression = leftExpression
+end
+
+function self:SetRightExpression (rightExpression)
+	self.RightExpression = rightExpression
+end
+
+function self:SetOperator (operator)
 	self.Operator = operator
 	
 	self.EvaluationFunction = EvaluationFunctions [operator] or EvaluationFunctions.default
 end
 
-function BinaryOperator:ToString ()
-	local Left = "[unknown expression]"
-	local Right = "[unknown expression]"
+function self:ToString ()
+	local leftExpression = "[Unknown Expression]"
+	local rightExpression = "[Unknown Expression]"
 	
-	if self.Left then
-		Left = self.Left:ToString ()
-		if self.Left:Is ("BinaryOperator") then
-			Left = "(" .. Left .. ")"
+	if self.LeftExpression then
+		leftExpression = self.LeftExpression:ToString ()
+		if self.LeftExpression:Is ("BinaryOperator") then
+			leftExpression = "(" .. leftExpression .. ")"
 		end
 	end
-	if self.Right then
-		Right = self.Right:ToString ()
-		if self.Right:Is ("BinaryOperator") then
-			Right = "(" .. Right  .. ")"
+	if self.RightExpression then
+		rightExpression = self.RightExpression:ToString ()
+		if self.RightExpression:Is ("BinaryOperator") then
+			rightExpression = "(" .. rightExpression  .. ")"
 		end
 	end
 	
-	return Left .. " " .. self.Operator .. " " .. Right
+	return leftExpression .. " " .. self.Operator .. " " .. rightExpression
 end

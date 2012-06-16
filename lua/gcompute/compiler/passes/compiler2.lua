@@ -17,19 +17,19 @@ function self:ProcessBlock (compilationUnit, block)
 	
 	for statement in block:GetEnumerator () do
 		if statement:Is ("Expression") then
-			Block:AddNode (statement)
+			Block:AddStatement (statement)
 		elseif statement:Is ("ForLoop") then
-			Block:AddNode (statement)
+			Block:AddStatement (statement)
 			self:ProcessBlock (compilationUnit, statement.Loop)
 		elseif statement:Is ("IfStatement") then
-			Block:AddNode (statement)
+			Block:AddStatement (statement)
 			self:ProcessBlock (compilationUnit, statement.Statement)
 			
 			if statement.Else then
 				self:ProcessBlock (compilationUnit, statement.Else)
 			end
 		elseif statement:Is ("Control") then
-			Block:AddNode (statement)
+			Block:AddStatement (statement)
 		elseif statement:Is ("FunctionDeclaration") then
 			self:ProcessBlock (compilationUnit, statement.Block)
 		elseif statement:Is ("VariableDeclaration") then
@@ -39,7 +39,7 @@ function self:ProcessBlock (compilationUnit, block)
 				Assignment.Left = GCompute.AST.Identifier ()
 				Assignment.Left:SetName (statement.Name)
 				Assignment.Right = statement.Value
-				Block:AddNode (Assignment)
+				Block:AddStatement (Assignment)
 			end
 		else
 			compilationUnit:Error ("Compiler2: Unhandled AST node " .. statement.__Type .. " (" .. statement:ToString () .. ")")

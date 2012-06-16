@@ -1,6 +1,6 @@
-local UnaryOperator = {}
-UnaryOperator.__Type = "UnaryOperator"
-GCompute.AST.UnaryOperator = GCompute.AST.MakeConstructor (UnaryOperator, GCompute.AST.Expression)
+local self = {}
+self.__Type = "UnaryOperator"
+GCompute.AST.UnaryOperator = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
 local EvaluationFunctions =
 {
@@ -9,8 +9,8 @@ local EvaluationFunctions =
 	["--"] = function (self, executionContext, value) return value - 1 end
 }
 
-function UnaryOperator:ctor ()
-	self.Left = nil
+function self:ctor ()
+	self.LeftExpression = nil
 	
 	self.Operator = "[unknown operator]"
 	self.Precedence = 0
@@ -18,8 +18,8 @@ function UnaryOperator:ctor ()
 	self.EvaluationFunction = EvaluationFunctions.default
 end
 
-function UnaryOperator:Evaluate (executionContext)
-	local value, reference = self.Left:Evaluate (executionContext)
+function self:Evaluate (executionContext)
+	local value, reference = self.LeftExpression:Evaluate (executionContext)
 	
 	value = self:EvaluationFunction (executionContext, value, reference)
 	reference:SetValue (value)
@@ -27,18 +27,26 @@ function UnaryOperator:Evaluate (executionContext)
 	return value
 end
 
-function UnaryOperator:SetOperator (operator)
+function self:GetLeftExpression ()
+	return self.LeftExpression
+end
+
+function self:SetLeftExpression (leftExpression)
+	self.LeftExpression = leftExpression
+end
+
+function self:SetOperator (operator)
 	self.Operator = operator
 	
 	self.EvaluationFunction = EvaluationFunctions [operator] or EvaluationFunctions.default
 end
 
-function UnaryOperator:ToString ()
-	local Left = "[unknown expression]"
+function self:ToString ()
+	local leftExpression = "[Unknown Expression]"
 	
-	if self.Left then
-		Left = self.Left:ToString ()
+	if self.LeftExpression then
+		leftExpression = self.LeftExpression:ToString ()
 	end
 	
-	return Left .. self.Operator
+	return leftExpression .. self.Operator
 end

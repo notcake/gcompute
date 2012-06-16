@@ -71,7 +71,7 @@ function self:ProcessExpression (compilationUnit, scope, statement)
 		end
 		
 		-- TODO: Identify function to call and get return type
-	elseif statement:Is ("NumberLiteral") then
+	elseif statement:Is ("NumericLiteral") then
 		if statement.Number == math.floor (statement.Number) then
 			statement.ResultType = GCompute.TypeReference ("int")
 		else

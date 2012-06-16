@@ -1,34 +1,39 @@
-local Stack = {}
-GCompute.Containers.Stack = GCompute.MakeConstructor (Stack)
+local self = {}
+GCompute.Containers.Stack = GCompute.MakeConstructor (self)
 
-function Stack:ctor ()
+function self:ctor ()
 	self.Items = {}
 	self.Count = 0
 	self.Top = nil
 end
 
-function Stack:Clear ()
+--- Clears the stack
+function self:Clear ()
 	self.Count = 0
 	self.Top = nil
 end
 
-function Stack:IsEmpty ()
+--- Returns whether the stack is empty
+-- @return true if the stack is empty
+function self:IsEmpty ()
 	return self.Count == 0
 end
 
-function Stack:Push (value)
+--- Pushes an item onto the top of the stack
+-- @param value The item to be pushed onto the top of the stack
+function self:Push (value)
 	self.Count = self.Count + 1
 	self.Items [self.Count] = value
 	self.Top = value
 end
 
-function Stack:Pop ()
-	if self.Count == 0 then
-		return nil
-	end
-	local Top = self.Items [self.Count]
+--- Pops an item from the top of the stack
+-- @return The item that was popped from the top of the stack or nil if the stack was already empty
+function self:Pop ()
+	if self.Count == 0 then return nil end
+	local top = self.Top
 	self.Items [self.Count] = nil
 	self.Count = self.Count - 1
 	self.Top = self.Items [self.Count]
-	return Top
+	return top
 end

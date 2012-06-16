@@ -8,7 +8,7 @@ function self:Block (parseTree, blockType)
 	local block = GCompute.AST.Block ()
 	block.BlockType = blockType or GCompute.AST.BlockType.Block
 	for node in parseTree:GetEnumerator () do
-		block:AddNode (self:Statement (node))
+		block:AddStatement (self:Statement (node))
 	end
 	return block
 end
@@ -76,7 +76,7 @@ function self:Expression (parseTree)
 	elseif parseTree.Value == "." then
 		return self:NameIndex (parseTree)
 	elseif parseTree.Value == "num" then
-		return GCompute.AST.NumberLiteral (parseTree:GetFirstChild ().Value)
+		return GCompute.AST.NumericLiteral (parseTree:GetFirstChild ().Value)
 	elseif parseTree.Value == "str" then
 		return GCompute.AST.StringLiteral (parseTree:GetFirstChild ().Value)
 	end

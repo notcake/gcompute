@@ -44,7 +44,22 @@ function self:Process (compilationUnit)
 		local startOffset = offset
 		local match, matchLength, tokenType = language:MatchSymbol (code:sub (offset))
 		local original = code:sub (offset, offset + matchLength - 1)
-		local _, lineCount = original:gsub ("(\r\n|\n\r|\n|\r)", "")
+		
+		local newlines = original:gsub ("[^\r\n]", "")
+		local lineCount = 0
+		
+		-- Count newlines
+		local i = 1
+		while i <= newlines:len () do
+			lineCount = lineCount + 1
+			
+			-- Count \r\n and \n\r as 1 newline
+			if newlines:sub (i, i) ~= newlines:sub (i + 1, i + 1) then
+				i = i + 1
+			end
+			i = i + 1
+		end
+		
 		if lineCount > 0 then
 			line = line + lineCount
 			character = 1

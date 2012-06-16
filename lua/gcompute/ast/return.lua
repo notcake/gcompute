@@ -1,22 +1,30 @@
-local Return = {}
-Return.__Type = "Return"
-GCompute.AST.Return = GCompute.AST.MakeConstructor (Return, GCompute.AST.Control)
+local self = {}
+self.__Type = "Return"
+GCompute.AST.Return = GCompute.AST.MakeConstructor (self, GCompute.AST.Control)
 
-function Return:ctor ()
-	self.ReturnValue = nil
+function self:ctor ()
+	self.ReturnExpression = nil
 end
 
-function Return:Evaluate (executionContext)
-	if self.ReturnValue then
-		executionContext:Return (self.ReturnValue:Evaluate (executionContext))
+function self:Evaluate (executionContext)
+	if self.ReturnExpression then
+		executionContext:Return (self.ReturnExpression:Evaluate (executionContext))
 	else
 		executionContext:Return ()
 	end
 end
 
-function Return:ToString ()
-	if self.ReturnValue then
-		return "return " .. self.ReturnValue:ToString ()
+function self:GetReturnExpression ()
+	return self.ReturnExpression
+end
+
+function self:SetReturnExpression (expression)
+	self.ReturnExpression = expression
+end
+
+function self:ToString ()
+	if self.ReturnExpression then
+		return "return " .. self.ReturnExpression:ToString ()
 	end
 	return "return"
 end

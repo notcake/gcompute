@@ -10,50 +10,48 @@ function LinkedList:ctor ()
 	self.Count = 0
 end
 
-function LinkedList:AddAfter (value)
-	if value == nil then
-		return
-	end
-	local LinkedListNode = GCompute.Containers.LinkedListNode ()
-	LinkedListNode.Previous = value
-	LinkedListNode.Next = value.Next
+function LinkedList:AddAfter (node, value)
+	if node == nil then return self:AddFirst (value) end
 	
-	if value.Next then
-		value.Next.Previous = LinkedListNode
-	end
-	value.Next = LinkedListNode
+	local linkedListNode = GCompute.Containers.LinkedListNode ()
+	linkedListNode.Previous = node
+	linkedListNode.Next = node.Next
 	
-	if self.Last == value then
-		self.Last = LinkedListNode
+	if node.Next then
+		node.Next.Previous = linkedListNode
+	end
+	node.Next = linkedListNode
+	
+	if self.Last == node then
+		self.Last = linkedListNode
 	end
 	
 	self.Count = self.Count + 1
-	LinkedListNode.Value = value
+	linkedListNode.Value = value
 	
-	return LinkedListNode
+	return linkedListNode
 end
 
-function LinkedList:AddBefore (value)
-	if value == nil then
-		return
-	end
-	local LinkedListNode = GCompute.Containers.LinkedListNode ()
-	LinkedListNode.Previous = value.Previous
-	LinkedListNode.Next = value
+function LinkedList:AddBefore (node, value)
+	if node == nil then return self:AddLast (value) end
 	
-	if value.Previous then
-		value.Previous.Next = LinkedListNode
-	end
-	value.Previous = LinkedListNode
+	local linkedListNode = GCompute.Containers.LinkedListNode ()
+	linkedListNode.Previous = node.Previous
+	linkedListNode.Next = node
 	
-	if self.First == value then
-		self.First = LinkedListNode
+	if node.Previous then
+		node.Previous.Next = linkedListNode
+	end
+	node.Previous = linkedListNode
+	
+	if self.First == node then
+		self.First = linkedListNode
 	end
 	
 	self.Count = self.Count + 1
-	LinkedListNode.Value = value
+	linkedListNode.Value = value
 	
-	return LinkedListNode
+	return linkedListNode
 end
 
 function LinkedList:AddFirst (value)
@@ -93,21 +91,21 @@ function LinkedList:Clear ()
 end
 
 function LinkedList:GetEnumerator ()
-	local Node = self.First
+	local node = self.First
 	return function ()
-		local Return = Node
-		if Node then
-			Node = Node.Next
-		end
-		return Return
+		local ret = node
+		node = node and node.Next
+		return ret
 	end
 end
 
 function LinkedList:GetItem (n)
-	local Node = self.First
-	while Node do
-		if n == 0 then return Node.Value else n = n - 1 end
-		Node = Node.Next
+	if n > self.Count then return nil end
+
+	local node = self.First
+	while node do
+		if n == 0 then return node.Value else n = n - 1 end
+		node = node.Next
 	end
 	
 	return nil
@@ -117,37 +115,63 @@ function LinkedList:IsEmpty ()
 	return self.Count == 0
 end
 
-function LinkedList:Remove (LinkedListNode)
-	if not LinkedListNode then
+function LinkedList:Remove (linkedListNode)
+	if not linkedListNode then
 		return
 	end
 
-	if LinkedListNode.Previous then
-		LinkedListNode.Previous.Next = LinkedListNode.Next
+	if linkedListNode.Previous then
+		linkedListNode.Previous.Next = linkedListNode.Next
 	end
-	if LinkedListNode.Next then
-		LinkedListNode.Next.Previous = LinkedListNode.Previous
+	if linkedListNode.Next then
+		linkedListNode.Next.Previous = linkedListNode.Previous
 	end
-	if self.First == LinkedListNode then
-		self.First = LinkedListNode.Next
+	if self.First == linkedListNode then
+		self.First = linkedListNode.Next
 	end
-	if self.Last == LinkedListNode then
-		self.Last = LinkedListNode.Previous
+	if self.Last == linkedListNode then
+		self.Last = linkedListNode.Previous
 	end
-	LinkedListNode.Previous = nil
-	LinkedListNode.Next = nil
+	linkedListNode.Previous = nil
+	linkedListNode.Next = nil
 	self.Count = self.Count - 1
 end
 
-function LinkedList:ToString ()
-	local Content = ""
-	for LinkedListNode in self:GetEnumerator () do
-		if Content ~= "" then
-			Content = Content .. ", "
-		end
-		Content = Content .. LinkedListNode:ToString ()
+function LinkedList:RemoveRange (startNode, endNode)
+	startNode = startNode or self.First
+	endNode = endNode or self.Last
+
+	local removalCount = 1
+	local currentNode = startNode
+	while currentNode and currentNode ~= endNode do
+		currentNode = currentNode.Next
+		removalCount = removalCount + 1
 	end
-	return "[" .. tostring (self.Count) .. "] : {" .. Content .. "}"
+	if not currentNode then return end
+	
+	if not startNode.Previous then
+		self.First = endNode.Next
+	else
+		startNode.Previous.Next = endNode.Next
+	end
+	if not endNode.Next then
+		self.Last = startNode.Previous
+	else
+		endNode.Next.Previous = startNode.Previous
+	end
+	
+	self.Count = self.Count - removalCount
+end
+
+function LinkedList:ToString ()
+	local content = ""
+	for linkedListNode in self:GetEnumerator () do
+		if content ~= "" then
+			content = content .. ", "
+		end
+		content = content .. linkedListNode:ToString ()
+	end
+	return "[" .. tostring (self.Count) .. "] : {" .. content .. "}"
 end
 
 -- Linked list node
@@ -169,43 +193,43 @@ if CLIENT then
 	concommand.Add ("gcompute_test_array", function (ply, _, args)
 		GCompute.ClearDebug ()
 	
-		local StartTime = SysTime ()
+		local startTime = SysTime ()
 		GCompute.PrintDebug ("Testing array:")
-		local Array = {}
+		local array = {}
 		GCompute.PrintDebug ("+2, +3, +5, 0+, -5, -2")
-		table.insert (Array, 2)
-		table.insert (Array, 3)
-		table.insert (Array, 5)
-		table.insert (Array, 1, 0)
-		table.remove (Array, 4)
-		table.remove (Array, 2)
-		local Contents = ""
-		for _, Value in pairs (Array) do
-			if Contents ~= "" then
-				Contents = Contents .. ", "
+		table.insert (array, 2)
+		table.insert (array, 3)
+		table.insert (array, 5)
+		table.insert (array, 1, 0)
+		table.remove (array, 4)
+		table.remove (array, 2)
+		local contents = ""
+		for _, value in pairs (array) do
+			if contents ~= "" then
+				contents = contents .. ", "
 			end
-			Contents = Contents .. tostring (Value)
+			contents = contents .. tostring (value)
 		end
-		GCompute.PrintDebug (Contents)
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Test 1 took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		GCompute.PrintDebug (contents)
+		local endTime = SysTime ()
+		GCompute.PrintDebug ("Test 1 took " .. tostring (math.floor ((endTime - startTime) * 100000 + 0.5) * 0.01) .. "ms.")
 	end)
 
 	concommand.Add ("gcompute_test_linkedlist", function (ply, _, args)
 		GCompute.ClearDebug ()
 	
-		local StartTime = SysTime ()
+		local startTime = SysTime ()
 		GCompute.PrintDebug ("Testing linked list:")
-		local LinkedList = GCompute.Containers.LinkedList ()
+		local linkedList = GCompute.Containers.LinkedList ()
 		GCompute.PrintDebug ("+2, +3, +5, 0+, -5, -2")
-		local Remove = LinkedList:AddLast (2)
-		LinkedList:AddLast (3)
-		local Remove2 = LinkedList:AddLast (5)
-		LinkedList:AddFirst (0)
-		LinkedList:Remove (Remove2)
-		LinkedList:Remove (Remove)
-		GCompute.PrintDebug (LinkedList:ToString ())
-		local EndTime = SysTime ()
-		GCompute.PrintDebug ("Test 1 took " .. tostring (math.floor ((EndTime - StartTime) * 100000 + 0.5) * 0.01) .. "ms.")
+		local remove = LinkedList:AddLast (2)
+		linkedList:AddLast (3)
+		local remove2 = LinkedList:AddLast (5)
+		linkedList:AddFirst (0)
+		linkedList:Remove (remove2)
+		linkedList:Remove (remove)
+		GCompute.PrintDebug (linkedList:ToString ())
+		local endTime = SysTime ()
+		GCompute.PrintDebug ("Test 1 took " .. tostring (math.floor ((endTime - startTime) * 100000 + 0.5) * 0.01) .. "ms.")
 	end)
 end

@@ -18,8 +18,11 @@ function self:ctor (name)
 	
 	self.ParserTable = {}
 	self.ParserConstructor = GCompute.MakeConstructor (self.ParserTable, GCompute.Parser)
-	self.ASTBuilderTable = {}
-	self.ASTBuilderConstructor = GCompute.MakeConstructor (self.ASTBuilderTable, GCompute.ASTBuilder)
+	
+	self.Passes =
+	{
+		PostParser = {}
+	}
 end
 
 function self:Parser (compilationUnit)
@@ -110,14 +113,12 @@ function self:LoadParser (file)
 	_G.Parser = parser
 end
 
-function self:LoadASTBuilder (file)
-	if not file then
-		file = self.Name .. "_astbuilder.lua"
-	end
-	local astBuilder = _G.ASTBuilder
-	_G.ASTBuilder = self.ASTBuilderTable
+function self:LoadPass (file, when)
+	local pass = _G.Pass
+	_G.Pass = nil
 	include (file)
-	_G.ASTBuilder = astBuilder
+	self.Passes.PostParser [#self.Passes.PostParser + 1] = _G.Pass
+	_G.Pass = pass
 end
 
 function self:MatchSymbol (code)

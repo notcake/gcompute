@@ -1,19 +1,25 @@
-local VariableDeclaration = {}
-VariableDeclaration.__Type = "VariableDeclaration"
-GCompute.AST.VariableDeclaration = GCompute.AST.MakeConstructor (VariableDeclaration)
+local self = {}
+self.__Type = "VariableDeclaration"
+GCompute.AST.VariableDeclaration = GCompute.AST.MakeConstructor (self)
 
-function VariableDeclaration:ctor ()
+function self:ctor ()
 	self.Type = nil
 	self.Name = "[unknown]"
 	self.Value = nil
 end
 
-function VariableDeclaration:ToString ()
-	if not self.Type then
-		return "[unknown] " .. self.Name
-	end
+function self:GetName ()
+	return self.Name0
+end
+
+function self:SetName (name)
+	self.Name = name
+end
+
+function self:ToString ()
+	local type = self.Type and self.Type:ToString () or "[Unknown Type]"
 	if not self.Value then
-		return self.Type:ToString () .. " " .. self.Name
+		return type .. " " .. self.Name
 	end
-	return self.Type:ToString () .. " " .. self.Name .. " = " .. self.Value:ToString ()
+	return type .. " " .. self.Name .. " = " .. self.Value:ToString ()
 end

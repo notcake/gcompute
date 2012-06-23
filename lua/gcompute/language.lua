@@ -19,10 +19,7 @@ function self:ctor (name)
 	self.ParserTable = {}
 	self.ParserConstructor = GCompute.MakeConstructor (self.ParserTable, GCompute.Parser)
 	
-	self.Passes =
-	{
-		PostParser = {}
-	}
+	self.Passes = {}
 end
 
 function self:Parser (compilationUnit)
@@ -117,7 +114,9 @@ function self:LoadPass (file, when)
 	local pass = _G.Pass
 	_G.Pass = nil
 	include (file)
-	self.Passes.PostParser [#self.Passes.PostParser + 1] = _G.Pass
+	local passName = GCompute.CompilerPassType [when]
+	self.Passes [passName] = self.Passes [passName] or {}
+	self.Passes [passName] [#self.Passes [passName] + 1] = _G.Pass
 	_G.Pass = pass
 end
 

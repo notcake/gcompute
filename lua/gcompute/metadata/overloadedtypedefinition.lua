@@ -1,5 +1,5 @@
 local self = {}
-GCompute.OverloadedTypeDefinition = GCompute.MakeConstructor (self, GCompute.MetadataObject)
+GCompute.OverloadedTypeDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
 
 --- @param name The name of this type
 function self:ctor (name)

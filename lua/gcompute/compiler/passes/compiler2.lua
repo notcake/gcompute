@@ -42,7 +42,7 @@ function self:ProcessBlock (compilationUnit, block)
 				Block:AddStatement (Assignment)
 			end
 		else
-			compilationUnit:Error ("Compiler2: Unhandled AST node " .. statement.__Type .. " (" .. statement:ToString () .. ")")
+			compilationUnit:Error ("Compiler2: Unhandled AST node " .. statement:GetNodeType () .. " (" .. statement:ToString () .. ")")
 		end
 	end
 end

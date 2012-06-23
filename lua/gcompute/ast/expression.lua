@@ -2,12 +2,17 @@ local self = {}
 self.__Type = "Expression"
 GCompute.AST.Expression = GCompute.AST.MakeConstructor (self)
 
-function self:ctor ()
-	self.CachedValue = nil
-	self.IsCached = false
-	self.IsConstant = false
+function self:ctor ()	
+	-- type inference
+	self.TargetTypes = {}
+	self.PossibleTypes = {}
 	
 	self.ResultType = nil
+	self.Value = nil
+end
+
+function self:AddTargetType (type)
+	self.TargetTypes [#self.TargetTypes + 1] = type
 end
 
 function self:Evaluate (executionContext)
@@ -18,14 +23,18 @@ function self:GetResultType ()
 	return self.ResultType
 end
 
-function self:IsConstant ()
-	return self.IsConstant
+function self:GetValue ()
+	return self.Value
 end
 
 function self:SetResultType (type)
 	self.ResultType = type
 end
 
+function self:SetValue (value)
+	self.Value = value
+end
+
 function self:ToString ()
-	return "[expression]"
+	return "[Unknown Expression]"
 end

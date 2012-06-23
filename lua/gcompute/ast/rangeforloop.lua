@@ -3,42 +3,56 @@ self.__Type = "RangeForLoop"
 GCompute.AST.RangeForLoop = GCompute.AST.MakeConstructor (self)
 
 function self:ctor ()
-	self.Variable = nil -- VariableDeclaration or QualifiedIdentifier
+	self.LoopVariable = nil -- VariableDeclaration or QualifiedIdentifier
 	self.Range = {}
 	
-	self.Namespace = GCompute.NamespaceDefinition ()
-	self.LoopStatement = nil
+	self.NamespaceDefinition = nil
+	self.Body = nil
 end
 
 function self:AddValue (n)
 	self.Range [#self.Range + 1] = { n }
+	if n then n:SetParent (self) end
 end
 
 function self:AddRange (startValue, endValue, increment)
 	self.Range [#self.Range + 1] = { startValue, endValue, increment }
+	if startValue then startValue:SetParent (self) end
+	if endValue then endValue:SetParent (self) end
+	if increment then increment:SetParent (self) end
 end
 
 function self:Evaluate (executionContext)
 end
 
-function self:GetLoopStatement ()
-	return self.LoopStatement
+function self:GetBody ()
+	return self.Body
 end
 
-function self:GetVariable ()
-	return self.Variable
+function self:GetLoopVariable ()
+	return self.LoopVariable
 end
 
-function self:SetLoopStatement (statement)
-	self.LoopStatement = statement
+function self:GetNamespace ()
+	return self.NamespaceDefinition
 end
 
-function self:SetVariable (variable)
-	self.Variable = variable
+function self:SetBody (statement)
+	self.Body = statement
+	if self.Body then self.Body:SetParent (self) end
+end
+
+function self:SetLoopVariable (loopVariable)
+	self.LoopVariable = loopVariable
+	if self.LoopVariable then self.LoopVariable:SetParent (self) end
+end
+
+function self:SetNamespace (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:ToString ()
-	local variable = self.Variable and self.Variable:ToString () or "[Unknown]"
+	local loopVariable = self.LoopVariable and self.LoopVariable:ToString () or "[Unknown Identifier]"
 	local range = ""
 	
 	for _, rangeEntry in ipairs (self.Range) do
@@ -53,14 +67,14 @@ function self:ToString ()
 		end
 	end
 	
-	local loopStatement = "    [Unknown]"
+	local bodyStatement = "    [Unknown Statement]"
 	
-	if self.LoopStatement then
-		if self.LoopStatement:Is ("Block") then
-			loopStatement = self.LoopStatement:ToString ()
+	if self.Body then
+		if self.Body:Is ("Block") then
+			bodyStatement = self.Body:ToString ()
 		else
-			loopStatement = "    " .. self.LoopStatement:ToString ():gsub ("\n", "\n    ")
+			bodyStatement = "    " .. self.Body:ToString ():gsub ("\n", "\n    ")
 		end
 	end
-	return "for (" .. variable .. " = " .. range .. ")\n" .. loopStatement
+	return "for (" .. loopVariable .. " = " .. range .. ")\n" .. bodyStatement
 end

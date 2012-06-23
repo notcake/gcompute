@@ -1,14 +1,14 @@
-local Break = {}
-Break.__Type = "Break"
-GCompute.AST.Break = GCompute.AST.MakeConstructor (Break, GCompute.AST.Control)
+local self = {}
+self.__Type = "Break"
+GCompute.AST.Break = GCompute.AST.MakeConstructor (self, GCompute.AST.Control)
 
-function Break:ctor ()
+function self:ctor ()
 end
 
-function Break:Evaluate (executionContext)
+function self:Evaluate (executionContext)
 	executionContext:Break ()
 end
 
-function Break:ToString ()
+function self:ToString ()
 	return "break"
 end

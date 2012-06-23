@@ -15,6 +15,7 @@ end
 function self:AddArgument (argument)
 	self.ArgumentCount = self.ArgumentCount + 1
 	self.Arguments [self.ArgumentCount] = argument
+	if argument then argument:SetParent (self) end
 end
 
 function self:GetArgument (index)

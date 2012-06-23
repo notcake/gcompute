@@ -8,12 +8,18 @@ function self:ctor ()
 end
 
 --- Adds a parameter to the list
--- @param name The name of the parameter
+-- @param parameterName The name of the parameter
 -- @return The id of the newly added parameter
-function self:AddParameter (name)
+function self:AddParameter (parameterName)
 	self.ParameterCount = self.ParameterCount + 1
-	self.ParameterNames [self.ParameterCount] = name
+	self.ParameterNames [self.ParameterCount] = parameterName
 	
+	return self.ParameterCount
+end
+
+--- Gets the number of parameters in this type parameter list
+-- @return The number of parameters in this type parameter list
+function self:GetParameterCount ()
 	return self.ParameterCount
 end
 
@@ -40,7 +46,7 @@ end
 
 -- Sets the name of the given parameter
 -- @param parameterId The id of the parameter
--- @param The new name of the parameter
-function self:SetParameterName (parameterId, name)
-	self.ParameterNames [parameterId] = name
+-- @param parameterName The new name of the parameter
+function self:SetParameterName (parameterId, parameterName)
+	self.ParameterNames [parameterId] = parameterName
 end

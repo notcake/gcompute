@@ -3,64 +3,110 @@ self.__Type = "FunctionDeclaration"
 GCompute.AST.FunctionDeclaration = GCompute.AST.MakeConstructor (self)
 
 function self:ctor ()
-	self.Name = "[unknown]"
-	self.Function = nil
+	self.Name = "[Unknown Identifier]"
 	
-	self.ReturnType = nil		-- TypeReference
-	self.ArgumentTypes = {}
-	self.ArgumentNames = {}
-	self.ArgumentCount = 0
-	self.Block = GCompute.AST.Block ()
-	self.Block.BlockType = GCompute.AST.BlockType.Function
+	self.ReturnType = nil	
+	
+	self.MemberFunction = false
+	self.TypeExpression = nil
+	
+	self.ParameterList = GCompute.ParameterList ()
+	
+	self.Body = nil
 end
 
-function self:AddArgument (argumentType, argumentName)
-	self.ArgumentCount = self.ArgumentCount + 1
-	self.ArgumentTypes [self.ArgumentCount] = argumentType or GCompute.AST.UnknownExpression ()
-	self.ArgumentNames [self.ArgumentCount] = argumentName or "[unknown]"
+function self:AddParameter (parameterType, parameterName)
+	self.ParameterList:AddParameter (parameterType, parameterName or "[Unknown Identifier]")
+	if parameterType then parameterType:SetParent (self) end
 end
 
-function self:GetArgumentCount ()
-	return self.ArgumentCount
+function self:Evaluate ()
 end
 
-function self:GetArgumentName (index)
-	return self.ArgumentNames [index]
-end
-
-function self:GetArgumentType (index)
-	return self.ArgumentTypes [index]
-end
-
-function self:GetBlock ()
-	return self.Block
-end
-
-function self:GetFunction ()
-	return self.Function
+function self:GetBody ()
+	return self.Body
 end
 
 function self:GetName ()
 	return self.Name
 end
 
+function self:GetParameterCount ()
+	return self.ParameterList:GetParameterCount ()
+end
+
+function self:GetParameterList ()
+	return self.ParameterList
+end
+
+function self:GetParameterName (parameterId)
+	return self.ParameterList:GetParameterName (parameterId)
+end
+
+function self:GetParameterType (parameterId)
+	return self.ParameterList:GetParameterType (parameterId)
+end
+
 function self:GetReturnType ()
 	return self.ReturnType
 end
 
-function self:SetFunction (func)
-	self.Function = func
+function self:GetTypeExpression ()
+	return self.TypeExpression
+end
+
+function self:IsMemberFunction ()
+	return self.MemberFunction
+end
+
+function self:SetBody (blockStatement)
+	self.Body = blockStatement
+	if self.Body then self.Body:SetParent (self) end
+end
+
+function self:SetMemberFunction (memberFunction)
+	self.MemberFunction = memberFunction
+end
+
+function self:SetName (name)
+	self.Name = name
+end
+
+function self:SetParameterName (parameterId, parameterName)
+	self.ParameterList:SetParameterName (parameterId, parameterName)
+end
+
+function self:SetParameterType (parameterId, parameterType)
+	self.ParameterList:SetParameterType (parameterId, parameterType)
+	if parameterType then parameterType:SetParent (self) end
+end
+
+function self:SetReturnType (returnType)
+	self.ReturnType = returnType
+	if self.ReturnType then self.ReturnType:SetParent (self) end
+end
+
+function self:SetTypeExpression (typeExpression)
+	self.TypeExpression = typeExpression
+	if self.TypeExpression then self.TypeExpression:SetParent (self) end
 end
 
 function self:ToString ()
-	local Type = self.ReturnType and self.ReturnType:ToString () or "[unknown]"
+	local returnType = self.ReturnType and self.ReturnType:ToString () or "[Unknown Type]"
+	local body = self.Body and self.Body:ToString () or "[Unknown Statement]"
 	
-	local Arguments = ""
-	for i = 1, self.ArgumentCount do
-		if Arguments ~= "" then
-			Arguments = Arguments .. ", "
+	local arguments = ""
+	for i = 1, self:GetParameterCount () do
+		if arguments ~= "" then
+			arguments = arguments .. ", "
 		end
-		Arguments = Arguments .. self.ArgumentTypes [i]:ToString () .. " " .. self.ArgumentNames [i]
+		local argumentType = self:GetParameterType (i) and self:GetParameterType (i):ToString () or "[Unknown Type]"
+		arguments = arguments .. argumentType .. " " .. self:GetParameterName (i)
 	end
-	return Type .. " " .. self.Name .. " (" .. Arguments .. ")\n" .. self.Block:ToString ()
+	if self.MemberFunction then
+		local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or "[Unknown Expression]"
+		return "[Function Declaration]\n" .. returnType .. " " .. typeExpression .. ":" .. self.Name .. " (" .. arguments .. ")\n" .. body
+	else
+		return "[Function Declaration]\n" .. returnType .. " " .. self.Name .. " (" .. arguments .. ")\n" .. body
+	end
 end

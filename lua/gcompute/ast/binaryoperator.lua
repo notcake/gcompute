@@ -57,16 +57,22 @@ function self:GetLeftExpression ()
 	return self.LeftExpression
 end
 
+function self:GetOperator ()
+	return self.Operator
+end
+
 function self:GetRightExpression ()
 	return self.RightExpression
 end
 
 function self:SetLeftExpression (leftExpression)
 	self.LeftExpression = leftExpression
+	if self.LeftExpression then self.LeftExpression:SetParent (self) end
 end
 
 function self:SetRightExpression (rightExpression)
 	self.RightExpression = rightExpression
+	if self.RightExpression then self.RightExpression:SetParent (self) end
 end
 
 function self:SetOperator (operator)
@@ -81,13 +87,13 @@ function self:ToString ()
 	
 	if self.LeftExpression then
 		leftExpression = self.LeftExpression:ToString ()
-		if self.LeftExpression:Is ("BinaryOperator") then
+		if self.LeftExpression.Is and self.LeftExpression:Is ("BinaryOperator") then
 			leftExpression = "(" .. leftExpression .. ")"
 		end
 	end
 	if self.RightExpression then
 		rightExpression = self.RightExpression:ToString ()
-		if self.RightExpression:Is ("BinaryOperator") then
+		if self.RightExpression.Is and self.RightExpression:Is ("BinaryOperator") then
 			rightExpression = "(" .. rightExpression  .. ")"
 		end
 	end

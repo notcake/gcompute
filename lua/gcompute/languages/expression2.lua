@@ -3,17 +3,17 @@ local LANGUAGE = GCompute.Languages.Create ("Expression 2")
 -- Tokenizer
 LANGUAGE:AddCustomSymbols ({"\"", "'"}, GCompute.TokenType.String, function (code)
 	local i = 2
-	local Escaped = false
+	local escaped = false
 	while true do
 		local c = code:sub (i, i)
 		if c == "" then
 			return code:sub (1, i) .. code:sub (1, 1), i
 		else
-			if Escaped then
-				Escaped = false
+			if escaped then
+				escaped = false
 			else
 				if c == "\\" then
-					Escaped = true
+					escaped = true
 				elseif c == code:sub (1, 1) then
 					return code:sub (1, i), i
 				end
@@ -37,12 +37,13 @@ LANGUAGE:AddCustomSymbol ("/*", GCompute.TokenType.Comment, function (code)
 end)
 LANGUAGE:AddSymbol ("#[^\n\r]*", GCompute.TokenType.Comment)
 LANGUAGE:AddSymbol ("[a-zA-Z_][a-zA-Z0-9_]*", GCompute.TokenType.Identifier)
+LANGUAGE:AddSymbol ("0b[01]+", GCompute.TokenType.Number)
 LANGUAGE:AddSymbol ("0x[0-9a-fA-F]+", GCompute.TokenType.Number)
 LANGUAGE:AddSymbol ("[0-9]+%.[0-9]*e[+\\-]?[0-9]+", GCompute.TokenType.Number)
 LANGUAGE:AddSymbol ("[0-9]+%.[0-9]*", GCompute.TokenType.Number)
 LANGUAGE:AddSymbol ("[0-9]+e[+\\-]?[0-9]+", GCompute.TokenType.Number)
 LANGUAGE:AddSymbol ("[0-9]+", GCompute.TokenType.Number)
-LANGUAGE:AddSymbols ({"##", "++", "--", "::", "->", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "^=", "||", "&&"}, GCompute.TokenType.Operator, false)
+LANGUAGE:AddSymbols ({"##", "++", "--", "==", "!=", "<=", ">=", "<<=", ">>=", "+=", "-=", "*=", "/=", "^=", "||", "&&", "^^", ">>", "<<"}, GCompute.TokenType.Operator, false)
 LANGUAGE:AddSymbols ({"#", "@", "!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ":", ".", ","}, GCompute.TokenType.Operator, false)
 LANGUAGE:AddSymbol (";", GCompute.TokenType.StatementTerminator, false)
 LANGUAGE:AddSymbols ({"\r\n", "\n\r", "\r", "\n"}, GCompute.TokenType.Newline, false)
@@ -53,4 +54,4 @@ LANGUAGE:AddKeywords ({"namespace", "struct", "class", "enum", "using", "functio
 LANGUAGE:AddKeywords ({"true", "false", "null"}, GCompute.KeywordTypes.Constants)
 
 LANGUAGE:LoadParser ("expression2_parser.lua")
-LANGUAGE:LoadPass ("expression2_postparser.lua", GCompute.CompilerPassType.PostParser)
+LANGUAGE:LoadPass ("expression2_implicitvariabledeclaration.lua", GCompute.CompilerPassType.PostNamespaceBuilder)

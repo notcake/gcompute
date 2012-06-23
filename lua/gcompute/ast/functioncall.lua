@@ -3,10 +3,7 @@ self.__Type = "FunctionCall"
 GCompute.AST.FunctionCall = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
 function self:ctor ()
-	self.FunctionExpression = nil		-- Expression
-	self.CachedFunction = nil
-	
-	self.MemberFunctionCall = false
+	self.LeftExpression = nil
 	
 	self.Arguments = {}
 	self.ArgumentCount = 0
@@ -14,7 +11,8 @@ end
 
 function self:AddArgument (argument)
 	self.ArgumentCount = self.ArgumentCount + 1
-	self.Arguments [self.ArgumentCount] = argument or GCompute.AST.UnknownExpression ()
+	self.Arguments [self.ArgumentCount] = argument
+	if argument then argument:SetParent (self) end
 end
 
 function self:AddArguments (arguments)
@@ -28,7 +26,7 @@ function self:Evaluate (executionContext)
 	if self.CachedFunction then
 		functionObject = self.CachedFunction
 	else
-		functionObject = self.FunctionExpression:Evaluate (executionContext)
+		functionObject = self.LeftExpression:Evaluate (executionContext)
 	end
 
 	if functionObject then
@@ -36,14 +34,15 @@ function self:Evaluate (executionContext)
 		for i = 1, self.ArgumentCount do
 			arguments [i] = self.Arguments [i]:Evaluate (executionContext)
 		end
-		if self:IsMemberFunctionCall () then
-			local this = self.FunctionExpression.Left:Evaluate (executionContext)
+		if false then
+			-- self:IsMemberFunctionCall ()
+			local this = self.LeftExpression.Left:Evaluate (executionContext)
 			return functionObject:Call (executionContext, self.ArgumentTypes, this, unpack (arguments))
 		else
 			return functionObject:Call (executionContext, self.ArgumentTypes, unpack (arguments))
 		end
 	else
-		executionContext:Error ("Unresolved function " .. self.FunctionExpression:ToString () .. " in " .. self:ToString () .. ".")
+		executionContext:Error ("Unresolved function " .. self.LeftExpression:ToString () .. " in " .. self:ToString () .. ".")
 	end
 end
 
@@ -55,29 +54,29 @@ function self:GetArgumentCount ()
 	return self.ArgumentCount
 end
 
-function self:GetFunctionExpression ()
-	return self.FunctionExpression
+function self:GetLeftExpression ()
+	return self.LeftExpression
 end
 
-function self:IsMemberFunctionCall ()
-	return self.MemberFunctionCall
+function self:SetArgument (index, expression)
+	self.Arguments [index] = expression
+	if expression then expression:SetParent (self) end
 end
 
-function self:SetFunctionExpression (functionExpression)
-	self.FunctionExpression = functionExpression
-end
-
-function self:SetMemberFunctionCall (memberFunctionCall)
-	self.MemberFunctionCall = memberFunctionCall
+function self:SetLeftExpression (leftExpression)
+	self.LeftExpression = leftExpression
+	if self.LeftExpression then self.LeftExpression:SetParent (self) end
 end
 
 function self:ToString ()
+	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Unknown Expression]"
 	local arguments = ""
 	for i = 1, self.ArgumentCount do
 		if arguments ~= "" then
 			arguments = arguments .. ", "
 		end
-		arguments = arguments .. self.Arguments [i]:ToString ()
+		local argument = self.Arguments [i] and self.Arguments [i]:ToString () or "[Unknown Expression]"
+		arguments = arguments .. argument
 	end
-	return self.FunctionExpression:ToString () .. " (" .. arguments .. ")"
+	return leftExpression .. " (" .. arguments .. ")"
 end

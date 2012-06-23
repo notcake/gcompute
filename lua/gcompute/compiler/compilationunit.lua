@@ -16,6 +16,8 @@ local CompilerMessageType =
 -- Compiler2 : ast -> global scope entries, local scope entries etc
 
 function self:ctor (sourceFile, languageName)
+	self.CompilationGroup = nil
+
 	self.SourceFile = sourceFile
 	self.Language = GCompute.Languages.Get (languageName)
 	
@@ -30,12 +32,7 @@ function self:ctor (sourceFile, languageName)
 	self.NamespaceDefinition = nil
 	
 	-- Profiling
-	self.TokenizerDuration = 0
-	self.PreprocessorDuration = 0
-	self.ParserJobGeneratorDuration = 0
-	self.ParserDuration = 0
-	self.PostParserDuration = 0
-	self.NamespaceBuilderDuration = 0
+	self.PassDurations = {}
 end
 
 -- Messages
@@ -85,8 +82,16 @@ function self:OutputMessages (outputFunction)
 end
 
 -- Compilation
+function self:GetAbstractSyntaxTree ()
+	return self.AST
+end
+
 function self:GetCode ()
 	return self.SourceFile:GetCode ()
+end
+
+function self:GetCompilationGroup ()
+	return self.CompilationGroup
 end
 
 function self:GetLanguage ()
@@ -99,12 +104,25 @@ function self:GetNamespaceDefinition ()
 	return self.NamespaceDefinition
 end
 
+function self:SetCompilationGroup (compilationGroup)
+	self.CompilationGroup = compilationGroup
+end
+
+-- Passes
+function self:GetPassDuration (passName)
+	return self.PassDurations [passName] or 0
+end
+
+function self:SetPassDuration (passName, duration)
+	self.PassDurations [passName] = duration
+end
+
 function self:Tokenize (callback)
 	callback = callback or GCompute.NullCallback
 	
 	local startTime = SysTime ()
 	self.Tokens = GCompute.Tokenizer:Process (self)
-	self.TokenizerDuration = SysTime () - startTime
+	self:SetPassDuration ("Tokenizer", SysTime () - startTime)
 	
 	callback ()
 end
@@ -114,7 +132,7 @@ function self:Preprocess (callback)
 	
 	local startTime = SysTime ()
 	GCompute.Preprocessor:Process (self, self.Tokens)
-	self.PreprocessorDuration = SysTime () - startTime
+	self:SetPassDuration ("Preprocessor", SysTime () - startTime)
 	
 	callback ()
 end
@@ -127,7 +145,7 @@ function self:GenerateParserJobs (callback)
 	parserJobGenerator:Process (
 		function (jobQueue)
 			self.ParserJobQueue = jobQueue
-			self.ParserJobGeneratorDuration = SysTime () - startTime
+			self:SetPassDuration ("ParserJobGenerator", SysTime () - startTime)
 			callback ()
 		end
 	)
@@ -138,21 +156,28 @@ function self:Parse (callback)
 	
 	local startTime = SysTime ()
 	local parser = self.Language:Parser (self)
+	parser.DebugOutput = GCompute.TextOutputBuffer ()
 	local actionChain = GCompute.CallbackChain ()
 	for _, v in ipairs (self.ParserJobQueue) do
 		actionChain:Add (
 			function (callback)
+				print ("Parsing from line " .. v.Start.Line .. ", char " .. v.Start.Character .. " to line " .. v.End.Line .. ", char " .. v.End.Character .. ".")
 				local parseTree = parser:Process (self.Tokens, v.Start, v.End)
 				self.Tokens:RemoveRange (v.Start, v.End)
-				self.Tokens:AddAfter (v.Start.Previous, parseTree)
-				callback ()
+				local tokenNode = self.Tokens:AddAfter (v.Start.Previous, "pre-parsed ast")
+				tokenNode.AST = parseTree
+				tokenNode.TokenType = GCompute.TokenType.AST
+				tokenNode.Line = v.Start.Line
+				tokenNode.Character = v.Start.Character
+				timer.Simple (0, callback)
 			end
 		)
 	end
 	actionChain:Add (
 		function (_)
-			self.AST = self.Tokens.First.Value
-			self.ParserDuration = SysTime () - startTime
+			-- parser.DebugOutput:OutputLines (print)
+			self.AST = self.Tokens.First.AST
+			self:SetPassDuration ("Parser", SysTime () - startTime)
 			
 			callback ()
 		end
@@ -162,20 +187,21 @@ end
 
 function self:PostParse (callback)
 	callback = callback or GCompute.NullCallback
+	if not self.Language.Passes.PostParser then callback () return end
 	
 	local startTime = SysTime ()
 	local actionChain = GCompute.CallbackChain ()
 	for _, pass in ipairs (self.Language.Passes.PostParser) do
 		actionChain:Add (
 			function (callback)
-				pass ():Process (self.AST)
+				pass (self):Process (self.AST)
 				callback ()
 			end
 		)
 	end
 	actionChain:Add (
 		function (_)
-			self.PostParserDuration = SysTime () - startTime
+			self:SetPassDuration ("PostParser", SysTime () - startTime)
 			
 			callback ()
 		end
@@ -186,11 +212,46 @@ end
 function self:BuildNamespace (callback)
 	callback = callback or GCompute.NullCallback
 	
-	local startTime = SysTime ()
-	local namespaceBuilder = GCompute.NamespaceBuilder (self, self.AST)
-	namespaceBuilder:Process (self.AST)
-	self.NamespaceBuilderDuration = SysTime () - startTime
-	self.NamespaceDefinition = self.AST:GetNamespace ()
+	self:RunPass ("NamespaceBuilder", GCompute.NamespaceBuilder,
+		function ()
+			self.NamespaceDefinition = self.AST:GetNamespace ()
+			callback ()
+		end
+	)
+end
+
+function self:PostBuildNamespace (callback)
+	callback = callback or GCompute.NullCallback
+	if not self.Language.Passes.PostNamespaceBuilder then callback () return end
 	
-	callback ()
+	local startTime = SysTime ()
+	local actionChain = GCompute.CallbackChain ()
+	for _, pass in ipairs (self.Language.Passes.PostNamespaceBuilder) do
+		actionChain:Add (
+			function (callback)
+				pass (self):Process (self.AST)
+				callback ()
+			end
+		)
+	end
+	actionChain:Add (
+		function (_)
+			self:SetPassDuration ("PostNamespaceBuilder", SysTime () - startTime)
+			
+			callback ()
+		end
+	)
+	actionChain:Execute ()
+end
+
+function self:RunPass (passName, passConstructor, callback)
+	callback = callback or GCompute.NullCallback
+	
+	local startTime = SysTime ()
+	passConstructor (self):Process (self.AST,
+		function ()
+			self:SetPassDuration (passName, SysTime () - startTime)
+			callback ()
+		end
+	)
 end

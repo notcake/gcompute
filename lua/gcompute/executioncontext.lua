@@ -1,7 +1,7 @@
-local ExecutionContext = {}
-GCompute.ExecutionContext = GCompute.MakeConstructor (ExecutionContext)
+local self = {}
+GCompute.ExecutionContext = GCompute.MakeConstructor (self)
 
-function ExecutionContext:ctor (process, thread)
+function self:ctor (process, thread)
 	if not thread then ErrorNoHalt ("ExecutionContexts should only be created by Threads.\n") GCompute.PrintStackTrace () end
 	self.Process = process
 	self.Thread = thread
@@ -17,17 +17,17 @@ function ExecutionContext:ctor (process, thread)
 	self.ReturnValueReference = nil
 end
 
-function ExecutionContext:Break ()
+function self:Break ()
 	self.BreakFlag = true
 	self.InterruptFlag = true
 end
 
-function ExecutionContext:Continue ()
+function self:Continue ()
 	self.ContinueFlag = true
 	self.InterruptFlag = true
 end
 
-function ExecutionContext:ClearInterrupt ()
+function self:ClearInterrupt ()
 	self.InterruptFlag = false
 	
 	self.BreakFlag = false
@@ -35,17 +35,17 @@ function ExecutionContext:ClearInterrupt ()
 	self.ReturnFlag = false
 end
 
-function ExecutionContext:ClearBreak ()
+function self:ClearBreak ()
 	self.BreakFlag = false
 	self.InterruptFlag = false
 end
 
-function ExecutionContext:ClearContinue ()
+function self:ClearContinue ()
 	self.ContinueFlag = false
 	self.InterruptFlag = false
 end
 
-function ExecutionContext:ClearReturn ()
+function self:ClearReturn ()
 	self.ReturnFlag = false
 	self.InterruptFlag = false
 	
@@ -58,19 +58,27 @@ function ExecutionContext:ClearReturn ()
 	return returnValue, returnValueReference
 end
 
-function ExecutionContext:Error (message)
+function self:Error (message)
 	ErrorNoHalt (message .. "\n")
 end
 
-function ExecutionContext:GetReturnValue ()
+function self:GetProcess ()
+	return self.Process
+end
+
+function self:GetReturnValue ()
 	return self.ReturnValue, self.ReturnValueReference
 end
 
-function ExecutionContext:PopScope ()
+function self:GetThread ()
+	return self.Thread
+end
+
+function self:PopScope ()
 	self.ScopeLookup:PopScope ()
 end
 
-function ExecutionContext:PushScope (scope)
+function self:PushScope (scope)
 	local ScopeInstance = scope:CreateInstance ()
 	ScopeInstance:SetParentScope (scope:GetParentScope ())
 	self.ScopeLookup:PushScope (ScopeInstance)
@@ -85,7 +93,7 @@ end
 		Pushes an instance of scopeDefinition onto the scope stack, setting
 		its parent to the scope that was at the top of the stack.
 ]]
-function ExecutionContext:PushBlockScope (scope)
+function self:PushBlockScope (scope)
 	local ScopeInstance = scope:CreateInstance ()
 	ScopeInstance:SetParentScope (self.ScopeLookup.TopScope)
 	self.ScopeLookup:PushScope (ScopeInstance)
@@ -93,7 +101,7 @@ function ExecutionContext:PushBlockScope (scope)
 	return ScopeInstance
 end
 
-function ExecutionContext:Return (value, reference)
+function self:Return (value, reference)
 	self.ReturnValue = value
 	self.ReturnValueReference = reference
 	
@@ -101,6 +109,6 @@ function ExecutionContext:Return (value, reference)
 	self.InterruptFlag = true
 end
 
-function ExecutionContext:TopScope ()
+function self:TopScope ()
 	return self.ScopeLookup.TopScope
 end

@@ -60,7 +60,7 @@ function self:ProcessBlock (compilationUnit, block)
 		elseif statement:Is ("VariableDeclaration") then
 			self:ProcessVariableDeclaration (compilationUnit, block.Scope, statement)
 		else
-			compilationUnit:Error ("DeclarationPass: Unhandled AST node " .. statement.__Type .. " (" .. statement:ToString () .. ")", statement:GetSourceLine (), statement:GetSourceCharacter ())
+			compilationUnit:Error ("DeclarationPass: Unhandled AST node " .. statement:GetNodeType () .. " (" .. statement:ToString () .. ")", statement:GetSourceLine (), statement:GetSourceCharacter ())
 		end
 	end
 end

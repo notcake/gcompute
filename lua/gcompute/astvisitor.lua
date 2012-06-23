@@ -4,8 +4,11 @@ GCompute.ASTVisitor = GCompute.MakeConstructor (self)
 function self:ctor ()
 end
 
-function self:Process (blockStatement)
+function self:Process (blockStatement, callback)
+	callback = callback or GCompute.NullCallback
+
 	self:ProcessRoot (blockStatement)
+	callback ()
 end
 
 function self:ProcessRoot (blockStatement)
@@ -38,14 +41,21 @@ function self:ProcessStatement (statement)
 	
 	if statement:Is ("IfStatement") then
 		for i = 1, statement:GetConditionCount () do
-			statement:SetCondition (i, self:ProcessExpression (statement:GetCondition (i)) or statement:GetCondition (i))
-			statement:SetStatement (i, self:ProcessStatement (statement:GetStatement (i)) or statement:GetStatement (i))
+			statement:SetCondition (i, self:ProcessStatement (statement:GetCondition (i)) or statement:GetCondition (i))
+			statement:SetConditionBody (i, self:ProcessStatement (statement:GetConditionBody (i)) or statement:GetConditionBody (i))
 		end
 		if statement:GetElseStatement () then
 			statement:SetElseStatement (self:ProcessStatement (statement:GetElseStatement ()) or statement:GetElseStatement ())
 		end
 	elseif statement:Is ("RangeForLoop") then
-		statement:SetLoopStatement (self:ProcessStatement (statement:GetLoopStatement ()) or statement:GetLoopStatement ())
+		statement:SetBody (self:ProcessStatement (statement:GetBody ()) or statement:GetBody ())
+	elseif statement:Is ("IteratorForLoop") then
+		statement:SetBody (self:ProcessStatement (statement:GetBody ()) or statement:GetBody ())
+	elseif statement:Is ("WhileLoop") then
+		statement:SetCondition (self:ProcessStatement (statement:GetCondition ()) or statement:GetCondition ())
+		statement:SetBody (self:ProcessStatement (statement:GetBody ()) or statement:GetBody ())
+	elseif statement:Is ("FunctionDeclaration") then
+		statement:SetBody (self:ProcessStatement (statement:GetBody ()) or statement:GetBody ())
 	end
 	
 	return ret
@@ -60,7 +70,7 @@ function self:ProcessExpression (expression)
 	elseif expression:Is ("UnaryOperator") then
 		expression:SetLeftExpression (self:ProcessExpression (expression:GetLeftExpression ()) or expression:GetLeftExpression ())
 	elseif expression:Is ("FunctionCall") then
-		expression:SetFunctionExpression (self:ProcessExpression (expression:GetFunctionExpression ()) or expression:GetFunctionExpression ())
+		expression:SetLeftExpression (self:ProcessExpression (expression:GetLeftExpression ()) or expression:GetLeftExpression ())
 		for i = 1, expression:GetArgumentCount () do
 			expression:SetArgument (i, self:ProcessExpression (expression:GetArgument (i)) or expression:GetArgument (i))
 		end

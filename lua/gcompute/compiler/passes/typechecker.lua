@@ -37,7 +37,7 @@ function self:ProcessBlock (compilationUnit, block)
 				self:ProcessExpression (compilationUnit, block:GetScope (), statement.Value)
 			end
 		else
-			compilationUnit:Error ("TypeChecker: Unhandled AST node " .. statement.__Type .. " (" .. statement:ToString () .. ")", statement:GetSourceLine (), statement:GetSourceCharacter ())
+			compilationUnit:Error ("TypeChecker: Unhandled AST node " .. statement:GetNodeType () .. " (" .. statement:ToString () .. ")", statement:GetSourceLine (), statement:GetSourceCharacter ())
 		end
 	end
 	
@@ -144,6 +144,6 @@ function self:ProcessExpression (compilationUnit, scope, statement)
 			compilationUnit:Debug ("Failed to determine type of " .. statement:ToString () .. ".")
 		end
 	else
-		compilationUnit:Error ("TypeChecker: Unhandled AST node " .. statement.__Type .. " (" .. statement:ToString () .. ")", statement:GetSourceLine (), statement:GetSourceCharacter ())
+		compilationUnit:Error ("TypeChecker: Unhandled AST node " .. statement:GetNodeType () .. " (" .. statement:ToString () .. ")", statement:GetSourceLine (), statement:GetSourceCharacter ())
 	end
 end

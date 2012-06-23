@@ -14,86 +14,70 @@ GCompute.NameResolver = GCompute.MakeConstructor (self)
 ]]
 
 function self:ctor ()
+	self.GlobalNamespaceDefinition = GCompute.GlobalNamespace
 end
 
-function self:Resolve (scope, astNode)
-	if astNode.ResultsPopulated then return end
-	
-	if astNode:Is ("Identifier") then
-		self:ResolveIdentifier (scope, astNode)
-	elseif astNode:Is ("NameIndex") then
-		self:ResolveNameIndex (scope, astNode)
-	elseif astNode:Is ("ParametricName") then
-		self:ResolveParametricName (scope, astNode)
-	else
-		GCompute.Error ("NameResolver: Cannot handle unknown AST node " .. astNode.__Type .. "!")
-	end
+function self:GetGlobalNamespace ()
+	return self.GlobalNamespaceDefinition
 end
 
-function self:ResolveIdentifier (scope, astIdentifier)
-	if astIdentifier.ResultsPopulated then return end
-	astIdentifier.ResultsPopulated = true
-
-	local name = astIdentifier.Name
-	
-	if not scope then
-		GCompute.Error ("NameResolver:ResolveIdentifier: No scope given!")
-	end
-	
-	-- Do local scopes
-	local parentScope = scope
-	while parentScope do
-		local member, memberReference = parentScope:GetMemberReference (name)
-		if memberReference then
-			local result = GCompute.NameResolutionResult ()
-			result:SetResult (member, memberReference:GetType (), memberReference)
-			astIdentifier.NameResolutionResults:AddResult (result)
-		end
-		
-		parentScope = parentScope:GetParentScope ()
-	end
-	
-	if astIdentifier.NameResolutionResults:GetResultCount () == 0 then
-		GCompute.Error ("NameResolver:ResolveIdentifier: No results for " .. name .. "!")
-	end
+function self:SetGlobalNamespace (globalNamespaceDefinition)
+	self.GlobalNamespaceDefinition = globalNamespaceDefinition
 end
 
-function self:ResolveNameIndex (scope, astNameIndex)
-	if astNameIndex.ResultsPopulated then return end
-	astNameIndex.ResultsPopulated = true
+function self:LookupQualifiedIdentifier (leftNamespace, name, nameResolutionResults)
+	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
 	
-	local left = astNameIndex.Left
-	local right = astNameIndex.Right
+	if leftNamespace:MemberExists (name) then
+		nameResolutionResults:AddGlobalResult (leftNamespace:GetMember (name), leftNamespace:GetMemberMetadata (name))
+	end
 	
-	self:Resolve (scope, left)
-	if right:Is ("Identifier") then
-		local name = right.Name
-		print ("ID")
-	elseif right:Is ("ParametricName") then
-		print ("PARAMETRICNAME")
-		for result in left.NameResolutionResults:GetEnumerator () do
-			local left = result:GetValue ()
-			local leftType = result:GetType ():UnreferenceType ()
-			local member, memberReference = left:GetMember (right.Name)
-			if memberReference then
-				local memberType = memberReference:GetType ():UnreferenceType ()
-				
-				for i = 1, right:GetArgumentCount () do
-					self:ResolveType (right:GetArgument (i))
-				end
+	return nameResolutionResults
+end
+
+function self:LookupUnqualifiedIdentifier (referenceNamespace, name, nameResolutionResults)
+	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
+	
+	self:LookupLocal (referenceNamespace, name, nameResolutionResults)
+	self:LookupGlobal (referenceNamespace, name, nameResolutionResults)
+	
+	return nameResolutionResults
+end
+
+function self:LookupGlobal (referenceNamespace, name, nameResolutionResults)
+	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
+	
+	local currentUsingSource = referenceNamespace
+	while currentUsingSource do
+		for i = 1, currentUsingSource:GetUsingCount () do
+			local usingDirective = currentUsingSource:GetUsing (i)
+			print ("Checking " .. usingDirective:ToString () .. " for " .. name)
+			if usingDirective:GetNamespace () and usingDirective:GetNamespace ():MemberExists (name) then
+				nameResolutionResults:AddGlobalResult (usingDirective:GetNamespace ():GetMember (name), usingDirective:GetNamespace ():GetMemberMetadata (name))
 			end
 		end
-	else
-		GCompute.Error ("NameResolver:ResolveNameIndex : Unknown AST node on right (" .. right.__Type .. ")!")
+	
+		currentUsingSource = currentUsingSource:GetContainingNamespace ()
 	end
+	
+	if self.GlobalNamespaceDefinition:MemberExists (name) then
+		nameResolutionResults:AddGlobalResult (self.GlobalNamespaceDefinition:GetMember (name), self.GlobalNamespaceDefinition:GetMemberMetadata (name))
+	end
+	
+	return nameResolutionResults
 end
 
-function self:ResolveParametricName (scope, astParametricName)
-	if astParametricName.ResultsPopulated then return end
-	astParametricName.ResultsPopulated = true
+function self:LookupLocal (referenceNamespace, name, nameResolutionResults)
+	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
 	
-	self:ResolveIdentifier (scope, astParametricName.Name)
+	local containingNamespace = referenceNamespace
+	while containingNamespace do
+		if containingNamespace:MemberExists (name) then
+			nameResolutionResults:AddLocalResult (containingNamespace:GetMember (name), containingNamespace:GetMemberMetadata (name))
+		end
+		
+		containingNamespace = containingNamespace:GetContainingNamespace ()
+	end
 	
+	return nameResolutionResults
 end
-
-GCompute.NameResolver = GCompute.NameResolver ()

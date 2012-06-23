@@ -1,8 +1,8 @@
-local StringLiteral = {}
-StringLiteral.__Type = "StringLiteral"
-GCompute.AST.StringLiteral = GCompute.AST.MakeConstructor (StringLiteral, GCompute.AST.Expression)
+local self = {}
+self.__Type = "StringLiteral"
+GCompute.AST.StringLiteral = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
-function StringLiteral:ctor (str)
+function self:ctor (str)
 	self.String = str
 	
 	self.IsConstant = true
@@ -10,10 +10,10 @@ function StringLiteral:ctor (str)
 	self.CachedValue = self.String
 end
 
-function StringLiteral:Evaluate (executionContext)
+function self:Evaluate (executionContext)
 	return self.String
 end
 
-function StringLiteral:ToString ()
-	return "\"" .. self.String .. "\""
+function self:ToString ()
+	return "\"" .. GCompute.String.Escape (self.String) .. "\""
 end

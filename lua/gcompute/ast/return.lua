@@ -20,6 +20,7 @@ end
 
 function self:SetReturnExpression (expression)
 	self.ReturnExpression = expression
+	if self.ReturnExpression then self.ReturnExpression:SetParent (self) end
 end
 
 function self:ToString ()

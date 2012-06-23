@@ -5,14 +5,19 @@ GCompute.AST.IfStatement = GCompute.AST.MakeConstructor (self)
 function self:ctor ()
 	self.ConditionCount = 0
 	self.Conditions = {}
-	self.Statements = {}
+	self.ConditionBodies = {}
+	
+	self.NamespaceDefinition = nil
 	self.Else = nil
 end
 
-function self:AddCondition (condition, statement)
+function self:AddCondition (condition, conditionBody)
 	self.ConditionCount = self.ConditionCount + 1
 	self.Conditions [self.ConditionCount] = condition
-	self.Statements [self.ConditionCount] = statement
+	self.ConditionBodies [self.ConditionCount] = conditionBody
+	
+	if condition then condition:SetParent (self) end
+	if conditionBody then conditionBody:SetParent (self) end
 end
 
 function self:Evaluate (executionContext)
@@ -20,7 +25,7 @@ function self:Evaluate (executionContext)
 	for i = 1, #self.Conditions do
 		if self.Conditions [i]:Evaluate (executionContext) then
 			conditionMatched = true
-			self.Statements [i]:Evaluate (executionContext)
+			self.ConditionBodies [i]:Evaluate (executionContext)
 			break
 		end
 	end
@@ -33,6 +38,10 @@ function self:GetCondition (index)
 	return self.Conditions [index]
 end
 
+function self:GetConditionBody (index)
+	return self.ConditionBodies [index]
+end
+
 function self:GetConditionCount ()
 	return self.ConditionCount
 end
@@ -41,35 +50,41 @@ function self:GetElseStatement ()
 	return self.Else
 end
 
-function self:GetStatement (index)
-	return self.Statements [index]
+function self:GetNamespace ()
+	return self.NamespaceDefinition
 end
 
-function self:SetCondition (index, expression)
-	self.Conditions [index] = expression
+function self:SetCondition (index, condition)
+	self.Conditions [index] = condition
+	if condition then condition:SetParent (self) end
 end
 
-function self:SetElseStatement (statement)
-	self.Else = statement
+function self:SetConditionBody (index, conditionBody)
+	self.ConditionBodies [index] = conditionBody
+	if conditionBody then conditionBody:SetParent (self) end
 end
 
-function self:SetStatement (index, statement)
-	self.Statements [index] = statement
+function self:SetElseStatement (elseStatement)
+	self.Else = elseStatement
+	if self.Else then self.Else:SetParent (self) end
+end
+
+function self:SetNamespace (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:ToString ()
 	local ifStatement = ""
 	for i = 1, self.ConditionCount do
 		local condition = self.Conditions [i] and self.Conditions [i]:ToString () or "[Unknown Expression]"
-		local statement = " [Unknown Statement]"
-		if self.Statements [i] then
-			statement = self.Statements [i]:ToString ()
-			if self.Statements [i]:Is ("Block") then
-				statement = "    " .. statement:gsub ("\n", "\n    ")
+		local conditionBody = " [Unknown Statement]"
+		if self.ConditionBodies [i] then
+			conditionBody = self.ConditionBodies [i]:ToString ()
+			if self.ConditionBodies [i]:Is ("Block") then
 			else
-				statement = "    " .. statement
+				conditionBody = "    " .. conditionBody
 			end
-			statement = "\n" .. statement
+			conditionBody = "\n" .. conditionBody .. "\n"
 		end
 		
 		if ifStatement == "" then
@@ -77,27 +92,18 @@ function self:ToString ()
 		else
 			ifStatement = ifStatement .. "elseif ("
 		end
-		ifStatement = ifStatement .. condition .. ")" .. statement
-	end
-	
-	if self.Statement then
-		Statement = self.Statement:ToString ()
-		if not self.Statement:Is ("Block") then
-			Statement = "    " .. Statement:gsub ("\n", "\n    ")
-		end
-		Statement = "\n" .. Statement
+		ifStatement = ifStatement .. condition .. ")" .. conditionBody
 	end
 	
 	if self.Else then
 		local elseStatement = self.Else:ToString ()
-		if not self.Else:Is ("Block") then
-			elseStatement = "    " .. elseStatement:gsub ("\n", "\n    ")
+		if self.Else:Is ("Block") then
 		else
 			elseStatement = "    " .. elseStatement
 		end
 		elseStatement = "\n" .. elseStatement
-		return "if (" .. Condition .. ")" .. Statement .. "\nelse " .. elseStatement
+		return ifStatement .. "else " .. elseStatement
 	else
-		return "if (" .. Condition .. ")" .. Statement
+		return ifStatement
 	end
 end

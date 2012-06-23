@@ -6,6 +6,8 @@ function self:ctor ()
 	self.SourceFileCount = 0
 	
 	self.NamespaceDefinition = GCompute.MergedNamespaceDefinition ()
+	self.NameResolver = GCompute.NameResolver ()
+	self.NameResolver:SetGlobalNamespace (self.NamespaceDefinition)
 end
 
 -- Source Files
@@ -18,7 +20,11 @@ function self:AddSourceFile (sourceFile, languageName)
 	local compilationUnit = sourceFile:GetCompilationUnit ()
 	if not compilationUnit then
 		compilationUnit = GCompute.CompilationUnit (sourceFile, languageName)
+		compilationUnit:SetCompilationGroup (self)
 		sourceFile:SetCompilationUnit (compilationUnit)
+	elseif compilationUnit:GetCompilationGroup () ~= self then
+		-- TODO: Fix bug where two CompilationGroups run simultaneously and use the same CompilationUnit
+		compilationUnit:SetCompilationGroup (self)
 	end
 	
 	return compilationUnit
@@ -56,6 +62,7 @@ function self:Compile (callback)
 				actionChain:Add (function (callback) compilationUnit:Parse (callback) end)
 				actionChain:Add (function (callback) compilationUnit:PostParse (callback) end)
 				actionChain:Add (function (callback) compilationUnit:BuildNamespace (callback) end)
+				actionChain:Add (function (callback) compilationUnit:PostBuildNamespace (callback) end)
 				actionChain:AddUnwrap (nextCallback)
 				actionChain:Execute ()
 			end
@@ -76,6 +83,7 @@ function self:Compile (callback)
 		actionChain:Add (
 			function (nextCallback)
 				local actionChain = GCompute.CallbackChain ()
+				actionChain:Add (function (callback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
 				--actionChain:Add (function (callback) compilationUnit:LookupNames (callback) end)
 				actionChain:AddUnwrap (nextCallback)
 				actionChain:Execute ()
@@ -85,6 +93,14 @@ function self:Compile (callback)
 	
 	actionChain:AddUnwrap (callback)
 	actionChain:Execute ()
+end
+
+function self:GetNamespace ()
+	return self.NamespaceDefinition
+end
+
+function self:GetNameResolver ()
+	return self.NameResolver
 end
 
 function self:ToString ()

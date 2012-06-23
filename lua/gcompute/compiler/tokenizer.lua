@@ -3,17 +3,19 @@ GCompute.Tokenizer = GCompute.MakeConstructor (self)
 
 GCompute.TokenType =
 {
-	Unknown				= 0,
-	Whitespace			= 1,
-	Newline				= 2,
-	Preprocessor		= 3,
-	Number				= 4,
-	Operator			= 5,
-	Identifier			= 6,
-	Keyword				= 7,
-	String				= 8,
-	Comment				= 9,
-	StatementTerminator	= 10
+	Unknown             =  0,
+	Whitespace          =  1,
+	Newline             =  2,
+	Preprocessor        =  3,
+	Number              =  4,
+	Operator            =  5,
+	Identifier          =  6,
+	Keyword             =  7,
+	String              =  8,
+	Comment             =  9,
+	StatementTerminator = 10,
+	EndOfFile           = 11,
+	AST                 = 12  -- Blob of already-parsed data
 }
 GCompute.InvertTable (GCompute.TokenType)
 local TokenType = GCompute.TokenType
@@ -59,13 +61,6 @@ function self:Process (compilationUnit)
 			end
 			i = i + 1
 		end
-		
-		if lineCount > 0 then
-			line = line + lineCount
-			character = 1
-		else
-			character = character + original:len ()
-		end
 		if match then
 			local token = tokens:AddLast (match)
 			if language:GetKeywordType (Match) ~= KeywordTypes.Unknown then
@@ -76,13 +71,25 @@ function self:Process (compilationUnit)
 			token.Character = character
 			offset = offset + matchLength
 		else
-			local token = Tokens:AddLast (code:sub (offset, offset))
-			token.TokenType = TokenTypes.Identifier
+			local token = tokens:AddLast (code:sub (offset, offset))
+			token.TokenType = TokenType.Identifier
 			token.Line = line
 			token.Character = character
 			offset = offset + 1
 		end
+		
+		if lineCount > 0 then
+			line = line + lineCount
+			character = 1
+		else
+			character = character + original:len ()
+		end
 	end
+	
+	local token = tokens:AddLast ("<eof>")
+	token.TokenType = TokenType.EndOfFile
+	token.Line = line
+	token.Character = character
 	
 	return tokens
 end

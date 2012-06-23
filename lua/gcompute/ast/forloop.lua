@@ -1,17 +1,20 @@
-local ForLoop = {}
-ForLoop.__Type = "ForLoop"
-GCompute.AST.ForLoop = GCompute.AST.MakeConstructor (ForLoop)
+local self = {}
+self.__Type = "ForLoop"
+GCompute.AST.ForLoop = GCompute.AST.MakeConstructor (self)
 
-function ForLoop:ctor ()
+function self:ctor ()
 	self.Initializer = nil
 	self.Condition = nil
 	self.PostLoop = nil
 	
+	self.NamespaceDefinition = nil
+	
+	-- TODO: Remove this
 	self.Scope = GCompute.Scope ()
 	self.Loop = nil
 end
 
-function ForLoop:Evaluate (executionContext)
+function self:Evaluate (executionContext)
 	local pushedScope = false
 	if self.Scope:HasVariables () then
 		pushedScope = true
@@ -52,12 +55,20 @@ function ForLoop:Evaluate (executionContext)
 	end
 end
 
-function ForLoop:ToString ()
-	local Initializer = self.Initializer and self.Initializer:ToString () or "[unknown]"
-	local Condition = self.Condition and self.Condition:ToString () or "[unknown]"
-	local PostLoop = self.PostLoop and self.PostLoop:ToString () or "[unknown]"
+function self:GetNamespace ()
+	return self.NamespaceDefinition
+end
+
+function self:SetNamespace (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
+end
+
+function self:ToString ()
+	local Initializer = self.Initializer and self.Initializer:ToString () or "[Unknown Expression]"
+	local Condition = self.Condition and self.Condition:ToString () or "[Unknown Expression]"
+	local PostLoop = self.PostLoop and self.PostLoop:ToString () or "[Unknown Expression]"
 	
-	local Loop = "    [unknown]"
+	local Loop = "    [Unknown Statement]"
 	
 	if self.Loop then
 		if self.Loop:Is ("Block") then

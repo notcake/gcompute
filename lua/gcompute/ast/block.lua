@@ -33,15 +33,15 @@ function self:ctor ()
 	self.Optimized = false
 end
 
-function self:AddStatement (node)
+function self:AddStatement (node)	
 	self.Statements [#self.Statements + 1] = node
 	self.StatementCount = self.StatementCount + 1
+	if node then node:SetParent (self) end
 end
 
 function self:AddStatements (statements)
 	for _, statement in ipairs (statements) do
-		self.Statements [#self.Statements + 1] = statement
-		self.StatemetCount = self.StatementCount + 1
+		self:AddStatement (statement)
 	end
 end
 

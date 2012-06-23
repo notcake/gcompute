@@ -1,3 +1,11 @@
+local Global = GCompute.GlobalNamespace
+local Type = Global:AddType ("Type")
+local Namespace = Global:AddType ("Namespace")
+local Function = Global:AddType ("Function")
+local FunctionGroup = Global:AddType ("FunctionGroup")
+local Void = Global:AddType ("Void")
+local Boolean = Global:AddType ("Boolean")
+
 local G = GCompute.GlobalScope
 
 local T = nil

@@ -1,14 +1,14 @@
-local Continue = {}
-Continue.__Type = "Continue"
-GCompute.AST.Continue = GCompute.AST.MakeConstructor (Continue, GCompute.AST.Control)
+local self = {}
+self.__Type = "Continue"
+GCompute.AST.Continue = GCompute.AST.MakeConstructor (self, GCompute.AST.Control)
 
-function Continue:ctor ()
+function self:ctor ()
 end
 
-function Continue:Evaluate (executionContext)
+function self:Evaluate (executionContext)
 	executionContext:Continue ()
 end
 
-function Continue:ToString ()
+function self:ToString ()
 	return "continue"
 end

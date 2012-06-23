@@ -1,14 +1,14 @@
-local Control = {}
-Control.__Type = "Control"
-GCompute.AST.Control = GCompute.AST.MakeConstructor (Control)
+local self = {}
+self.__Type = "Control"
+GCompute.AST.Control = GCompute.AST.MakeConstructor (self)
 
-function Control:ctor ()
+function self:ctor ()
 end
 
-function Control:Evaluate (executionContext)
+function self:Evaluate (executionContext)
 	executionContext:Error ("Unknown control statement.")
 end
 
-function Control:ToString ()
-	return "[unknown control statement]"
+function self:ToString ()
+	return "[Unknown Control Statement]"
 end

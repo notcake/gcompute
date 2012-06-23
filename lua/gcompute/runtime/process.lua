@@ -1,40 +1,48 @@
-local Process = {}
-GCompute.Process = GCompute.MakeConstructor (Process)
+local self = {}
+GCompute.Process = GCompute.MakeConstructor (self)
 
 local nextProcessId = 0
 
-function Process:ctor ()
+function self:ctor ()
 	self.ProcessId = nextProcessId
 	nextProcessId = nextProcessId + 1
 
 	self.Modules = {}
 	self.Threads = {}
 	
-	self.ProcessScope = nil
+	self.NamespaceDefinition = {}
+	self.RuntimeNamespace = {}
 	self.StdIn = nil
 	self.StdOut = nil
 end
 
-function Process:CreateThread ()
+function self:CreateThread ()
 	local thread = GCompute.Thread (self)
 	self.Threads [thread:GetThreadID ()] = thread
 	
 	return thread
 end
 
-function Process:GetScope ()
-	return self.ProcessScope
+function self:GetNamespace ()
+	return self.NamespaceDefinition
 end
 
-function Process:SetScope (scope)
-	self.ProcessScope = scope
+function self:GetRuntimeNamespace ()
+	return self.RuntimeNamespace
 end
 
-function Process:Start ()
-	local Main = self:CreateThread ()
-	Main:SetName ("Main Thread")
-	Main:SetFunction (function (self)
-		self:GetProcess ():GetScope ().OptimizedBlock:Evaluate (self:GetExecutionContext ())
+function self:SetNamespace (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
+end
+
+function self:Start ()
+	self.RuntimeNamespace = self.NamespaceDefinition:CreateRuntimeNamespace ()
+	A = self.RuntimeNamespace
+	
+	local mainThread = self:CreateThread ()
+	mainThread:SetName ("Main Thread")
+	mainThread:SetFunction (function (self)
+		self:GetProcess ():GetNamespace ():GetConstructor () (self:GetExecutionContext ())
 	end)
-	Main:Start ()
+	mainThread:Start ()
 end

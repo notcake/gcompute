@@ -1,53 +1,58 @@
-local Thread = {}
-GCompute.Thread = GCompute.MakeConstructor (Thread)
+local self = {}
+GCompute.Thread = GCompute.MakeConstructor (self)
 
-local LastThreadID = 0
+local nextThreadId = 0
 
-local function DoNothing (self) end
-
-function Thread:ctor (process)
-	self.ThreadID = LastThreadID
-	LastThreadID = LastThreadID + 1
+function self:ctor (process)
+	self.ThreadID = nextThreadId
+	nextThreadId = nextThreadId + 1
 
 	self.Process = process
 	self.ExecutionContext = GCompute.ExecutionContext (process, self)
 	self.Name = "Thread " .. tostring (self.ThreadID)
 	
-	self.Function = DoNothing
+	self.Function = GCompute.NullCallback
 	self.Running = false
+	
+	-- Non-coroutine execution model
+	self.ResumeFunction = nil
 end
 
-function Thread:GetExecutionContext ()
+function self:GetExecutionContext ()
 	return self.ExecutionContext
 end
 
-function Thread:GetProcess ()
+function self:GetProcess ()
 	return self.Process
 end
 
-function Thread:GetThreadID ()
+function self:GetThreadID ()
 	return self.ThreadID
 end
 
-function Thread:GetName ()
+function self:GetName ()
 	return self.Name
 end
 
-function Thread:IsRunning ()
+function self:IsRunning ()
 	return self.Running
 end
 
-function Thread:SetFunction (threadFunction)
+function self:SetFunction (threadFunction)
 	self.Function = threadFunction
 end
 
-function Thread:SetName (name)
+function self:SetName (name)
 	self.Name = name
 end
 
-function Thread:Start (...)
+function self:Start (...)
 	if self.Running then return false end
 	
 	self.Running = true
 	self:Function (...)
+end
+
+function self:Yield (resumeFunction)
+	self.ResumeFunction = resumeFunction or self.ResumeFunction
 end

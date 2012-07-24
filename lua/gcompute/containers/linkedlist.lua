@@ -14,8 +14,9 @@ function LinkedList:AddAfter (node, value)
 	if node == nil then return self:AddFirst (value) end
 	
 	local linkedListNode = GCompute.Containers.LinkedListNode ()
-	linkedListNode.Previous = node
+	linkedListNode.List = self
 	linkedListNode.Next = node.Next
+	linkedListNode.Previous = node
 	
 	if node.Next then
 		node.Next.Previous = linkedListNode
@@ -36,8 +37,9 @@ function LinkedList:AddBefore (node, value)
 	if node == nil then return self:AddLast (value) end
 	
 	local linkedListNode = GCompute.Containers.LinkedListNode ()
-	linkedListNode.Previous = node.Previous
+	linkedListNode.List = self
 	linkedListNode.Next = node
+	linkedListNode.Previous = node.Previous
 	
 	if node.Previous then
 		node.Previous.Next = linkedListNode
@@ -57,9 +59,11 @@ end
 function LinkedList:AddFirst (value)
 	if not self.First then
 		self.First = GCompute.Containers.LinkedListNode ()
+		self.First.List = self
 		self.Last = self.First
 	else
 		self.First.Previous = GCompute.Containers.LinkedListNode ()
+		self.First.Previous.List = self
 		self.First.Previous.Next = self.First
 		self.First = self.First.Previous
 	end
@@ -72,9 +76,11 @@ end
 function LinkedList:AddLast (value)
 	if not self.Last then
 		self.First = GCompute.Containers.LinkedListNode ()
+		self.First.List = self
 		self.Last = self.First
 	else
 		self.Last.Next = GCompute.Containers.LinkedListNode ()
+		self.Last.Next.List = self
 		self.Last.Next.Previous = self.Last
 		self.Last = self.Last.Next
 	end
@@ -88,6 +94,18 @@ function LinkedList:Clear ()
 	self.First = nil
 	self.Last = nil
 	self.Count = 0
+end
+
+function LinkedList:ComputeMemoryUsage (memoryUsageReport, poolName)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure (poolName or "Linked Lists", self)
+	for linkedListNode in self:GetEnumerator () do
+		memoryUsageReport:CreditTableStructure (poolName or "Linked Lists", linkedListNode)
+		memoryUsageReport:CreditObject (poolName or "Linked Lists", linkedListNode.Value)
+	end
+	return memoryUsageReport
 end
 
 function LinkedList:GetEnumerator ()
@@ -132,8 +150,9 @@ function LinkedList:Remove (linkedListNode)
 	if self.Last == linkedListNode then
 		self.Last = linkedListNode.Previous
 	end
-	linkedListNode.Previous = nil
+	linkedListNode.List = nil
 	linkedListNode.Next = nil
+	linkedListNode.Previous = nil
 	self.Count = self.Count - 1
 end
 
@@ -169,6 +188,12 @@ function LinkedList:ToString ()
 		if content ~= "" then
 			content = content .. ", "
 		end
+		
+		if content:len () > 2048 then
+			content = content .. "..."
+			break
+		end
+		
 		content = content .. linkedListNode:ToString ()
 	end
 	return "[" .. tostring (self.Count) .. "] : {" .. content .. "}"
@@ -176,8 +201,9 @@ end
 
 -- Linked list node
 function LinkedListNode:ctor ()
-	self.Previous = nil
+	self.List = nil
 	self.Next = nil
+	self.Previous = nil
 	self.Value = nil
 end
 
@@ -185,7 +211,7 @@ function LinkedListNode:ToString ()
 	if not self.Value then return "[nil]" end
 	
 	if type (self.Value) == "table" and self.Value.ToString then return self.Value:ToString () end
-	if type (self.Value) == "string" then return "\"" .. self.Value .. "\"" end
+	if type (self.Value) == "string" then return "\"" .. GCompute.String.Escape (self.Value) .. "\"" end
 	return tostring (self.Value)
 end
 

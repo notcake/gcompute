@@ -5,8 +5,6 @@ function self:ctor (process, thread)
 	if not thread then ErrorNoHalt ("ExecutionContexts should only be created by Threads.\n") GCompute.PrintStackTrace () end
 	self.Process = process
 	self.Thread = thread
-
-	self.ScopeLookup = GCompute.ScopeLookup ()
 	
 	self.InterruptFlag = false
 	
@@ -74,41 +72,10 @@ function self:GetThread ()
 	return self.Thread
 end
 
-function self:PopScope ()
-	self.ScopeLookup:PopScope ()
-end
-
-function self:PushScope (scope)
-	local ScopeInstance = scope:CreateInstance ()
-	ScopeInstance:SetParentScope (scope:GetParentScope ())
-	self.ScopeLookup:PushScope (ScopeInstance)
-	
-	return ScopeInstance
-end
-
---[[
-	ExecutionContext:PushBlockScope (Scope scopeDefinition)
-		Returns: Scope scopeInstance
-		
-		Pushes an instance of scopeDefinition onto the scope stack, setting
-		its parent to the scope that was at the top of the stack.
-]]
-function self:PushBlockScope (scope)
-	local ScopeInstance = scope:CreateInstance ()
-	ScopeInstance:SetParentScope (self.ScopeLookup.TopScope)
-	self.ScopeLookup:PushScope (ScopeInstance)
-	
-	return ScopeInstance
-end
-
 function self:Return (value, reference)
 	self.ReturnValue = value
 	self.ReturnValueReference = reference
 	
 	self.ReturnFlag = true
 	self.InterruptFlag = true
-end
-
-function self:TopScope ()
-	return self.ScopeLookup.TopScope
 end

@@ -1,10 +1,12 @@
 if CLIENT then
+	TestInput = nil
+
 	local function TestE2Compiler (Input)
 		local self = {}
 		function self:Error (Message)
 			Msg ("E2 compile error: " .. Message .. "\n")
 		end
-		local StartTime = SysTime ()
+		local startTime = SysTime ()
 		
 		local status, directives, Input = PreProcessor.Execute (Input)
 		if not status then self:Error(directives) return end
@@ -37,18 +39,50 @@ if CLIENT then
 			self:Error(script)
 			return 0
 		end
-		PrintTable(script)
 		
-		local EndTime = SysTime ()
-		return EndTime - StartTime
+		local endTime = SysTime ()
+		return endTime - startTime
 	end
 	
 	concommand.Add("gcompute_test_e2", function (ply, _, args)
-		TestE2Compiler ("if(1){print(\"a\")}else{print(\"b\")}")
+		if args [1] then
+			TestInput = file.Read ("expression2/" .. args [1] .. ".txt") or ""
+		end
+		
+		print ("E2 compiler took " .. (TestE2Compiler (TestInput) * 1000) .. " ms.")
+	end)
+	
+	concommand.Add("gcompute_test_e2_tokenizer", function (ply, _, args)
+		if args [1] then
+			TestInput = file.Read ("expression2/" .. args [1] .. ".txt") or ""
+		end
+	
+		local self = {}
+		function self:Error (Message)
+			Msg ("E2 compile error: " .. Message .. "\n")
+		end
+		local startTime = SysTime ()
+		
+		local input = TestInput
+		
+		local status, directives, input = PreProcessor.Execute (input)
+		if not status then self:Error(directives) return end
+		self.Input = input
+		self.error = false
+		
+		self.name = directives.name
+		
+		self.inports = directives.inputs
+		self.outports = directives.outputs
+		self.persists = directives.persist
+		self.trigger = directives.trigger
+		
+		local status, tokens = Tokenizer.Execute(self.Input)
+		print ("E2 tokenizer took " .. ((SysTime () - startTime) * 1000) .. " ms.")
 	end)
 
 	local Language = "Expression 2"
-	local TestInput = "#include <lol/a>\n#include <aa a\\a>\nx+ x * 24.0e3; X++; public class {} P;\"a\\\"\" \"j\"'\"'\n//asdlj\n/*a//\n*/"
+	TestInput = "#include <lol/a>\n#include <aa a\\a>\nx+ x * 24.0e3; X++; public class {} P;\"a\\\"\" \"j\"'\"'\n//asdlj\n/*a//\n*/"
 	TestInput = "auto x = \"abc\";"
 	TestInput = [[
 		int->int memoize (int->int func) {
@@ -157,23 +191,8 @@ if CLIENT then
 				
 				local AST = compilationUnit.AST
 				
-				local passes =
-					{
-						"DeclarationPass",
-						"NameResolutionPass",
-						"TypeCheckerPass",
-						"Compiler2"
-					}
-					
-				local startTime = SysTime ()
-				for _, passName in ipairs (passes) do
-					startTime = SysTime ()
-					PCallError (function () GCompute [passName] ():Process (compilationUnit, AST) end)
-					endTime = SysTime ()
-					GCompute.PrintDebug (passName .. " ran in " .. tostring (math.floor ((endTime - startTime) * 100000 + 0.5) * 0.01) .. "ms.")
-				end
-				
 				compilationUnit:OutputMessages (GCompute.PrintDebug)
+				GCompute.PrintDebug (compilationGroup:ComputeMemoryUsage ():ToString ())
 				
 				Print ("Abstract Syntax Tree (serialized):")
 				Print (AST:ToString ())

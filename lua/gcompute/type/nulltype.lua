@@ -1,0 +1,1 @@
+local self = {}GCompute.NullType = GCompute.MakeConstructor (self, GCompute.Type)function self:ctor ()endfunction self:ToString ()	return "[Null Type]"end

@@ -14,70 +14,91 @@ GCompute.NameResolver = GCompute.MakeConstructor (self)
 ]]
 
 function self:ctor ()
-	self.GlobalNamespaceDefinition = GCompute.GlobalNamespace
 end
 
-function self:GetGlobalNamespace ()
-	return self.GlobalNamespaceDefinition
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Name Resolvers", self)
+	return memoryUsageReport
 end
 
-function self:SetGlobalNamespace (globalNamespaceDefinition)
-	self.GlobalNamespaceDefinition = globalNamespaceDefinition
-end
-
-function self:LookupQualifiedIdentifier (leftNamespace, name, nameResolutionResults)
-	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
+function self:LookupQualifiedIdentifier (leftNamespace, name, resolutionResults)
+	resolutionResults = resolutionResults or GCompute.NameResolutionResults ()
 	
 	if leftNamespace:MemberExists (name) then
-		nameResolutionResults:AddGlobalResult (leftNamespace:GetMember (name), leftNamespace:GetMemberMetadata (name))
+		resolutionResults:AddGlobalResult (leftNamespace:GetMember (name), leftNamespace:GetMemberMetadata (name))
 	end
 	
-	return nameResolutionResults
+	return resolutionResults
 end
 
-function self:LookupUnqualifiedIdentifier (referenceNamespace, name, nameResolutionResults)
-	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
+function self:LookupUnqualifiedIdentifier (name, globalNamespace, localNamespace, resolutionResults)
+	resolutionResults = resolutionResults or GCompute.NameResolutionResults ()
 	
-	self:LookupLocal (referenceNamespace, name, nameResolutionResults)
-	self:LookupGlobal (referenceNamespace, name, nameResolutionResults)
+	self:LookupLocal (name, globalNamespace, localNamespace, resolutionResults)
+	self:LookupGlobal (name, globalNamespace, localNamespace, resolutionResults)
 	
-	return nameResolutionResults
+	return resolutionResults
 end
 
-function self:LookupGlobal (referenceNamespace, name, nameResolutionResults)
-	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
+function self:LookupGlobal (name, globalNamespace, localNamespace, resolutionResults)
+	resolutionResults = resolutionResults or GCompute.NameResolutionResults ()
 	
-	local currentUsingSource = referenceNamespace
+	local currentUsingSource = localNamespace
 	while currentUsingSource do
 		for i = 1, currentUsingSource:GetUsingCount () do
 			local usingDirective = currentUsingSource:GetUsing (i)
-			print ("Checking " .. usingDirective:ToString () .. " for " .. name)
 			if usingDirective:GetNamespace () and usingDirective:GetNamespace ():MemberExists (name) then
-				nameResolutionResults:AddGlobalResult (usingDirective:GetNamespace ():GetMember (name), usingDirective:GetNamespace ():GetMemberMetadata (name))
+				resolutionResults:AddGlobalResult (usingDirective:GetNamespace ():GetMember (name), usingDirective:GetNamespace ():GetMemberMetadata (name))
 			end
 		end
 	
 		currentUsingSource = currentUsingSource:GetContainingNamespace ()
 	end
 	
-	if self.GlobalNamespaceDefinition:MemberExists (name) then
-		nameResolutionResults:AddGlobalResult (self.GlobalNamespaceDefinition:GetMember (name), self.GlobalNamespaceDefinition:GetMemberMetadata (name))
+	if globalNamespace:MemberExists (name) then
+		resolutionResults:AddGlobalResult (globalNamespace:GetMember (name), globalNamespace:GetMemberMetadata (name))
 	end
 	
-	return nameResolutionResults
+	return resolutionResults
 end
 
-function self:LookupLocal (referenceNamespace, name, nameResolutionResults)
-	nameResolutionResults = nameResolutionResults or GCompute.NameResolutionResults ()
+function self:LookupLocal (name, globalNamespace, localNamespace, resolutionResults)
+	resolutionResults = resolutionResults or GCompute.NameResolutionResults ()
 	
-	local containingNamespace = referenceNamespace
+	local containingNamespace = localNamespace
 	while containingNamespace do
 		if containingNamespace:MemberExists (name) then
-			nameResolutionResults:AddLocalResult (containingNamespace:GetMember (name), containingNamespace:GetMemberMetadata (name))
+			resolutionResults:AddLocalResult (containingNamespace:GetMember (name), containingNamespace:GetMemberMetadata (name))
 		end
 		
 		containingNamespace = containingNamespace:GetContainingNamespace ()
 	end
 	
-	return nameResolutionResults
+	return resolutionResults
 end
+
+function self:ResolveASTNode (astNode, errorReporter, globalNamespace, localNamespace)
+	local resolutionResults = nil
+	if astNode:Is ("NamespaceIndex") then
+	elseif astNode:Is ("ObjectIndex") then
+	elseif astNode:Is ("NameIndex") then
+		local leftResults = self:ResolveASTNode (astNode:GetLeftExpression (), errorReporter, globalNamespace, localNamespace)
+		local identifier = astNode:GetIdentifier ()
+		if identifier:Is ("Identifier") then
+			if leftResults and leftResults:GetResult (1) then
+				resolutionResults = self:LookupQualifiedIdentifier (leftResults:GetResult (1).Result, identifier:GetName ())
+			end
+		else
+			errorReporter:Error ("Unknown AST node on right of NameIndex (" .. astNode:GetNodeType () .. ")")
+		end
+	elseif astNode:Is ("Identifier") then
+		resolutionResults = self:LookupUnqualifiedIdentifier (astNode:GetName (), globalNamespace, localNamespace)
+	end
+	astNode.ResolutionResults = resolutionResults or astNode.ResolutionResults
+	return resolutionResults
+end
+
+GCompute.DefaultNameResolver = GCompute.NameResolver ()

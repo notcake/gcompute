@@ -1,155 +1,126 @@
 local self = {}
-GCompute.TypeParser = GCompute.MakeConstructor (self, GCompute.Parser)
-GCompute.StaticTypeParser = self
+GCompute.TypeParser = GCompute.MakeConstructor (self)
 
-local symbols = {
-	"->", ".", ",", "(", ")", "[", "]", "<", ">"
-}
+function self:ctor ()
+end
 
-function self:ctor (typeName)
-	self.Tokens = GCompute.Containers.LinkedList ()
-	
-	local i = 1
-	while i <= typeName:len () do
-		local wasSymbol = false
-		for j = 1, #symbols do
-			if typeName:sub (i, i + symbols [j]:len () - 1) == symbols [j] then
-				local token = self.Tokens:AddLast (symbols [j])
-				token.TokenType = GCompute.TokenType.Operator
-				token.Line = 1
-				token.Character = i
-				i = i + symbols [j]:len ()
-				wasSymbol = true
-				break
-			end
+function self:Root (str)
+	local pos = self:AcceptWhitespace (1, str)
+	local expression, newPos = self:IndexOrParametricIndexOrArrayOrFunction (pos, str)
+	if not expression then
+		if str:len () == 0 then
+			self:Error (1, str, "Input is the empty string")
+		else
+			self:Error (pos, str, "Expected <identifier>, got " .. self:PeekFormatted (pos, str))
 		end
-		if not wasSymbol then
-			if typeName:sub (i, i) == " " or
-				typeName:sub (i, i) == "\t" then
-				i = i + 1
-			else
-				local identifier = typeName:match ("^[a-zA-Z_][a-zA-Z0-9_]*", i)
-				if identifier then
-					local token = self.Tokens:AddLast (identifier)
-					token.TokenType = GCompute.TokenType.Identifier
-					token.Line = 1
-					token.Character = i
-					i = i + identifier:len ()
-				else
-					local number = typeName:match ("^[0-9]+", i)
-					if number then
-						local token = self.Tokens:AddLast (number)
-						token.TokenType = GCompute.TokenType.Number
-						token.Line = 1
-						token.Character = i
-						i = i + number:len ()
-					else
-						GCompute.Error ("TypeParser:ctor : Unknown character '" .. typeName:sub (i, i) .. "' in type name \"" .. typeName .. "\".")
-						i = i + 1
-					end
-				end
-			end
-		end
-	end
-	
-	self.ParseTree = self:Parse (self.Tokens)
-end
-
-function self:Root ()
-	self.ParseTree = self:Type ()
-end
-
-function self:Type ()
-	return self:TypeFunction ()
-end
-
-function self:TypeFunction ()
-	return self:RecurseRight (self.TypeScoped, {["->"] = true})
-end
-
-function self:TypeScoped ()
-	return self:RecurseLeft (self.TypeArray, {["."] = true})
-end
-
-function self:TypeArray ()
-	local elementType = self:TypeTuple ()
-	
-	while self:Accept ("[") do
-		local array = GCompute.Containers.Tree ("array")
-		array:AddNode (elementType)
-		
-		local arguments = self:List (self.ArrayRank)
-		arguments.Value = "args"
-		array:AddNode (arguments)
-		
-		if not self:Accept ("]") then
-			self:ExpectedToken ("]")
-			return array
-		end
-		
-		elementType = array
-	end
-	
-	return elementType
-end
-
-function self:TypeArrayRank ()
-	if self:Peek () == "," or
-		self:Peek () == "]" then
-		return GCompute.Containers.Tree ("any")
-	end
-	
-	local number = self:AcceptType (GCompute.TokenType.Number)
-	if number then
-		return GCompute.Containers.Tree (number)
-	end
-end
-
-function self:TypeTuple ()
-	if self:Accept ("(") then
-		local tuple = GCompute.Containers.Tree ("tuple")
-		
-		local arguments = self:List (self.Type)
-		arguments.Value = "args"
-		tuple:AddNode (arguments)
-		if not self:Accept (")") then
-			self:ExpectedToken (")")
-		end
-		
-		return tuple
-	end
-	return self:TypeTemplate ()
-end
-
-function self:TypeTemplate ()
-	local typeName = self:TypeName ()
-	if not self:Accept ("<") then
-		return typeName
-	end
-	local parametricType = GCompute.Containers.Tree ("parametric_type")
-	parametricType:AddNode (typeName)
-	if self:Accept (">") then
-		self:SyntaxError ("Empty parametric type argument lists are not allowed.")
-		return parametricType
-	else
-		local arguments = self:List (self.Type)
-		arguments.Value = "args"
-		parametricType:AddNode (arguments)
-		if not self:Accept (">") then
-			self:ExpectedToken (">")
-		end
-	end
-	return parametricType
-end
-
-function self:TypeName ()
-	local typeName = self:AcceptType (GCompute.TokenType.Identifier)
-	if not typeName then
 		return nil
 	end
-	
-	local tree = GCompute.Containers.Tree ("name")
-	tree:Add (typeName)
-	
-	return tree
+	return expression
 end
+
+function self:Type (pos, str)
+	if self:Peek (pos, str) == "(" then
+		-- tuple?
+	end
+end
+
+local validOperators =
+{
+	["."] = true,
+	["<"] = true,
+	["["] = true,
+	["("] = true
+}
+function self:IndexOrParametricIndexOrArrayOrFunction (pos, str)
+	-- left.identifier
+	-- left.identifier < parametric type argument list >
+	-- left [ array dimensions ]
+	-- left ( function argument list )
+	local leftExpression, newPos = self:Identifier (pos, str)
+	if not leftExpression then
+		return nil
+	end
+	pos = newPos
+	
+	pos = self:AcceptWhitespace (pos, str)
+	local nextSymbol, newPos = nil, nil
+	nextSymbol, newPos = self:Peek (pos, str)
+	while validOperators [nextSymbol] do
+		pos = newPos
+		pos = self:AcceptWhitespace (pos, str)
+		
+		if nextSymbol == "." then
+			local nameIndex = GCompute.AST.NameIndex ()
+			nameIndex:SetLeftExpression (leftExpression)
+			local identifier, newPos = self:Identifier (pos, str)
+			if not identifier then
+				self:Error (pos, str, "Expected <identifier> after '.', got " .. self:PeekFormatted (pos, str))
+			else
+				pos = newPos
+			end
+			nameIndex:SetIdentifier (identifier)
+			leftExpression = nameIndex
+		else
+			self:Error (pos, str, "Unhandled operator " .. self:PeekFormatted (pos, str))
+		end
+		pos = self:AcceptWhitespace (pos, str)
+		nextSymbol, newPos = self:Peek (pos, str)
+	end
+	
+	if pos <= str:len () then
+		self:Error (pos, str, "Expected '.', '<', '[' or '(', got " .. self:PeekFormatted (pos, str))
+	end
+	
+	return leftExpression
+end
+
+function self:Identifier (pos, str)
+	local startPos, endPos = str:find ("^[a-zA-Z_][a-zA-Z0-9_]*", pos)
+	if not startPos then return nil, nil end
+	
+	return GCompute.AST.Identifier (str:sub (startPos, endPos)), endPos + 1
+end
+
+local whitespace =
+{
+	[" "] = true,
+	["\t"] = true,
+	["\r"] = true,
+	["\n"] = true
+}
+function self:AcceptWhitespace (pos, str)
+	while whitespace [str:sub (pos, pos)] do
+		pos = pos + 1
+	end
+	return pos
+end
+
+function self:Error (pos, str, message)
+	ErrorNoHalt ("GCompute.TypeParser : Parsing \"" .. str .. "\": char " .. pos .. ": " .. message .. "\n")
+end
+
+function self:Peek (pos, str)
+	local startPos, endPos = str:find ("^[a-zA-Z_][a-zA-Z0-9_]*", pos)
+	if not startPos then
+		return str:sub (pos, pos), pos + 1
+	else
+		return str:sub (startPos, endPos), endPos + 1
+	end
+end
+
+function self:PeekFormatted (pos, str)
+	local nextSymbol = self:Peek (pos, str)
+	if nextSymbol then
+		if nextSymbol:len () == 0 then
+			return "<eof>"
+		elseif nextSymbol:len () == 1 then
+			return "'" .. GCompute.String.Escape (nextSymbol) .. "'"
+		else
+			return "\"" .. GCompute.String.Escape (nextSymbol) .. "\""
+		end
+	else
+		return "<eof>"
+	end
+end
+
+GCompute.TypeParser = GCompute.TypeParser ()

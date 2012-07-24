@@ -9,6 +9,23 @@ function self:ctor ()
 	self.Body = nil
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	if self.Condition then
+		self.Condition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.Body then
+		self.Body:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.NamespaceDefinition then
+		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 end
 

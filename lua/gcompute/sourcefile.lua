@@ -20,6 +20,20 @@ function self:ComputeCodeHash ()
 	self.CodeHash = tonumber (util.CRC (self.Code))
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Source Files", self)
+	memoryUsageReport:CreditString ("Source Files", self.Path)
+	memoryUsageReport:CreditString ("Source Code", self.Code)
+	
+	if self.CompilationUnit then
+		self.CompilationUnit:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
+end
+
 function self:GetCode ()
 	return self.Code
 end

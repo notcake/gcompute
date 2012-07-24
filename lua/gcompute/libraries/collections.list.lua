@@ -1,7 +1,4 @@
-local G = GCompute.GlobalScope
-local Collections = G:AddNamespace ("Collections")
+local Global = GCompute.GlobalNamespace
+local Collections = Global:AddNamespace ("Collections")
 
-local Type = nil
-local Function = nil
-Type = Collections:AddType ("List")
-Type:AddArgument ("Type", "T")
+local List = Collections:AddType ("List", { "T" })

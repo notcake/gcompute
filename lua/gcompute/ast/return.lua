@@ -6,6 +6,19 @@ function self:ctor ()
 	self.ReturnExpression = nil
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	
+	if self.ReturnExpression then
+		self.ReturnExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 	if self.ReturnExpression then
 		executionContext:Return (self.ReturnExpression:Evaluate (executionContext))

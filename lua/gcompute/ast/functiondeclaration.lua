@@ -5,7 +5,7 @@ GCompute.AST.FunctionDeclaration = GCompute.AST.MakeConstructor (self)
 function self:ctor ()
 	self.Name = "[Unknown Identifier]"
 	
-	self.ReturnType = nil	
+	self.ReturnTypeExpression = nil	
 	
 	self.MemberFunction = false
 	self.TypeExpression = nil
@@ -13,11 +13,36 @@ function self:ctor ()
 	self.ParameterList = GCompute.ParameterList ()
 	
 	self.Body = nil
+	
+	self.FunctionDefinition = nil
 end
 
 function self:AddParameter (parameterType, parameterName)
-	self.ParameterList:AddParameter (parameterType, parameterName or "[Unknown Identifier]")
+	self.ParameterList:AddParameter (GCompute.DeferredNameResolution (parameterType), parameterName or "[Unknown Identifier]")
 	if parameterType then parameterType:SetParent (self) end
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditString ("Syntax Trees", self.Name)
+	self.ParameterList:ComputeMemoryUsage (memoryUsageReport, "Syntax Trees")
+	
+	if self.ReturnTypeExpression then
+		self.ReturnTypeExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.TypeExpression then
+		self.TypeExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.Body then
+		self.Body:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.FunctionDefinition then
+		self.FunctionDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
 end
 
 function self:Evaluate ()
@@ -25,6 +50,10 @@ end
 
 function self:GetBody ()
 	return self.Body
+end
+
+function self:GetFunctionDefinition ()
+	return self.FunctionDefinition
 end
 
 function self:GetName ()
@@ -47,8 +76,8 @@ function self:GetParameterType (parameterId)
 	return self.ParameterList:GetParameterType (parameterId)
 end
 
-function self:GetReturnType ()
-	return self.ReturnType
+function self:GetReturnTypeExpression ()
+	return self.ReturnTypeExpression
 end
 
 function self:GetTypeExpression ()
@@ -64,6 +93,10 @@ function self:SetBody (blockStatement)
 	if self.Body then self.Body:SetParent (self) end
 end
 
+function self:SetFunctionDefinition (functionDefinition)
+	self.FunctionDefinition = functionDefinition
+end
+
 function self:SetMemberFunction (memberFunction)
 	self.MemberFunction = memberFunction
 end
@@ -77,13 +110,13 @@ function self:SetParameterName (parameterId, parameterName)
 end
 
 function self:SetParameterType (parameterId, parameterType)
-	self.ParameterList:SetParameterType (parameterId, parameterType)
+	self.ParameterList:SetParameterType (parameterId, GCompute.DeferredNameResolution (parameterType))
 	if parameterType then parameterType:SetParent (self) end
 end
 
-function self:SetReturnType (returnType)
-	self.ReturnType = returnType
-	if self.ReturnType then self.ReturnType:SetParent (self) end
+function self:SetReturnTypeExpression (returnTypeExpression)
+	self.ReturnTypeExpression = returnTypeExpression
+	if self.ReturnTypeExpression then self.ReturnTypeExpression:SetParent (self) end
 end
 
 function self:SetTypeExpression (typeExpression)
@@ -92,21 +125,13 @@ function self:SetTypeExpression (typeExpression)
 end
 
 function self:ToString ()
-	local returnType = self.ReturnType and self.ReturnType:ToString () or "[Unknown Type]"
+	local returnTypeExpression = self.ReturnTypeExpression and self.ReturnTypeExpression:ToString () or "[Unknown Type]"
 	local body = self.Body and self.Body:ToString () or "[Unknown Statement]"
 	
-	local arguments = ""
-	for i = 1, self:GetParameterCount () do
-		if arguments ~= "" then
-			arguments = arguments .. ", "
-		end
-		local argumentType = self:GetParameterType (i) and self:GetParameterType (i):ToString () or "[Unknown Type]"
-		arguments = arguments .. argumentType .. " " .. self:GetParameterName (i)
-	end
 	if self.MemberFunction then
 		local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or "[Unknown Expression]"
-		return "[Function Declaration]\n" .. returnType .. " " .. typeExpression .. ":" .. self.Name .. " (" .. arguments .. ")\n" .. body
+		return "[Function Declaration]\n" .. returnTypeExpression .. " " .. typeExpression .. ":" .. self.Name .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
 	else
-		return "[Function Declaration]\n" .. returnType .. " " .. self.Name .. " (" .. arguments .. ")\n" .. body
+		return "[Function Declaration]\n" .. returnTypeExpression .. " " .. self.Name .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
 	end
 end

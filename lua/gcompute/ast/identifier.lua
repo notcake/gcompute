@@ -7,8 +7,19 @@ function self:ctor (name)
 	self.NameTable = nil
 	
 	self.LookupType = GCompute.AST.NameLookupType.Reference
-	self.NameResolutionResults = GCompute.NameResolutionResults ()
+	self.ResolutionResults = GCompute.NameResolutionResults ()
 	self.ResultsPopulated = false
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditString ("Syntax Trees", self.Name)
+	
+	self.ResolutionResults:ComputeMemoryUsage (memoryUsageReport)
+	return memoryUsageReport
 end
 
 function self:Evaluate (executionContext)

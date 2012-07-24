@@ -8,7 +8,7 @@ function self:ctor ()
 	self.ArgumentCount = 0
 	
 	self.LookupType = GCompute.AST.NameLookupType.Reference
-	self.NameResolutionResults = GCompute.NameResolutionResults ()
+	self.ResolutionResults = GCompute.NameResolutionResults ()
 	self.ResultsPopulated = false
 end
 

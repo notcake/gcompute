@@ -22,6 +22,27 @@ function self:AddArguments (arguments)
 	end
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.Arguments)
+	memoryUsageReport:CreditString ("Syntax Trees", self.MemberName)
+	
+	if self.LeftExpression then
+		self.LeftExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	for i = 1, self:GetArgumentCount () do
+		if self:GetArgument (i) then
+			self:GetArgument (i):ComputeMemoryUsage (memoryUsageReport)
+		end
+	end
+	
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 end
 

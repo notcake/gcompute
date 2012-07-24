@@ -20,17 +20,12 @@ local BlockTypeLookup =
 }
 
 function self:ctor ()
+	self.BlockType = BlockType.Block
+	
 	self.Statements = {}
 	self.StatementCount = 0
 	
 	self.NamespaceDefinition = nil -- NamespaceDefinition or TypeDefinition
-	
-	-- TODO: Remove this
-	self.Scope = GCompute.Scope ()	-- definition Scope
-	self.BlockType = BlockType.Block
-	
-	self.OptimizedBlock = nil
-	self.Optimized = false
 end
 
 function self:AddStatement (node)	
@@ -43,6 +38,21 @@ function self:AddStatements (statements)
 	for _, statement in ipairs (statements) do
 		self:AddStatement (statement)
 	end
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.Statements)
+	for statement in self:GetEnumerator () do
+		statement:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.NamespaceDefinition then
+		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
 end
 
 function self:Evaluate (executionContext)

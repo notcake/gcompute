@@ -3,7 +3,7 @@ self.__Type = "AnonymousFunction"
 GCompute.AST.AnonymousFunction = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
 function self:ctor ()
-	self.ReturnType = nil
+	self.ReturnTypeExpression = nil
 	
 	self.ParameterList = GCompute.ParameterList ()
 	
@@ -11,7 +11,7 @@ function self:ctor ()
 end
 
 function self:AddParameter (parameterType, parameterName)
-	self.ParameterList:AddParameter (parameterType, parameterName or "[Unknown Identifier]")
+	self.ParameterList:AddParameter (GCompute.DeferredNameResolution (parameterType), parameterName or "[Unknown Identifier]")
 	if parameterType then parameterType:SetParent (self) end
 end
 
@@ -35,8 +35,8 @@ function self:GetParameterType (parameterId)
 	return self.ParameterList:GetParameterType (parameterId)
 end
 
-function self:GetReturnType ()
-	return self.ReturnType
+function self:GetReturnTypeExpression ()
+	return self.ReturnTypeExpression
 end
 
 function self:SetArgumentName (index, name)
@@ -58,26 +58,18 @@ function self:SetParameterName (parameterId, parameterName)
 end
 
 function self:SetParameterType (parameterId, parameterType)
-	self.ParameterList:SetParameterType (parameterId, parameterType)
+	self.ParameterList:SetParameterType (parameterId, GCompute.DeferredNameResolution (parameterType))
 	if parameterType then parameterType:SetParent (self) end
 end
 
-function self:SetReturnType (returnType)
-	self.ReturnType = returnType
-	if self.ReturnType then self.ReturnType:SetParent (self) end
+function self:SetReturnTypeExpression (returnTypeExpression)
+	self.ReturnTypeExpression = returnTypeExpression
+	if self.ReturnTypeExpression then self.ReturnTypeExpression:SetParent (self) end
 end
 
 function self:ToString ()
-	local returnType = self.ReturnType and self.ReturnType:ToString () or "[Unknown Type]"
+	local returnTypeExpression = self.ReturnTypeExpression and self.ReturnTypeExpression:ToString () or "[Unknown Type]"
 	local body = self.Body and self.Body:ToString () or "[Unknown Statement]"
 	
-	local arguments = ""
-	for i = 1, self:GetParameterCount () do
-		if arguments ~= "" then
-			arguments = arguments .. ", "
-		end
-		local argumentType = self:GetParameterType (i) and self:GetParameterType (i):ToString () or "[Unknown Type]"
-		arguments = arguments .. argumentType .. " " .. self:GetParameterName (i)
-	end
-	return returnType .. " (" .. arguments .. ")\n" .. body
+	return returnTypeExpression .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
 end

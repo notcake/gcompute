@@ -46,6 +46,35 @@ function self:AddMemberResult (objectDefinition, objectMetadata)
 	}
 end
 
+function self:ClearLocalResults ()
+	self.LocalResults = {}
+end
+
+function self:ClearGlobalResults ()
+	self.GlobalResults = {}
+end
+
+function self:ClearMemberResults ()
+	self.MemberResults = {}
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Name Resolution Results", self)
+	memoryUsageReport:CreditTableStructure ("Name Resolution Results", self.LocalResults)
+	memoryUsageReport:CreditTableStructure ("Name Resolution Results", self.GlobalResults)
+	memoryUsageReport:CreditTableStructure ("Name Resolution Results", self.MemberResults)
+	return memoryUsageReport
+end
+
+function self:FilterLocalResults ()
+	for i = #self.LocalResults, 2, -1 do
+		self.LocalResults [i] = nil
+	end
+end
+
 function self:GetGlobalResult (index)
 	return self.GlobalResults [index]
 end

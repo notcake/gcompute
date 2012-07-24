@@ -10,6 +10,15 @@ function self:ctor (str)
 	self.CachedValue = self.String
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditString ("Syntax Trees", self)
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 	return self.String
 end

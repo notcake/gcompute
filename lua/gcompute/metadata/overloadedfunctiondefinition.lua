@@ -29,10 +29,27 @@ function self:GetFunctionCount ()
 	return #self.Functions
 end
 
+--- Gets whether this object is an OverloadedFunctionDefinition
+-- @return A boolean indicating whether this object is an OverloadedFunctionDefinition
+function self:IsOverloadedFunctionDefinition ()
+	return true
+end
+
+--- Resolves the types of all functions in this function group
+function self:ResolveTypes (globalNamespace)
+	for i = 1, self:GetFunctionCount () do
+		self:GetFunction (i):ResolveTypes (globalNamespace)
+	end
+end
+
 --- Returns a string representation of this function group
 -- @return A string representation of this function group
 function self:ToString ()
-	local functionGroup = self:GetName () .. " (Function Group [" .. self:GetFunctionCount () .. "])\n"
+	if self:GetFunctionCount () == 1 then
+		return "[Function Group] " .. self:GetFunction (1):ToString ()
+	end
+	
+	local functionGroup = "[Function Group (" .. self:GetFunctionCount () .. ")] " .. (self:GetName () or "[Unnamed]") .. "\n"
 	functionGroup = functionGroup .. "{\n"
 	for i = 1, self:GetFunctionCount () do
 		functionGroup = functionGroup .. "    " .. self:GetFunction (i):ToString ():gsub ("\n", "\n    ") .. "\n"

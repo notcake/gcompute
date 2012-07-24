@@ -20,6 +20,32 @@ function self:AddCondition (condition, conditionBody)
 	if conditionBody then conditionBody:SetParent (self) end
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.Conditions)
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.ConditionBodies)
+	
+	for i = 1, self:GetConditionCount () do
+		if self:GetCondition (i) then
+			self:GetCondition (i):ComputeMemoryUsage (memoryUsageReport)
+		end
+		if self:GetConditionBody (i) then
+			self:GetConditionBody (i):ComputeMemoryUsage (memoryUsageReport)
+		end
+	end
+	
+	if self.Else then
+		self.Else:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.NamespaceDefinition then
+		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 	local conditionMatched = false
 	for i = 1, #self.Conditions do

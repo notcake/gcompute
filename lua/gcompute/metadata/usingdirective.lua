@@ -32,8 +32,8 @@ function self:Resolve (simpleNameResolver)
 	
 	-- Should only have 1 match
 	local matches = {}
-	for i = 1, self.ParsedQualifiedName.NameResolutionResults:GetResultCount () do
-		local result = self.ParsedQualifiedName.NameResolutionResults:GetResult (i)
+	for i = 1, self.ParsedQualifiedName.ResolutionResults:GetResultCount () do
+		local result = self.ParsedQualifiedName.ResolutionResults:GetResult (i)
 		if result.Metadata:GetMemberType () == GCompute.MemberTypes.Namespace then
 			matches [#matches + 1] = result.Result
 		end
@@ -45,7 +45,7 @@ function self:Resolve (simpleNameResolver)
 		self:SetNamespace (matches [1])
 	else
 		ErrorNoHalt ("UsingDirective:Resolve : Too many matches for " .. self.QualifiedName .. ".\n")
-		ErrorNoHalt (self.ParsedQualifiedName.NameResolutionResults:ToString () .. "\n")
+		ErrorNoHalt (self.ParsedQualifiedName.ResolutionResults:ToString () .. "\n")
 	end
 end
 

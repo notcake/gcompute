@@ -46,7 +46,7 @@ function E2Pipe.SendMessage (messageType, message)
 	message = GCompute.String.ConsoleEscape (message)
 	
 	local data = "|" .. messageType .. "|" .. message
-	data = ("000" .. GCompute.Number.ToHex (data:len ())):sub (-4) .. data
+	data = ("000" .. string.format ("%x", data:len ())):sub (-4) .. data
 	
 	E2Pipe.RawBuffer = E2Pipe.RawBuffer .. data
 end

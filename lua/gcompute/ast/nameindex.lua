@@ -9,8 +9,27 @@ function self:ctor ()
 	-- TODO: Remove this below
 	self.IndexType = GCompute.AST.NameIndexType.Namespace
 	self.LookupType = GCompute.AST.NameLookupType.Reference
-	self.NameResolutionResults = GCompute.NameResolutionResults ()
+	self.ResolutionResults = GCompute.NameResolutionResults ()
 	self.ResultsPopulated = false
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	
+	if self.LeftExpression then
+		self.LeftExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.Identifier then
+		self.Identifier:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.ResolutionResults then
+		self.ResolutionResults:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	return memoryUsageReport
 end
 
 function self:Evaluate (executionContext)

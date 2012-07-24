@@ -9,11 +9,21 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
-	self.NameResolver = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNameResolver () or nil
-	if not self.NameResolver then
-		self.NameResolver = GCompute.NameResolver ()
-		self.NameResolver:SetGlobalNamespace (GCompute.GlobalNamespace)
-	end
+	self.NameResolver = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNameResolver () or GCompute.NameResolver ()
+	self.GlobalNamespace = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNamespace () or GCompute.GlobalNamespace
+end
+
+function self:GetNameResolver ()
+	return self.NameResolver
+end
+
+function self:Process (blockStatement, callback)
+	self:ProcessRoot (blockStatement,
+		function ()
+			self.CompilationUnit:GetNamespaceDefinition ():ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespace ())
+			callback ()
+		end
+	)
 end
 
 function self:VisitRoot (blockStatement)
@@ -29,22 +39,21 @@ function self:VisitStatement (statement)
 	end
 end
 
-function self:VisitExpression (expression)
+function self:VisitExpression (expression, referenceNamespace)
 	if expression:Is ("Identifier") then
-		local nameResolutionResults = self.NameResolver:LookupUnqualifiedIdentifier (expression:GetParentNamespace (), expression:GetName ())
-		expression.NameResolutionResults = nameResolutionResults
-		self.CompilationUnit:Debug (expression:GetName ())
-		self.CompilationUnit:Debug (nameResolutionResults:ToString ())
+		local resolutionResults = self.NameResolver:LookupUnqualifiedIdentifier (expression:GetName (), self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
+		resolutionResults:FilterLocalResults ()
+		expression.ResolutionResults = resolutionResults
 	elseif expression:Is ("NameIndex") then
-		local nameResolutionResults = GCompute.NameResolutionResults ()
-		expression.NameResolutionResults = nameResolutionResults
-		local leftResults = expression:GetLeftExpression ().NameResolutionResults
+		local resolutionResults = GCompute.NameResolutionResults ()
+		expression.ResolutionResults = resolutionResults
+		local leftResults = expression:GetLeftExpression ().ResolutionResults
+		local identifier = expression:GetIdentifier () -- either an Identifier or ParametricIdentifier
+		local name = identifier:GetName ()
 		for i = 1, leftResults:GetGlobalResultCount () do
 			local result = leftResults:GetGlobalResult (i).Result
-			self.NameResolver:LookupQualifiedIdentifier (result, expression:GetIdentifier (), nameResolutionResults)
+			self.NameResolver:LookupQualifiedIdentifier (result, name, resolutionResults)
 		end
-		self.CompilationUnit:Debug (expression:GetIdentifier ())
-		self.CompilationUnit:Debug (nameResolutionResults:ToString ())
 	end
 end
 
@@ -52,6 +61,6 @@ function self:ResolveUsings (statement)
 	local namespace = statement:GetNamespace ()
 	for i = 1, namespace:GetUsingCount () do
 		local usingDirective = namespace:GetUsing (i)
-		namespace:GetUsing (i):Resolve (self)
+		namespace:GetUsing (i):Resolve (nil, nil, self)
 	end
 end

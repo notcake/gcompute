@@ -5,9 +5,10 @@ GCompute.MemberTypes = GCompute.Enum (
 		Field       =   4,
 		Method      =   8,
 		Property    =  16,
-		TypeInfo    =  32,
+		Type        =  32,
 		Custom      =  64,
 		NestedType  = 128,
-		Namespace   = 256
+		Namespace   = 256,
+		Alias       = 512
 	}
 )

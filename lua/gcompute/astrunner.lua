@@ -122,7 +122,7 @@ function self:Resume (executionContext)
 			end
 		elseif topNode:Is ("Identifier") then
 			self.NodeStack:Pop ()
-			self.ValueStack:Push (topNode.NameResolutionResults:GetResult (1).Result)
+			self.ValueStack:Push (topNode.ResolutionResults:GetResult (1).Result)
 		else
 			ErrorNoHalt ("Unknown node type " .. topNode:GetNodeType () .. "\n")
 			self.NodeStack:Pop ()

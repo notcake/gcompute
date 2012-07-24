@@ -11,6 +11,20 @@ function self:ctor (name)
 	self.Constructor = nil
 end
 
+--- Adds an alias to this namespace definition
+-- @param name The name of the alias
+-- @param objectName The name of the object the alias points to
+-- @return The new AliasDefinition
+function self:AddAlias (name, objectName)
+	if not self.Members [name] then
+		self.Members [name] = GCompute.AliasDefinition (name, objectName)
+		self.Members [name]:SetContainingNamespace (self)
+		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Alias)
+		self.Members [name]:SetMetadata (self.Metadata [name])
+	end
+	return self.Members [name]
+end
+
 --- Adds a child namespace to this namespace definition
 -- @param name The name of the child namespace
 -- @return The new NamespaceDefinition
@@ -19,6 +33,7 @@ function self:AddNamespace (name)
 		self.Members [name] = GCompute.NamespaceDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
 		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Namespace)
+		self.Members [name]:SetMetadata (self.Metadata [name])
 	end
 	return self.Members [name]
 end
@@ -32,6 +47,7 @@ function self:AddMemberVariable (name, typeName)
 		self.Members [name] = GCompute.VariableDefinition (name, typeName)
 		self.Members [name]:SetContainingNamespace (self)
 		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Field)
+		self.Members [name]:SetMetadata (self.Metadata [name])
 	end
 	return self.Members [name]
 end
@@ -44,7 +60,8 @@ function self:AddType (name, typeParameterList)
 	if not self.Members [name] then
 		self.Members [name] = GCompute.OverloadedTypeDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
-		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.TypeInfo)
+		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Type)
+		self.Members [name]:SetMetadata (self.Metadata [name])
 	end
 	return self.Members [name]:AddType (typeParameterList)
 end
@@ -59,6 +76,7 @@ function self:AddFunction (name, parameterList, typeParameterList)
 		self.Members [name] = GCompute.OverloadedFunctionDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
 		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Method)
+		self.Members [name]:SetMetadata (self.Metadata [name])
 	end
 	return self.Members [name]:AddFunction (parameterList, typeParameterList)
 end
@@ -67,6 +85,14 @@ end
 -- @param qualifiedName The name of the namespace to be used
 function self:AddUsing (qualifiedName)
 	self.Usings [#self.Usings + 1] = GCompute.UsingDirective (qualifiedName)
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
+	return memoryUsageReport
 end
 
 --- Returns a function which handles runtime namespace initialization
@@ -102,11 +128,30 @@ function self:GetUsingCount ()
 	return #self.Usings
 end
 
+--- Returns whether this namespace definition has no members
+-- @return A boolean indicating whether this namespace definition has no members
+function self:IsEmpty ()
+	return next (self.Members) == nil
+end
+
+--- Gets whether this object is a NamespaceDefinition
+-- @return A boolean indicating whether this object is a NamespaceDefinition
+function self:IsNamespace ()
+	return true
+end
+
 --- Returns whether a member with the given name exists
 -- @param name The name of the member whose existance is being checked
 -- @return A boolean indicating whether a member with the given name exists
 function self:MemberExists (name)
 	return self.Metadata [name] and true or false
+end
+
+--- Resolves the types in this namespace
+function self:ResolveTypes (globalNamespace)
+	for name, memberDefinition in pairs (self.Members) do
+		memberDefinition:ResolveTypes (globalNamespace)
+	end
 end
 
 --- Sets the runtime initialization function for this namespace
@@ -124,4 +169,26 @@ function self:SetConstructorAST (constructorAST)
 		local astRunner = GCompute.ASTRunner (self.ConstructorAST)
 		astRunner:Execute (executionContext)
 	end
+end
+
+--- Returns a string representation of this namespace
+-- @return A string representing this namespace
+function self:ToString ()
+	local namespaceDefinition = "[Namespace] " .. (self:GetName () or "[Unnamed]")
+	
+	if not self:IsEmpty () or self:GetUsingCount () > 0 then
+		namespaceDefinition = namespaceDefinition .. "\n{\n"
+		for i = 1, self:GetUsingCount () do
+			namespaceDefinition = namespaceDefinition .. "    " .. self:GetUsing (i):ToString () .. "\n"
+		end
+		if self:GetUsingCount () > 0 then
+			namespaceDefinition = namespaceDefinition .. "    \n"
+		end
+		for name, memberDefinition in pairs (self.Members) do
+			namespaceDefinition = namespaceDefinition .. "    " .. memberDefinition:ToString ():gsub ("\n", "\n    ") .. "\n"
+		end
+		namespaceDefinition = namespaceDefinition .. "}"
+	end
+	
+	return namespaceDefinition
 end

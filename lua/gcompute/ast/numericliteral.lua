@@ -10,6 +10,14 @@ function self:ctor (num)
 	self.CachedValue = self.Number
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	return memoryUsageReport
+end
+
 function self:Evaluate ()
 	return self.Number
 end

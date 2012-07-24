@@ -20,6 +20,21 @@ function self:ctor ()
 	self.EvaluationFunction = EvaluationFunctions.default
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	
+	if self.RightExpression then
+		self.RightExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	memoryUsageReport:CreditString ("Syntax Trees", self.Operator)
+	
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 	local value, reference = self.RightExpression:Evaluate (executionContext)
 	

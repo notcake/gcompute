@@ -59,6 +59,8 @@ end
 
 -- Sequence
 function self:Sequence ()
+	self:AcceptWhitespaceAndNewlines ()
+		
 	local statements = {}
 	while self:PeekType () ~= GCompute.TokenType.EndOfFile and self:Peek () ~= "}" do
 		local statement, accepted = self:Statement ()
@@ -71,7 +73,7 @@ function self:Sequence ()
 			self.CompilationUnit:Error ("Expected <statement> after ','.", self:GetLastToken ().Line, self:GetLastToken ().Character)
 		end
 		
-		self:AcceptWhitespace ()
+		self:AcceptWhitespaceAndNewlines ()
 	end
 	return statements
 end
@@ -128,7 +130,7 @@ function self:StatementIf ()
 	local statement = self:Statement ()
 	ifStatement:AddCondition (condition, statement)
 	
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	while self:Accept ("elseif") do
 		if not self:Accept ("(") then
 			self.CompilationUnit:Error ("Expected '(' after 'elseif'.", self.TokenNode.Line, self.TokenNode.Character)
@@ -141,9 +143,9 @@ function self:StatementIf ()
 		local statement = self:Statement ()
 		ifStatement:AddCondition (condition, statement)
 		
-		self:AcceptWhitespace ()
+		self:AcceptWhitespaceAndNewlines ()
 	end
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	if self:Accept ("else") then
 		ifStatement:SetElseStatement (self:Statement ())
 	end
@@ -189,7 +191,7 @@ function self:StatementFor ()
 		self.CompilationUnit:Error ("Expected ')' after expression in for loop.", self.TokenNode.Line, self.TokenNode.Character)
 	end
 	
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	local statement = self:Statement ()
 	forStatement:SetBody (statement)
 	
@@ -217,7 +219,7 @@ function self:StatementForEach ()
 		self.CompilationUnit:Error ("Expected ')' after <expression> in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
 	end
 	
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	local statement = self:Statement ()
 	forEachStatement:SetBody (statement)
 	
@@ -234,11 +236,11 @@ function self:ForVariable ()
 			self.CompilationUnit:Error ("Expected <identifier> after 'local' in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
 		end
 		if self:Accept (":") then
-			local variableType = self:Type ()
-			if not variableType then
+			local typeExpression = self:Type ()
+			if not typeExpression then
 				self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
 			end
-			variable:SetVariableType (variableType)
+			variable:SetTypeExpression (typeExpression)
 		end
 	else
 		variable = self:QualifiedIdentifier ()
@@ -261,11 +263,11 @@ function self:ForEachVariables ()
 			variable:SetName (identifier)
 			
 			if self:Accept (":") then
-				local variableType = self:Type ()
-				if not variableType then
+				local typeExpression = self:Type ()
+				if not typeExpression then
 					self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
 				end
-				variable:SetVariableType (variableType)
+				variable:SetTypeExpression (typeExpression)
 			end
 			
 			variables [#variables + 1] = variable
@@ -312,7 +314,7 @@ function self:StatementWhile ()
 		self.CompilationUnit:Error ("Expected ')' after <expression> in while loop.", self.TokenNode.Line, self.TokenNode.Character)
 	end
 	
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	local statement = self:Statement ()
 	whileStatement:SetBody (statement)
 	
@@ -385,7 +387,7 @@ function self:StatementControl ()
 		return GCompute.AST.Continue ()
 	elseif self:Accept ("return") then
 		local returnStatement = GCompute.AST.Return ()
-		self:AcceptWhitespace ()
+		self:AcceptWhitespaceAndNewlines ()
 		if self:Peek () ~= ";" and self:Peek () ~= "}" then
 			returnStatement:SetReturnExpression (self:Expression ())
 		end
@@ -472,7 +474,7 @@ end
 
 function self:StatementBlock ()
 	if not self:Accept ("{") then return nil end
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	
 	local blockStatement = nil
 	if self:AcceptType (GCompute.TokenType.AST) then
@@ -543,7 +545,7 @@ function self:StatementFunctionDeclaration ()
 		self:CommitPosition ()
 	end
 	
-	functionDeclaration:SetReturnType (returnType)
+	functionDeclaration:SetReturnTypeExpression (returnType or GCompute.AST.Identifier ("void"))
 	functionDeclaration:SetName (functionName)
 	if typeExpression then
 		functionDeclaration:SetTypeExpression (typeExpression)
@@ -560,7 +562,7 @@ function self:StatementFunctionDeclaration ()
 					self.CompilationUnit:Error ("Expected <type> after ':' in argument list of function declaration.", self:GetLastToken ().Line, self:GetLastToken ().Character)
 				end
 			else
-				parameterType = GCompute.AST.Identifier ("number")
+				parameterType = GCompute.TypeParser:Root ("Expression2.number")
 			end
 			
 			functionDeclaration:AddParameter (parameterType, parameterName)
@@ -570,7 +572,7 @@ function self:StatementFunctionDeclaration ()
 		self.CompilationUnit:Error ("Expected ')' to close argument list in function declaration.", self:GetLastToken ().Line, self:GetLastToken ().Character)
 	end
 	
-	self:AcceptWhitespace ()	
+	self:AcceptWhitespaceAndNewlines ()
 	local blockStatement = self:StatementBlock ()
 	if not blockStatement then
 		self:Accept (";")
@@ -609,7 +611,7 @@ function self:StatementVariableDeclaration ()
 	end
 	
 	local variableDeclaration = GCompute.AST.VariableDeclaration ()
-	variableDeclaration:SetVariableType (typeExpression)
+	variableDeclaration:SetTypeExpression (typeExpression)
 	variableDeclaration:SetName (variableName)
 	variableDeclaration:SetRightExpression (rightExpression)
 	
@@ -837,7 +839,7 @@ function self:ExpressionFunctionCallOrArrayIndexOrIndex ()
 	local nextCharacter = nil
 	local matched = true
 	repeat
-		self:AcceptWhitespace ()
+		self:AcceptWhitespaceAndNewlines ()
 		nextCharacter = self:Peek ()
 		matched = true
 		local newLeftExpression = nil
@@ -978,7 +980,7 @@ function self:ExpressionAnonymousFunction ()
 	end
 	
 	local anonymousFunctionExpression = GCompute.AST.AnonymousFunction ()
-	anonymousFunctionExpression:SetReturnType (returnType)
+	anonymousFunctionExpression:SetReturnTypeExpression (returnType or GCompute.AST.Identifier ("void"))
 	
 	if self:Peek () ~= ")" then
 		repeat
@@ -990,7 +992,7 @@ function self:ExpressionAnonymousFunction ()
 					self.CompilationUnit:Error ("Expected <type> after ':' in argument list of anonymous function.", self:GetLastToken ().Line, self:GetLastToken ().Character)
 				end
 			else
-				parameterType = GCompute.AST.Identifier ("number")
+				parameterType = GCompute.TypeParser:Root ("Expression2.number")
 			end
 			
 			anonymousFunctionExpression:AddParameter (parameterType, parameterName)
@@ -1028,14 +1030,18 @@ end
 
 function self:ExpressionBooleanLiteral ()
 	if self:Accept ("true") or self:Accept ("false") then
-		return GCompute.AST.BooleanLiteral (self:GetLastToken ().Value)
+		local booleanLiteral = GCompute.AST.BooleanLiteral (self:GetLastToken ().Value)
+		booleanLiteral:SetType (GCompute.DeferredNameResolution ("bool"))
+		return booleanLiteral
 	end
 	return nil
 end
 
 function self:ExpressionNumericLiteral ()
 	if self:AcceptType (GCompute.TokenType.Number) then
-		return GCompute.AST.NumericLiteral (self:GetLastToken ().Value)
+		local numericLiteral = GCompute.AST.NumericLiteral (self:GetLastToken ().Value)
+		numericLiteral:SetType (GCompute.DeferredNameResolution ("Expression2.number"):Resolve ())
+		return numericLiteral
 	end
 	return nil
 end
@@ -1043,7 +1049,9 @@ end
 function self:ExpressionStringLiteral ()
 	local stringToken = self:AcceptType (GCompute.TokenType.String)
 	if stringToken then
-		return GCompute.AST.StringLiteral (stringToken)
+		local stringLiteral = GCompute.AST.StringLiteral (stringToken)
+		stringLiteral:SetType (GCompute.DeferredNameResolution ("Expression2.string"):Resolve ())
+		return stringLiteral
 	end
 	return nil
 end

@@ -1,24 +1,29 @@
-local G = GCompute.GlobalScope
-local T = G:AddType ("Object")
-T:ClearBaseTypes ()
-G:AddTypeReference ("object", "Object")
+local Global = GCompute.GlobalNamespace
+local Object = Global:AddType ("Object")
 
-local F = nil
+Object:AddFunction ("GetHashCode")
+	:SetReturnType ("int")
+	:SetNativeFunction (
+		function (self)
+			return tonumber (util.CRC (tostring (self)))
+		end
+	)
 
-F = T:GetMembers ():AddMemberFunction ("GetHashCode", "int")
-F.Native = function (executionContext, obj)
-	return tonumber (util.CRC (tostring (obj)))
-end
-
-F = T:GetMembers ():AddMemberFunction ("GetType", "Type")
-F.Native = function (executionContext, obj)
-	return T
-end
-
-F = T:GetMembers ():AddMemberFunction ("ToString", "string")
-F.Native = function (executionContext, obj)
-	if type (obj) == "table" and type (obj.ToString) == "function" then
-		return obj:ToString ()
-	end
-	return tostring (obj)
-end
+Object:AddFunction ("GetType")
+	:SetReturnType ("Type")
+	:SetNativeFunction (
+		function (self)
+			return Object
+		end
+	)
+	
+Object:AddFunction ("ToString")
+	:SetReturnType ("string")
+	:SetNativeFunction (
+		function (self)
+			if type (self) == "table" and type (self.ToString) == "function" then
+				return self:ToString ()
+			end
+			return tostring (self)
+		end
+	)

@@ -3,7 +3,7 @@ GCompute.AST = GCompute.AST or {}
 local self = {}
 self.__Type = "Unknown"
 self.__Types = {}
-GCompute.AST.AST = GCompute.MakeConstructor (self)
+GCompute.AST.AST = GCompute.MakeConstructor (self, GCompute.IObject)
 
 function self:ctor ()
 	self.Parent = nil
@@ -16,6 +16,15 @@ end
 function self:Clone ()
 	ErrorNoHalt (self:GetNodeType () .. ":Clone : Not implemented.\n")
 	return nil
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure (poolName or "Syntax Trees", self)
+	GCompute.Error (self:GetNodeType () .. ":ComputeMemoryUsage : Not implemented.")
+	return memoryUsageReport
 end
 
 function self:CopySource (sourceNode)
@@ -68,8 +77,16 @@ function self:GetSourceLine ()
 	return self.SourceLine
 end
 
+function self:IsASTNode ()
+	return true
+end
+
 function self:HasNamespace ()
 	return self.GetNamespace and true or false
+end
+
+function self:HasType ()
+	return self.GetType and true or false
 end
 
 function self:Is (t)

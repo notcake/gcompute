@@ -37,7 +37,6 @@ end
 
 function self:Start ()
 	self.RuntimeNamespace = self.NamespaceDefinition:CreateRuntimeNamespace ()
-	A = self.RuntimeNamespace
 	
 	local mainThread = self:CreateThread ()
 	mainThread:SetName ("Main Thread")

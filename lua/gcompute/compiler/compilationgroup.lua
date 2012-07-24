@@ -7,7 +7,6 @@ function self:ctor ()
 	
 	self.NamespaceDefinition = GCompute.MergedNamespaceDefinition ()
 	self.NameResolver = GCompute.NameResolver ()
-	self.NameResolver:SetGlobalNamespace (self.NamespaceDefinition)
 end
 
 -- Source Files
@@ -73,7 +72,7 @@ function self:Compile (callback)
 			self.NamespaceDefinition:AddSourceNamespace (GCompute.GlobalNamespace)
 			for sourceFile in self:GetEnumerator () do
 				self.NamespaceDefinition:AddSourceNamespace (sourceFile:GetCompilationUnit ():GetNamespaceDefinition ())
-			end			
+			end
 			callback ()
 		end
 	)
@@ -84,7 +83,7 @@ function self:Compile (callback)
 			function (nextCallback)
 				local actionChain = GCompute.CallbackChain ()
 				actionChain:Add (function (callback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
-				--actionChain:Add (function (callback) compilationUnit:LookupNames (callback) end)
+				actionChain:Add (function (callback) compilationUnit:RunPass ("TypeInferer", GCompute.TypeInfererTypeAssigner, callback) end)
 				actionChain:AddUnwrap (nextCallback)
 				actionChain:Execute ()
 			end
@@ -101,6 +100,20 @@ end
 
 function self:GetNameResolver ()
 	return self.NameResolver
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Compilation Groups", self)
+	memoryUsageReport:CreditTableStructure ("Compilation Groups", self.SourceFiles)
+	for sourceFile in self:GetEnumerator () do
+		sourceFile:ComputeMemoryUsage (memoryUsageReport)
+	end
+	self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	self.NameResolver:ComputeMemoryUsage (memoryUsageReport)
+	return memoryUsageReport
 end
 
 function self:ToString ()

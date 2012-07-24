@@ -1,13 +1,5 @@
 local self = {}
-GCompute.CompilationUnit = GCompute.MakeConstructor (self)
-
-local CompilerMessageType =
-{
-	Debugging	= 0,
-	Information	= 1,
-	Warning		= 2,
-	Error		= 3
-}
+GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReporter)
 
 -- Tokenizer : Linked list of tokens
 -- Preprocessor : Linked list of tokens
@@ -31,31 +23,47 @@ function self:ctor (sourceFile, languageName)
 	self.AST = nil
 	self.NamespaceDefinition = nil
 	
+	-- Extra data
+	self.Data = {}
+	
 	-- Profiling
 	self.PassDurations = {}
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Compilation Units", self)
+	memoryUsageReport:CreditTable ("Compilation Units", self.PassDurations)
+	self.SourceFile:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport:CreditTable ("Compilation Messages", self.Messages)
+	
+	if self.Tokens then
+		self.Tokens:ComputeMemoryUsage (memoryUsageReport, "Source Code Tokens")
+	end
+	if self.ParserJobQueue then
+		memoryUsageReport:CreditTableStructure ("Compilation Units", self.ParserJobQueue)
+		for _, v in ipairs (self.ParserJobQueue) do
+			memoryUsageReport:CreditTableStructure ("Compilation Units", v)
+		end
+	end
+	if self.AST then
+		self.AST:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.NamespaceDefinition then
+		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	memoryUsageReport:CreditTable ("Extra Compilation Data", self.Data)
+	return memoryUsageReport
+end
+
 -- Messages
-function self:Error (message, line, character)
-	self:Message (CompilerMessageType.Error, message, line, character)
-end
-
-function self:Debug (message, line, character)
-	self:Message (CompilerMessageType.Debug, message, line, character)
-end
-
-function self:Information (message, line, character)
-	self:Message (CompilerMessageType.Information, message, line, character)
-end
-
-function self:Warning (message, line, character)
-	self:Message (CompilerMessageType.Warning, message, line, character)
-end
-
 function self:Message (messageType, message, line, character)
 	local messageEntry =
 	{
-		MessageType = CompilerMessageType.Error,
+		MessageType = messageType,
 		MessageId = self.NextMessageId,
 		Message = message,
 		Line = line,
@@ -94,6 +102,10 @@ function self:GetCompilationGroup ()
 	return self.CompilationGroup
 end
 
+function self:GetExtraData (name)
+	return self.Data [name]
+end
+
 function self:GetLanguage ()
 	return self.Language
 end
@@ -104,11 +116,26 @@ function self:GetNamespaceDefinition ()
 	return self.NamespaceDefinition
 end
 
+function self:ProcessDirective (directive, startToken, endToken)
+	self:GetLanguage ():ProcessDirective (self, directive, startToken, endToken)
+end
+
 function self:SetCompilationGroup (compilationGroup)
 	self.CompilationGroup = compilationGroup
 end
 
+function self:SetExtraData (name, data)
+	self.Data [name] = data
+end
+
 -- Passes
+function self:AddPassDuration (passName, duration)
+	if not self.PassDurations [passName] then
+		self.PassDurations [passName] = 0
+	end
+	self.PassDurations [passName] = self.PassDurations [passName] + duration
+end
+
 function self:GetPassDuration (passName)
 	return self.PassDurations [passName] or 0
 end
@@ -121,10 +148,14 @@ function self:Tokenize (callback)
 	callback = callback or GCompute.NullCallback
 	
 	local startTime = SysTime ()
-	self.Tokens = GCompute.Tokenizer:Process (self)
-	self:SetPassDuration ("Tokenizer", SysTime () - startTime)
-	
-	callback ()
+	local tokenizer = GCompute.Tokenizer (self)
+	tokenizer:Process (self:GetCode (), self:GetLanguage (),
+		function (tokens)
+			self.Tokens = tokens
+			self:AddPassDuration ("Tokenizer", SysTime () - startTime)
+			callback ()
+		end
+	)
 end
 
 function self:Preprocess (callback)
@@ -132,7 +163,7 @@ function self:Preprocess (callback)
 	
 	local startTime = SysTime ()
 	GCompute.Preprocessor:Process (self, self.Tokens)
-	self:SetPassDuration ("Preprocessor", SysTime () - startTime)
+	self:AddPassDuration ("Preprocessor", SysTime () - startTime)
 	
 	callback ()
 end
@@ -145,7 +176,7 @@ function self:GenerateParserJobs (callback)
 	parserJobGenerator:Process (
 		function (jobQueue)
 			self.ParserJobQueue = jobQueue
-			self:SetPassDuration ("ParserJobGenerator", SysTime () - startTime)
+			self:AddPassDuration ("ParserJobGenerator", SysTime () - startTime)
 			callback ()
 		end
 	)
@@ -177,7 +208,7 @@ function self:Parse (callback)
 		function (_)
 			-- parser.DebugOutput:OutputLines (print)
 			self.AST = self.Tokens.First.AST
-			self:SetPassDuration ("Parser", SysTime () - startTime)
+			self:AddPassDuration ("Parser", SysTime () - startTime)
 			
 			callback ()
 		end
@@ -194,14 +225,13 @@ function self:PostParse (callback)
 	for _, pass in ipairs (self.Language.Passes.PostParser) do
 		actionChain:Add (
 			function (callback)
-				pass (self):Process (self.AST)
-				callback ()
+				pass (self):Process (self.AST, callback)
 			end
 		)
 	end
 	actionChain:Add (
 		function (_)
-			self:SetPassDuration ("PostParser", SysTime () - startTime)
+			self:AddPassDuration ("PostParser", SysTime () - startTime)
 			
 			callback ()
 		end
@@ -229,14 +259,13 @@ function self:PostBuildNamespace (callback)
 	for _, pass in ipairs (self.Language.Passes.PostNamespaceBuilder) do
 		actionChain:Add (
 			function (callback)
-				pass (self):Process (self.AST)
-				callback ()
+				pass (self):Process (self.AST, callback)
 			end
 		)
 	end
 	actionChain:Add (
 		function (_)
-			self:SetPassDuration ("PostNamespaceBuilder", SysTime () - startTime)
+			self:AddPassDuration ("PostNamespaceBuilder", SysTime () - startTime)
 			
 			callback ()
 		end
@@ -250,7 +279,7 @@ function self:RunPass (passName, passConstructor, callback)
 	local startTime = SysTime ()
 	passConstructor (self):Process (self.AST,
 		function ()
-			self:SetPassDuration (passName, SysTime () - startTime)
+			self:AddPassDuration (passName, SysTime () - startTime)
 			callback ()
 		end
 	)

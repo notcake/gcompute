@@ -3,9 +3,11 @@ self.__Type = "VariableDeclaration"
 GCompute.AST.VariableDeclaration = GCompute.AST.MakeConstructor (self)
 
 function self:ctor ()
-	self.VariableType = nil
+	self.TypeExpression = nil
 	self.Name = "[Unknown Identifier]"
 	self.RightExpression = nil
+	
+	self.Type = nil
 end
 
 function self:GetName ()
@@ -16,8 +18,12 @@ function self:GetRightExpression ()
 	return self.RightExpression
 end
 
-function self:GetVariableType ()
-	return self.VariableType
+function self:GetType ()
+	return self.Type
+end
+
+function self:GetTypeExpression ()
+	return self.TypeExpression
 end
 
 function self:SetName (name)
@@ -29,15 +35,18 @@ function self:SetRightExpression (rightExpression)
 	if self.RightExpression then self.RightExpression:SetParent (self) end
 end
 
-function self:SetVariableType (variableType)
-	self.VariableType = variableType
-	if self.VariableType then self.VariableType:SetParent (self) end
+function self:SetTypeExpression (typeExpression)
+	self.TypeExpression = typeExpression
+	if self.TypeExpression then
+		self.TypeExpression:SetParent (self)
+	end
+	self.Type = GCompute.DeferredNameResolution (self.TypeExpression)
 end
 
 function self:ToString ()
-	local variableType = self.VariableType and self.VariableType:ToString () or "[Unknown Type]"
+	local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or "[Unknown Type]"
 	if not self.RightExpression then
-		return variableType .. " " .. self.Name
+		return "[VariableDeclaration]\n" .. typeExpression .. " " .. self.Name
 	end
-	return "[VariableDeclaration]\n" .. variableType .. " " .. self.Name .. " = " .. self.RightExpression:ToString ()
+	return "[VariableDeclaration]\n" .. typeExpression .. " " .. self.Name .. " = " .. self.RightExpression:ToString ()
 end

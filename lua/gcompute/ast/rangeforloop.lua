@@ -22,6 +22,31 @@ function self:AddRange (startValue, endValue, increment)
 	if increment then increment:SetParent (self) end
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.Range)
+	
+	for _, rangeEntry in ipairs (self.Range) do
+		for _, expression in ipairs (rangeEntry) do
+			expression:ComputeMemoryUsage (memoryUsageReport)
+		end
+	end
+	
+	if self.LoopVariable then
+		self.LoopVariable:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.Body then
+		self.Body:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.NamespaceDefinition then
+		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
+end
+
 function self:Evaluate (executionContext)
 end
 

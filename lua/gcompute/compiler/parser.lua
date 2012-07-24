@@ -1,9 +1,9 @@
-local Parser = {}
-GCompute.Parser = GCompute.MakeConstructor (Parser)
+local self = {}
+GCompute.Parser = GCompute.MakeConstructor (self)
 
 local KeywordTypes = GCompute.KeywordTypes
 
-function Parser:ctor (compilationUnit)
+function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.Language = compilationUnit:GetLanguage ()
 	self.DebugOutput = GCompute.NullOutputBuffer
@@ -16,13 +16,11 @@ function Parser:ctor (compilationUnit)
 	self.CurrentTokenType = nil
 	self.TokenNode = nil
 	
-	self.ParseTree = nil
-	self.ParseTreeStack = GCompute.Containers.Stack ()
 	self.TokenStack = GCompute.Containers.Stack ()
 	self.Modifiers = {}
 end
 
-function Parser:Accept (token)
+function self:Accept (token)
 	if self.CurrentToken == token and self.CurrentTokenType ~= GCompute.TokenType.String then
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
@@ -33,7 +31,7 @@ function Parser:Accept (token)
 	return nil
 end
 
-function Parser:AcceptAndSave (token)
+function self:AcceptAndSave (token)
 	if self.CurrentToken == token and self.CurrentTokenType ~= GCompute.TokenType.String then
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
@@ -45,7 +43,11 @@ function Parser:AcceptAndSave (token)
 	return nil
 end
 
-function Parser:AcceptTokens (tokens)
+function self:AcceptNewlines ()
+	while self:AcceptType (GCompute.TokenType.Newline) do end
+end
+
+function self:AcceptTokens (tokens)
 	-- debug
 	if #tokens > 0 then
 		self.DebugOutput:WriteLine ("Parser:AcceptTokens : Tokens should be a table of keys, not an array (" .. table.concat (tokens, ", ") .. ").")
@@ -60,7 +62,7 @@ function Parser:AcceptTokens (tokens)
 	return nil
 end
 
-function Parser:AcceptTypes (tokenTypes)
+function self:AcceptTypes (tokenTypes)
 	if tokenTypes [self.CurrentTokenType] then
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
@@ -71,7 +73,7 @@ function Parser:AcceptTypes (tokenTypes)
 	return nil
 end
 
-function Parser:AcceptType (tokenType)
+function self:AcceptType (tokenType)
 	if self.CurrentTokenType == tokenType then
 		self.LastAccepted = self.CurrentToken
 		self.LastAcceptedType = self.CurrentTokenType
@@ -82,23 +84,27 @@ function Parser:AcceptType (tokenType)
 	return nil
 end
 
-function Parser:AcceptWhitespace ()
+function self:AcceptWhitespace ()
+	while self:AcceptType (GCompute.TokenType.Whitespace) do end
+end
+
+function self:AcceptWhitespaceAndNewlines ()
 	while self:AcceptType (GCompute.TokenType.Whitespace) or self:AcceptType (GCompute.TokenType.Newline) do end
 end
 
-function Parser:AddParseItem (Value)
+function self:AddParseItem (Value)
 	return self.ParseTreeStack.Top:Add (Value)
 end
 
-function Parser:AddParseNode (TreeNode)
+function self:AddParseNode (TreeNode)
 	return self.ParseTreeStack.Top:AddNode (TreeNode)
 end
 
-function Parser:AddModifier (Modifier)
+function self:AddModifier (Modifier)
 	self.Modifiers [#self.Modifiers + 1] = Modifier
 end
 
-function Parser:ChompModifiers ()
+function self:ChompModifiers ()
 	while self.CompilationUnit.Language:GetKeywordType (self.CurrentToken) == KeywordTypes.Modifier do
 		self.DebugOutput:WriteLine ("Nommed modifier (" .. self.CurrentToken .. ")")
 		self.Modifiers [#self.Modifiers + 1] = self.CurrentToken
@@ -106,17 +112,17 @@ function Parser:ChompModifiers ()
 	end
 end
 
-function Parser:ClearModifiers ()
+function self:ClearModifiers ()
 	if #self.Modifiers > 0 then
 		self.Modifiers = {}
 	end
 end
 
-function Parser:CommitPosition ()
+function self:CommitPosition ()
 	self.TokenStack:Pop ()
 end
 
-function Parser:DiscardParseItem ()
+function self:DiscardParseItem ()
 	self.ParseTreeStack:Pop ()
 	if not self.ParseTreeStack.Top then
 		GCompute.PrintStackTrace ()
@@ -124,7 +130,7 @@ function Parser:DiscardParseItem ()
 	self.ParseTreeStack.Top:RemoveLast ()
 end
 
-function Parser:ExpectedItem (item)
+function self:ExpectedItem (item)
 	local current = self.TokenNode
 	local currentToken = "<eof>"
 	local line = 0
@@ -144,7 +150,7 @@ function Parser:ExpectedItem (item)
 	end
 end
 
-function Parser:ExpectedToken (token)
+function self:ExpectedToken (token)
 	local current = self.TokenNode
 	local currentToken = "<eof>"
 	local line = 0
@@ -164,11 +170,11 @@ function Parser:ExpectedToken (token)
 	end
 end
 
-function Parser:GetLastToken ()
+function self:GetLastToken ()
 	return self.LastToken
 end
 
-function Parser:GetNextToken ()
+function self:GetNextToken ()
 	if not self.TokenNode then return nil, nil end
 	
 	self.LastToken = self.TokenNode
@@ -183,11 +189,18 @@ function Parser:GetNextToken ()
 	return self.CurrentToken, self.CurrentTokenType
 end
 
-function Parser:IsTokenAvailable ()
+function self:Initialize (tokens, startToken, endToken)
+	self.Tokens = tokens
+	self.TokenNode = startToken or tokens.First
+	self.CurrentToken = self.TokenNode.Value
+	self.CurrentTokenType = self.TokenNode.TokenType
+end
+
+function self:IsTokenAvailable ()
 	return self.CurrentToken ~= nil
 end
 
-function Parser:List (subParseFunction, delimiter)
+function self:List (subParseFunction, delimiter)
 	delimiter = delimiter or ","
 	local list = {}
 	local item = subParseFunction (self)
@@ -203,45 +216,23 @@ function Parser:List (subParseFunction, delimiter)
 	return list
 end
 
-function Parser:Process (tokens, startToken, endToken)
-	self.Tokens = tokens
-	self.TokenNode = startToken or tokens.First
-	self.CurrentToken = self.TokenNode.Value
-	self.CurrentTokenType = self.TokenNode.TokenType
-
-	self.ParseTree = GCompute.Containers.Tree ()
-	self.ParseTree.Value = "root"
-	self:PushParseNode (self.ParseTree)
+function self:Process (tokens, startToken, endToken)
+	self:Initialize (tokens, startToken, endToken)
 	
 	self.CompilationUnit:Debug ("Parsing from line " .. startToken.Line .. ", char " .. startToken.Character .. " to line " .. endToken.Line .. ", char " .. endToken.Character .. ".")
 	
 	return self:Root ()
 end
 
-function Parser:Peek ()
+function self:Peek ()
 	return self.CurrentToken, self.CurrentTokenType
 end
 
-function Parser:PeekType ()
+function self:PeekType ()
 	return self.CurrentTokenType
 end
 
-function Parser:PopParseItem ()
-	self.ParseTreeStack:Pop ()
-end
-
-function Parser:PushParseItem (Value)
-	local Node = self.ParseTreeStack.Top:Add (Value)
-	self.ParseTreeStack:Push (Node)
-	return Node
-end
-
--- Pushes a node without parenting it
-function Parser:PushParseNode (TreeNode)
-	self.ParseTreeStack:Push (TreeNode)
-end
-
-function Parser:RecurseLeft (subParseFunction, tokens)
+function self:RecurseLeft (subParseFunction, tokens)
 	local leftExpression = subParseFunction (self)
 	if not leftExpression then return nil end
 	local gotExpression = true
@@ -249,13 +240,13 @@ function Parser:RecurseLeft (subParseFunction, tokens)
 	while gotExpression do
 		gotExpression = false
 		-- The looping of this bit will ensure (I think) that left associativity is preserved.
-		self:AcceptWhitespace ()
+		self:AcceptWhitespaceAndNewlines ()
 		if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
 			gotExpression = true
 			local nextLeftExpression = GCompute.AST.BinaryOperator ()
 			nextLeftExpression:SetOperator (self.CurrentToken)
 			self:GetNextToken ()
-			self:AcceptWhitespace ()
+			self:AcceptWhitespaceAndNewlines ()
 			nextLeftExpression:SetLeftExpression (leftExpression)
 			nextLeftExpression:SetRightExpression (subParseFunction (self))
 			leftExpression = nextLeftExpression
@@ -265,16 +256,16 @@ function Parser:RecurseLeft (subParseFunction, tokens)
 	return leftExpression
 end
 
-function Parser:RecurseRight (subParseFunction, tokens)
+function self:RecurseRight (subParseFunction, tokens)
 	local leftExpression = subParseFunction (self)
 	if not leftExpression then return nil end
 	
-	self:AcceptWhitespace ()
+	self:AcceptWhitespaceAndNewlines ()
 	if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		local binaryOperatorExpression = GCompute.AST.BinaryOperator ()
 		binaryOperatorExpression:SetOperator (self.CurrentToken)
 		self:GetNextToken ()
-		self:AcceptWhitespace ()
+		self:AcceptWhitespaceAndNewlines ()
 		binaryOperatorExpression:SetLeftExpression (leftExpression)
 		local rightExpression = self:RecurseRight (subParseFunction, tokens)
 		if not rightExpression then return nil end
@@ -285,7 +276,7 @@ function Parser:RecurseRight (subParseFunction, tokens)
 	return leftExpression
 end
 
-function Parser:RecurseRightUnary (subParseFunction, tokens, subItemName)
+function self:RecurseRightUnary (subParseFunction, tokens, subItemName)
 	if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		local unaryExpression = GCompute.AST.LeftUnaryOperator ()
 		unaryExpression:SetOperator (self.CurrentToken)
@@ -299,7 +290,7 @@ function Parser:RecurseRightUnary (subParseFunction, tokens, subItemName)
 	return subParseFunction (self)
 end
 
-function Parser:RestorePosition ()
+function self:RestorePosition ()
 	self.DebugOutput:WriteLine ("Position restored.")
 	self.TokenNode = self.TokenStack:Pop ()
 	if self.TokenNode then
@@ -311,11 +302,11 @@ function Parser:RestorePosition ()
 	end
 end
 
-function Parser:SavePosition ()
+function self:SavePosition ()
 	self.TokenStack:Push (self.TokenNode)
 end
 
-function Parser:SyntaxError (syntaxError)
+function self:SyntaxError (syntaxError)
 	local current = self.TokenNode
 	local line = 0
 	local character = 0

@@ -16,6 +16,9 @@ function self:ctor (name)
 	self.SymbolTokenType = {}
 	self.Keywords = {}
 	
+	self.DirectivesCaseSensitive = true
+	self.Directives = {}
+	
 	self.ParserTable = {}
 	self.ParserConstructor = GCompute.MakeConstructor (self.ParserTable, GCompute.Parser)
 	
@@ -24,10 +27,6 @@ end
 
 function self:Parser (compilationUnit)
 	return self.ParserConstructor (compilationUnit)
-end
-
-function self:ASTBuilder (compilationUnit)
-	return self.ASTBuilderConstructor (compilationUnit)
 end
 
 function self:AddCustomSymbol (pattern, tokenType, matchFunction)
@@ -42,6 +41,13 @@ function self:AddCustomSymbols (patterns, tokenType, matchFunction)
 		self.SymbolMatchType [#self.SymbolMatchType + 1] = matchFunction
 		self.SymbolTokenType [#self.SymbolTokenType + 1] = tokenType
 	end
+end
+
+function self:AddDirective (directive, handler)
+	if not self.DirectivesCaseSensitive then
+		directive = directive:lower ()
+	end
+	self.Directives [directive] = handler
 end
 
 function self:AddKeyword (keyword, keywordType)
@@ -92,6 +98,10 @@ function self:GetKeywordType (token)
 	return self.Keywords [token] or KeywordTypes.Unknown
 end
 
+function self:GetParserMetatable ()
+	return self.ParserTable
+end
+
 function self:GetSymbols ()
 	return self.Symbols
 end
@@ -120,23 +130,23 @@ function self:LoadPass (file, when)
 	_G.Pass = pass
 end
 
-function self:MatchSymbol (code)
+function self:MatchSymbol (code, offset)
 	for index, symbol in ipairs (self.Symbols) do
 		local match = nil
 		local matchLength = 0
 		if self.SymbolMatchType [index] == SymbolMatchType.Regex then
-			match = code:match (symbol) 
+			match = code:match (symbol, offset)
 			if match then
 				matchLength = match:len ()
 			end
 		elseif self.SymbolMatchType [index] == SymbolMatchType.Plain then
-			if code:sub (1, symbol:len ()) == symbol then
+			if code:sub (offset, offset + symbol:len () - 1) == symbol then
 				match = symbol
 				matchLength = match:len ()
 			end
 		else
-			if code:sub (1, symbol:len ()) == symbol then
-				match, matchLength = self.SymbolMatchType [index] (code)
+			if code:sub (offset, offset + symbol:len () - 1) == symbol then
+				match, matchLength = self.SymbolMatchType [index] (code, offset)
 			end
 		end
 		if match then
@@ -144,4 +154,22 @@ function self:MatchSymbol (code)
 		end
 	end
 	return nil, 0
+end
+
+function self:ProcessDirective (compilationUnit, directive, startToken, endToken)
+	if not self.DirectivesCaseSensitive then
+		directive = directive:lower ()
+	end
+	if not self.Directives [directive] then
+		compilationUnit:Error ("Unknown preprocessor directive " .. directive, startToken.Line, startToken.Character)
+		return
+	end
+	
+	local directiveParser = self:Parser (compilationUnit)
+	directiveParser:Initialize (startToken.List, startToken, endToken)
+	self.Directives [directive] (compilationUnit, directive, directiveParser)
+end
+
+function self:SetDirectiveCaseSensitivity (caseSensitive)
+	self.DirectivesCaseSensitive = caseSensitive
 end

@@ -17,10 +17,27 @@ function self:ctor (innerType)
 			GCompute.Error ("ReferenceType constructor cannot be passed a ReferenceType (" .. self.InnerType:ToString () .. ")")
 			self.InnerType = nil
 		end
+	elseif self.InnerType:IsAlias () then
 	else
 		GCompute.Error ("ReferenceType constructor must be passed a Type or nil, got " .. self.InnerType:ToString ())
 		self.InnerType = nil
 	end
+end
+
+function self:CanExplicitCastTo (destinationType)
+	if not self.InnerType then return false end
+	
+	local innerType = self.InnerType:UnwrapAlias ()
+	return innerType:CanExplicitCastTo (destinationType)
+end
+
+function self:CanImplicitCastTo (destinationType)
+	if not self.InnerType then return false end
+
+	local innerType = self.InnerType:UnwrapAlias ()
+	if innerType:Equals (destinationType) then return true end
+	if innerType:IsBaseType (destinationType) then return true end
+	return innerType:CanImplicitCastTo (destinationType)
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -36,6 +53,7 @@ end
 
 function self:Equals (other)
 	if self == other then return true end
+	other = other:UnwrapAlias ()
 	if not other:IsReference () then return false end
 	return self:UnwrapReference ():Equals (other:UnwrapReference ())
 end
@@ -45,6 +63,10 @@ function self:GetFullName ()
 		return self.InnerType:GetFullName () .. " &"
 	end
 	return "[nil] &"
+end
+
+function self:IsBaseType (supertype)
+	return false
 end
 
 function self:IsReference ()

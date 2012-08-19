@@ -5,12 +5,13 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 	SimpleNameResolver
 	
 	Resolves using directives
+	Resolves names
 ]]
 
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.NameResolver = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNameResolver () or GCompute.NameResolver ()
-	self.GlobalNamespace = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNamespace () or GCompute.GlobalNamespace
+	self.GlobalNamespace = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition () or GCompute.GlobalNamespace
 end
 
 function self:GetNameResolver ()
@@ -20,7 +21,7 @@ end
 function self:Process (blockStatement, callback)
 	self:ProcessRoot (blockStatement,
 		function ()
-			self.CompilationUnit:GetNamespaceDefinition ():ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespace ())
+			self.CompilationUnit:GetNamespaceDefinition ():ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition ())
 			callback ()
 		end
 	)
@@ -49,6 +50,10 @@ function self:VisitExpression (expression, referenceNamespace)
 		expression.ResolutionResults = resolutionResults
 		local leftResults = expression:GetLeftExpression ().ResolutionResults
 		local identifier = expression:GetIdentifier () -- either an Identifier or ParametricIdentifier
+		if not identifier then
+			self.CompilationUnit:Error ("NameIndex has no Identifier (" .. expression .. ")", expression:GetLocation ())
+			return
+		end
 		local name = identifier:GetName ()
 		for i = 1, leftResults:GetGlobalResultCount () do
 			local result = leftResults:GetGlobalResult (i).Result
@@ -61,6 +66,6 @@ function self:ResolveUsings (statement)
 	local namespace = statement:GetNamespace ()
 	for i = 1, namespace:GetUsingCount () do
 		local usingDirective = namespace:GetUsing (i)
-		namespace:GetUsing (i):Resolve (nil, nil, self)
+		namespace:GetUsing (i):Resolve (self)
 	end
 end

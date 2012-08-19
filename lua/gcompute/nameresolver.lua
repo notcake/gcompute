@@ -28,6 +28,12 @@ function self:LookupQualifiedIdentifier (leftNamespace, name, resolutionResults)
 	resolutionResults = resolutionResults or GCompute.NameResolutionResults ()
 	
 	if leftNamespace:MemberExists (name) then
+		if not leftNamespace:GetMember (name) then
+			A = leftNamespace
+			B = name
+			C = resolutionResults
+			error ("")
+		end
 		resolutionResults:AddGlobalResult (leftNamespace:GetMember (name), leftNamespace:GetMemberMetadata (name))
 	end
 	
@@ -82,20 +88,24 @@ end
 
 function self:ResolveASTNode (astNode, errorReporter, globalNamespace, localNamespace)
 	local resolutionResults = nil
-	if astNode:Is ("NamespaceIndex") then
-	elseif astNode:Is ("ObjectIndex") then
-	elseif astNode:Is ("NameIndex") then
+	if astNode:Is ("NameIndex") then
 		local leftResults = self:ResolveASTNode (astNode:GetLeftExpression (), errorReporter, globalNamespace, localNamespace)
 		local identifier = astNode:GetIdentifier ()
-		if identifier:Is ("Identifier") then
+		if not identifier then
+			errorReporter:Error ("NameIndex is missing an Identifier (" .. astNode:ToString () .. ").")
+		elseif identifier:Is ("Identifier") then
 			if leftResults and leftResults:GetResult (1) then
 				resolutionResults = self:LookupQualifiedIdentifier (leftResults:GetResult (1).Result, identifier:GetName ())
+			else
+				errorReporter:Error ("Failed to resolve left hand side of NameIndex (" .. astNode:ToString () .. ")")
 			end
 		else
-			errorReporter:Error ("Unknown AST node on right of NameIndex (" .. astNode:GetNodeType () .. ")")
+			errorReporter:Error ("Unknown AST node on right of NameIndex (" .. identifier:GetNodeType () .. ")")
 		end
 	elseif astNode:Is ("Identifier") then
 		resolutionResults = self:LookupUnqualifiedIdentifier (astNode:GetName (), globalNamespace, localNamespace)
+	else
+		errorReporter:Error ("NameResolver cannot handle " .. astNode:GetNodeType () .. " AST node.")
 	end
 	astNode.ResolutionResults = resolutionResults or astNode.ResolutionResults
 	return resolutionResults

@@ -4,7 +4,7 @@ GCompute.AST.MemberFunctionCall = GCompute.AST.MakeConstructor (self, GCompute.A
 
 function self:ctor ()
 	self.LeftExpression = nil
-	self.MemberName = nil
+	self.Identifier = nil
 	
 	self.Arguments = {}
 	self.ArgumentCount = 0
@@ -30,6 +30,9 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.Arguments)
 	memoryUsageReport:CreditString ("Syntax Trees", self.MemberName)
 	
+	if self.Identifier then
+		self.Identifier:ComputeMemoryUsage (memoryUsageReport)
+	end
 	if self.LeftExpression then
 		self.LeftExpression:ComputeMemoryUsage (memoryUsageReport)
 	end
@@ -54,12 +57,25 @@ function self:GetArgumentCount ()
 	return self.ArgumentCount
 end
 
+function self:GetArgumentTypes (includeLeft)
+	if includeLeft == nil then includeLeft = true end
+	
+	local argumentTypes = {}
+	if includeLeft then
+		argumentTypes [#argumentTypes + 1] = self.LeftExpression:GetType ()
+	end
+	for i = 1, self.ArgumentCount do
+		argumentTypes [#argumentTypes + 1] = self.Arguments [i]:GetType ()
+	end
+	return argumentTypes
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end
 
-function self:GetMemberName ()
-	return self.MemberName
+function self:GetIdentifier ()
+	return self.Identifier
 end
 
 function self:SetArgument (index, expression)
@@ -72,13 +88,13 @@ function self:SetLeftExpression (leftExpression)
 	if self.LeftExpression then self.LeftExpression:SetParent (self) end
 end
 
-function self:SetMemberName (memberName)
-	self.MemberName = memberName
+function self:SetIdentifier (identifier)
+	self.Identifier = identifier
 end
 
 function self:ToString ()
 	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Unknown Expression]"
-	local memberName = self.MemberName or "[Unknown Identifier]"
+	local identifier = self.Identifier and self.Identifier:ToString () or "[Unknown Identifier]"
 	local arguments = ""
 	for i = 1, self.ArgumentCount do
 		if arguments ~= "" then
@@ -88,5 +104,14 @@ function self:ToString ()
 		arguments = arguments .. argument
 	end
 	
-	return leftExpression .. ":" .. memberName .. " (" .. arguments .. ")"
+	return leftExpression .. ":" .. identifier .. " (" .. arguments .. ")"
+end
+
+function self:Visit (astVisitor, ...)
+	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	for i = 1, self:GetArgumentCount () do
+		self:SetArgument (i, self:GetArgument (i):Visit (astVisitor, ...) or self:GetArgument (i))
+	end
+	
+	return astVisitor:VisitExpression (self, ...)
 end

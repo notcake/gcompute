@@ -21,6 +21,53 @@ function self:ctor (name, parameterList, typeParameterList)
 	self.NativeFunction = nil
 end
 
+--- Returns the compatibility rating of the given number and types of arguments with this FunctionDefinition
+-- @param argumentTypeArray An array of argument Types
+-- @return A number indicating how compatible this FunctionDefinition is with the given argument type list
+function self:CanAcceptArgumentTypes (argumentTypeArray)
+	-- Bail out if the function cannot accept the given number of arguments
+	if self:IsMemberFunction () then
+		if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray - 1) then return -math.huge end
+	else
+		if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray) then return -math.huge end
+	end
+
+	-- Check first argument
+	local argumentTypeArrayIndex = 1
+	if self:IsMemberFunction () then
+		if not argumentTypeArray [1]:CanConvertTo (self:GetContainingNamespace (), GCompute.TypeConversionMethod.ImplicitConversion) then
+			print ("Argument " .. 1 .. ", " .. 0 .. ": " .. argumentTypeArray [1]:GetFullName () .. " and " .. self:GetContainingNamespace ():GetFullName ())
+			return -math.huge
+		end
+		argumentTypeArrayIndex = 2
+	end
+	
+	local parameterList = self:GetParameterList ()
+	local parameterCount = parameterList:GetParameterCount ()
+	local compatibility = 0
+	
+	local i = 1
+	while argumentTypeArrayIndex <= #argumentTypeArray do
+		local argumentType = argumentTypeArray [argumentTypeArrayIndex]:UnwrapAlias ()
+		if not argumentType:CanConvertTo (parameterList:GetParameterType (i), GCompute.TypeConversionMethod.ImplicitConversion) then
+			print ("Argument " .. argumentTypeArrayIndex .. ", " .. i .. ": " .. argumentTypeArray [argumentTypeArrayIndex]:GetFullName () .. " and " .. parameterList:GetParameterType (i):GetFullName ())
+			return -math.huge
+		end
+		if i == parameterCount then
+			-- vararg function, match remaining given parameter types against final defined parameter type
+		else
+			i = i + 1
+		end
+		argumentTypeArrayIndex = argumentTypeArrayIndex + 1
+	end
+	
+	return compatibility
+end
+
+function self:CreateRuntimeObject ()
+	return self
+end
+
 --- Gets the FunctionDeclaration syntax tree node corresponding to this function
 -- @return The FunctionDeclaration corresponding to this function
 function self:GetFunctionDeclaration ()
@@ -92,6 +139,9 @@ end
 function self:ResolveTypes (globalNamespace)
 	if self:GetReturnType () then
 		self:GetReturnType ():Resolve ()
+		if not self:GetReturnType ():IsFailedResolution () then
+			self:SetReturnType (self:GetReturnType ():GetObject ())
+		end
 	end
 	self:GetParameterList ():ResolveTypes (globalNamespace, self:GetContainingNamespace ())
 end
@@ -121,12 +171,16 @@ end
 function self:SetReturnType (returnType)
 	if type (returnType) == "string" then
 		self.ReturnType = GCompute.DeferredNameResolution (returnType, nil, nil, self:GetContainingNamespace ())
-	elseif returnType:IsDeferredNameResolution () then
-		self.ReturnType = returnType
-	elseif returnType:IsType () then
-		self.ReturnType = returnType
 	else
-		GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredNameResolution or Type")
+		if returnType:IsAlias () then
+			self.ReturnType = returnType
+		elseif returnType:IsDeferredNameResolution () then
+			self.ReturnType = returnType
+		elseif returnType:IsType () then
+			self.ReturnType = returnType
+		else
+			GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredNameResolution or Type")
+		end
 	end
 	return self
 end
@@ -134,8 +188,12 @@ end
 --- Returns a string representation of this function
 -- @return A string representation of this function
 function self:ToString ()
-	local functionDefinition = self.ReturnType and self.ReturnType:ToString () or "[Unknown Type]"
-	functionDefinition = functionDefinition .. " " .. self:GetName ()
+	local functionDefinition = self.ReturnType and self.ReturnType:GetFullName () or "[Unknown Type]"
+	if self:IsMemberFunction () then
+		functionDefinition = functionDefinition .. " " .. self:GetContainingNamespace ():GetFullName () .. ":" .. self:GetName ()
+	else
+		functionDefinition = functionDefinition .. " " .. self:GetName ()
+	end
 	if not self:GetTypeParameterList ():IsEmpty () then
 		functionDefinition = functionDefinition .. " " .. self:GetTypeParameterList ():ToString ()
 	end

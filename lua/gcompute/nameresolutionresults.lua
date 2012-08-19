@@ -8,6 +8,8 @@ function self:ctor ()
 end
 
 function self:AddGlobalResult (objectDefinition, objectMetadata)
+	if not objectDefinition then GCompute.Error ("NameResolutionResults:AddGlobalResult : objectDefinition must not be nil.") end
+
 	if #self.GlobalResults >= 100 then
 		GCompute.Error ("Too many global name resolution results!")
 		exit ()
@@ -21,6 +23,8 @@ function self:AddGlobalResult (objectDefinition, objectMetadata)
 end
 
 function self:AddLocalResult (objectDefinition, objectMetadata)
+	if not objectDefinition then GCompute.Error ("NameResolutionResults:AddLocalResult : objectDefinition must not be nil.") end
+	
 	if #self.LocalResults >= 100 then
 		GCompute.Error ("Too many local name resolution results!")
 		exit ()
@@ -34,6 +38,8 @@ function self:AddLocalResult (objectDefinition, objectMetadata)
 end
 
 function self:AddMemberResult (objectDefinition, objectMetadata)
+	if not objectDefinition then GCompute.Error ("NameResolutionResults:AddMemberResult : objectDefinition must not be nil.") end
+	
 	if #self.MemberResults >= 100 then
 		GCompute.Error ("Too many member name resolution results!")
 		exit ()

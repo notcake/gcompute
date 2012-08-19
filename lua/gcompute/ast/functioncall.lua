@@ -32,9 +32,9 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 		self.LeftExpression:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
-	for i = 1, self:GetArgumentCount () do
-		if self:GetArgument (i) then
-			self:GetArgument (i):ComputeMemoryUsage (memoryUsageReport)
+	for i = 1, self.ArgumentCount do
+		if self.Arguments [i] then
+			self.Arguments [i]:ComputeMemoryUsage (memoryUsageReport)
 		end
 	end
 	
@@ -66,12 +66,82 @@ function self:Evaluate (executionContext)
 	end
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 0: Evaluate left
+	-- State 2+: Evaluate arguments
+	-- State 1: Call
+	if state == 0 then
+		-- Return to state 2
+		astRunner:PushState (2)
+		
+		local functionCallPlan = self.FunctionCallPlan
+		if functionCallPlan:GetFunctionDefinition () then
+			astRunner:PushValue (functionCallPlan:GetFunctionDefinition ())
+		elseif functionCallPlan:GetFunction () then
+			astRunner:PushValue (functionCallPlan:GetFunction ())
+		else
+			-- Expression, state 0
+			astRunner:PushNode (self:GetLeftExpression ())
+			astRunner:PushState (0)
+		end
+	elseif state == 1 then
+		-- Discard FunctionCall
+		astRunner:PopNode ()
+		
+		local arguments = {}
+		for i = self:GetArgumentCount (), 1, -1 do
+			arguments [i] = astRunner:PopValue ()
+		end
+		local functionDefinition = astRunner:PopValue ()
+		local func = functionDefinition
+		if type (functionDefinition) == "table" then
+			func = functionDefinition:GetNativeFunction ()
+		else
+			functionDefinition = nil
+		end
+		
+		if func then
+			astRunner:PushValue (func (unpack (arguments)))
+		elseif functionDefinition then
+			local block = functionDefinition:GetBlock ()
+			if block then
+				astRunner:PushNode (functionDefinition:GetBlock ())
+				astRunner:PushState (0)
+				astRunner:PushValue (arguments)
+			else
+				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
+			end
+		else
+			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
+		end
+	else
+		if state - 1 <= self:GetArgumentCount () then
+			astRunner:PushState (state + 1)
+			
+			-- Expression, state 0
+			astRunner:PushNode (self:GetArgument (state - 1))
+			astRunner:PushState (0)
+		else
+			-- No more arguments
+			astRunner:PushState (1)
+		end
+	end
+end
+
 function self:GetArgument (index)
 	return self.Arguments [index]
 end
 
 function self:GetArgumentCount ()
 	return self.ArgumentCount
+end
+
+function self:GetArgumentTypes ()
+	local argumentTypes = {}
+	for i = 1, self.ArgumentCount do
+		argumentTypes [#argumentTypes + 1] = self.Arguments [i]:GetType ()
+	end
+	return argumentTypes
 end
 
 function self:GetLeftExpression ()
@@ -99,4 +169,13 @@ function self:ToString ()
 		arguments = arguments .. argument
 	end
 	return leftExpression .. " (" .. arguments .. ")"
+end
+
+function self:Visit (astVisitor, ...)
+	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	for i = 1, self:GetArgumentCount () do
+		self:SetArgument (i, self:GetArgument (i):Visit (astVisitor, ...) or self:GetArgument (i))
+	end
+	
+	return astVisitor:VisitExpression (self, ...)
 end

@@ -77,6 +77,28 @@ function self:Evaluate (executionContext)
 	end
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	if executionContext.InterruptFlag then
+		astRunner:PopNode ()
+		return
+	end
+	
+	astRunner:PushState (state + 1)
+	
+	if state > 0 and self:GetStatement (state):Is ("Expression") then
+		-- Discard last expression value
+		astRunner:PopValue ()
+	end
+	
+	if state >= self:GetStatementCount () then
+		astRunner:PopNode ()
+		astRunner:PopState ()
+	else
+		astRunner:PushNode (self:GetStatement (state + 1))
+		astRunner:PushState (0)
+	end
+end
+
 function self:GetBlockType ()
 	return self.BlockType
 end
@@ -148,4 +170,13 @@ function self:ToString ()
 		end
 	end
 	return "[" .. (BlockTypeLookup [self.BlockType] or "?") .. "]\n{" .. content .. "\n}"
+end
+
+function self:Visit (astVisitor, ...)
+	local astOverride = astVisitor:VisitBlock (self, ...)
+	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	
+	for i = 1, self:GetStatementCount () do
+		self:SetStatement (i, self:GetStatement (i):Visit (astVisitor, ...) or self:GetStatement (i))
+	end
 end

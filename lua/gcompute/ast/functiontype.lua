@@ -1,15 +1,12 @@
 local self = {}
-self.__Type = "AnonymousFunction"
-GCompute.AST.AnonymousFunction = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
+self.__Type = "FunctionType"
+GCompute.AST.FunctionType = GCompute.AST.MakeConstructor (self)
 
 function self:ctor ()
-	self.ReturnTypeExpression = nil
+	self.Name = "[Unknown Identifier]"
 	
+	self.ReturnTypeExpression = nil	
 	self.ParameterList = GCompute.ParameterList ()
-	
-	self.Body = nil
-	
-	self.FunctionDefinition = nil
 end
 
 function self:AddParameter (parameterType, parameterName)
@@ -17,12 +14,21 @@ function self:AddParameter (parameterType, parameterName)
 	if parameterType then parameterType:SetParent (self) end
 end
 
-function self:GetBody ()
-	return self.Body
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	memoryUsageReport:CreditString ("Syntax Trees", self.Name)
+	self.ParameterList:ComputeMemoryUsage (memoryUsageReport, "Syntax Trees")
+	
+	if self.ReturnTypeExpression then
+		self.ReturnTypeExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	return memoryUsageReport
 end
 
-function self:GetFunctionDefinition ()
-	return self.FunctionDefinition
+function self:Evaluate ()
 end
 
 function self:GetParameterCount ()
@@ -45,24 +51,6 @@ function self:GetReturnTypeExpression ()
 	return self.ReturnTypeExpression
 end
 
-function self:SetArgumentName (index, name)
-	self.ArgumentNames [index] = name
-end
-
-function self:SetArgumentType (index, type)
-	self.ArgumentNames [index] = type
-	if type then type:SetParent (self) end
-end
-
-function self:SetBody (blockStatement)
-	self.Body = blockStatement
-	if self.Body then self.Body:SetParent (self) end
-end
-
-function self:SetFunctionDefinition (functionDefinition)
-	self.FunctionDefinition = functionDefinition
-end
-
 function self:SetParameterName (parameterId, parameterName)
 	self.ParameterList:SetParameterName (parameterId, parameterName)
 end
@@ -79,7 +67,6 @@ end
 
 function self:ToString ()
 	local returnTypeExpression = self.ReturnTypeExpression and self.ReturnTypeExpression:ToString () or "[Unknown Type]"
-	local body = self.Body and self.Body:ToString () or "[Unknown Statement]"
 	
-	return returnTypeExpression .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
+	return returnTypeExpression .. " " .. self:GetParameterList ():ToString ()
 end

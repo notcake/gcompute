@@ -68,6 +68,55 @@ function self:Evaluate (executionContext)
 	return self:EvaluationFunction (executionContext, left, right, leftReference, rightReference)
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 0: Evaluate left
+	-- State 1: Evaluate right
+	-- State 2: Call
+	if state == 0 then
+		-- Return to state 1
+		astRunner:PushState (1)
+	
+		-- Expression, state 0
+		astRunner:PushNode (self:GetLeftExpression ())
+		astRunner:PushState (0)
+	elseif state == 1 then
+		-- Return to state 2
+		astRunner:PushState (2)
+	
+		-- Expression, state 0
+		astRunner:PushNode (self:GetRightExpression ())
+		astRunner:PushState (0)
+	elseif state == 2 then
+		-- Discard BinaryOperator
+		astRunner:PopNode ()
+		
+		local arguments = {}
+		local right = astRunner:PopValue ()
+		local left = astRunner:PopValue ()
+		
+		local functionCallPlan = self.FunctionCallPlan
+		local functionDefinition = functionCallPlan:GetFunctionDefinition ()
+		local func = functionCallPlan:GetFunction ()
+		if not func and functionDefinition then
+			func = functionDefinition:GetNativeFunction ()
+		end
+		
+		if func then
+			astRunner:PushValue (func (left, right))
+		elseif functionDefinition then
+			local block = functionDefinition:GetBlock ()
+			if block then
+				astRunner:PushNode (functionDefinition:GetBlock ())
+				astRunner:PushState (0)
+			else
+				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
+			end
+		else
+			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
+		end
+	end
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end
@@ -114,4 +163,11 @@ function self:ToString ()
 	end
 	
 	return leftExpression .. " " .. self.Operator .. " " .. rightExpression
+end
+
+function self:Visit (astVisitor, ...)
+	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
+	
+	return astVisitor:VisitExpression (self, ...)
 end

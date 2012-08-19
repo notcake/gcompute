@@ -76,3 +76,9 @@ function self:ToString ()
 	local identifier = self.Identifier and self.Identifier:ToString () or "[Unknown Identifier]"
 	return leftExpression .. "." .. identifier
 end
+
+function self:Visit (astVisitor, ...)
+	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+
+	return astVisitor:VisitExpression (self, ...)
+end

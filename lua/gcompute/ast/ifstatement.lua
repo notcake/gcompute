@@ -60,6 +60,50 @@ function self:Evaluate (executionContext)
 	end
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 2n: evaluate condition n
+	-- State 2n + 1: check condition value, evaluate block
+	
+	astRunner:PushState (state + 1)
+	if state % 2 == 0 then
+		-- Evaluate condition
+		local condition = self:GetCondition (state / 2 + 1)
+		
+		if not condition then
+			-- Out of conditions to test
+		
+			-- Discard IfStatement
+			astRunner:PopNode ()
+			astRunner:PopState ()
+		
+			-- Else block
+			if self:GetElseStatement () then
+				-- Statement, state 0
+				astRunner:PushNode (self:GetElseStatement ())
+				astRunner:PushState (0)
+			end
+		else
+			-- Expression, state 0
+			astRunner:PushNode (condition)
+			astRunner:PushState (0)
+		end
+	else
+		-- Check condition result, execute block
+		local value = astRunner:PopValue ()
+		if value then
+			-- Discard IfStatement
+			astRunner:PopNode ()
+			astRunner:PopState ()
+			
+			-- Statement, state 0
+			astRunner:PushNode (self:GetConditionBody ((state - 1) / 2 + 1))
+			astRunner:PushState (0)
+		else
+			-- Next condition
+		end
+	end
+end
+
 function self:GetCondition (index)
 	return self.Conditions [index]
 end
@@ -131,5 +175,18 @@ function self:ToString ()
 		return ifStatement .. "else " .. elseStatement
 	else
 		return ifStatement
+	end
+end
+
+function self:Visit (astVisitor, ...)
+	local astOverride = astVisitor:VisitStatement (self, ...)
+	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	
+	for i = 1, self:GetConditionCount () do
+		self:SetCondition (i, self:GetCondition (i):Visit (astVisitor, ...) or self:GetCondition (i))
+		self:SetConditionBody (i, self:GetConditionBody (i):Visit (astVisitor, ...) or self:GetConditionBody (i))
+	end
+	if self:GetElseStatement () then
+		self:SetElseStatement (self:GetElseStatement ():Visit (astVisitor, ...) or self:GetElseStatement ())
 	end
 end

@@ -3,12 +3,16 @@ GCompute.NamespaceDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDe
 
 --- @param name The name of this namespace
 function self:ctor (name)
+	self.NamespaceType = GCompute.NamespaceType.Unknown
+
 	self.Usings = {}
 	self.Members = {}
-	self.Metadata = {}
+	self.MemberMetadata = {}
 	
 	self.ConstructorAST = nil
 	self.Constructor = nil
+	
+	self.UniqueNameMap = nil
 end
 
 --- Adds an alias to this namespace definition
@@ -19,8 +23,8 @@ function self:AddAlias (name, objectName)
 	if not self.Members [name] then
 		self.Members [name] = GCompute.AliasDefinition (name, objectName)
 		self.Members [name]:SetContainingNamespace (self)
-		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Alias)
-		self.Members [name]:SetMetadata (self.Metadata [name])
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Alias)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 	return self.Members [name]
 end
@@ -32,8 +36,11 @@ function self:AddNamespace (name)
 	if not self.Members [name] then
 		self.Members [name] = GCompute.NamespaceDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
-		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Namespace)
-		self.Members [name]:SetMetadata (self.Metadata [name])
+		if self:GetNamespaceType () == GCompute.NamespaceType.Global then
+			self.Members [name]:SetNamespaceType (self:GetNamespaceType ())
+		end
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Namespace)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 	return self.Members [name]
 end
@@ -46,8 +53,8 @@ function self:AddMemberVariable (name, typeName)
 	if not self.Members [name] then
 		self.Members [name] = GCompute.VariableDefinition (name, typeName)
 		self.Members [name]:SetContainingNamespace (self)
-		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Field)
-		self.Members [name]:SetMetadata (self.Metadata [name])
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Field)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 	return self.Members [name]
 end
@@ -60,8 +67,8 @@ function self:AddType (name, typeParameterList)
 	if not self.Members [name] then
 		self.Members [name] = GCompute.OverloadedTypeDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
-		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Type)
-		self.Members [name]:SetMetadata (self.Metadata [name])
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Type)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 	return self.Members [name]:AddType (typeParameterList)
 end
@@ -75,8 +82,8 @@ function self:AddFunction (name, parameterList, typeParameterList)
 	if not self.Members [name] then
 		self.Members [name] = GCompute.OverloadedFunctionDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
-		self.Metadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Method)
-		self.Members [name]:SetMetadata (self.Metadata [name])
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Method)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 	return self.Members [name]:AddFunction (parameterList, typeParameterList)
 end
@@ -101,6 +108,14 @@ function self:GetConstructor ()
 	return self.Constructor or GCompute.NullCallback
 end
 
+function self:GetEnumerator ()
+	local next, tbl, key = pairs (self.Members)
+	return function ()
+		key = next (tbl, key)
+		return key, tbl [key], self.MemberMetadata [key]
+	end
+end
+
 --- Returns the definition object of a member object
 -- @param name The name of the member object
 -- @return The definition object for the given member object
@@ -112,7 +127,22 @@ end
 -- @param name The name of the member object
 -- @return The MemberInfo object for the given member object
 function self:GetMemberMetadata (name)
-	return self.Metadata [name]
+	return self.MemberMetadata [name]
+end
+
+function self:GetNamespaceType ()
+	return self.NamespaceType
+end
+
+function self:GetType ()
+	return GCompute.Types.Namespace
+end
+
+function self:GetUniqueNameMap ()
+	if not self.UniqueNameMap then
+		self.UniqueNameMap = GCompute.UniqueNameMap ()
+	end
+	return self.UniqueNameMap
 end
 
 --- Returns the UsingDirective identified by the given index
@@ -140,11 +170,15 @@ function self:IsNamespace ()
 	return true
 end
 
+function self:IsRoot ()
+	return self:GetContainingNamespace () == nil
+end
+
 --- Returns whether a member with the given name exists
 -- @param name The name of the member whose existance is being checked
 -- @return A boolean indicating whether a member with the given name exists
 function self:MemberExists (name)
-	return self.Metadata [name] and true or false
+	return self.MemberMetadata [name] and true or false
 end
 
 --- Resolves the types in this namespace
@@ -171,10 +205,14 @@ function self:SetConstructorAST (constructorAST)
 	end
 end
 
+function self:SetNamespaceType (namespaceType)
+	self.NamespaceType = namespaceType
+end
+
 --- Returns a string representation of this namespace
 -- @return A string representing this namespace
 function self:ToString ()
-	local namespaceDefinition = "[Namespace] " .. (self:GetName () or "[Unnamed]")
+	local namespaceDefinition = "[Namespace (" .. GCompute.NamespaceType [self.NamespaceType] .. ")] " .. (self:GetName () or "[Unnamed]")
 	
 	if not self:IsEmpty () or self:GetUsingCount () > 0 then
 		namespaceDefinition = namespaceDefinition .. "\n{\n"

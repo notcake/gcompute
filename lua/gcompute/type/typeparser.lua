@@ -37,9 +37,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction (pos, str)
 	-- left [ array dimensions ]
 	-- left ( function argument list )
 	local leftExpression, newPos = self:Identifier (pos, str)
-	if not leftExpression then
-		return nil
-	end
+	if not leftExpression then return nil end
 	pos = newPos
 	
 	pos = self:AcceptWhitespace (pos, str)

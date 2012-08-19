@@ -230,6 +230,8 @@ function self:ForVariable ()
 	local variable = nil
 	if self:Accept ("local") then
 		variable = GCompute.AST.VariableDeclaration ()
+		varaiable:SetLocal (true)
+		
 		local identifier = self:AcceptType (GCompute.TokenType.Identifier) 
 		variable:SetName (identifier)
 		if not identifier then
@@ -259,6 +261,7 @@ function self:ForEachVariables ()
 		local identifier = nil
 		if isLocal then
 			local variable = GCompute.AST.VariableDeclaration ()
+			variable:SetLocal (isLocal)
 			identifier = self:AcceptType (GCompute.TokenType.Identifier)
 			variable:SetName (identifier)
 			
@@ -611,6 +614,7 @@ function self:StatementVariableDeclaration ()
 	end
 	
 	local variableDeclaration = GCompute.AST.VariableDeclaration ()
+	variableDeclaration:SetLocal (true)
 	variableDeclaration:SetTypeExpression (typeExpression)
 	variableDeclaration:SetName (variableName)
 	variableDeclaration:SetRightExpression (rightExpression)
@@ -882,13 +886,13 @@ end
 
 function self:ExpressionMemberFunctionCall (leftExpression)
 	if not self:AcceptAndSave (":") then return leftExpression end
-	local identifier = self:AcceptType (GCompute.TokenType.Identifier)
+	local unqualifiedIdentifier = self:UnqualifiedIdentifier ()
 	local identifierLine = self.TokenNode.Line
 	local identifierCharacter = self.TokenNode.Character
 	
 	local memberFunctionCallExpression = GCompute.AST.MemberFunctionCall ()
 	memberFunctionCallExpression:SetLeftExpression (leftExpression)
-	memberFunctionCallExpression:SetMemberName (identifier)
+	memberFunctionCallExpression:SetIdentifier (unqualifiedIdentifier)
 	
 	local noLeftParenthesis = not self:Accept ("(")
 	local leftParenthesisLine = self.TokenNode.Line
@@ -911,7 +915,7 @@ function self:ExpressionMemberFunctionCall (leftExpression)
 		return leftExpression
 	end
 	
-	if not identifier then
+	if not unqualifiedIdentifier then
 		self.CompilationUnit:Error ("Expected <identifier> after ':' in member function call.", identifierLine, identifierCharacter)
 	end
 	if noLeftParenthesis then
@@ -1057,11 +1061,78 @@ function self:ExpressionStringLiteral ()
 end
 
 function self:Type ()
-	return self:QualifiedIdentifier ()
+	return self:TypeIndexOrParametricIndexOrArrayOrFunction ()
 end
 
-function self:QualifiedIdentifier ()
-	return self:UnqualifiedIdentifier ()
+local validOperators =
+{
+	["."] = true,
+	["<"] = true,
+	["["] = true,
+	["("] = true
+}
+function self:TypeIndexOrParametricIndexOrArrayOrFunction ()
+	local leftExpression = self:UnqualifiedIdentifier ()
+	if not leftExpression then return nil end
+	
+	local nextOperator = self:Peek ()
+	while validOperators [nextOperator] do
+		self:Accept (nextOperator)
+		
+		if nextOperator == "." then
+			local nameIndex = GCompute.AST.NameIndex ()
+			nameIndex:SetLeftExpression (leftExpression)
+			local unqualifiedIdentifier = self:UnqualifiedIdentifier ()
+			if not unqualifiedIdentifier then
+				self.CompilationUnit:Error ("Expected <identifier> after '.',, got " .. self:Peek (), self.TokenNode.Line, self.TokenNode.Character)
+			end
+			
+			nameIndex:SetIdentifier (unqualifiedIdentifier)
+			leftExpression = nameIndex
+		elseif nextOperator == "(" then
+			local functionType = GCompute.AST.FunctionType ()
+			functionType:SetReturnTypeExpression (leftExpression)
+			
+			if self:Peek () ~= ")" then
+				repeat
+					local parameterName = nil
+					local parameterType = self:Type ()
+					
+					if not parameterType then
+						self.CompilationUnit:Error ("Expected <type> after '(' in function type.", self.TokenNode.Line, self.TokenNode.Character)
+						break
+					end
+					if self:Accept (":") then
+						parameterName = parameterType
+						parameterType = self:Type ()
+						if not parameterType then
+							self.CompilationUnit:Error ("Expected <type> after ':' in argument list of function type.", self:GetLastToken ().Line, self:GetLastToken ().Character)
+						end
+					else
+						local possibleType = self:Type ()
+						if possibleType then
+							parameterName = parameterType
+							parameterType = possibleType
+						end
+					end
+					if parameterName and not parameterName:Is ("Identifier") then
+						self.CompilationUnit:Error ("Parameter name cannot be a qualified identifier.", self:GetLastToken ().Line, self:GetLastToken ().Character)
+					end
+					
+					functionType:AddParameter (parameterType, parameterName)
+				until not self:Accept (",")
+			end
+			if not self:Accept (")") then
+				self.CompilationUnit:Error ("Expected ')' to close argument list in function type.", self:GetLastToken ().Line, self:GetLastToken ().Character)
+			end
+			leftExpression = functionType
+		else
+			self.CompilationUnit:Error ("Unhandled operator in type (" .. nextOperator .. ")", self.TokenNode.Line, self.TokenNode.Character)
+		end
+		nextOperator = self:Peek ()
+	end
+	
+	return leftExpression
 end
 
 function self:UnqualifiedIdentifier ()

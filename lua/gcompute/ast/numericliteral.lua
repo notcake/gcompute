@@ -22,6 +22,13 @@ function self:Evaluate ()
 	return self.Number
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- Discard NumericLiteral
+	astRunner:PopNode ()
+	
+	astRunner:PushValue (self.Number)
+end
+
 function self:GetNumber ()
 	return self.Number
 end
@@ -32,4 +39,8 @@ end
 
 function self:ToString ()
 	return tostring (self.Number)
+end
+
+function self:Visit (astVisitor, ...)
+	return astVisitor:VisitExpression (self, ...)
 end

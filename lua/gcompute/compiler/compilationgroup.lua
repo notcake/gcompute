@@ -6,6 +6,8 @@ function self:ctor ()
 	self.SourceFileCount = 0
 	
 	self.NamespaceDefinition = GCompute.MergedNamespaceDefinition ()
+	self.NamespaceDefinition:SetNamespaceType (GCompute.NamespaceType.Global)
+	
 	self.NameResolver = GCompute.NameResolver ()
 end
 
@@ -73,6 +75,7 @@ function self:Compile (callback)
 			for sourceFile in self:GetEnumerator () do
 				self.NamespaceDefinition:AddSourceNamespace (sourceFile:GetCompilationUnit ():GetNamespaceDefinition ())
 			end
+			GCompute.UniqueNameAssigner ():Process (self.NamespaceDefinition)
 			callback ()
 		end
 	)
@@ -83,6 +86,7 @@ function self:Compile (callback)
 			function (nextCallback)
 				local actionChain = GCompute.CallbackChain ()
 				actionChain:Add (function (callback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
+				actionChain:Add (function (callback) compilationUnit:RunPass ("LocalScopeMerger", GCompute.LocalScopeMerger, callback) end)
 				actionChain:Add (function (callback) compilationUnit:RunPass ("TypeInferer", GCompute.TypeInfererTypeAssigner, callback) end)
 				actionChain:AddUnwrap (nextCallback)
 				actionChain:Execute ()
@@ -94,7 +98,7 @@ function self:Compile (callback)
 	actionChain:Execute ()
 end
 
-function self:GetNamespace ()
+function self:GetNamespaceDefinition ()
 	return self.NamespaceDefinition
 end
 

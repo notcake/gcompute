@@ -1,5 +1,10 @@
 GCompute = GCompute or {}
 GCompute.Reflection = GCompute.Reflection or {}
+
+GCompute.Types = GCompute.Types or {}
+GCompute.Types.Top = nil
+GCompute.Types.Bottom = nil
+
 include ("glib/glib.lua")
 GLib.Import (GCompute)
 -- GCompute.AddCSLuaFolderRecursive ("gcompute")
@@ -37,8 +42,10 @@ include ("deferrednameresolution.lua")
 include ("memoryusagereport.lua")
 
 -- compiler
+include ("astnode.lua")
 include ("ast.lua")
 include ("astvisitor.lua")
+include ("namespacevisitor.lua")
 include ("containers.lua")
 
 include ("compiler/compilationgroup.lua")
@@ -50,9 +57,19 @@ include ("compiler/preprocessor.lua")
 include ("compiler/parserjobgenerator.lua")
 include ("compiler/parser.lua")
 include ("compiler/namespacebuilder.lua")
+include ("compiler/uniquenameassigner.lua")
 include ("compiler/simplenameresolver.lua")
 include ("compiler/typeinferer.lua")
 include ("compiler/typeinferer_typeassigner.lua")
+include ("compiler/localscopemerger.lua")
+
+include ("uniquenamemap.lua")
+
+include ("assignmenttype.lua")
+include ("assignmentplan.lua")
+include ("functioncallplan.lua")
+include ("variablereadtype.lua")
+include ("variablereadplan.lua")
 
 -- source files
 include ("sourcefilecache.lua")
@@ -60,6 +77,7 @@ include ("sourcefile.lua")
 include ("anonymoussourcefile.lua")
 
 -- type system
+include ("type/typeconversionmethod.lua")
 include ("type/typeparser.lua")
 include ("type/type.lua")
 include ("type/arraytype.lua")
@@ -83,6 +101,8 @@ include ("textoutputbuffer.lua")
 include ("nulloutputbuffer.lua")
 
 -- compile time and reflection
+include ("metadata/namespacetype.lua")
+
 include ("metadata/objectdefinition.lua")
 include ("metadata/aliasdefinition.lua")
 include ("metadata/namespacedefinition.lua")
@@ -123,6 +143,7 @@ include ("runtime/thread.lua")
 include ("runtime/module.lua")
 
 GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
+GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 
 include ("corelibrary.lua")
 GCompute.IncludeDirectory ("gcompute/libraries", true)

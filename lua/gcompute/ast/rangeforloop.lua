@@ -6,6 +6,13 @@ function self:ctor ()
 	self.LoopVariable = nil -- VariableDeclaration or QualifiedIdentifier
 	self.Range = {}
 	
+	self.LoopVariableValue = GCompute.AST.NumericLiteral (0)
+	
+	self.LoopVariableAssignment = GCompute.AST.BinaryAssignmentOperator ()
+	self.LoopVariableAssignment:SetOperator ("=")
+	self.LoopVariableAssignment:SetRightExpression (self.LoopVariableValue)
+	self.LoopVariableAssignment:SetParent (self)
+	
 	self.NamespaceDefinition = nil
 	self.Body = nil
 end
@@ -50,6 +57,118 @@ end
 function self:Evaluate (executionContext)
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 0 - n: Compute ranges
+	-- State -1: Assign loop variable, run loop
+	-- State -2: Check loop variable
+	
+	if state > 0 then
+		-- Finished evaluating a range, jiggle it.
+		if #self.Range [#self.Range - state + 1] == 1 then
+			local startValue = astRunner:PopValue ()
+			astRunner:PushValue ({ startValue })
+		elseif #self.Range [#self.Range - state + 1] == 2 then
+			local increment = 1
+			local endValue = astRunner:PopValue ()
+			local startValue = astRunner:PopValue ()
+			astRunner:PushValue ({ startValue, endValue, increment })
+		else
+			local increment = astRunner:PopValue ()
+			local endValue = astRunner:PopValue ()
+			local startValue = astRunner:PopValue ()
+			astRunner:PushValue ({ startValue, endValue, increment })
+		end
+	end
+	
+	if state == #self.Range then
+		astRunner:PushState (-1)
+		astRunner:PushValue (astRunner:PeekValue () [1])
+	elseif state >= 0 then
+		if state == 0 then
+			astRunner:PushValue (nil)
+		end
+		astRunner:PushState (state + 1)
+		
+		local range = self.Range [#self.Range - state]
+		if #range == 1 then
+			-- Expression, state 0
+			astRunner:PushNode (range [1])
+			astRunner:PushState (0)
+		elseif #range == 3 then
+			-- Expression, state 0
+			astRunner:PushNode (range [3])
+			astRunner:PushState (0)
+		end
+		if #range >= 2 then
+			-- Expression, state 0
+			astRunner:PushNode (range [2])
+			astRunner:PushState (0)
+			
+			-- Expression, state 0
+			astRunner:PushNode (range [1])
+			astRunner:PushState (0)
+		end
+	elseif state == -1 then
+		-- Assign loop variable, increment variable, run loop
+		local i = astRunner:PopValue ()
+		astRunner:PushValue (i + (astRunner:PeekValue () [3] or 1))
+		self.LoopVariableValue:SetNumber (i)
+		
+		astRunner:PushState (-2)
+		
+		-- Statement, state 0
+		astRunner:PushNode (self.Body)
+		astRunner:PushState (0)
+		
+		-- Expression, state 0
+		astRunner:PushNode (self.LoopVariableAssignment)
+		astRunner:PushState (0)
+	elseif state == -2 then
+		-- Discard loop variable assignment value
+		astRunner:PopValue ()
+		
+		-- Clear continue flag
+		if executionContext.ContinueFlag then
+			executionContext:ClearContinue ()
+		end
+		
+		-- Break or other interrupt
+		if executionContext.InterruptFlag then
+			-- Bail
+			if executionContext.BreakFlag then
+				executionContext:ClearBreak ()
+			end
+			
+			astRunner:PopNode ()
+			while astRunner:PopValue () do end
+			return
+		end
+	
+		-- Check loop variable
+		local i = astRunner:PeekValue ()
+		local range = astRunner:PeekValue (-1)
+		
+		if not range [2] or i > range [2] then
+			-- Done with this range.
+			astRunner:PopValue ()
+			astRunner:PopValue ()
+			
+			range = astRunner:PeekValue ()
+			if not range then
+				-- Done with this loop
+				astRunner:PopNode ()
+			else
+				-- Continue with next range
+				astRunner:PushState (-1)
+				astRunner:PushValue (range [1])
+			end
+		else
+			-- Continue with current range
+			astRunner:PushState (-1)
+		end
+	end
+end
+
 function self:GetBody ()
 	return self.Body
 end
@@ -69,7 +188,7 @@ end
 
 function self:SetLoopVariable (loopVariable)
 	self.LoopVariable = loopVariable
-	if self.LoopVariable then self.LoopVariable:SetParent (self) end
+	self.LoopVariableAssignment:SetLeftExpression (loopVariable)
 end
 
 function self:SetNamespace (namespaceDefinition)
@@ -102,4 +221,12 @@ function self:ToString ()
 		end
 	end
 	return "for (" .. loopVariable .. " = " .. range .. ")\n" .. bodyStatement
+end
+
+function self:Visit (astVisitor, ...)
+	local astOverride = astVisitor:VisitStatement (self, ...)
+	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	
+	self.LoopVariableAssignment:Visit (astVisitor, ...)
+	self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
 end

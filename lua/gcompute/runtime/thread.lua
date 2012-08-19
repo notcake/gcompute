@@ -50,7 +50,10 @@ function self:Start (...)
 	if self.Running then return false end
 	
 	self.Running = true
+	local _executionContext = _G.executionContext
+	_G.executionContext = self:GetExecutionContext ()
 	self:Function (...)
+	_G.executionContext = _executionContext
 end
 
 function self:Yield (resumeFunction)

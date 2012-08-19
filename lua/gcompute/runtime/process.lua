@@ -36,7 +36,7 @@ function self:SetNamespace (namespaceDefinition)
 end
 
 function self:Start ()
-	self.RuntimeNamespace = self.NamespaceDefinition:CreateRuntimeNamespace ()
+	self.RuntimeNamespace = self.NamespaceDefinition:CreateRuntimeObject ()
 	
 	local mainThread = self:CreateThread ()
 	mainThread:SetName ("Main Thread")

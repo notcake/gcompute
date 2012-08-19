@@ -10,6 +10,12 @@ function self:ctor (returnType, parameterList)
 	end
 end
 
+function self:GetFullName ()
+	local returnType = self.ReturnType and self.ReturnType:GetFullName () or "[Unknown Type]"
+	
+	return returnType .. " " .. self:GetParameterList ():ToString ()
+end
+
 function self:GetParameterList ()
 	return self.ParameterList
 end
@@ -25,6 +31,8 @@ end
 function self:SetReturnType (returnType)
 	if type (returnType) == "string" then
 		self.ReturnType = GCompute.DeferredNameResolution (returnType)
+	elseif returnType:IsAlias () then
+		self.ReturnType = returnType
 	elseif returnType:IsDeferredNameResolution () then
 		self.ReturnType = returnType
 	elseif returnType:IsType () then
@@ -35,7 +43,7 @@ function self:SetReturnType (returnType)
 end
 
 function self:ToString ()
-	local returnType = self.ReturnType and self.ReturnType:ToString () or "[Unknown Type]"
+	local returnType = self.ReturnType and self.ReturnType:GetFullName () or "[Unknown Type]"
 	
 	return returnType .. " " .. self:GetParameterList ():ToString ()
 end

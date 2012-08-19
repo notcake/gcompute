@@ -3,6 +3,10 @@ local String = Expression2:AddType ("string")
 	
 Expression2:AddFunction ("format", { { "string", "formatString" }, { "object", "..." } })
 	:SetReturnType ("string")
+	:SetNativeFunction (string.format)
+	
+Expression2:AddFunction ("print", { { "object", "..." } })
+	:SetNativeFunction (print)
 
 String:AddFunction ("upper")
 	:SetReturnType ("string")

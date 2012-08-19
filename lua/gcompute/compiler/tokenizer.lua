@@ -135,7 +135,7 @@ function self:ProcessSome ()
 	self.Line      = line
 	self.Character = character
 	
-	print ("Tokenizer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. ((self.Offset / self.Code:len ()) * 100) .. "%.")
+	print ("Tokenizer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. ((self.Offset / (self.Code:len () + 1)) * 100) .. "%.")
 	if self.Offset <= self.Code:len () then
 		timer.Simple (0,
 			function ()

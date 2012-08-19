@@ -16,6 +16,10 @@ function self:ctor (name, typeName)
 	end
 end
 
+function self:CreateRuntimeObject ()
+	return nil
+end
+
 --- Resolves the type of this variable
 function self:ResolveTypes (globalNamespace)
 	self.Type:Resolve (globalNamespace, self:GetContainingNamespace ())

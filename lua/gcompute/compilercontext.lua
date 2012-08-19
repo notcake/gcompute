@@ -130,22 +130,11 @@ if CLIENT then
 		print ("execution took " + ((systime () - a) * 1000) + " ms.");
 		print (n.GetHashCode ());
 	]]
+	--TestInput = file.Read ("expression2/prime_sieve.txt")
 	TestInput = [[
-		@name Test
-		
-		A = systime ()
-		for (I = 1, 100)
-		{
-			print (I)
-			continue
-		}
-		print ("execution took " + ((systime () - A) * 1000) + " ms.")
-	]]
-	TestInput = file.Read ("expression2/prime_sieve.txt")
-	--[[TestInput = [[
-		int n = 2;
+		local n:number = 2;
 		print ("n is " + n);
-		print ("n.GetHashCode () is " + n.GetHashCode ());
+		print ("n.GetHashCode () is " + n:GetHashCode ());
 	]]
 	--TestInput = "int a = 1; print(a);"
 	
@@ -197,8 +186,11 @@ if CLIENT then
 				Print ("Abstract Syntax Tree (serialized):")
 				Print (AST:ToString ())
 				
+				Print ("Namespace:")
+				Print (compilationGroup:GetNamespaceDefinition ():ToString ())
+				
 				local process = GCompute.Process ()
-				process:SetNamespace (compilationGroup:GetNamespace ())
+				process:SetNamespace (compilationGroup:GetNamespaceDefinition ())
 				process:Start ()
 			end
 		)

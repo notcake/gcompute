@@ -22,6 +22,10 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
+function self:CreateRuntimeObject ()
+	GCompute.Error ("ObjectDefinition:CreateRuntimeObject : Not implemented (" .. self:GetFullName () .. ")")
+end
+
 --- Gets the namespace definition containing this object
 -- @return The NamespaceDefinition containing this object
 function self:GetContainingNamespace ()
@@ -71,12 +75,6 @@ end
 function self:GetType ()
 	GCompute.Error (self.Name .. ":GetType : Not implemented.")
 	return nil
-end
-
---- Gets whether this object is an alias for another object
--- @return A boolean indicating whether this object is an alias for another object
-function self:IsAlias ()
-	return false
 end
 
 --- Gets whether this object is inaccessible from code in other files

@@ -6,7 +6,6 @@ function self:ctor (name)
 	self.Name = name
 	self.NameTable = nil
 	
-	self.LookupType = GCompute.AST.NameLookupType.Reference
 	self.ResolutionResults = GCompute.NameResolutionResults ()
 	self.ResultsPopulated = false
 end
@@ -33,16 +32,12 @@ function self:Evaluate (executionContext)
 	end
 end
 
-function self:GetLookupType ()
-	return self.LookupType
+function self:ExecuteAsAST (astRunner, state)
+	self.VariableReadPlan:ExecuteAsAST (astRunner, self, state)
 end
 
 function self:GetName ()
 	return self.Name
-end
-
-function self:SetLookupType (lookupType)
-	self.LookupType = lookupType
 end
 
 function self:SetName (name)
@@ -51,4 +46,8 @@ end
 
 function self:ToString ()
 	return self.Name or "[Identifier]"
+end
+
+function self:Visit (astVisitor, ...)
+	return astVisitor:VisitExpression (self, ...)
 end

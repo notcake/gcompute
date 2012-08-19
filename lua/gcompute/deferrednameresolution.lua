@@ -90,6 +90,13 @@ function self:Resolve ()
 	local matches = {}
 	local metadata = {}
 	local resolutionResults = self.ParsedName.ResolutionResults
+	
+	if not resolutionResults then
+		self.ErrorReporter:Error ("Cannot resolve " .. self.Name .. ": compiler bug.")
+		self:SetResolvedObject (nil)
+		return
+	end
+	
 	if resolutionResults:GetLocalResultCount () > 0 then
 		resolutionResults:FilterLocalResults ()
 		resolutionResults:ClearGlobalResults ()

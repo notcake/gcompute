@@ -21,6 +21,16 @@ function self:AddType (typeParameterList)
 	return self.Types [#self.Types]
 end
 
+--- Gets an iterator for this type group
+-- @return An iterator function returning the TypeDefinitions in this TypeGroup
+function self:GetEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Types [i]
+	end
+end
+
 --- Gets the type with the given index in this type group
 -- @param index The index of the type to be retrieved
 -- @return The TypeDefinition with the given index

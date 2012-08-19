@@ -4,6 +4,8 @@ GCompute.TypeDefinition = GCompute.MakeConstructor (self, GCompute.NamespaceDefi
 --- @param The name of this type
 -- @param typeParameterList A TypeParameterList describing the parameters the type takes or nil if the type is non-parametric
 function self:ctor (name, typeParameterList)
+	self.BaseTypes = {}
+
 	self.ImplicitCasts = {}
 	self.ExplicitCasts = {}
 	
@@ -18,18 +20,42 @@ function self:ctor (name, typeParameterList)
 	end
 end
 
+--- Adds a base type to this type definition
+-- @param baseType The base type to be added, as a string, DeferredNameResolution or Type
+function self:AddBaseType (baseType)
+	if type (baseType) == "string" then
+		baseType = GCompute.DeferredNameResolution (baseType, nil, nil, self)
+	end
+	
+	-- Check for cycles, duplicate base types
+	if baseType:IsType () then
+		if baseType:Equals (self) then
+			GCompute.Error ("TypeDefinition:AddBaseType : Cannot add base type " .. baseType:GetFullName () .. " to " .. self:GetFullName () .. " because they are the same type.")
+			return
+		elseif baseType:IsBaseType (self) then
+			GCompute.Error ("TypeDefinition:AddBaseType : Cannot add base type " .. baseType:GetFullName () .. " to " .. self:GetFullName () .. " because " .. baseType:GetFullName () .. " inherits from " .. self:GetFullName () .. ".")
+			return
+		elseif self:IsBaseType (baseType) then
+			GCompute.Error ("TypeDefinition:AddBaseType : " .. baseType:GetFullName () .. " is already a base type of " .. self:GetFullName () .. ".")
+			return
+		end
+	end
+	
+	self.BaseTypes [#self.BaseTypes + 1] = baseType
+end
+
 --- Adds a type cast operator to this type definition
--- @param destinationTypeName The destination type, as a string, DeferredNameResolution or Type
+-- @param destinationType The destination type, as a string, DeferredNameResolution or Type
 -- @param implicit A boolean indicating whether the cast is implicit (true) or explicit (false)
 -- @param nativeFunction (Optional) A function that performs the cast
-function self:AddCast (destinationTypeName, implicit, nativeFunction)
-	if type (destinationTypeName) == "string" then
-		destinationTypeName = GCompute.DeferredNameResolution (destinationTypeName)
+function self:AddCast (destinationType, implicit, nativeFunction)
+	if type (destinationType) == "string" then
+		destinationType = GCompute.DeferredNameResolution (destinationType, nil, nil, self)
 	end
 
-	local cast = GCompute.FunctionDefinition ((implicit and "implicit" or "explicit") .. " operator " .. destinationTypeName:GetFullName ())
+	local cast = GCompute.FunctionDefinition ((implicit and "implicit" or "explicit") .. " operator " .. destinationType:GetFullName ())
 	cast:SetContainingNamespace (self)
-	cast:SetReturnType (destinationTypeName)
+	cast:SetReturnType (destinationType)
 	cast:SetNativeFunction (nativeFunction)
 	
 	if implicit then
@@ -62,6 +88,42 @@ function self:AddNamespace (name)
 	return self:AddType (name)
 end
 
+function self:CanExplicitCastTo (destinationType)
+	for _, functionDefinition in ipairs (self.ExplicitCasts) do
+		if functionDefinition:GetReturnType ():Equals (destinationType) then
+			return true
+		end
+	end
+	return false
+end
+
+function self:CanImplicitCastTo (destinationType)
+	for _, functionDefinition in ipairs (self.ImplicitCasts) do
+		if functionDefinition:GetReturnType ():Equals (destinationType) then
+			return true
+		end
+	end
+	return false
+end
+
+function self:CreateRuntimeObject ()
+	return {}
+end
+
+function self:Equals (otherType)
+	otherType = otherType:UnwrapAlias ()
+	if self == otherType then return true end
+	return false
+end
+
+function self:GetBaseTypes ()
+	if #self.BaseTypes == 0 then
+		if self:IsTop () then return {} end
+		return { GCompute.Types.Top }
+	end
+	return self.BaseTypes
+end
+
 --- Gets the short name of this type
 -- @return The short name of this type
 function self:GetShortName ()
@@ -84,10 +146,31 @@ function self:GetTypeParameterList ()
 	return self.TypeParameterList
 end
 
+--- Returns whether this type derives from baseType
+-- @param baseType The base type to be checked
+-- @return A boolean indicating whether this type derives from baseType
+function self:IsBaseType (baseType)
+	baseType = baseType:UnwrapAlias ()
+	if baseType:GetFullName () == "Object" then return true end
+	
+	for _, type in ipairs (self.BaseTypes) do
+		if type:Equals (baseType) or type:IsBaseType (baseType) then
+			return true
+		end
+	end
+	return false
+end
+
 --- Returns whether this namespace definition has no members
 -- @return A boolean indicating whether this namespace definition has no members
 function self:IsEmpty ()
 	return next (self.Members) == nil and #self.ImplicitCasts == 0 and #self.ExplicitCasts == 0
+end
+
+--- Gets whether this object is a MergedTypeDefinition
+-- @return A boolean indicating whether this object is a MergedTypeDefinition
+function self:IsMergedTypeDefinition ()
+	return false
 end
 
 --- Gets whether this object is a TypeDefinition
@@ -98,12 +181,35 @@ end
 
 --- Resolves the types in this namespace
 function self:ResolveTypes (globalNamespace)
+	-- Resolve base types
+	for k, baseType in ipairs (self.BaseTypes) do
+		if baseType:IsDeferredNameResolution () then
+			baseType:Resolve ()
+			if baseType:IsFailedResolution () then
+				GCompute.Error ("TypeDefinition:ResolveTypes : Failed to resolve base type of " .. self:GetFullName () .. " : " .. baseType:GetFullName ())
+			elseif baseType:GetObject ():Equals (self) then
+				GCompute.Error ("TypeDefinition:ResolveTypes : Cannot add base type " .. baseType:GetFullName () .. " to " .. self:GetFullName () .. " because they are the same type.")
+			elseif baseType:GetObject ():IsBaseType (self) then
+				GCompute.Error ("TypeDefinition:ResolveTypes : Cannot add base type " .. baseType:GetFullName () .. " to " .. self:GetFullName () .. " because " .. baseType:GetFullName () .. " inherits from " .. self:GetFullName () .. ".")
+			elseif self:IsBaseType (baseType:GetObject ()) then
+				GCompute.Error ("TypeDefinition:ResolveTypes : " .. baseType:GetFullName () .. " is already a base type of " .. self:GetFullName () .. ".")
+			else
+				self.BaseTypes [k] = baseType:GetObject ()
+			end
+		end
+	end
+	
+	-- Resolve members
 	for name, memberDefinition in pairs (self.Members) do
 		memberDefinition:ResolveTypes (globalNamespace)
 	end
+	
+	-- Resolve implicit cast destination types
 	for _, implicitCastDefinition in ipairs (self.ImplicitCasts) do
 		implicitCastDefinition:ResolveTypes (globalNamespace)
 	end
+	
+	-- Resolve explicit cast destination types
 	for _, explicitCastDefinition in ipairs (self.ExplicitCasts) do
 		explicitCastDefinition:ResolveTypes (globalNamespace)
 	end

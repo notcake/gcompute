@@ -23,6 +23,17 @@ function self:Evaluate (executionContext)
 	return self.String
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- Discard StringLiteral
+	astRunner:PopNode ()
+	
+	astRunner:PushValue (self.String)
+end
+
 function self:ToString ()
 	return "\"" .. GCompute.String.Escape (self.String) .. "\""
+end
+
+function self:Visit (astVisitor, ...)
+	return astVisitor:VisitExpression (self, ...)
 end

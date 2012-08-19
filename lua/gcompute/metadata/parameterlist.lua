@@ -7,6 +7,8 @@ function self:ctor (parameters)
 	self.ParameterNames = {}
 	self.ParameterDocumentation = {}
 	
+	self.VarArgs = false
+	
 	if parameters then
 		for _, parameter in ipairs (parameters) do
 			self:AddParameter (parameter [1], parameter [2])
@@ -19,9 +21,16 @@ end
 -- @param parameterName (Optional) The name of the parameter
 -- @return The id of the newly added parameter
 function self:AddParameter (parameterType, parameterName)
+	if self.VarArgs then
+		GCompute.Error ("ParameterList:AddParameter : Parameter list has already been terminated by a varargs parameter.")
+		return
+	end
+
 	self.ParameterCount = self.ParameterCount + 1
 	self:SetParameterType (self.ParameterCount, parameterType)
 	self.ParameterNames [self.ParameterCount] = parameterName
+	
+	if parameterName == "..." then self.VarArgs = true end
 	
 	return self.ParameterCount
 end
@@ -95,6 +104,15 @@ function self:IsEmpty ()
 	return self.ParameterCount == 0
 end
 
+--- Returns a boolean indicating whether this parameter list can match the given argument count
+-- @param argumentCount The argument count to be matched against
+-- @return A boolean indicating whether this parameter list can match the given argument count
+function self:MatchesArgumentCount (argumentCount)
+	if not self.VarArgs then return self:GetParameterCount () == argumentCount end
+	
+	return argumentCount >= self:GetParameterCount () - 1
+end
+
 --- Resolves the types of all parameters in this parameter list
 function self:ResolveTypes (globalNamespace, localNamespace)
 	for i = 1, #self.ParameterTypes do
@@ -102,6 +120,9 @@ function self:ResolveTypes (globalNamespace, localNamespace)
 			self.ParameterTypes [i]:SetGlobalNamespace (globalNamespace)
 			self.ParameterTypes [i]:SetLocalNamespace (localNamespace)
 			self.ParameterTypes [i]:Resolve ()
+			if not self.ParameterTypes [i]:IsFailedResolution () then
+				self.ParameterTypes [i] = self.ParameterTypes [i]:GetObject ()
+			end
 		end
 	end
 end

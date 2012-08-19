@@ -12,7 +12,6 @@ function self:ctor (process, thread)
 	self.ContinueFlag = false
 	self.ReturnFlag = false
 	self.ReturnValue = nil
-	self.ReturnValueReference = nil
 end
 
 function self:Break ()
@@ -48,16 +47,18 @@ function self:ClearReturn ()
 	self.InterruptFlag = false
 	
 	local returnValue = self.ReturnValue
-	local returnValueReference = self.ReturnValueReference
 	
 	self.ReturnValue = nil
-	self.ReturnValueReference = nil
 	
-	return returnValue, returnValueReference
+	return returnValue
 end
 
 function self:Error (message)
 	ErrorNoHalt (message .. "\n")
+end
+
+function self:GetRuntimeNamespace ()
+	return self.Process:GetRuntimeNamespace ()
 end
 
 function self:GetProcess ()
@@ -65,16 +66,15 @@ function self:GetProcess ()
 end
 
 function self:GetReturnValue ()
-	return self.ReturnValue, self.ReturnValueReference
+	return self.ReturnValue
 end
 
 function self:GetThread ()
 	return self.Thread
 end
 
-function self:Return (value, reference)
+function self:Return (value)
 	self.ReturnValue = value
-	self.ReturnValueReference = reference
 	
 	self.ReturnFlag = true
 	self.InterruptFlag = true

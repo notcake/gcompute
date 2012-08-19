@@ -16,6 +16,16 @@ function self:AddFunction (parameterList, typeParameterList)
 	return self.Functions [#self.Functions]
 end
 
+--- Gets an iterator for this function group
+-- @return An iterator function returning the FunctionDefinitions in this FunctionGroup
+function self:GetEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Functions [i]
+	end
+end
+
 --- Gets the function with the given index in this function group
 -- @param index The index of the function to be retrieved
 -- @return The FunctionDefinition with the given index

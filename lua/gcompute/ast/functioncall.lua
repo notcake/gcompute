@@ -68,11 +68,12 @@ end
 
 function self:ExecuteAsAST (astRunner, state)
 	-- State 0: Evaluate left
-	-- State 2+: Evaluate arguments
-	-- State 1: Call
+	-- State 1: Nothing
+	-- State 3+: Evaluate arguments
+	-- State 2: Call
 	if state == 0 then
-		-- Return to state 2
-		astRunner:PushState (2)
+		-- Return to state 3
+		astRunner:PushState (3)
 		
 		local functionCallPlan = self.FunctionCallPlan
 		if functionCallPlan:GetFunctionDefinition () then
@@ -84,7 +85,7 @@ function self:ExecuteAsAST (astRunner, state)
 			astRunner:PushNode (self:GetLeftExpression ())
 			astRunner:PushState (0)
 		end
-	elseif state == 1 then
+	elseif state == 2 then
 		-- Discard FunctionCall
 		astRunner:PopNode ()
 		
@@ -103,11 +104,22 @@ function self:ExecuteAsAST (astRunner, state)
 		if func then
 			astRunner:PushValue (func (unpack (arguments)))
 		elseif functionDefinition then
-			local block = functionDefinition:GetBlock ()
+			local functionDeclaration = functionDefinition:GetFunctionDeclaration ()
+			local namespace = functionDeclaration:GetNamespace ()
+			local mergedLocalScope = namespace:GetMergedLocalScope ()
+			local block = functionDeclaration:GetBody ()
 			if block then
-				astRunner:PushNode (functionDefinition:GetBlock ())
+				if mergedLocalScope then
+					local stackFrame = mergedLocalScope:CreateStackFrame ()
+					executionContext:PushStackFrame (stackFrame)
+					
+					for i = 1, functionDefinition:GetParameterCount () do
+						stackFrame [mergedLocalScope:GetRuntimeName (namespace:GetMember (functionDefinition:GetParameterName (i)))] = arguments [i]
+					end
+				end
+			
+				astRunner:PushNode (block)
 				astRunner:PushState (0)
-				astRunner:PushValue (arguments)
 			else
 				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
 			end
@@ -115,15 +127,15 @@ function self:ExecuteAsAST (astRunner, state)
 			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
 		end
 	else
-		if state - 1 <= self:GetArgumentCount () then
+		if state - 2 <= self:GetArgumentCount () then
 			astRunner:PushState (state + 1)
 			
 			-- Expression, state 0
-			astRunner:PushNode (self:GetArgument (state - 1))
+			astRunner:PushNode (self:GetArgument (state - 2))
 			astRunner:PushState (0)
 		else
 			-- No more arguments
-			astRunner:PushState (1)
+			astRunner:PushState (2)
 		end
 	end
 end

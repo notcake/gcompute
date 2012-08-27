@@ -11,8 +11,9 @@ function self:ctor ()
 	
 	self.VariableDefinition = nil
 	
-	self.Static = false
+	self.Auto = false
 	self.Local = false
+	self.Static = false
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -55,12 +56,24 @@ function self:GetVariableDefinition ()
 	return self.VariableDefinition
 end
 
+function self:IsAuto ()
+	return self.Auto
+end
+
 function self:IsLocal ()
 	return self.Local
 end
 
 function self:IsStatic ()
 	return self.Static
+end
+
+function self:SetAuto (auto)
+	self.Auto = auto
+end
+
+function self:SetLocal (isLocal)
+	self.Local = isLocal
 end
 
 function self:SetName (name)
@@ -72,12 +85,16 @@ function self:SetRightExpression (rightExpression)
 	if self.RightExpression then self.RightExpression:SetParent (self) end
 end
 
-function self:SetLocal (isLocal)
-	self.Local = isLocal
-end
-
 function self:SetStatic (static)
 	self.Static = static
+end
+
+function self:SetType (type)
+	self.Type = type
+	
+	if self.VariableDefinition then
+		self.VariableDefinition:SetType (type)
+	end
 end
 
 function self:SetTypeExpression (typeExpression)
@@ -85,7 +102,7 @@ function self:SetTypeExpression (typeExpression)
 	if self.TypeExpression then
 		self.TypeExpression:SetParent (self)
 	end
-	self.Type = GCompute.DeferredNameResolution (self.TypeExpression)
+	self.Type = self.TypeExpression and GCompute.DeferredNameResolution (self.TypeExpression) or nil
 end
 
 function self:SetVariableDefinition (variableDefinition)
@@ -93,13 +110,17 @@ function self:SetVariableDefinition (variableDefinition)
 end
 
 function self:ToString ()
-	local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or "[Unknown Type]"
+	local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or nil
+	typeExpression = self.Type and "[" .. self.Type:GetFullName () .. "]" or "[Unknown Type]"
 	local variableDeclaration = "[VariableDeclaration]\n"
 	if self.Local then
 		variableDeclaration = variableDeclaration .. "local "
 	end
 	if self.Static then
 		variableDeclaration = variableDeclaration .. "static "
+	end
+	if self.Auto then
+		variableDeclaration = variableDeclaration .. "auto "
 	end
 	variableDeclaration = variableDeclaration .. typeExpression .. " " .. self.Name
 	if self.RightExpression then
@@ -109,13 +130,13 @@ function self:ToString ()
 end
 
 function self:Visit (astVisitor, ...)
-	local astOverride = astVisitor:VisitStatement (self, ...)
-	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
-	
 	if self:GetTypeExpression () then
 		self:SetTypeExpression (self:GetTypeExpression ():Visit (astVisitor, ...) or self:GetTypeExpression ())
 	end
 	if self:GetRightExpression () then
 		self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
 	end
+	
+	local astOverride = astVisitor:VisitStatement (self, ...)
+	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
 end

@@ -80,11 +80,11 @@ function self:OutputMessages (outputFunction)
 	
 	for _, messageEntry in ipairs (self.Messages) do
 		if messageEntry.Character then
-			outputFunction ("Line " .. messageEntry.Line .. ", char " .. messageEntry.Character .. ": " .. messageEntry.Message)
+			outputFunction ("Line " .. messageEntry.Line .. ", char " .. messageEntry.Character .. ": " .. messageEntry.Message, messageEntry.MessageType)
 		elseif messageEntry.Line then
-			outputFunction ("Line " .. messageEntry.Line .. ": " .. messageEntry.Message)
+			outputFunction ("Line " .. messageEntry.Line .. ": " .. messageEntry.Message, messageEntry.MessageType)
 		else
-			outputFunction (messageEntry.Message)
+			outputFunction (messageEntry.Message, messageEntry.MessageType)
 		end
 	end
 end
@@ -192,7 +192,7 @@ function self:Parse (callback)
 	for _, v in ipairs (self.ParserJobQueue) do
 		actionChain:Add (
 			function (callback)
-				print ("Parsing from line " .. v.Start.Line .. ", char " .. v.Start.Character .. " to line " .. v.End.Line .. ", char " .. v.End.Character .. ".")
+				self:Debug ("Parsing from line " .. v.Start.Line .. ", char " .. v.Start.Character .. " to line " .. v.End.Line .. ", char " .. v.End.Character .. ".")
 				local parseTree = parser:Process (self.Tokens, v.Start, v.End)
 				self.Tokens:RemoveRange (v.Start, v.End)
 				local tokenNode = self.Tokens:AddAfter (v.Start.Previous, "pre-parsed ast")

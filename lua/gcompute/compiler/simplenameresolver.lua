@@ -4,8 +4,9 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 --[[
 	SimpleNameResolver
 	
-	Resolves using directives
-	Resolves names
+	1. Resolves using directives
+	2. Resolves names
+	3. Updates the type of function parameters in FunctionRoot NamespaceDefinitions
 ]]
 
 function self:ctor (compilationUnit)
@@ -38,6 +39,10 @@ function self:VisitStatement (statement)
 	if statement:HasNamespace () then
 		self:ResolveUsings (statement)
 	end
+	
+	if statement:Is ("FunctionDeclaration") then
+		self:VisitFunction (statement)
+	end
 end
 
 function self:VisitExpression (expression, referenceNamespace)
@@ -51,13 +56,32 @@ function self:VisitExpression (expression, referenceNamespace)
 		local leftResults = expression:GetLeftExpression ().ResolutionResults
 		local identifier = expression:GetIdentifier () -- either an Identifier or ParametricIdentifier
 		if not identifier then
-			self.CompilationUnit:Error ("NameIndex has no Identifier (" .. expression .. ")", expression:GetLocation ())
+			self.CompilationUnit:Error ("NameIndex has no Identifier (" .. expression:ToString () .. ")", expression:GetLocation ())
 			return
 		end
 		local name = identifier:GetName ()
 		for i = 1, leftResults:GetGlobalResultCount () do
 			local result = leftResults:GetGlobalResult (i).Result
 			self.NameResolver:LookupQualifiedIdentifier (result, name, resolutionResults)
+		end
+	elseif expression:Is ("AnonymousFunction") then
+		self:VisitFunction (expression)
+	end
+end
+
+function self:VisitFunction (func)
+	local resolutionResults = func:GetReturnTypeExpression ().ResolutionResults
+	
+	local functionDefinition = func:GetFunctionDefinition ()
+	local namespace = func:GetNamespace ()
+
+	-- Force early resolution of the parameter types, since we'll need them
+	functionDefinition:ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition ())
+	
+	local parameterList = func:GetParameterList ()
+	for parameterType, parameterName in parameterList:GetEnumerator () do
+		if parameterType then
+			namespace:GetMember (parameterName):SetType (parameterType)
 		end
 	end
 end

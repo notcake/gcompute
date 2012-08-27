@@ -7,6 +7,7 @@ GCompute.Types.Bottom = nil
 
 include ("glib/glib.lua")
 GLib.Import (GCompute)
+GCompute.EventProvider (GCompute)
 -- GCompute.AddCSLuaFolderRecursive ("gcompute")
 
 GCompute.GlobalNamespace = nil
@@ -108,6 +109,7 @@ include ("metadata/aliasdefinition.lua")
 include ("metadata/namespacedefinition.lua")
 include ("metadata/typedefinition.lua")
 include ("metadata/functiondefinition.lua")
+include ("metadata/constructordefinition.lua")
 include ("metadata/overloadedtypedefinition.lua")
 include ("metadata/overloadedfunctiondefinition.lua")
 include ("metadata/variabledefinition.lua")
@@ -117,6 +119,9 @@ include ("metadata/mergedoverloadedfunctiondefinition.lua")
 include ("metadata/typeparameterlist.lua")
 include ("metadata/parameterlist.lua")
 include ("metadata/usingdirective.lua")
+
+include ("metadata/mergedlocalscope.lua")
+
 include ("reflection/memberinfo.lua")
 include ("reflection/membertypes.lua")
 
@@ -138,9 +143,16 @@ include ("languages/expression2.lua")
 
 -- runtime
 include ("astrunner.lua")
+include ("runtime/processlist.lua")
 include ("runtime/process.lua")
 include ("runtime/thread.lua")
 include ("runtime/module.lua")
+
+include ("runtime/localprocesslist.lua")
+
+-- native code emission
+include ("nativegen/icodeemitter.lua")
+include ("nativegen/luaemitter.lua")
 
 GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
 GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
@@ -149,4 +161,9 @@ include ("corelibrary.lua")
 GCompute.IncludeDirectory ("gcompute/libraries", true)
 GCompute.GlobalNamespace:ResolveTypes (GCompute.GlobalNamespace)
 
-GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute")
+if CLIENT then
+	include ("gooey/sh_init.lua")
+	GCompute.IncludeDirectory ("gcompute/ui")
+end
+
+GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")

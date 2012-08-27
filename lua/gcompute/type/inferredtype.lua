@@ -83,8 +83,16 @@ function self:Equals (other)
 	return self == other
 end
 
+function self:GetBaseTypes ()
+	return { GCompute.Types.Object }
+end
+
 function self:GetFullName ()
 	return "[InferredType " .. tostring (self):sub (8) .. "]"
+end
+
+function self:GetTypeDefinition ()
+	return GCompute.Types.Object:GetTypeDefinition ()
 end
 
 function self:IsInferredType ()

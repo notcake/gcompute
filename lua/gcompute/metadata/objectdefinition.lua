@@ -70,7 +70,7 @@ function self:GetShortName ()
 	return self:GetName () or "[Unnamed]"
 end
 
---- Returns the type of this object
+--- Returns the Type of this object
 -- @return A Type representing the type of this object
 function self:GetType ()
 	GCompute.Error (self.Name .. ":GetType : Not implemented.")

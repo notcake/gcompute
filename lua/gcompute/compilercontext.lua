@@ -106,36 +106,31 @@ if CLIENT then
 		}
 	]]
 	TestInput = [[
-		float a = systime ();
+		local a = systime ();
 	
-		int sum (int a, int b)
+		function number sum (a, b)
 		{
-			int result = 0;
-			for (int i = a; i <= b; i++)
+			local result = 0;
+			for (local i = a, b)
 			{
 				result += i;
 			}
 			return result;
 		}
 		
-		int factorial (int n)
+		function number factorial (n)
 		{
 			if (n <= 1) { return 1; }
 			return factorial (n - 1) * n;
 		}
 		
-		int n = 5;
-		print ("sum is " + sum (1000, 2000));
+		local n = 5;
+		print ("sum is " + sum (1000, 1020));
 		print ("factorial(" + n + ") is " + factorial (n));
 		print ("execution took " + ((systime () - a) * 1000) + " ms.");
-		print (n.GetHashCode ());
+		print (n:GetHashCode ());
 	]]
 	--TestInput = file.Read ("expression2/prime_sieve.txt")
-	TestInput = [[
-		local n:number = 2;
-		print ("n is " + n);
-		print ("n.GetHashCode () is " + n:GetHashCode ());
-	]]
 	--TestInput = "int a = 1; print(a);"
 	
 	concommand.Add ("gcompute_test_compiler", function (ply, _, args)
@@ -153,6 +148,11 @@ if CLIENT then
 		
 		GCompute.PrintDebug = function (msg)
 			Print (msg)
+			GCompute.E2Pipe.Print (msg)
+		end
+		
+		GCompute.PrintError = function (msg)
+			ErrorNoHalt (msg .. "\n")
 			GCompute.E2Pipe.Print (msg)
 		end
 		
@@ -180,16 +180,25 @@ if CLIENT then
 				
 				local AST = compilationUnit.AST
 				
-				compilationUnit:OutputMessages (GCompute.PrintDebug)
+				compilationUnit:OutputMessages (
+					function (message, messageType)
+						if messageType == GCompute.MessageType.Error then
+							GCompute.PrintError (message)
+						else
+							GCompute.PrintDebug (message)
+						end
+					end
+				)
 				GCompute.PrintDebug (compilationGroup:ComputeMemoryUsage ():ToString ())
 				
-				Print ("Abstract Syntax Tree (serialized):")
-				Print (AST:ToString ())
+				GCompute.PrintDebug ("Abstract Syntax Tree (serialized):")
+				GCompute.PrintDebug (AST:ToString ())
 				
 				Print ("Namespace:")
 				Print (compilationGroup:GetNamespaceDefinition ():ToString ())
 				
-				local process = GCompute.Process ()
+				local process = GCompute.LocalProcessList:CreateProcess ()
+				process:SetName (sourceFile:GetPath ())
 				process:SetNamespace (compilationGroup:GetNamespaceDefinition ())
 				process:Start ()
 			end

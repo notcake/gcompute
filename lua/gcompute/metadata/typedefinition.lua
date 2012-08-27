@@ -6,6 +6,7 @@ GCompute.TypeDefinition = GCompute.MakeConstructor (self, GCompute.NamespaceDefi
 function self:ctor (name, typeParameterList)
 	self.BaseTypes = {}
 
+	self.Constructors = {}
 	self.ImplicitCasts = {}
 	self.ExplicitCasts = {}
 	
@@ -53,7 +54,8 @@ function self:AddCast (destinationType, implicit, nativeFunction)
 		destinationType = GCompute.DeferredNameResolution (destinationType, nil, nil, self)
 	end
 
-	local cast = GCompute.FunctionDefinition ((implicit and "implicit" or "explicit") .. " operator " .. destinationType:GetFullName ())
+	local fullName = destinationType:IsDeferredNameResolution () and destinationType:GetName () or destinationType:GetFullName ()
+	local cast = GCompute.FunctionDefinition ((implicit and "implicit" or "explicit") .. " operator " .. fullName)
 	cast:SetContainingNamespace (self)
 	cast:SetReturnType (destinationType)
 	cast:SetNativeFunction (nativeFunction)
@@ -65,6 +67,17 @@ function self:AddCast (destinationType, implicit, nativeFunction)
 	end
 	
 	return cast
+end
+
+function self:AddConstructor (parameterList)
+	local constructorDefinition = GCompute.ConstructorDefinition (self:GetName (), parameterList)
+	constructorDefinition:SetReturnType (self)
+	constructorDefinition:SetContainingNamespace (self)
+	constructorDefinition:SetMemberStatic (true)
+	
+	self.Constructors [#self.Constructors + 1] = constructorDefinition
+	
+	return constructorDefinition
 end
 
 --- Adds an implicit type cast operator to this type definition
@@ -86,6 +99,16 @@ end
 -- @return The new TypeDefinition
 function self:AddNamespace (name)
 	return self:AddType (name)
+end
+
+function self:CanConstructFrom (sourceType)
+	local argumentTypeArray = { sourceType }
+	for _, constructorDefinition in ipairs (self.Constructors) do
+		if constructorDefinition:CanAcceptArgumentTypes (argumentTypeArray) then
+			return true
+		end
+	end
+	return false
 end
 
 function self:CanExplicitCastTo (destinationType)
@@ -134,6 +157,12 @@ function self:GetShortName ()
 	end
 end
 
+--- Returns the Type of this object
+-- @return A Type representing the type of this object
+function self:GetType ()
+	return GCompute.Types.Type
+end
+
 --- Gets the type definition for this type
 -- @return The TypeDefinition for this type
 function self:GetTypeDefinition ()
@@ -164,7 +193,7 @@ end
 --- Returns whether this namespace definition has no members
 -- @return A boolean indicating whether this namespace definition has no members
 function self:IsEmpty ()
-	return next (self.Members) == nil and #self.ImplicitCasts == 0 and #self.ExplicitCasts == 0
+	return #self.Constructors == 0 and next (self.Members) == nil and #self.ImplicitCasts == 0 and #self.ExplicitCasts == 0
 end
 
 --- Gets whether this object is a MergedTypeDefinition
@@ -199,6 +228,11 @@ function self:ResolveTypes (globalNamespace)
 		end
 	end
 	
+	-- Resolve constructor types
+	for _, constructorDefinition in ipairs (self.Constructors) do
+		constructorDefinition:ResolveTypes (globalNamespace)
+	end
+	
 	-- Resolve members
 	for name, memberDefinition in pairs (self.Members) do
 		memberDefinition:ResolveTypes (globalNamespace)
@@ -225,12 +259,28 @@ function self:ToString ()
 	
 	if not self:IsEmpty () then
 		typeDefinition = typeDefinition .. "\n{\n"
+		local newlineRequired = false
+		
+		if #self.Constructors > 0 then
+			typeDefinition = typeDefinition .. "    // Constructors\n"
+			newlineRequired = true
+		end
+		for _, constructorDefinition in ipairs (self.Constructors) do
+			typeDefinition = typeDefinition .. "    " .. constructorDefinition:ToString ():gsub ("\n", "\n    ") .. "\n"
+		end
+		
+		if next (self.Members) then
+			if newlineRequired then typeDefinition = typeDefinition .. "    \n" end
+			newlineRequired = true
+		end
 		for name, memberDefinition in pairs (self.Members) do
 			typeDefinition = typeDefinition .. "    " .. memberDefinition:ToString ():gsub ("\n", "\n    ") .. "\n"
 		end
-	
-		if #self.ImplicitCasts + #self.ExplicitCasts > 0 and next (self.Members) then
-			typeDefinition = typeDefinition .. "    \n"
+		
+		if #self.ImplicitCasts > 0 or #self.ExplicitCasts > 0 then
+			if newlineRequired then typeDefinition = typeDefinition .. "    \n" end
+			typeDefinition = typeDefinition .. "    // Casts\n"
+			newlineRequired = true
 		end
 		for _, implicitCastDefinition in ipairs (self.ImplicitCasts) do
 			typeDefinition = typeDefinition .. "    " .. implicitCastDefinition:ToString ():gsub ("\n", "\n    ") .. "\n"

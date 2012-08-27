@@ -11,9 +11,12 @@ end
 -- @param typeParamterList A TypeParameterList describing the type parameters the function takes or nil if the function is non-type-parametric
 -- @return The new FunctionDefinition
 function self:AddFunction (parameterList, typeParameterList)
-	self.Functions [#self.Functions + 1] = GCompute.FunctionDefinition (self:GetName (), parameterList, typeParameterList)
-	self.Functions [#self.Functions]:SetContainingNamespace (self:GetContainingNamespace ())
-	return self.Functions [#self.Functions]
+	local functionDefinition = GCompute.FunctionDefinition (self:GetName (), parameterList, typeParameterList)
+	functionDefinition:SetContainingNamespace (self:GetContainingNamespace ())
+	
+	self.Functions [#self.Functions + 1] = functionDefinition
+	
+	return functionDefinition
 end
 
 --- Gets an iterator for this function group

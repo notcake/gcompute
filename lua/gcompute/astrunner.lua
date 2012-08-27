@@ -27,6 +27,7 @@ function self:PeekValue (offset)
 end
 
 function self:PopNode ()
+	-- print (string.rep (" ", self.NodeStack.Count - 1) .. "POP: " .. self.NodeStack.Top:ToString ())
 	return self.NodeStack:Pop ()
 end
 
@@ -35,10 +36,12 @@ function self:PopState ()
 end
 
 function self:PopValue ()
+	-- print (string.rep (" ", self.ValueStack.Count - 1) .. "POP: " .. tostring (self.ValueStack.Top))
 	return self.ValueStack:Pop ()
 end
 
 function self:PushNode (astNode)
+	-- print (string.rep (" ", self.NodeStack.Count) .. "PUSH: " .. astNode:ToString ())
 	self.NodeStack:Push (astNode)
 end
 
@@ -47,6 +50,7 @@ function self:PushState (state)
 end
 
 function self:PushValue (value)
+	-- print (string.rep (" ", self.ValueStack.Count) .. "PUSH: " .. tostring (value))
 	self.ValueStack:Push (value)
 end
 

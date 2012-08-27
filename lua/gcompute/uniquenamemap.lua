@@ -16,13 +16,23 @@ function self:AddObject (object)
 		self.UsedNames [baseName] = true
 	else
 		local i = 0
-		while true do
-			if not self.UsedNames [baseName .. "_" .. tostring (i)] then
-				self.NameMap [object] = baseName .. "_" .. tostring (i)
-				self.UsedNames [baseName .. "_" .. tostring (i)] = true
-			end
+		while self.UsedNames [baseName .. "_" .. tostring (i)] do
+			i = i + 1
 		end
+		self.NameMap [object] = baseName .. "_" .. tostring (i)
+		self.UsedNames [baseName .. "_" .. tostring (i)] = true
 	end
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Unique Name Maps", self)
+	memoryUsageReport:CreditTableStructure ("Unique Name Maps", self.NameMap)
+	memoryUsageReport:CreditTableStructure ("Unique Name Maps", self.UsedNames)
+	
+	return memoryUsageReport
 end
 
 function self:GetObjectName (object)

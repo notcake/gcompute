@@ -26,6 +26,7 @@ function self:ctor ()
 	self.StatementCount = 0
 	
 	self.NamespaceDefinition = nil -- NamespaceDefinition or TypeDefinition
+	self.PopStackFrame = false
 end
 
 function self:AddStatement (node)	
@@ -79,15 +80,33 @@ end
 
 function self:ExecuteAsAST (astRunner, state)
 	if executionContext.InterruptFlag then
+		if self:GetMergedLocalScope () or self.PopStackFrame then
+			executionContext:PopStackFrame ()
+		end
+		
 		astRunner:PopNode ()
+		
+		if executionContext.ReturnFlag and self:GetBlockType () == GCompute.AST.BlockType.Function then
+			astRunner:PushValue (executionContext:ClearReturn ())
+		end
 		return
 	end
 	
 	astRunner:PushState (state + 1)
 	
-	if state > 0 and self:GetStatement (state):Is ("Expression") then
-		-- Discard last expression value
-		astRunner:PopValue ()
+	if state == 0 and self:GetMergedLocalScope () and self:GetBlockType () ~= GCompute.AST.BlockType.Function then
+		executionContext:PushStackFrame (self:GetMergedLocalScope ():CreateStackFrame ())
+	end
+	
+	if state > 0 then
+		local statement = self:GetStatement (state)
+		if statement:Is ("Expression") then
+			-- Discard last Expression value
+			astRunner:PopValue ()
+		elseif statement:Is ("VariableDeclaration") and statement:GetRightExpression () then
+			-- Discard BinaryAssignmentOperator value
+			astRunner:PopValue ()
+		end
 	end
 	
 	if state >= self:GetStatementCount () then
@@ -109,6 +128,10 @@ function self:GetEnumerator ()
 		i = i + 1
 		return self.Statements [i]
 	end
+end
+
+function self:GetMergedLocalScope ()
+	return self:GetNamespace () and self:GetNamespace ():GetMergedLocalScope ()
 end
 
 function self:GetNamespace ()
@@ -155,21 +178,32 @@ function self:SetOptimizedBlock (optimizedBlock)
 	self.OptimizedBlock = optimizedBlock
 end
 
+function self:SetPopStackFrame (popStackFrame)
+	self.PopStackFrame = popStackFrame
+end
+
 function self:SetStatement (index, statement)
 	self.Statements [index] = statement
 end
 
 function self:ToString ()
-	local content = ""
+	local block = "[" .. (BlockTypeLookup [self.BlockType] or "?") .. "]\n{\n"
+	if self.NamespaceDefinition and not self.NamespaceDefinition:IsEmpty () then
+		block = block .. "    " .. self.NamespaceDefinition:ToString ():gsub ("\n", "\n    ") .. "\n    \n"
+	end
+	
+	local contents = {}
 	for item in self:GetEnumerator () do
-		content = content .. "\n    " .. item:ToString ():gsub ("\n", "\n    ")
+		local content = "    " .. item:ToString ():gsub ("\n", "\n    ")
 		if item.Is then
 			if item:Is ("Expression") or item:Is ("VariableDeclaration") or item:Is ("Control") then
 				content = content .. ";"
 			end
 		end
+		contents [#contents + 1] = content
 	end
-	return "[" .. (BlockTypeLookup [self.BlockType] or "?") .. "]\n{" .. content .. "\n}"
+	block = block .. table.concat (contents, "\n") .. "\n}"
+	return block
 end
 
 function self:Visit (astVisitor, ...)

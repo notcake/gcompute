@@ -23,13 +23,14 @@ end
 
 --- Returns the compatibility rating of the given number and types of arguments with this FunctionDefinition
 -- @param argumentTypeArray An array of argument Types
+-- @return A boolean indicating whether this FunctionDefinition can accept the given argument type list
 -- @return A number indicating how compatible this FunctionDefinition is with the given argument type list
 function self:CanAcceptArgumentTypes (argumentTypeArray)
 	-- Bail out if the function cannot accept the given number of arguments
 	if self:IsMemberFunction () then
-		if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray - 1) then return -math.huge end
+		if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray - 1) then return false, -math.huge end
 	else
-		if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray) then return -math.huge end
+		if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray) then return false, -math.huge end
 	end
 
 	-- Check first argument
@@ -37,7 +38,7 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 	if self:IsMemberFunction () then
 		if not argumentTypeArray [1]:CanConvertTo (self:GetContainingNamespace (), GCompute.TypeConversionMethod.ImplicitConversion) then
 			print ("Argument " .. 1 .. ", " .. 0 .. ": " .. argumentTypeArray [1]:GetFullName () .. " and " .. self:GetContainingNamespace ():GetFullName ())
-			return -math.huge
+			return false, -math.huge
 		end
 		argumentTypeArrayIndex = 2
 	end
@@ -51,7 +52,7 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 		local argumentType = argumentTypeArray [argumentTypeArrayIndex]:UnwrapAlias ()
 		if not argumentType:CanConvertTo (parameterList:GetParameterType (i), GCompute.TypeConversionMethod.ImplicitConversion) then
 			print ("Argument " .. argumentTypeArrayIndex .. ", " .. i .. ": " .. argumentTypeArray [argumentTypeArrayIndex]:GetFullName () .. " and " .. parameterList:GetParameterType (i):GetFullName ())
-			return -math.huge
+			return false, -math.huge
 		end
 		if i == parameterCount then
 			-- vararg function, match remaining given parameter types against final defined parameter type
@@ -61,7 +62,7 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 		argumentTypeArrayIndex = argumentTypeArrayIndex + 1
 	end
 	
-	return compatibility
+	return true, compatibility
 end
 
 function self:CreateRuntimeObject ()
@@ -86,10 +87,18 @@ function self:GetNativeString ()
 	return self.NativeString
 end
 
+function self:GetParameterCount ()
+	return self.ParameterList:GetParameterCount ()
+end
+
 --- Gets the parameter list of this function
 -- @return The parameter list of this function
 function self:GetParameterList ()
 	return self.ParameterList
+end
+
+function self:GetParameterName (index)
+	return self.ParameterList:GetParameterName (index)
 end
 
 --- Gets the return type of this function as a DeferredNameResolution or Type
@@ -137,7 +146,8 @@ end
 
 --- Resolves the return type and paremeter types of this function
 function self:ResolveTypes (globalNamespace)
-	if self:GetReturnType () then
+	local returnType = self:GetReturnType ()
+	if returnType and returnType:IsDeferredNameResolution () then
 		self:GetReturnType ():Resolve ()
 		if not self:GetReturnType ():IsFailedResolution () then
 			self:SetReturnType (self:GetReturnType ():GetObject ())
@@ -179,7 +189,7 @@ function self:SetReturnType (returnType)
 		elseif returnType:IsType () then
 			self.ReturnType = returnType
 		else
-			GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredNameResolution or Type")
+			GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredNameResolution or Type (" .. returnType:ToString () .. ")")
 		end
 	end
 	return self

@@ -56,7 +56,10 @@ end
 
 function self:SetBody (blockStatement)
 	self.Body = blockStatement
-	if self.Body then self.Body:SetParent (self) end
+	if self.Body then
+		self.Body:SetBlockType (GCompute.AST.BlockType.Function)
+		self.Body:SetParent (self)
+	end
 end
 
 function self:SetFunctionDefinition (functionDefinition)
@@ -82,4 +85,26 @@ function self:ToString ()
 	local body = self.Body and self.Body:ToString () or "[Unknown Statement]"
 	
 	return returnTypeExpression .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
+end
+
+function self:Visit (astVisitor, ...)
+	for i = 1, self:GetParameterCount () do
+		local parameterType = self:GetParameterType (i)
+		local newParameterType = nil
+		if parameterType:IsDeferredNameResolution () then
+			newParameterType = parameterType:GetParsedName ():Visit (astVisitor, ...)
+		end
+		if newParameterType and newParameterType ~= parameterType then
+			self:SetParameterType (i, newParameterType)
+		end
+	end
+	
+	if self:GetReturnTypeExpression () then
+		self:SetReturnTypeExpression (self:GetReturnTypeExpression ():Visit (astVisitor, ...) or self:GetReturnTypeExpression ())
+	end
+	
+	local astOverride = astVisitor:VisitStatement (self, ...)
+	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	
+	self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
 end

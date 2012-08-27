@@ -13,6 +13,8 @@ function self:ctor (name)
 	self.Constructor = nil
 	
 	self.UniqueNameMap = nil
+	
+	self.MergedLocalScope = nil
 end
 
 --- Adds an alias to this namespace definition
@@ -99,6 +101,11 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if memoryUsageReport:IsCounted (self) then return end
 	
 	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
+	
+	if self.MergedLocalScope then
+		self.MergedLocalScope:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
 	return memoryUsageReport
 end
 
@@ -130,8 +137,17 @@ function self:GetMemberMetadata (name)
 	return self.MemberMetadata [name]
 end
 
+function self:GetMergedLocalScope ()
+	return self.MergedLocalScope
+end
+
 function self:GetNamespaceType ()
 	return self.NamespaceType
+end
+
+function self:GetRuntimeName (memberDefinition)
+	if not self.UniqueNameMap then return memberDefinition:GetName () end
+	return self.UniqueNameMap:GetObjectName (memberDefinition)
 end
 
 function self:GetType ()
@@ -205,6 +221,10 @@ function self:SetConstructorAST (constructorAST)
 	end
 end
 
+function self:SetMergedLocalScope (mergedLocalScope)
+	self.MergedLocalScope = mergedLocalScope
+end
+
 function self:SetNamespaceType (namespaceType)
 	self.NamespaceType = namespaceType
 end
@@ -215,17 +235,29 @@ function self:ToString ()
 	local namespaceDefinition = "[Namespace (" .. GCompute.NamespaceType [self.NamespaceType] .. ")] " .. (self:GetName () or "[Unnamed]")
 	
 	if not self:IsEmpty () or self:GetUsingCount () > 0 then
-		namespaceDefinition = namespaceDefinition .. "\n{\n"
+		namespaceDefinition = namespaceDefinition .. "\n{"
+		
+		local newlineRequired = self:GetUsingCount () > 0
 		for i = 1, self:GetUsingCount () do
-			namespaceDefinition = namespaceDefinition .. "    " .. self:GetUsing (i):ToString () .. "\n"
+			namespaceDefinition = namespaceDefinition .. "\n    " .. self:GetUsing (i):ToString ()
 		end
-		if self:GetUsingCount () > 0 then
-			namespaceDefinition = namespaceDefinition .. "    \n"
+		
+		if self.MergedLocalScope and not self.MergedLocalScope:IsEmpty () then
+			if newlineRequired then namespaceDefinition = namespaceDefinition .. "\n    " end
+			namespaceDefinition = namespaceDefinition .. "\n    " .. self.MergedLocalScope:ToString ():gsub ("\n", "\n    ")
+			newlineRequired = true
+		end
+		
+		if next (self.Members) then
+			if newlineRequired then namespaceDefinition = namespaceDefinition .. "\n    " end
+			newlineRequired = true
 		end
 		for name, memberDefinition in pairs (self.Members) do
-			namespaceDefinition = namespaceDefinition .. "    " .. memberDefinition:ToString ():gsub ("\n", "\n    ") .. "\n"
+			namespaceDefinition = namespaceDefinition .. "\n    " .. memberDefinition:ToString ():gsub ("\n", "\n    ")
 		end
-		namespaceDefinition = namespaceDefinition .. "}"
+		namespaceDefinition = namespaceDefinition .. "\n}"
+	else
+		namespaceDefinition = namespaceDefinition .. " { }"
 	end
 	
 	return namespaceDefinition

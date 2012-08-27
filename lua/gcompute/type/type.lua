@@ -14,6 +14,7 @@ function self:CanConvertTo (destinationType, typeConversionMethod)
 	end
 	if not destinationType:IsType () then
 		GCompute.Error ("Type:CanConvertTo : " .. destinationType:ToString () .. " is not a type.")
+		return false
 	end
 	if typeConversionMethod & GCompute.TypeConversionMethod.Identity != 0 and
 	   self:Equals (destinationType) then
@@ -31,9 +32,15 @@ function self:CanConvertTo (destinationType, typeConversionMethod)
 	   self:CanExplicitCastTo (destinationType) then
 		return true
 	end
-	if typeConversionMethod & GCompute.TypeConversionMethod.Constructor != 0 then
-		ErrorNoHalt ("Type:CanConvertTo : Constructor check not implemented for " .. destinationType:GetFullName () .. "\n")
+	if typeConversionMethod & GCompute.TypeConversionMethod.Constructor != 0 and
+	   destinationType:CanConstructFrom (self) then
+		return true
 	end
+	return false
+end
+
+function self:CanConstructFrom (sourceType)
+	GCompute.Error ("Type:CanConstructFrom : Not implemented for " .. self:ToString ())
 	return false
 end
 

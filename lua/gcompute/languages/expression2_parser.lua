@@ -230,7 +230,7 @@ function self:ForVariable ()
 	local variable = nil
 	if self:Accept ("local") then
 		variable = GCompute.AST.VariableDeclaration ()
-		varaiable:SetLocal (true)
+		variable:SetLocal (true)
 		
 		local identifier = self:AcceptType (GCompute.TokenType.Identifier) 
 		variable:SetName (identifier)
@@ -243,6 +243,8 @@ function self:ForVariable ()
 				self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
 			end
 			variable:SetTypeExpression (typeExpression)
+		else
+			variable:SetAuto (true)
 		end
 	else
 		variable = self:QualifiedIdentifier ()
@@ -596,6 +598,10 @@ function self:StatementVariableDeclaration ()
 	if not variableName then
 		self.CompilationUnit:Error ("Expected <identifier> after 'local' in variable declaration.", self:GetLastToken ().Line, self:GetLastToken ().Character)
 	end
+	
+	local variableDeclaration = GCompute.AST.VariableDeclaration ()
+	variableDeclaration:SetLocal (true)
+	
 	local typeExpression = nil
 	local rightExpression = nil
 	
@@ -604,6 +610,8 @@ function self:StatementVariableDeclaration ()
 		if not typeExpression then
 			self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration.", self:GetLastToken ().Line, self:GetLastToken ().Character)
 		end
+	else
+		variableDeclaration:SetAuto (true)
 	end
 	
 	if self:Accept ("=") then
@@ -613,8 +621,6 @@ function self:StatementVariableDeclaration ()
 		end
 	end
 	
-	local variableDeclaration = GCompute.AST.VariableDeclaration ()
-	variableDeclaration:SetLocal (true)
 	variableDeclaration:SetTypeExpression (typeExpression)
 	variableDeclaration:SetName (variableName)
 	variableDeclaration:SetRightExpression (rightExpression)
@@ -1061,7 +1067,7 @@ function self:ExpressionStringLiteral ()
 end
 
 function self:Type ()
-	return self:TypeIndexOrParametricIndexOrArrayOrFunction ()
+	return self:IndexOrParametricIndexOrArrayOrFunction ()
 end
 
 local validOperators =
@@ -1071,7 +1077,7 @@ local validOperators =
 	["["] = true,
 	["("] = true
 }
-function self:TypeIndexOrParametricIndexOrArrayOrFunction ()
+function self:IndexOrParametricIndexOrArrayOrFunction ()
 	local leftExpression = self:UnqualifiedIdentifier ()
 	if not leftExpression then return nil end
 	
@@ -1133,6 +1139,10 @@ function self:TypeIndexOrParametricIndexOrArrayOrFunction ()
 	end
 	
 	return leftExpression
+end
+
+function self:QualifiedIdentifier ()
+	return self:IndexOrParametricIndexOrArrayOrFunction ()
 end
 
 function self:UnqualifiedIdentifier ()

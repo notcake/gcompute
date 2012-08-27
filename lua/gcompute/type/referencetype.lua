@@ -15,7 +15,7 @@ function self:ctor (innerType)
 	elseif self.InnerType:IsType () then
 		if self.InnerType:IsReference () then
 			GCompute.Error ("ReferenceType constructor cannot be passed a ReferenceType (" .. self.InnerType:ToString () .. ")")
-			self.InnerType = nil
+			self.InnerType = self.InnerType:UnwrapReference ()
 		end
 	elseif self.InnerType:IsAlias () then
 	else

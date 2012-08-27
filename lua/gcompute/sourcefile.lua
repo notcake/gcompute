@@ -46,6 +46,10 @@ function self:GetCompilationUnit ()
 	return self.CompilationUnit
 end
 
+function self:GetPath ()
+	return self.Path
+end
+
 function self:SetCompilationUnit (compilationUnit)
 	self.CompilationUnit = compilationUnit
 end

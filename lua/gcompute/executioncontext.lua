@@ -12,6 +12,9 @@ function self:ctor (process, thread)
 	self.ContinueFlag = false
 	self.ReturnFlag = false
 	self.ReturnValue = nil
+	
+	self.TopStackFrame = nil
+	self.Stack = GCompute.Containers.Stack ()
 end
 
 function self:Break ()
@@ -33,16 +36,22 @@ function self:ClearInterrupt ()
 end
 
 function self:ClearBreak ()
+	if not self.BreakFlag then return end
+	
 	self.BreakFlag = false
 	self.InterruptFlag = false
 end
 
 function self:ClearContinue ()
+	if not self.ContinueFlag then return end
+
 	self.ContinueFlag = false
 	self.InterruptFlag = false
 end
 
 function self:ClearReturn ()
+	if not self.ReturnFlag then return end
+
 	self.ReturnFlag = false
 	self.InterruptFlag = false
 	
@@ -71,6 +80,17 @@ end
 
 function self:GetThread ()
 	return self.Thread
+end
+
+function self:PopStackFrame ()
+	self.Stack:Pop ()
+	self.TopStackFrame = self.Stack.Top
+	return self.TopStackFrame
+end
+
+function self:PushStackFrame (stackFrame)
+	self.Stack:Push (stackFrame)
+	self.TopStackFrame = self.Stack.Top
 end
 
 function self:Return (value)

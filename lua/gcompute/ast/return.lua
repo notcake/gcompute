@@ -27,6 +27,31 @@ function self:Evaluate (executionContext)
 	end
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 0: Evaluate right
+	-- State 1: Return
+	
+	if not self:GetReturnExpression () then
+		astRunner:PopNode ()
+		executionContext:Return ()
+		return
+	end
+
+	if state == 0 then
+		-- Return to state 1
+		astRunner:PushState (1)
+		
+		-- Expression, state 0
+		astRunner:PushNode (self:GetReturnExpression ())
+		astRunner:PushState (0)
+	else
+		-- Discard Return
+		astRunner:PopNode ()
+		
+		executionContext:Return (astRunner:PopValue ())
+	end
+end
+
 function self:GetReturnExpression ()
 	return self.ReturnExpression
 end
@@ -41,4 +66,12 @@ function self:ToString ()
 		return "return " .. self.ReturnExpression:ToString ()
 	end
 	return "return"
+end
+
+function self:Visit (astVisitor, ...)
+	if self:GetReturnExpression () then
+		self:SetReturnExpression (self:GetReturnExpression ():Visit (astVisitor, ...) or self:GetReturnExpression ())
+	end
+	
+	return astVisitor:VisitStatement (self, ...)
 end

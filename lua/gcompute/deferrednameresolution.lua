@@ -17,6 +17,8 @@ function self:ctor (name, nameResolver, globalNamespace, localNamespace)
 	
 	if name == nil then
 		GCompute.Error ("DeferredNameResolution constructed with a nil value.")
+		self.Name = "nil"
+		self.ParsedName = GCompute.TypeParser:Root ("nil")
 	elseif type (name) == "string" then
 		self.ParsedName = GCompute.TypeParser:Root (name)
 	elseif name:IsASTNode () then
@@ -45,8 +47,11 @@ function self:GetErrorReporter ()
 end
 
 function self:GetFullName ()
-	if self.ResolutionFailed or not self:IsResolved () then
-		return self.Name
+	if self.ResolutionFailed then
+		return "[Failed] " .. self.Name
+	end
+	if not self:IsResolved () then
+		return "[Unresolved] " .. self.Name
 	end
 	return self.Object:GetFullName ()
 end
@@ -68,6 +73,10 @@ function self:GetObject ()
 		GCompute.Error ("DeferredNameResolution:GetObject : " .. self:GetFullName () .. " has not been resolved yet.")
 	end
 	return self.Object
+end
+
+function self:GetParsedName ()
+	return self.ParsedName
 end
 
 function self:IsDeferredNameResolution ()

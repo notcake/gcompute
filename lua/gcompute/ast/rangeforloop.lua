@@ -24,6 +24,14 @@ end
 
 function self:AddRange (startValue, endValue, increment)
 	self.Range [#self.Range + 1] = { startValue, endValue, increment }
+	
+	if #self.Range == 1 then
+		-- Set the right expression of the assignment to the start value so
+		-- that the type inferer will use its type for the left variable declaration
+		-- later on
+		self.LoopVariableAssignment:SetRightExpression (startValue)
+	end
+	
 	if startValue then startValue:SetParent (self) end
 	if endValue then endValue:SetParent (self) end
 	if increment then increment:SetParent (self) end
@@ -85,9 +93,16 @@ function self:ExecuteAsAST (astRunner, state)
 		astRunner:PushValue (astRunner:PeekValue () [1])
 	elseif state >= 0 then
 		if state == 0 then
+			self.LoopVariableAssignment:SetRightExpression (self.LoopVariableValue)
 			astRunner:PushValue (nil)
 		end
 		astRunner:PushState (state + 1)
+		
+		if executionContext.InterruptFlag then
+			while astRunner:PopValue () do end
+			astRunner:PopNode ()
+			return
+		end
 		
 		local range = self.Range [#self.Range - state]
 		if #range == 1 then
@@ -114,6 +129,7 @@ function self:ExecuteAsAST (astRunner, state)
 		astRunner:PushValue (i + (astRunner:PeekValue () [3] or 1))
 		self.LoopVariableValue:SetNumber (i)
 		
+		-- Return to state -2
 		astRunner:PushState (-2)
 		
 		-- Statement, state 0
@@ -134,13 +150,12 @@ function self:ExecuteAsAST (astRunner, state)
 		
 		-- Break or other interrupt
 		if executionContext.InterruptFlag then
-			-- Bail
 			if executionContext.BreakFlag then
 				executionContext:ClearBreak ()
 			end
 			
-			astRunner:PopNode ()
 			while astRunner:PopValue () do end
+			astRunner:PopNode ()
 			return
 		end
 	
@@ -150,12 +165,13 @@ function self:ExecuteAsAST (astRunner, state)
 		
 		if not range [2] or i > range [2] then
 			-- Done with this range.
-			astRunner:PopValue ()
-			astRunner:PopValue ()
+			astRunner:PopValue () -- Pop i
+			astRunner:PopValue () -- Pop range
 			
 			range = astRunner:PeekValue ()
 			if not range then
 				-- Done with this loop
+				astRunner:PopValue () -- Pop nil
 				astRunner:PopNode ()
 			else
 				-- Continue with next range
@@ -228,5 +244,10 @@ function self:Visit (astVisitor, ...)
 	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
 	
 	self.LoopVariableAssignment:Visit (astVisitor, ...)
+	for _, range in ipairs (self.Range) do
+		for i = 1, #range do
+			range [i] = range [i]:Visit (astVisitor, ...) or range [i]
+		end
+	end
 	self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
 end

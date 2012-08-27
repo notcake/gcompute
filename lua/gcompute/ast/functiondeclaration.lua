@@ -15,6 +15,8 @@ function self:ctor ()
 	self.Body = nil
 	
 	self.FunctionDefinition = nil
+	
+	self.NamespaceDefinition = nil
 end
 
 function self:AddParameter (parameterType, parameterName)
@@ -42,6 +44,9 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if self.FunctionDefinition then
 		self.FunctionDefinition:ComputeMemoryUsage (memoryUsageReport)
 	end
+	if self.NamespaceDefinition then
+		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
 	return memoryUsageReport
 end
 
@@ -58,6 +63,10 @@ end
 
 function self:GetName ()
 	return self.Name
+end
+
+function self:GetNamespace ()
+	return self.NamespaceDefinition
 end
 
 function self:GetParameterCount ()
@@ -90,7 +99,10 @@ end
 
 function self:SetBody (blockStatement)
 	self.Body = blockStatement
-	if self.Body then self.Body:SetParent (self) end
+	if self.Body then
+		self.Body:SetBlockType (GCompute.AST.BlockType.Function)
+		self.Body:SetParent (self)
+	end
 end
 
 function self:SetFunctionDefinition (functionDefinition)
@@ -103,6 +115,10 @@ end
 
 function self:SetName (name)
 	self.Name = name
+end
+
+function self:SetNamespace (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:SetParameterName (parameterId, parameterName)
@@ -128,10 +144,38 @@ function self:ToString ()
 	local returnTypeExpression = self.ReturnTypeExpression and self.ReturnTypeExpression:ToString () or "[Unknown Type]"
 	local body = self.Body and self.Body:ToString () or "[Unknown Statement]"
 	
+	local functionDeclaration = "[Function Declaration]\n" .. returnTypeExpression .. " "
+	
 	if self.MemberFunction then
 		local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or "[Unknown Expression]"
-		return "[Function Declaration]\n" .. returnTypeExpression .. " " .. typeExpression .. ":" .. self.Name .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
-	else
-		return "[Function Declaration]\n" .. returnTypeExpression .. " " .. self.Name .. " " .. self:GetParameterList ():ToString () .. "\n" .. body
+		functionDeclaration = functionDeclaration .. typeExpression .. ":"
 	end
+	functionDeclaration = functionDeclaration .. self.Name .. " " .. self:GetParameterList ():ToString () .. "\n"
+	if self.NamespaceDefinition then
+		functionDeclaration = functionDeclaration .. self.NamespaceDefinition:ToString () .. "\n"
+	end
+	functionDeclaration = functionDeclaration .. body
+	return functionDeclaration
+end
+
+function self:Visit (astVisitor, ...)
+	for i = 1, self:GetParameterCount () do
+		local parameterType = self:GetParameterType (i)
+		local newParameterType = nil
+		if parameterType:IsDeferredNameResolution () then
+			newParameterType = parameterType:GetParsedName ():Visit (astVisitor, ...)
+		end
+		if newParameterType and newParameterType ~= parameterType then
+			self:SetParameterType (i, newParameterType)
+		end
+	end
+	
+	if self:GetReturnTypeExpression () then
+		self:SetReturnTypeExpression (self:GetReturnTypeExpression ():Visit (astVisitor, ...) or self:GetReturnTypeExpression ())
+	end
+	
+	local astOverride = astVisitor:VisitStatement (self, ...)
+	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	
+	self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
 end

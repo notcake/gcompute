@@ -87,6 +87,8 @@ function self:LookupLocal (name, globalNamespace, localNamespace, resolutionResu
 end
 
 function self:ResolveASTNode (astNode, errorReporter, globalNamespace, localNamespace)
+	if not astNode then return GCompute.NameResolutionResults () end
+
 	local resolutionResults = nil
 	if astNode:Is ("NameIndex") then
 		local leftResults = self:ResolveASTNode (astNode:GetLeftExpression (), errorReporter, globalNamespace, localNamespace)

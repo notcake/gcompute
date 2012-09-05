@@ -54,7 +54,7 @@ LANGUAGE:AddSymbol (";", GCompute.TokenType.StatementTerminator, false)
 LANGUAGE:AddSymbols ({"\r\n", "\n\r", "\r", "\n"}, GCompute.TokenType.Newline, false)
 LANGUAGE:AddSymbol ("[ \t]+", GCompute.TokenType.Whitespace)
 
-LANGUAGE:AddKeywords ({"if", "else", "elseif", "while", "for", "do", "break", "switch"}, GCompute.KeywordTypes.Control)
+LANGUAGE:AddKeywords ({"if", "else", "elseif", "while", "for", "do", "break", "switch", "return", "continue"}, GCompute.KeywordTypes.Control)
 LANGUAGE:AddKeywords ({"namespace", "struct", "class", "enum", "using", "function"}, GCompute.KeywordTypes.DataType)
 LANGUAGE:AddKeywords ({"true", "false", "null"}, GCompute.KeywordTypes.Constants)
 

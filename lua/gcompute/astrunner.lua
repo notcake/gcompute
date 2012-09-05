@@ -1,17 +1,14 @@
 local self = {}
 GCompute.ASTRunner = GCompute.MakeConstructor (self)
 
-function self:ctor (ast)
-	self.AST = ast
+function self:ctor ()
 	self.NodeStack = GCompute.Containers.Stack ()
 	self.StateStack = GCompute.Containers.Stack ()
 	self.ValueStack = GCompute.Containers.Stack ()
 end
 
-function self:Execute (executionContext)
-	self.NodeStack:Push (self.AST)
-	self.StateStack:Push (0)
-	self:Resume (executionContext)
+function self:Execute ()
+	self:Resume ()
 end
 
 function self:PeekNode (offset)
@@ -54,10 +51,11 @@ function self:PushValue (value)
 	self.ValueStack:Push (value)
 end
 
-function self:Resume (executionContext)
+function self:Resume ()
 	for i = 1, 1000 do
 		local topNode = self.NodeStack.Top
 		if not topNode then
+			self:PopNode ()
 			print ("Done.")
 			return
 		end
@@ -92,10 +90,10 @@ function self:Resume (executionContext)
 			self.NodeStack:Pop ()
 		end
 	end
-
-	executionContext:GetThread ():Yield (
-		function (executionContext)
-			self:Resume (executionContext)
+	
+	executionContext:PushResumeFunction (
+		function ()
+			self:Resume ()
 		end
 	)
 end

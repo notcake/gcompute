@@ -29,6 +29,48 @@ end
 function self:Evaluate (executionContext)
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 0: Execute condition
+	-- State 1: Check condition, execute body
+	
+	-- Clear continue flag
+	if executionContext.ContinueFlag then
+		executionContext:ClearContinue ()
+	end
+	
+	-- Break or other interrupt
+	if executionContext.InterruptFlag then
+		if executionContext.BreakFlag then
+			executionContext:ClearBreak ()
+		end
+		
+		astRunner:PopNode ()
+		return
+	end
+	
+	if state == 0 then
+		-- Return to state 1
+		astRunner:PushState (1)
+		
+		-- Expression, state 0
+		astRunner:PushNode (self.Condition)
+		astRunner:PushState (0)
+	else
+		local condition = astRunner:PopValue ()
+		if condition then
+			-- Return to state 0
+			astRunner:PushState (0)
+			
+			-- Block, state 0
+			astRunner:PushNode (self.Body)
+			astRunner:PushState (0)
+		else
+			-- Discard WhileLoop
+			astRunner:PopNode ()
+		end
+	end
+end
+
 function self:GetBody ()
 	return self.Body
 end
@@ -67,4 +109,12 @@ function self:ToString ()
 		end
 	end
 	return "while (" .. condition .. ")\n" .. bodyStatement
+end
+
+function self:Visit (astVisitor, ...)
+	local astOverride = astVisitor:VisitStatement (self, ...)
+	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
+	
+	self:SetCondition (self:GetCondition ():Visit (astVisitor, ...) or self:GetCondition ())
+	self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
 end

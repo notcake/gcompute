@@ -2,6 +2,7 @@ local self = {}
 GCompute.Type = GCompute.MakeConstructor (self, GCompute.IObject)
 
 function self:ctor ()
+	self.Nullable = false
 end
 
 --- Returns a boolean indicating whether this type can be converted to destinationType
@@ -62,6 +63,10 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
+function self:CreateDefaultValue ()
+	return nil
+end
+
 function self:Equals (otherType)
 	GCompute.Error ("Type:Equals : Not implemented for " .. self:ToString ())
 end
@@ -96,6 +101,10 @@ function self:IsInferredType ()
 	return false
 end
 
+function self:IsNullable ()
+	return self.Nullable
+end
+
 function self:IsReference ()
 	return false
 end
@@ -121,6 +130,10 @@ function self:IsTypeDefinition ()
 end
 
 function self:Resolve (globalNamespace, localNamespace)
+end
+
+function self:SetNullable (nullable)
+	self.Nullable = nullable
 end
 
 --- Unwraps a ReferenceType

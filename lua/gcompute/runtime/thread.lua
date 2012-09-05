@@ -17,12 +17,22 @@ function self:ctor (process)
 	self.ExecutionContext = GCompute.ExecutionContext (process, self)
 	self.Name = "Thread " .. string.format ("%08x", self.ThreadID)
 	
+	self.Started = false
+	self.Terminated = false
+	
 	self.Function = GCompute.NullCallback
 	self.Parameters = {}
-	self.Running = false
 	
-	-- Non-coroutine execution model
-	self.ResumeFunction = nil
+	-- Statistics
+	self.CpuTime = 0
+	self.LastExecutionTime = 0
+	
+	GCompute.EventProvider (self)
+end
+
+function self:GetCpuTime ()
+	if SysTime () - self.LastExecutionTime > 0.5 then return 0 end
+	return self.CpuTime
 end
 
 function self:GetExecutionContext ()
@@ -42,15 +52,24 @@ function self:GetName ()
 end
 
 function self:IsRunning ()
-	return self.Running
+	return self.Started and not self.Terminated
 end
 
 function self:RunSome ()
-	if not self.Running then return end
+	if not self.Started then return end
+	if self.Terminated then return end
 	
 	local _executionContext = _G.executionContext
 	_G.executionContext = self:GetExecutionContext ()
-	self:Function (unpack (self.Parameters))
+	
+	local startTime = SysTime ()
+	repeat
+		executionContext:PopResumeFunction () ()
+	until not self:IsRunning () or SysTime () - startTime >= 0.001
+	
+	self.CpuTime = SysTime () - startTime
+	self.LastExecutionTime = SysTime ()
+	
 	_G.executionContext = _executionContext
 end
 
@@ -63,12 +82,30 @@ function self:SetName (name)
 end
 
 function self:Start (...)
-	if self.Running then return false end
+	if self.Started then return false end
 	
-	self.Running = true
+	self.Started = true
 	self.Parameters = { ... }
+	
+	self.ExecutionContext:PushResumeFunction (
+		function ()
+			self:Terminate ()
+		end
+	)
+	self.ExecutionContext:PushResumeFunction (
+		function ()
+			self.Function (unpack (self.Parameters))
+		end
+	)
 end
 
-function self:Yield (resumeFunction)
-	self.ResumeFunction = resumeFunction or self.ResumeFunction
+function self:Terminate ()
+	if self.Terminated then return end
+	
+	self.Terminated = true
+	self:DispatchEvent ("Terminated")
+end
+
+function self:Yield (...)
+	coroutine.yield (...)
 end

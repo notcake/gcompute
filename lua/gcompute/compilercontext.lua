@@ -125,7 +125,7 @@ if CLIENT then
 		}
 		
 		local n = 5;
-		print ("sum is " + sum (1000, 1020));
+		print ("sum is " + sum (1000, 2000));
 		print ("factorial(" + n + ") is " + factorial (n));
 		print ("execution took " + ((systime () - a) * 1000) + " ms.");
 		print (n:GetHashCode ());

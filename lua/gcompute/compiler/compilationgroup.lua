@@ -18,15 +18,10 @@ function self:AddSourceFile (sourceFile, languageName)
 	self.SourceFileCount = self.SourceFileCount + 1
 	self.SourceFiles [self.SourceFileCount] = sourceFile
 	
-	local compilationUnit = sourceFile:GetCompilationUnit ()
-	if not compilationUnit then
-		compilationUnit = GCompute.CompilationUnit (sourceFile, languageName)
-		compilationUnit:SetCompilationGroup (self)
-		sourceFile:SetCompilationUnit (compilationUnit)
-	elseif compilationUnit:GetCompilationGroup () ~= self then
-		-- TODO: Fix bug where two CompilationGroups run simultaneously and use the same CompilationUnit
-		compilationUnit:SetCompilationGroup (self)
-	end
+	local compilationUnit = sourceFile:CreateCompilationUnit ()
+	compilationUnit:SetLanguage (languageName)
+	compilationUnit:SetCompilationGroup (self)
+	-- TODO: Fix bug where two CompilationGroups run simultaneously and use the same CompilationUnit
 	
 	return compilationUnit
 end
@@ -62,6 +57,7 @@ function self:Compile (callback)
 				actionChain:Add (function (callback) compilationUnit:GenerateParserJobs (callback) end)
 				actionChain:Add (function (callback) compilationUnit:Parse (callback) end)
 				actionChain:Add (function (callback) compilationUnit:PostParse (callback) end)
+				actionChain:Add (function (callback) compilationUnit:RunPass ("BlockStatementInserter", GCompute.BlockStatementInserter, callback) end)
 				actionChain:Add (function (callback) compilationUnit:BuildNamespace (callback) end)
 				actionChain:Add (function (callback) compilationUnit:PostBuildNamespace (callback) end)
 				actionChain:AddUnwrap (nextCallback)
@@ -86,8 +82,8 @@ function self:Compile (callback)
 			function (nextCallback)
 				local actionChain = GCompute.CallbackChain ()
 				actionChain:Add (function (callback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
-				actionChain:Add (function (callback) compilationUnit:RunPass ("LocalScopeMerger", GCompute.LocalScopeMerger, callback) end)
-				actionChain:Add (function (callback) compilationUnit:RunPass ("TypeInferer", GCompute.TypeInfererTypeAssigner, callback) end)
+				actionChain:Add (function (callback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
+				actionChain:Add (function (callback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
 				actionChain:AddUnwrap (nextCallback)
 				actionChain:Execute ()
 			end

@@ -1,12 +1,11 @@
 local self = {}
 
 --[[
-	Events
-	
-	ProcessOpened (Process process)
-		Fired when a process is double clicked.
-	SelectedProcessChanged (Process process)
-		Fired when a process is selected from the list.
+	Events:
+		ProcessOpened (Process process)
+			Fired when a process is double clicked.
+		SelectedProcessChanged (Process process)
+			Fired when a process is selected from the list.
 ]]
 
 function self:Init ()
@@ -18,13 +17,22 @@ function self:Init ()
 	self:AddColumn ("Name")
 	self:AddColumn ("PID")
 		:SetAlignment (6)
-		:SetMaxWidth (128)
+		:SetMaxWidth (64)
+	self:AddColumn ("CPU")
+		:SetAlignment (6)
+		:SetMaxWidth (64)
 	self:AddColumn ("Created")
 		:SetMaxWidth (192)
 	
 	self:SetColumnComparator ("PID",
 		function (a, b)
 			return a.Process:GetProcessId () < b.Process:GetProcessId ()
+		end
+	)
+	
+	self:SetColumnComparator ("CPU",
+		function (a, b)
+			return a.Process:GetCpuTime () < b.Process:GetCpuTime ()
 		end
 	)
 	
@@ -40,7 +48,7 @@ function self:Init ()
 			local targetItem = self:GetSelectedProcesses ()
 			self.Menu:SetTargetItem (targetItem)
 			
-			self.Menu:FindItem ("Terminate"):SetDisabled (#targetItem == 0)
+			self.Menu:FindItem ("Terminate"):SetEnabled (#targetItem ~= 0)
 		end
 	)
 	self.Menu:AddOption ("Terminate",
@@ -94,7 +102,7 @@ function self:Init ()
 		end,
 		Terminated = function (process)
 			local listViewItem = self.Processes [process:GetProcessId ()]
-			listViewItem:SetBackgroundColor (Color (255, 0, 0, 255))
+			listViewItem:SetBackgroundColor (GLib.Colors.Red)
 			
 			timer.Simple (1,
 				function ()
@@ -173,6 +181,18 @@ function self:SetProcessList (processList)
 	)
 end
 
+function self:Think ()
+	for _, listViewItem in pairs (self.Processes) do
+		local cpuTime = listViewItem.Process:GetCpuTime ()
+		local cpuFraction = cpuTime / (1 / 60)
+		if cpuFraction == 0 then
+			listViewItem:SetColumnText ("CPU", "")
+		else
+			listViewItem:SetColumnText ("CPU", string.format ("%.2f", cpuFraction * 100))
+		end
+	end
+end
+
 -- Internal, do not call
 function self:AddProcess (process)
 	if self.Processes [process:GetProcessId ()] then return end
@@ -184,7 +204,8 @@ function self:AddProcess (process)
 	self:UpdateIcon (listViewItem)
 	
 	listViewItem:SetColumnText (2, string.format ("%08x", process:GetProcessId ()))
-	listViewItem:SetColumnText (3, GLib.FormatDate (process:GetCreationTimestamp ()))
+	listViewItem:SetColumnText (3, "")
+	listViewItem:SetColumnText (4, GLib.FormatDate (process:GetCreationTimestamp ()))
 	
 	self.Processes [process:GetProcessId ()] = listViewItem
 	

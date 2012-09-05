@@ -138,5 +138,5 @@ function self:Visit (astVisitor, ...)
 	end
 	
 	local astOverride = astVisitor:VisitStatement (self, ...)
-	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
 end

@@ -41,8 +41,8 @@ function self:ctor (compilationUnit)
 	
 	self.Tokens = nil
 	self.Offset = 1
-	self.Line = 1
-	self.Character = 1
+	self.Line = 0
+	self.Character = 0
 end
 
 function self:Process (code, language, callback)
@@ -52,8 +52,8 @@ function self:Process (code, language, callback)
 	
 	self.Tokens = GCompute.Containers.LinkedList ()
 	self.Offset = 1
-	self.Line = 1
-	self.Character = 1
+	self.Line = 0
+	self.Character = 0
 	
 	self.TickStartTime = SysTime ()
 	self:ProcessSome ()
@@ -83,6 +83,7 @@ function self:ProcessSome ()
 			
 			-- Count newlines
 			local i = 1
+			local lastNewlineEnd = 1
 			while i <= originalLen do				
 				-- Count \r\n and \n\r as 1 newline
 				local c = original:sub (i, i)
@@ -94,6 +95,7 @@ function self:ProcessSome ()
 							i = i + 1
 						end
 					end
+					lastNewlineEnd = i + 1
 				end
 				i = i + 1
 			end
@@ -107,24 +109,38 @@ function self:ProcessSome ()
 					tokenType = TokenType.Keyword
 				end
 				
-				token.TokenType = tokenType
-				token.Line      = line
-				token.Character = character
+				token.TokenType    = tokenType
+				token.Line         = line
+				token.Character    = character
+				token.EndLine      = line + lineCount
+				if lineCount > 0 then
+					token.EndCharacter = GLib.UTF8.Length (original:sub (lastNewlineEnd))
+				else
+					token.EndCharacter = character + matchLength
+				end
 				
 				offset = offset + matchLength
 			else
 				-- Unable to match symbol, take one character and mark it as an identifier
-				local token     = tokens:AddLast (code:sub (offset, offset))
-				token.TokenType = TokenType.Identifier
-				token.Line      = line
-				token.Character = character
+				local token        = tokens:AddLast (code:sub (offset, offset))
+				token.TokenType    = TokenType.Identifier
+				token.Line         = line
+				token.Character    = character
+				token.EndLine      = line
+				token.EndCharacter = character + 1
+				if token.Value == "\t" or token.Value == "\n" then
+					lineCount = 1
+					token.EndLine      = token.EndLine + 1
+					token.EndCharacter = 0
+				end
 				
+				character = character + 1
 				offset = offset + 1
 			end
 			
 			if lineCount > 0 then
 				line = line + lineCount
-				character = 1
+				character = 0
 			else
 				character = character + matchLength
 			end
@@ -135,6 +151,7 @@ function self:ProcessSome ()
 	self.Line      = line
 	self.Character = character
 	
+	print ("Tokenizer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. ((self.Offset / (self.Code:len () + 1)) * 100) .. "%.")
 	self.CompilationUnit:Debug ("Tokenizer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. ((self.Offset / (self.Code:len () + 1)) * 100) .. "%.")
 	if self.Offset <= self.Code:len () then
 		timer.Simple (0,
@@ -144,10 +161,12 @@ function self:ProcessSome ()
 			end
 		)
 	else
-		local token     = self.Tokens:AddLast ("<eof>")
-		token.TokenType = TokenType.EndOfFile
-		token.Line      = self.Line
-		token.Character = self.Character
+		local token        = self.Tokens:AddLast ("<eof>")
+		token.TokenType    = TokenType.EndOfFile
+		token.Line         = self.Line
+		token.Character    = self.Character
+		token.EndLine      = self.Line
+		token.EndCharacter = self.Character
 		
 		self.Callback (self.Tokens)
 	end

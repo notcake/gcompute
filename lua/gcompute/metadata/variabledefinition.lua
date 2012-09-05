@@ -10,12 +10,18 @@ function self:ctor (name, typeName)
 end
 
 function self:CreateRuntimeObject ()
-	return nil
+	return self.Type:CreateDefaultValue ()
 end
 
 --- Resolves the type of this variable
 function self:ResolveTypes (globalNamespace)
 	self.Type:Resolve (globalNamespace, self:GetContainingNamespace ())
+	
+	if self.Type:IsDeferredNameResolution () then
+		if not self.Type:IsFailedResolution () then
+			self.Type = self.Type:GetObject ()
+		end
+	end
 end
 
 --- Returns the type of this object

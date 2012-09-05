@@ -22,4 +22,4 @@ function self:PerformLayout ()
 	end
 end
 
-vgui.Register ("GComputeProcessBrowserFrame", self, "DFrame")
+vgui.Register ("GComputeProcessBrowserFrame", self, "GFrame")

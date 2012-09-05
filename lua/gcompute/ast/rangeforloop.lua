@@ -241,7 +241,7 @@ end
 
 function self:Visit (astVisitor, ...)
 	local astOverride = astVisitor:VisitStatement (self, ...)
-	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
 	
 	self.LoopVariableAssignment:Visit (astVisitor, ...)
 	for _, range in ipairs (self.Range) do

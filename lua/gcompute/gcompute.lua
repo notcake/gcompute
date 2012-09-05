@@ -57,6 +57,7 @@ include ("compiler/tokenizer.lua")
 include ("compiler/preprocessor.lua")
 include ("compiler/parserjobgenerator.lua")
 include ("compiler/parser.lua")
+include ("compiler/blockstatementinserter.lua")
 include ("compiler/namespacebuilder.lua")
 include ("compiler/uniquenameassigner.lua")
 include ("compiler/simplenameresolver.lua")
@@ -75,7 +76,6 @@ include ("variablereadplan.lua")
 -- source files
 include ("sourcefilecache.lua")
 include ("sourcefile.lua")
-include ("anonymoussourcefile.lua")
 
 -- type system
 include ("type/typeconversionmethod.lua")
@@ -162,7 +162,7 @@ GCompute.IncludeDirectory ("gcompute/libraries", true)
 GCompute.GlobalNamespace:ResolveTypes (GCompute.GlobalNamespace)
 
 if CLIENT then
-	include ("gooey/sh_init.lua")
+	include ("gooey/gooey.lua")
 	GCompute.IncludeDirectory ("gcompute/ui")
 end
 

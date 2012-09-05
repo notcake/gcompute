@@ -1,16 +1,13 @@
-local LinkedList = {}
-local LinkedListNode = {}
-GCompute.Containers.LinkedList = GCompute.MakeConstructor (LinkedList)
-GCompute.Containers.LinkedListNode = GCompute.MakeConstructor (LinkedListNode)
+local self = {}
+GCompute.Containers.LinkedList = GCompute.MakeConstructor (self)
 
--- Linked list
-function LinkedList:ctor ()
+function self:ctor ()
 	self.First = nil
 	self.Last = nil
 	self.Count = 0
 end
 
-function LinkedList:AddAfter (node, value)
+function self:AddAfter (node, value)
 	if node == nil then return self:AddFirst (value) end
 	
 	local linkedListNode = GCompute.Containers.LinkedListNode ()
@@ -33,7 +30,7 @@ function LinkedList:AddAfter (node, value)
 	return linkedListNode
 end
 
-function LinkedList:AddBefore (node, value)
+function self:AddBefore (node, value)
 	if node == nil then return self:AddLast (value) end
 	
 	local linkedListNode = GCompute.Containers.LinkedListNode ()
@@ -56,7 +53,7 @@ function LinkedList:AddBefore (node, value)
 	return linkedListNode
 end
 
-function LinkedList:AddFirst (value)
+function self:AddFirst (value)
 	if not self.First then
 		self.First = GCompute.Containers.LinkedListNode ()
 		self.First.List = self
@@ -73,7 +70,7 @@ function LinkedList:AddFirst (value)
 	return self.First
 end
 
-function LinkedList:AddLast (value)
+function self:AddLast (value)
 	if not self.Last then
 		self.First = GCompute.Containers.LinkedListNode ()
 		self.First.List = self
@@ -90,13 +87,13 @@ function LinkedList:AddLast (value)
 	return self.Last
 end
 
-function LinkedList:Clear ()
+function self:Clear ()
 	self.First = nil
 	self.Last = nil
 	self.Count = 0
 end
 
-function LinkedList:ComputeMemoryUsage (memoryUsageReport, poolName)
+function self:ComputeMemoryUsage (memoryUsageReport, poolName)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
 	if memoryUsageReport:IsCounted (self) then return end
 	
@@ -108,7 +105,19 @@ function LinkedList:ComputeMemoryUsage (memoryUsageReport, poolName)
 	return memoryUsageReport
 end
 
-function LinkedList:GetEnumerator ()
+function self:Filter (filter)
+	if not filter then return end
+	
+	for linkedListNode in self:GetEnumerator () do
+		if not filter (linkedListNode) then
+			linkedListNode:Remove ()
+		end
+	end
+end
+
+--- Returns an iterator which returns LinkedListNodes in this LinkedList. Deletion of the last LinkedListNode returned by the iterator is allowed.
+-- @return An iterator which returns LinkedListNodes in this LinkedList
+function self:GetEnumerator ()
 	local node = self.First
 	return function ()
 		local ret = node
@@ -117,7 +126,7 @@ function LinkedList:GetEnumerator ()
 	end
 end
 
-function LinkedList:GetItem (n)
+function self:GetItem (n)
 	if n > self.Count then return nil end
 
 	local node = self.First
@@ -129,11 +138,11 @@ function LinkedList:GetItem (n)
 	return nil
 end
 
-function LinkedList:IsEmpty ()
+function self:IsEmpty ()
 	return self.Count == 0
 end
 
-function LinkedList:Remove (linkedListNode)
+function self:Remove (linkedListNode)
 	if not linkedListNode then
 		return
 	end
@@ -156,7 +165,7 @@ function LinkedList:Remove (linkedListNode)
 	self.Count = self.Count - 1
 end
 
-function LinkedList:RemoveRange (startNode, endNode)
+function self:RemoveRange (startNode, endNode)
 	startNode = startNode or self.First
 	endNode = endNode or self.Last
 
@@ -182,7 +191,17 @@ function LinkedList:RemoveRange (startNode, endNode)
 	self.Count = self.Count - removalCount
 end
 
-function LinkedList:ToString ()
+function self:ToArray ()
+	local array = {}
+	
+	for node in self:GetEnumerator () do
+		array [#array + 1] = node.Value
+	end
+	
+	return array
+end
+
+function self:ToString ()
 	local content = ""
 	for linkedListNode in self:GetEnumerator () do
 		if content ~= "" then
@@ -197,22 +216,6 @@ function LinkedList:ToString ()
 		content = content .. linkedListNode:ToString ()
 	end
 	return "[" .. tostring (self.Count) .. "] : {" .. content .. "}"
-end
-
--- Linked list node
-function LinkedListNode:ctor ()
-	self.List = nil
-	self.Next = nil
-	self.Previous = nil
-	self.Value = nil
-end
-
-function LinkedListNode:ToString ()
-	if not self.Value then return "[nil]" end
-	
-	if type (self.Value) == "table" and self.Value.ToString then return self.Value:ToString () end
-	if type (self.Value) == "string" then return "\"" .. GCompute.String.Escape (self.Value) .. "\"" end
-	return tostring (self.Value)
 end
 
 if CLIENT then

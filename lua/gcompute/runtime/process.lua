@@ -53,6 +53,14 @@ function self:GetCreationTimestamp ()
 	return self.CreationTimestamp
 end
 
+function self:GetCpuTime ()
+	local cpuTime = 0
+	for _, thread in pairs (self.Threads) do
+		cpuTime = cpuTime + thread:GetCpuTime ()
+	end
+	return cpuTime
+end
+
 function self:GetName ()
 	return self.Name
 end
@@ -100,9 +108,7 @@ function self:Start ()
 	
 	local mainThread = self:CreateThread ()
 	mainThread:SetName ("Main Thread")
-	mainThread:SetFunction (function (self)
-		self:GetProcess ():GetNamespace ():GetConstructor () (self:GetExecutionContext ())
-	end)
+	mainThread:SetFunction (self:GetNamespace ():GetConstructor ())
 	mainThread:Start ()
 	
 	mainThread:AddEventListener ("Terminated",

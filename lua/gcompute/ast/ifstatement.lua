@@ -180,7 +180,7 @@ end
 
 function self:Visit (astVisitor, ...)
 	local astOverride = astVisitor:VisitStatement (self, ...)
-	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
 	
 	for i = 1, self:GetConditionCount () do
 		self:SetCondition (i, self:GetCondition (i):Visit (astVisitor, ...) or self:GetCondition (i))

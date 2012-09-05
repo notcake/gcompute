@@ -215,9 +215,8 @@ end
 -- @param constructorAST The runtime initialization function AST for this namespace
 function self:SetConstructorAST (constructorAST)
 	self.ConstructorAST = constructorAST
-	self.Constructor = function (executionContext)
-		local astRunner = GCompute.ASTRunner (self.ConstructorAST)
-		astRunner:Execute (executionContext)
+	self.Constructor = function ()
+		executionContext:PushResumeAST (constructorAST)
 	end
 end
 

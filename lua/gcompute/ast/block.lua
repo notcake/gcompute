@@ -208,7 +208,7 @@ end
 
 function self:Visit (astVisitor, ...)
 	local astOverride = astVisitor:VisitBlock (self, ...)
-	if astOverride then astOverride:Visit (astVisitor, ...) return astOverride end
+	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
 	
 	for i = 1, self:GetStatementCount () do
 		self:SetStatement (i, self:GetStatement (i):Visit (astVisitor, ...) or self:GetStatement (i))

@@ -8,6 +8,8 @@ GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReport
 -- Compiler2 : ast -> global scope entries, local scope entries etc
 
 function self:ctor (sourceFile, languageName)
+	languageName = languageName or "Expression 2"
+	
 	self.CompilationGroup = nil
 
 	self.SourceFile = sourceFile
@@ -19,6 +21,9 @@ function self:ctor (sourceFile, languageName)
 	
 	-- Compilation
 	self.Tokens = nil
+	self.TokenizationInProgress = false
+	self.TokenizationRevision = 0
+	
 	self.ParserJobQueue = nil
 	self.AST = nil
 	self.NamespaceDefinition = nil
@@ -110,10 +115,18 @@ function self:GetLanguage ()
 	return self.Language
 end
 
+function self:GetTokens ()
+	return self.Tokens
+end
+
 --- Gets the NamespaceDefinition produced by this CompilationUnit
 -- @return The NamespaceDefinition produced by this CompilationUnit
 function self:GetNamespaceDefinition ()
 	return self.NamespaceDefinition
+end
+
+function self:HasLanguage ()
+	return self.Language and true or false
 end
 
 function self:ProcessDirective (directive, startToken, endToken)
@@ -126,6 +139,14 @@ end
 
 function self:SetExtraData (name, data)
 	self.Data [name] = data
+end
+
+function self:SetLanguage (languageOrLanguageName)
+	if type (languageOrLanguageName) == "string" then
+		self.Language = GCompute.Languages.Get (languageOrLanguageName)
+	else
+		self.Language = languageOrLanguageName
+	end
 end
 
 -- Passes
@@ -144,13 +165,25 @@ function self:SetPassDuration (passName, duration)
 	self.PassDurations [passName] = duration
 end
 
+function self:IsTokenizing ()
+	return self.TokenizationInProgress
+end
+
 function self:Tokenize (callback)
 	callback = callback or GCompute.NullCallback
+	
+	if self.TokenizationInProgress then return end
+	if self.TokenizationRevision == self.SourceFile:GetCodeHash () then return end
+	
+	self.TokenizationInProgress = true
+	self.TokenizationRevision = self.SourceFile:GetCodeHash ()
 	
 	local startTime = SysTime ()
 	local tokenizer = GCompute.Tokenizer (self)
 	tokenizer:Process (self:GetCode (), self:GetLanguage (),
 		function (tokens)
+			self.TokenizationInProgress = false
+			
 			self.Tokens = tokens
 			self:AddPassDuration ("Tokenizer", SysTime () - startTime)
 			callback ()

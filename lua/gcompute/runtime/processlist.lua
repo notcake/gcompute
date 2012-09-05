@@ -5,7 +5,7 @@ GCompute.ProcessList = GCompute.MakeConstructor (self)
 	Events:
 		ProcessCreated (Process process)
 			Fired when a new process is created.
-		ProcessDestroyed (Process process)
+		ProcessTerminated (Process process)
 			Fired when a process terminates.
 ]]
 
@@ -15,6 +15,11 @@ function self:ctor ()
 	self.NextProcessId = math.random (0, 0xFFFF) * 0x00010000
 	
 	GCompute.EventProvider (self)
+	
+	self.ProcessTerminated = function (process)
+		self.Processes [process:GetProcessId ()] = nil
+		self:DispatchEvent ("ProcessTerminated", process)
+	end
 end
 
 function self:CreateProcess ()
@@ -24,6 +29,8 @@ function self:CreateProcess ()
 	
 	self.Processes [processId] = process
 	
+	process:AddEventListener ("Terminated", tostring (self), self.ProcessTerminated)
+	
 	self:DispatchEvent ("ProcessCreated", process)
 	
 	return process
@@ -32,3 +39,6 @@ end
 function self:GetEnumerator ()
 	return pairs (self.Processes)
 end
+
+-- Event handlers
+self.ProcessTerminated = GCompute.NullCallback

@@ -41,17 +41,22 @@ function self:Contains (memberDefinition)
 end
 
 function self:CreateStackFrame ()
-	return
-	{
-		ToString = function (self)
-			local str = "{"
-			for k, v in pairs (self) do
-				str = str .. "\n    " .. tostring (k) .. " = " .. tostring (v)
-			end
-			str = str .. "\n}"
-			return str
+	local stackFrame = {}
+	stackFrame.ToString = function (self)
+		local str = "{"
+		for k, v in pairs (self) do
+			str = str .. "\n    " .. tostring (k) .. " = " .. tostring (v)
 		end
-	}
+		str = str .. "\n}"
+		return str
+	end
+	
+	for _, memberDefinition in ipairs (self.Members) do
+		local runtimeName = self:GetRuntimeName (memberDefinition)
+		stackFrame [runtimeName] = memberDefinition:CreateRuntimeObject ()
+	end
+	
+	return stackFrame
 end
 
 function self:GetRuntimeName (object)

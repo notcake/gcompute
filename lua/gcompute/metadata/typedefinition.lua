@@ -5,7 +5,7 @@ GCompute.TypeDefinition = GCompute.MakeConstructor (self, GCompute.NamespaceDefi
 -- @param typeParameterList A TypeParameterList describing the parameters the type takes or nil if the type is non-parametric
 function self:ctor (name, typeParameterList)
 	self.BaseTypes = {}
-
+	
 	self.Constructors = {}
 	self.ImplicitCasts = {}
 	self.ExplicitCasts = {}
@@ -19,6 +19,8 @@ function self:ctor (name, typeParameterList)
 	for name in self.TypeParameterList:GetEnumerator () do
 		self:AddMemberVariable (name, "Type")
 	end
+	
+	self:SetNullable (true)
 end
 
 --- Adds a base type to this type definition
@@ -127,6 +129,11 @@ function self:CanImplicitCastTo (destinationType)
 		end
 	end
 	return false
+end
+
+function self:CreateDefaultValue ()
+	if self:IsNullable () then return nil end
+	return nil
 end
 
 function self:CreateRuntimeObject ()

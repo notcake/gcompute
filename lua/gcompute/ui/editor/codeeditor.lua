@@ -80,10 +80,12 @@ function PANEL:Init ()
 	self.UndoRedoStack = GCompute.UndoRedoStack ()
 	
 	-- Compiler
-	self.SourceFile = GCompute.SourceFileCache:CreateAnonymousSourceFile ()
+	self.SourceFile = nil
 	self.CompilationUnit = nil
 	self.LastSourceFileUpdateTime = 0
 	self.SourceFileOutdated = true
+	
+	self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
 	
 	self:SetKeyboardMap (GCompute.Editor.CodeEditorKeyboardMap)
 end
@@ -684,10 +686,6 @@ end
 
 -- Compiler
 function PANEL:GetCompilationUnit ()
-	if not self.SourceFile then return nil end
-	if not self.CompilationUnit then
-		self.CompilationUnit = self.SourceFile:GetCompilationUnit ()
-	end
 	return self.CompilationUnit
 end
 
@@ -703,14 +701,45 @@ function PANEL:IsSourceFileOutdated ()
 	return self.SourceFileOutdated
 end
 
+-- Internal function, do not call
+function PANEL:SetCompilationUnit (compilationUnit)
+	if self.CompilationUnit == compilationUnit then return end
+	
+	self:UnhookCompilationUnit (self.CompilationUnit)
+	self.CompilationUnit = compilationUnit
+	self:HookCompilationUnit (self.CompilationUnit)
+	
+	if self.CompilationUnit then
+		local tokens = self.CompilationUnit:GetTokens ()
+		if tokens then
+			self:ApplyTokens (tokens.First, tokens.Last)
+		else
+			self:ClearTokenization ()
+		end
+	else
+		self:ClearTokenization ()
+	end
+end
+
+-- Internal function, do not call
 function PANEL:SetSourceFile (sourceFile)
 	if not sourceFile then return end
 	if self.SourceFile == sourceFile then return end
 	
 	local oldSourceFile = self.SourceFile
+	if self.SourceFile then
+		self:UnhookSourceFile (self.SourceFile)
+		self:SetCompilationUnit (nil)
+	end
+	
 	self.SourceFile = sourceFile
-	self.CompilationUnit = nil
-	self:InvalidateSourceFile ()
+	
+	if self.SourceFile then
+		self:HookSourceFile (self.SourceFile)
+		if self.SourceFile:HasCompilationUnit () then
+			self:SetCompilationUnit (self.SourceFile:GetCompilationUnit ())
+		end
+	end
 	
 	self:DispatchEvent ("SourceFileChanged", oldSourceFile, sourceFile)
 end
@@ -733,8 +762,45 @@ function PANEL:ApplyTokenization ()
 	end
 end
 
+function PANEL:ClearTokenization ()
+	for line in self.Document:GetEnumerator () do
+		line:SetStartToken (nil)
+	end
+end
+
 function PANEL:HasTokenization ()
 	return self.Document:GetLine (0):GetStartToken () and true or false
+end
+
+-- Internal, do not call
+function PANEL:HookCompilationUnit (compilationUnit)
+	if not compilationUnit then return end
+	
+	compilationUnit:AddEventListener ("TokenRangeAdded", tostring (self:GetTable ()),
+		function (_, startToken, endToken)
+			self:ApplyTokens (startToken, endToken)
+		end
+	)
+end
+
+function PANEL:UnhookCompilationUnit (compilationUnit)
+	if not compilationUnit then return end
+	
+	compilationUnit:RemoveEventListener ("TokenRangeRemoved", tostring (self:GetTable ()))
+end
+
+function PANEL:HookSourceFile (sourceFile)
+	if not sourceFile then return end
+	sourceFile:AddEventListener ("CompilationUnitCreated", tostring (self:GetTable ()),
+		function (_, compilationUnit)
+			self:SetCompilationUnit (compilationUnit)
+		end
+	)
+end
+
+function PANEL:UnhookSourceFile (sourceFile)
+	if not sourceFile then return end
+	sourceFile:RemoveEventListener ("CompilationUnitCreated", tostring (self:GetTable ()))
 end
 
 -- Event handlers

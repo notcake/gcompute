@@ -18,6 +18,11 @@ GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReport
 	Events:
 		LanguageChanged (Language language)
 			Fired when this CompilationUnit's language has changed.
+		
+		RangeAdded (Token startToken, Token endToken)
+			Fired when a range of tokens has been inserted.
+		RangeRemoved (Token startToken, Token endToken)
+			Fired when a range of tokens has been removed.
 ]]
 
 function self:ctor (sourceFile)
@@ -211,6 +216,16 @@ function self:Tokenize (callback)
 	
 	local startTime = SysTime ()
 	local lexer = GCompute.Lexer (self)
+	lexer:AddEventListener ("RangeAdded",
+		function (_, startToken, endToken)
+			self:DispatchEvent ("TokenRangeAdded", startToken, endToken)
+		end
+	)
+	lexer:AddEventListener ("RangeRemoved",
+		function (_, startToken, endToken)
+			self:DispatchEvent ("TokenRangeRemoved", startToken, endToken)
+		end
+	)
 	lexer:Process (self:GetCode (), self:GetLanguage (),
 		function (tokens)
 			self.TokenizationInProgress = false

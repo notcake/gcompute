@@ -15,6 +15,8 @@ local nextAnonymousId = 0
 	Events:
 		CacheableChanged (cacheable)
 			Fired when this source file's cacheability has changed.
+		CompilationUnitCreated (CompilataionUnit compilationUnit)
+			Fired when this source file has created a compilation unit for itself.
 		IdChanged (oldId, newId)
 			Fired when this source file's id has changed.
 		PathChanged (oldPath, newPath)
@@ -86,6 +88,8 @@ end
 function self:GetCompilationUnit ()
 	if not self.CompilationUnit then
 		self.CompilationUnit = GCompute.CompilationUnit (self)
+		
+		self:DispatchEvent ("CompilationUnitCreated", self.CompilationUnit)
 	end
 	
 	return self.CompilationUnit
@@ -101,6 +105,10 @@ end
 
 function self:GetPath ()
 	return self.Path
+end
+
+function self:HasCompilationUnit ()
+	return self.CompilationUnit and true or false
 end
 
 function self:HasExpired ()

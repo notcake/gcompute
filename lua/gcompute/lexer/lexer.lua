@@ -3,8 +3,10 @@ GCompute.Lexer = GCompute.MakeConstructor (self)
 
 --[[
 	Events:
-		RangeLexed (LineCharacterLocation start, LineCharacterLocaation end)
-			Fired when a range of characters has been lexed.
+		RangeAdded (Token startToken, Token endToken)
+			Fired when a range of tokens has been inserted.
+		RangeRemoved (Token startToken, Token endToken)
+			Fired when a range of tokens has been removed.
 ]]
 
 function self:ctor (compilationUnit)
@@ -50,6 +52,8 @@ function self:ProcessSome ()
 	local offset     = self.Offset
 	local line       = self.Line
 	local character  = self.Character
+	
+	local startToken = tokens.Last
 	
 	local tickStartTime = self.TickStartTime
 	while SysTime () - tickStartTime < 0.015 and offset <= codeLength do
@@ -161,4 +165,8 @@ function self:ProcessSome ()
 		ErrorNoHalt ("Lexer took " .. ((SysTime () - self.StartTime) * 1000) .. " ms\n")
 		self.Callback (self.Tokens)
 	end
+	
+	if startToken == nil then startToken = tokens.First
+	local endToken = tokens.Last
+	self:DispatchEvent ("RangeAdded", startToken, endToken)
 end

@@ -17,7 +17,7 @@ function self:ctor (compilationUnit)
 	
 	self.Callback = nil
 	
-	self.Tokens = nil
+	self.Tokens = compilationUnit:GetTokens ()
 	self.Offset = 1
 	self.Line = 0
 	self.Character = 0
@@ -30,8 +30,6 @@ function self:Process (code, language, callback)
 	self.Language = language
 	self.Callback = callback or GCompute.NullCallback
 	
-	self.Tokens = GCompute.Containers.LinkedList ()
-	self.Tokens.LinkedListNode = GCompute.Token
 	self.Offset = 1
 	self.Line = 0
 	self.Character = 0
@@ -166,7 +164,7 @@ function self:ProcessSome ()
 		self.Callback (self.Tokens)
 	end
 	
-	if startToken == nil then startToken = tokens.First
+	if startToken == nil then startToken = tokens.First end
 	local endToken = tokens.Last
 	self:DispatchEvent ("RangeAdded", startToken, endToken)
 end

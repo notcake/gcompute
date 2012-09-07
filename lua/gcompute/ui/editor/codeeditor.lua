@@ -117,6 +117,13 @@ function PANEL:RequestFocus ()
 	self.TextEntry:RequestFocus ()
 end
 
+function PANEL:Remove ()
+	self:SetSourceFile (nil)
+	self:SetCompilationUnit (nil)
+
+	_R.Panel.Remove (self)
+end
+
 function PANEL:SetContextMenu (contextMenu)
 	self.ContextMenu = contextMenu
 end
@@ -745,16 +752,24 @@ function PANEL:SetSourceFile (sourceFile)
 end
 
 -- Internal, do not call
-function PANEL:ApplyTokenization ()
-	if not self.SourceFile then return end
+function PANEL:ApplyTokens (startToken, endToken)
+	if not startToken then return end
+	if not endToken then return end
 	
-	local tokens = self:GetCompilationUnit ():GetTokens ()
-	if not tokens then return end
+	-- Invalidate the line on which startToken starts.
+	if self.Document:GetLine (startToken.Line) then
+		self.Document:GetLine (startToken.Line):InvalidateColoring ()
+	end
 	
-	local token = tokens.First
-	local expectingStartOfLine = 0
-	while token do
+	-- Assign tokens to lines on which they end, or which they fully contain
+	local token = startToken
+	local terminatingToken = endToken.Next -- The token after endToken
+	local expectingStartOfLine = startToken.Line -- The line whose start token we are looking for
+	if startToken.Character > 0 then expectingStartOfLine = expectingStartOfLine + 1 end
+	
+	while token and token ~= terminatingToken do
 		while token.EndLine >= expectingStartOfLine and (token.EndLine ~= expectingStartOfLine or token.EndCharacter ~= 0) do
+			if expectingStartOfLine >= self.Document:GetLineCount () then return end
 			self.Document:GetLine (expectingStartOfLine):SetStartToken (token)
 			expectingStartOfLine = expectingStartOfLine + 1
 		end
@@ -786,6 +801,7 @@ end
 function PANEL:UnhookCompilationUnit (compilationUnit)
 	if not compilationUnit then return end
 	
+	compilationUnit:RemoveEventListener ("TokenRangeAdded",   tostring (self:GetTable ()))
 	compilationUnit:RemoveEventListener ("TokenRangeRemoved", tostring (self:GetTable ()))
 end
 
@@ -914,16 +930,10 @@ function PANEL:Think ()
 			self.LastSourceFileUpdateTime = SysTime ()
 			
 			self.SourceFile:SetCode (self:GetText ())
-			self:GetCompilationUnit ()
-				:Tokenize (
-					function ()
-						if not self or not self:IsValid () then return end
-						self:ApplyTokenization ()
-					end
-				)
-			if not self:HasTokenization () then
-				self:ApplyTokenization ()
-			end
+			self:GetCompilationUnit ():Tokenize (
+				function ()
+				end
+			)
 		end
 	end
 end

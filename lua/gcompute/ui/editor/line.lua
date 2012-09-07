@@ -128,6 +128,10 @@ function self:GetWidth (tabWidth)
 	return self.CachedWidth
 end
 
+function self:InvalidateColoring ()
+	self.CachedRenderInstructionsValid = false
+end
+
 function self:Length ()
 	if not self.CachedLengthValid then
 		self.CachedLength = self:RealLength ()

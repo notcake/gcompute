@@ -114,6 +114,12 @@ function self:PerformLayout ()
 	end
 end
 
+function self:Remove ()
+	self.TabControl:Clear ()
+	
+	_R.Panel.Remove (self)
+end
+
 --- Returns false if the tab is the last remaining tab and contains the unchanged default text
 function self:CanCloseTab (tab)
 	if not tab then return false end
@@ -244,8 +250,8 @@ function self:OpenFile (file, callback)
 						local file = fileStream:GetFile ()
 						local tab = self:CreateCodeTab ()
 						tab:SetText (file:GetDisplayName ())
-						tab:GetContents ():SetFile (file)
 						tab:GetContents ():SetText (data)
+						tab:GetContents ():SetFile (file)
 						fileStream:Close ()
 						
 						callback (true, file, tab)

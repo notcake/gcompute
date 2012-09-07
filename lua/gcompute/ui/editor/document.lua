@@ -95,6 +95,14 @@ function self:GetEnd ()
 	return endLocation
 end
 
+function self:GetEnumerator ()
+	local i = -1
+	return function ()
+		i = i + 1
+		return self.Lines [i]
+	end
+end
+
 function self:GetLine (line)
 	return self.Lines [line + 1]
 end

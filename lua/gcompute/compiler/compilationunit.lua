@@ -214,6 +214,9 @@ function self:Tokenize (callback)
 	self.TokenizationInProgress = true
 	self.TokenizationRevision = self.SourceFile:GetCodeHash ()
 	
+	self.Tokens = GCompute.Containers.LinkedList ()
+	self.Tokens.LinkedListNode = GCompute.Token
+	
 	local startTime = SysTime ()
 	local lexer = GCompute.Lexer (self)
 	lexer:AddEventListener ("RangeAdded",

@@ -31,19 +31,13 @@ function self:AddDirective (directive, handler)
 	self.Directives [directive] = handler
 end
 
-function self:AddKeyword (keyword, keywordType)
-	if not keywordType then
-		keywordType = GCompute.KeywordType.Unknown
-	end
+function self:AddKeyword (keywordType, keyword)
 	self.Keywords [keyword] = keywordType
 end
 
-function self:AddKeywords (keywords, keywordType)
-	if not keywordType then
-		keywordType = GCompute.KeywordType.Unknown
-	end
+function self:AddKeywords (keywordType, keywords)
 	for _, keyword in ipairs (keywords) do
-		self.Keywords [keyword] = keywordType
+		self:AddKeyword (keywordType, keyword)
 	end
 end
 

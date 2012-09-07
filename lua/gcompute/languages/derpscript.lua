@@ -54,9 +54,9 @@ LANGUAGE:GetTokenizer ()
 	:AddPlainSymbols  (GCompute.TokenType.Newline,             {"\r\n", "\r", "\n"})
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")
 
-LANGUAGE:AddKeywords ({"if", "else", "while", "for", "do", "break", "switch", "new"}, GCompute.KeywordType.Control)
-LANGUAGE:AddKeywords ({"public", "private", "protected", "friend", "static", "const"}, GCompute.KeywordType.Modifier)
-LANGUAGE:AddKeywords ({"namespace", "struct", "class", "enum", "using"}, GCompute.KeywordType.DataType)
-LANGUAGE:AddKeywords ({"true", "false", "null"}, GCompute.KeywordType.Constant)
+LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "while", "for", "do", "break", "switch", "new"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Modifier, {"public", "private", "protected", "friend", "static", "const"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
 
 LANGUAGE:LoadParser ()

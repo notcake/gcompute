@@ -77,6 +77,8 @@ function self:GetTokenColor (token)
 		return GLib.Colors.Yellow
 	elseif tokenType == GCompute.TokenType.Identifier then
 		return GLib.Colors.LightSkyBlue
+	elseif tokenType == GCompute.TokenType.Unknown then
+		return GLib.Colors.Tomato
 	end
 	return GLib.Colors.White
 end

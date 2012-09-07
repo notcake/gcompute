@@ -38,6 +38,9 @@ GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 				if deletionStart:Equals (self.Document:GetEnd ()) then return end
 			end
 		end
+				
+				PrintTable (deletionStart)
+				PrintTable (deletionEnd)
 			
 		local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation)
 		local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation)

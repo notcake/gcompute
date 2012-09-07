@@ -4,6 +4,14 @@ GCompute.SourceFile = GCompute.MakeConstructor (self)
 local nextAnonymousId = 0
 
 --[[
+	SourceFile
+	
+		SourceFiles have a one to one relationship with CompilationUnits.
+		A SourceFile will create a CompilationUnit if it doesn't already have one
+		when GetCompilationUnit is called.
+]]
+
+--[[
 	Events:
 		CacheableChanged (cacheable)
 			Fired when this source file's cacheability has changed.
@@ -43,14 +51,6 @@ function self:CanCache ()
 	return self.Cacheable
 end
 
-function self:CreateCompilationUnit ()
-	if not self.CompilationUnit then
-		self.CompilationUnit = GCompute.CompilationUnit (self)
-	end
-	
-	return self.CompilationUnit
-end
-
 function self:ComputeCodeHash ()
 	self.CodeHash = tonumber (util.CRC (self.Code))
 end
@@ -81,7 +81,13 @@ function self:GetCodeHash ()
 	return self.CodeHash
 end
 
+--- Returns the CompilationUnit associated with this SourceFile and creates one if it doesn't already exist
+-- @return The CompilationUnit associated with this SourceFile
 function self:GetCompilationUnit ()
+	if not self.CompilationUnit then
+		self.CompilationUnit = GCompute.CompilationUnit (self)
+	end
+	
 	return self.CompilationUnit
 end
 
@@ -121,10 +127,6 @@ end
 function self:SetCode (code)
 	self.Code = code
 	self:ComputeCodeHash ()
-end
-
-function self:SetCompilationUnit (compilationUnit)
-	self.CompilationUnit = compilationUnit
 end
 
 function self:SetId (id)

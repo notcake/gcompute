@@ -42,18 +42,26 @@ include ("deferrednameresolution.lua")
 
 include ("memoryusagereport.lua")
 
+include ("containers.lua")
+
 -- compiler
 include ("astnode.lua")
 include ("ast.lua")
 include ("astvisitor.lua")
 include ("namespacevisitor.lua")
-include ("containers.lua")
 
 include ("compiler/compilationgroup.lua")
 include ("compiler/compilationunit.lua")
 include ("compiler/compilerpasstype.lua")
 
-include ("compiler/tokenizer.lua")
+include ("lexer/keywordtype.lua")
+include ("lexer/tokentype.lua")
+include ("lexer/symbolmatchtype.lua")
+
+include ("lexer/token.lua")
+include ("lexer/tokenizer.lua")
+include ("lexer/lexer.lua")
+
 include ("compiler/preprocessor.lua")
 include ("compiler/parserjobgenerator.lua")
 include ("compiler/parser.lua")
@@ -135,11 +143,14 @@ include ("reference.lua")
 include ("compilercontext.lua")
 include ("executioncontext.lua")
 
+include ("languagedetector.lua")
 include ("languages.lua")
 include ("language.lua")
 include ("languages/brainfuck.lua")
 include ("languages/derpscript.lua")
 include ("languages/expression2.lua")
+include ("languages/glua.lua")
+include ("languages/lua.lua")
 
 -- runtime
 include ("astrunner.lua")

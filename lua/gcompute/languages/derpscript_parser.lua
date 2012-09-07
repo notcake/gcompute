@@ -272,7 +272,7 @@ function Parser:StatementTypeDeclaration ()
 	self.DebugOutput:WriteLine ("Trying type declaration...")
 	self:SavePosition ()
 	self:ChompModifiers ()
-	if self.Language:GetKeywordType (self.CurrentToken) ~= GCompute.KeywordTypes.DataType then
+	if self.Language:GetKeywordType (self.CurrentToken) ~= GCompute.KeywordType.DataType then
 		self:ClearModifiers ()
 		self:RestorePosition ()
 		return false

@@ -159,7 +159,8 @@ if CLIENT then
 		GCompute.ClearDebug ()
 		
 		local compilationGroup = GCompute.CompilationGroup ()
-		local sourceFile = GCompute.AnonymousSourceFile (TestInput)
+		local sourceFile = GCompute.SourceFileCache:CreateAnonymousSourceFile ()
+		sourceFile:SetCode (TestInput)
 		local compilationUnit = compilationGroup:AddSourceFile (sourceFile, Language)
 		
 		compilationGroup:Compile (
@@ -168,7 +169,7 @@ if CLIENT then
 				GCompute.PrintDebug ("Input: " .. TestInput)
 				GCompute.PrintDebug ("--------------------------------")
 				
-				GCompute.PrintDebug ("Tokenizer ran in " .. tostring (math.floor ((compilationUnit:GetPassDuration ("Tokenizer")) * 100000 + 0.5) * 0.01) .. "ms.")
+				GCompute.PrintDebug ("Lexer ran in " .. tostring (math.floor ((compilationUnit:GetPassDuration ("Lexer")) * 100000 + 0.5) * 0.01) .. "ms.")
 				GCompute.PrintDebug ("Preprocessor ran in " .. tostring (math.floor ((compilationUnit:GetPassDuration ("Preprocessor")) * 100000 + 0.5) * 0.01) .. "ms.")
 				GCompute.PrintDebug ("ParserJobGenerator ran in " .. tostring (math.floor ((compilationUnit:GetPassDuration ("ParserJobGenerator")) * 100000 + 0.5) * 0.01) .. "ms.")
 				GCompute.PrintDebug ("Parser ran in " .. tostring (math.floor ((compilationUnit:GetPassDuration ("Parser")) * 100000 + 0.5) * 0.01) .. "ms.")

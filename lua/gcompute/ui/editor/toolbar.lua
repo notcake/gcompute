@@ -1,0 +1,127 @@
+function GCompute.Editor.Toolbar (self)
+	local toolbar = vgui.Create ("GToolbar", self)
+	toolbar:AddButton ("New")
+		:SetIcon ("gui/g_silkicons/page_white_add")
+		:AddEventListener ("Click",
+			function ()
+				self:CreateEmptyCodeTab ():Select ()
+			end
+		)
+	toolbar:AddButton ("Open")
+		:SetIcon ("gui/g_silkicons/folder_page")
+		:AddEventListener ("Click",
+			function ()
+				VFS.OpenOpenFileDialog (
+					function (path, file)
+						if not path then return end
+						if not self or not self:IsValid () then return end
+						
+						if not file then GCompute.Error ("VFS.OpenOpenFileDialog returned a path but not an IFile???") end
+						
+						self:OpenFile (file,
+							function (success, file, tab)
+								if not tab then return end
+								tab:Select ()
+							end
+						)
+					end
+				)
+			end
+		)
+	toolbar:AddButton ("Save")
+		:SetIcon ("gui/g_silkicons/disk")
+		:AddEventListener ("Click",
+			function ()
+				self:SaveTab (self:GetSelectedTab ())
+			end
+		)
+	toolbar:AddButton ("Save All")
+		:SetIcon ("gui/g_silkicons/disk_multiple")
+		:AddEventListener ("Click",
+			function ()
+				local unsaved = {}
+				for i = 1, self.TabControl:GetTabCount () do
+					local contents = self.TabControl:GetTab (i):GetContents ()
+					if contents then
+						if contents:IsUnsaved () then
+							unsaved [#unsaved + 1] = self.TabControl:GetTab (i)
+						end
+					end
+				end
+				
+				if #unsaved == 0 then return end
+				
+				local saveIterator
+				local i = 0
+				function saveIterator (success)
+					i = i + 1
+					if not self or not self:IsValid () then return end
+					if not unsaved [i] then return end
+					if not success then return end
+					self:SaveTab (unsaved [i], saveIterator)
+				end
+				saveIterator (true)
+			end
+		)
+	toolbar:AddSeparator ()
+	toolbar:AddButton ("Cut")
+		:SetIcon ("gui/g_silkicons/cut")
+		:SetEnabled (false)
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				codeEditor:CutSelection ()
+			end
+		)
+	toolbar:AddButton ("Copy")
+		:SetIcon ("gui/g_silkicons/page_white_copy")
+		:SetEnabled (false)
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				codeEditor:CopySelection ()
+			end
+		)
+	toolbar:AddButton ("Paste")
+		:SetIcon ("gui/g_silkicons/paste_plain")
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				codeEditor:Paste ()
+			end
+		)
+	toolbar:AddSeparator ()
+	
+	-- Don't register click handlers for undo / redo.
+	-- They should get registered with an UndoRedoController which will
+	-- register click handlers.
+	toolbar:AddButton ("Undo")
+		:SetIcon ("gui/g_silkicons/arrow_undo")
+	toolbar:AddButton ("Redo")
+		:SetIcon ("gui/g_silkicons/arrow_redo")
+	toolbar:AddSeparator ()
+	toolbar:AddButton ("Run Code")
+		:SetIcon ("gui/g_silkicons/resultset_next")
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				RunString (codeEditor:GetText ())
+			end
+		)
+	toolbar:AddSeparator ()
+	toolbar:AddButton ("Stress Test")
+		:SetIcon ("gui/g_silkicons/exclamation")
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				codeEditor:SetText (string.rep (string.rep ("A:", 64) .. "\n", 30))
+			end
+		)
+	
+	return toolbar
+end

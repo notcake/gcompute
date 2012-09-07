@@ -8,140 +8,33 @@ function self:Init ()
 	self:SetDeleteOnClose (false)
 	self:MakePopup ()
 	
-	self.Toolbar = vgui.Create ("GToolbar", self)
-	self.Toolbar:AddButton ("New")
-		:SetIcon ("gui/g_silkicons/page_white_add")
-		:AddEventListener ("Click",
-			function ()
-				self:CreateEmptyCodeTab ():Select ()
-			end
-		)
-	self.Toolbar:AddButton ("Open")
-		:SetIcon ("gui/g_silkicons/folder_page")
-		:AddEventListener ("Click",
-			function ()
-				VFS.OpenOpenFileDialog (
-					function (path)
-						if not path then return end
-						if not self or not self:IsValid () then return end
-						
-						self:LoadFile (path,
-							function (file, tab)
-								if not tab then return end
-								tab:Select ()
-							end
-						)
-					end
-				)
-			end
-		)
-	self.Toolbar:AddButton ("Save")
-		:SetIcon ("gui/g_silkicons/disk")
-		:AddEventListener ("Click",
-			function ()
-				self:SaveTab (self:GetSelectedTab ())
-			end
-		)
-	self.Toolbar:AddButton ("Save All")
-		:SetIcon ("gui/g_silkicons/disk_multiple")
-		:AddEventListener ("Click",
-			function ()
-				local unsaved = {}
-				for i = 1, self.TabControl:GetTabCount () do
-					local contents = self.TabControl:GetTab (i):GetContents ()
-					if contents then
-						if contents:IsUnsaved () then
-							unsaved [#unsaved + 1] = self.TabControl:GetTab (i)
-						end
-					end
-				end
-				
-				if #unsaved == 0 then return end
-				
-				local saveIterator
-				local i = 0
-				function saveIterator (success)
-					i = i + 1
-					if not self or not self:IsValid () then return end
-					if not unsaved [i] then return end
-					if not success then return end
-					self:SaveTab (unsaved [i], saveIterator)
-				end
-				saveIterator (true)
-			end
-		)
-	self.Toolbar:AddSeparator ()
-	self.Toolbar:AddButton ("Cut")
-		:SetIcon ("gui/g_silkicons/cut")
-		:SetEnabled (false)
-		:AddEventListener ("Click",
-			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:CutSelection ()
-			end
-		)
-	self.Toolbar:AddButton ("Copy")
-		:SetIcon ("gui/g_silkicons/page_white_copy")
-		:SetEnabled (false)
-		:AddEventListener ("Click",
-			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:CopySelection ()
-			end
-		)
-	self.Toolbar:AddButton ("Paste")
-		:SetIcon ("gui/g_silkicons/paste_plain")
-		:AddEventListener ("Click",
-			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:Paste ()
-			end
-		)
-	self.Toolbar:AddSeparator ()
-	
-	-- Don't register click handlers for undo / redo.
-	-- Our UndoRedoController does it for us.
-	self.Toolbar:AddButton ("Undo")
-		:SetIcon ("gui/g_silkicons/arrow_undo")
-	self.Toolbar:AddButton ("Redo")
-		:SetIcon ("gui/g_silkicons/arrow_redo")
-	self.Toolbar:AddSeparator ()
-	self.Toolbar:AddButton ("Run Code")
-		:SetIcon ("gui/g_silkicons/resultset_next")
-		:AddEventListener ("Click",
-			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				RunString (codeEditor:GetText ())
-			end
-		)
-	self.Toolbar:AddSeparator ()
+	self.Toolbar = GCompute.Editor.Toolbar (self)
 	
 	self.TabControl = vgui.Create ("GTabControl", self)
-	self.TabControl:AddEventListener ("SelectedTabChanged",
-		function (_, oldSelectedTab, selectedTab)
-			local oldContents = oldSelectedTab and oldSelectedTab:GetContents () or nil
-			local contents = selectedTab and selectedTab:GetContents () or nil
-			local undoRedoStack = contents and contents:GetUndoRedoStack () or nil
-			if contents then contents:RequestFocus () end
+	self.TabControl:AddEventListener ("SelectedContentsChanged",
+		function (_, oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
+			local undoRedoStack = selectedContents and selectedContents:GetUndoRedoStack () or nil
+			if selectedContents then selectedContents:RequestFocus () end
 			self.UndoRedoController:SetUndoRedoStack (undoRedoStack)
-			self.ClipboardController:SetControl (contents)
+			self.ClipboardController:SetControl (selectedContents)
 			
-			if oldContents then
-				self:UnhookSelectedTabContents (oldSelectedTab, oldContents)
-			end
-			if contents then
-				self:HookSelectedTabContents (selectedTab, contents)
-			end
+			self:UnhookSelectedTabContents (oldSelectedTab, oldSelectedContents)
+			self:HookSelectedTabContents (selectedTab, selectedContents)
+			
+			self:UpdateCaretPositionText ()
+			self:UpdateLanguageText ()
 		end
 	)
 	self.TabControl:AddEventListener ("TabAdded",
 		function (_, tab)
+			local contents = tab:GetContents ()
+			
 			tab:SetContextMenu (self.TabContextMenu)
-			self:HookTabContents (tab, tab:GetContents ())
+			
+			self:HookTabContents (tab, contents)
+			if contents then
+				self:RegisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
+			end
 		end
 	)
 	self.TabControl:AddEventListener ("TabCloseRequested",
@@ -150,122 +43,56 @@ function self:Init ()
 		end
 	)
 	self.TabControl:AddEventListener ("TabContentsChanged",
-		function (_, tab, contents)
-			self:HookTabContents (tab, contents)
-			
-			if not tab:IsSelected () then return end
-			local contents = tab and tab:GetContents () or nil
-			self:HookSelectedTabContents (tab, contents)
-			
-			if contents then
-				contents:RequestFocus ()
+		function (_, tab, oldContents, contents)
+			if oldContents then
+				self:UnregisterTabPath (tab, oldContents:GetFile (), oldContents:GetFile () and oldContents:GetFile ():GetPath ())
 			end
-			
-			local undoRedoStack = contents and contents:GetUndoRedoStack () or nil
-			self.UndoRedoController:SetUndoRedoStack (undoRedoStack)
-			self.ClipboardController:SetControl (contents)
+			if contents then
+				self:RegisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
+			end
+			self:UnhookTabContents (tab, oldContents)
+			self:HookTabContents (tab, contents)
 		end
 	)
 	self.TabControl:AddEventListener ("TabRemoved",
 		function (_, tab)
-			self:UnhookTabContents (tab, tab:GetContents ())
-		end
-	)
-	
-	self.TabContextMenu = vgui.Create ("GMenu")
-	self.TabContextMenu:AddEventListener ("MenuOpening",
-		function (_, tab)
-			local contents = tab and tab:GetContents ()
+			local contents = tab:GetContents ()
+			self:UnhookTabContents (tab, contents)
 			
-			self.TabContextMenu:FindItem ("Close")                 :SetEnabled (self:CanCloseTab (tab))
-			self.TabContextMenu:FindItem ("Close all others")      :SetEnabled (self.TabControl:GetTabCount () > 1)
-			self.TabContextMenu:FindItem ("Save")                  :SetEnabled (contents and contents:CanSave ())
-			self.TabContextMenu:FindItem ("Rename")                :SetEnabled (contents and contents:HasFilePath ())
-			self.TabContextMenu:FindItem ("Delete")                :SetEnabled (contents and contents:HasFilePath ())
-			self.TabContextMenu:FindItem ("Copy path to clipboard"):SetEnabled (contents and contents:HasFilePath ())
+			if contents then
+				self:UnregisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
+			end
 		end
 	)
 	
-	self.TabContextMenu:AddOption ("Close")
-		:SetIcon ("gui/g_silkicons/tab_delete")
-		:AddEventListener ("Click",
-			function (_, tab)
-				if not tab then return end
-				self:CloseTab (tab)
-			end
-		)
-	self.TabContextMenu:AddOption ("Close all others")
-		:SetIcon ("gui/g_silkicons/tab_delete")
-		:AddEventListener ("Click",
-			function (_, tab)
-				if not tab then return end
-				local tabs = {}
-				for i = 1, self.TabControl:GetTabCount () do
-					if self.TabControl:GetTab (i) ~= tab then
-						tabs [#tabs + 1] = self.TabControl:GetTab (i)
-					end
-				end
-				
-				local closeIterator
-				local i = 0
-				function closeIterator (success)
-					i = i + 1
-					if not self or not self:IsValid () then return end
-					if not tabs [i] then return end
-					if not success then return end
-					self:CloseTab (tabs [i], closeIterator)
-				end
-				closeIterator (true)
-			end
-		)
-	self.TabContextMenu:AddSeparator ()
-	self.TabContextMenu:AddOption ("Save")
-		:SetIcon ("gui/g_silkicons/disk")
-		:AddEventListener ("Click",
-			function (_, tab)
-				if not tab then return end
-				self:SaveTab (tab)
-			end
-		)
-	self.TabContextMenu:AddOption ("Save as...")
-		:SetIcon ("gui/g_silkicons/disk")
-		:AddEventListener ("Click",
-			function (_, tab)
-				if not tab then return end
-				self:SaveAsTab (tab)
-			end
-		)
-	self.TabContextMenu:AddOption ("Rename")
-		:SetIcon ("gui/g_silkicons/page_edit")
-	self.TabContextMenu:AddOption ("Delete")
-		:SetIcon ("gui/g_silkicons/cross")
-	self.TabContextMenu:AddSeparator ()
-	self.TabContextMenu:AddOption ("Copy path to clipboard")
-		:SetIcon ("gui/g_silkicons/page_white_copy")
-		:AddEventListener ("Click",
-			function (_, tab)
-				if not tab then return end
-				if not tab:GetContents () then return end
-				if not tab:GetContents ():HasFilePath () then return end
-				SetClipboardText (tab:GetContents ():GetFilePath ())
-			end
-		)
+	self.TabContextMenu = GCompute.Editor.TabContextMenu (self)
+	self.CodeEditorContextMenu = GCompute.Editor.CodeEditorContextMenu (self)
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
+	self.LanguagePanel      = self.StatusBar:AddTextPanel ("Unknown language")
+	self.CaretPositionPanel = self.StatusBar:AddTextPanel ("Line 1, col 1")
+	self.CaretPositionPanel:SetFixedWidth (96)
 	
 	self.ClipboardController = Gooey.ClipboardController ()
 	self.ClipboardController:AddCopyButton  (self.Toolbar:GetItemById ("Copy"))
+	self.ClipboardController:AddCopyButton  (self.CodeEditorContextMenu:GetItemById ("Copy"))
 	self.ClipboardController:AddCutButton   (self.Toolbar:GetItemById ("Cut"))
+	self.ClipboardController:AddCutButton  (self.CodeEditorContextMenu:GetItemById ("Cut"))
 	self.ClipboardController:AddPasteButton (self.Toolbar:GetItemById ("Paste"))
+	self.ClipboardController:AddPasteButton  (self.CodeEditorContextMenu:GetItemById ("Paste"))
 	
 	self.UndoRedoController = Gooey.UndoRedoController ()
 	self.UndoRedoController:AddSaveButton   (self.Toolbar:GetItemById ("Save"))
 	self.UndoRedoController:AddUndoButton   (self.Toolbar:GetItemById ("Undo"))
+	self.UndoRedoController:AddUndoButton   (self.CodeEditorContextMenu:GetItemById ("Undo"))
 	self.UndoRedoController:AddRedoButton   (self.Toolbar:GetItemById ("Redo"))
+	self.UndoRedoController:AddRedoButton   (self.CodeEditorContextMenu:GetItemById ("Redo"))
 	
 	self:SetKeyboardMap (GCompute.Editor.EditorKeyboardMap)
 	
 	self.NextNewId = 1
+	
+	self.OpenPaths = {} -- map of paths to 
 	
 	self:InvalidateLayout ()
 	
@@ -362,6 +189,7 @@ function self:CreateCodeTab (...)
 	tab:SetCloseButtonVisible (true)
 	
 	local codeEditor = vgui.Create ("GComputeCodeEditor")
+	codeEditor:SetContextMenu (self.CodeEditorContextMenu)
 	
 	tab:SetContents (codeEditor)
 	
@@ -394,19 +222,19 @@ function self:GetSelectedTab ()
 	return self.TabControl:GetSelectedTab ()
 end
 
-function self:LoadFile (fileOrFilePath, callback)
-	callback = callback or GCompute.NullCallback
+--- Opens a new tab for the IFile. Use OpenPath instead if you have a path only.
+-- @param file The IFile to be opened.
+-- @param callback A callback function (success, IFile file, Tab tab)
+function self:OpenFile (file, callback)
+	if not file then return end
 	
-	if type (fileOrFilePath) == "string" then
-		VFS.Root:GetChild (GAuth.GetLocalId (), fileOrFilePath,
-			function (returnCode, file)
-				if not self or not self:IsValid () then return end
-				self:LoadFile (file, callback)
-			end
-		)
+	if self:IsPathOpen (file:GetPath ()) then
+		local tabs = self:GetPathTabs (file:GetPath ())
+		callback (true, file, tabs [1])
 		return
 	end
-	fileOrFilePath:Open (GAuth.GetLocalId (), VFS.OpenFlags.Read,
+	
+	file:Open (GAuth.GetLocalId (), VFS.OpenFlags.Read,
 		function (returnCode, fileStream)
 			if returnCode == VFS.ReturnCode.Success then
 				fileStream:Read (fileStream:GetLength (),
@@ -415,76 +243,107 @@ function self:LoadFile (fileOrFilePath, callback)
 						
 						local file = fileStream:GetFile ()
 						local tab = self:CreateCodeTab ()
-						tab:SetText (file:GetDisplayPath ())
-						tab:GetContents ():SetFilePath (file:GetPath (), file:GetDisplayPath ())
+						tab:SetText (file:GetDisplayName ())
+						tab:GetContents ():SetFile (file)
 						tab:GetContents ():SetText (data)
-						tab:Select ()
 						fileStream:Close ()
 						
-						callback (file, tab)
+						callback (true, file, tab)
 					end
 				)
 			else
-				callback ()
+				callback (false, file)
 			end
 		end
 	)
 end
 
+--- Opens a new tab for the given path. Use OpenFile instead if you have an IFile.
+-- @param path The path of the file to be opened
+-- @param callback A callback function (success, IFile file, Tab tab)
+function self:OpenPath (path, callback)
+	callback = callback or GCompute.NullCallback
+	
+	if self:IsPathOpen (path) then
+		local tabs = self:GetPathTabs (path)
+		callback (true, self:GetPathFile (path), tabs [1])
+		return
+	end
+	
+	VFS.Root:GetChild (GAuth.GetLocalId (), path,
+		function (returnCode, file)
+			if not self or not self:IsValid () then return end
+			if not file then callback (false) return end
+			self:OpenFile (file, callback)
+		end
+	)
+end
+
+--- Prompts for a file to which to save, then saves a tab's contents.
+-- @param tab The tab whose contents are to be saved
+-- @pram callback A callback function (success, IFile file)
 function self:SaveAsTab (tab, callback)
 	callback = callback or GCompute.NullCallback
 	
-	if not tab then callback (true) end
-	local contents = tab:GetContents ()
+	local contents = tab and tab:GetContents ()
 	if not contents then callback (true) end
 	
 	VFS.OpenSaveFileDialog (
-		function (path)
+		function (path, file)
 			if not path then callback (false) return end
 			if not contents or not contents:IsValid () then callback (false) return end
-			contents:SetFilePath (path)
-			self:SaveTab (tab, callback)
+			self:SaveTab (tab, path,
+				function (success, file)
+					callback (success, file)
+					
+					if not contents or not contents:IsValid () then return end
+					if file then contents:SetFile (file) end
+				end
+			)
 		end
 	)
 end
 
 --- Saves a tab's contents.
 -- @param tab The tab whose contents are to be saved
--- @param callback function (success)
-function self:SaveTab (tab, callback)
+-- @param pathOrCallback Optional path to which to save
+-- @param callback A callback function (success, IFile file)
+function self:SaveTab (tab, pathOrCallback, callback)
+	if type (pathOrCallback) == "function" then
+		callback = pathOrCallback
+		pathOrCallback = nil
+	end
 	callback = callback or GCompute.NullCallback
 	
-	if not tab then callback (true) end
-	local contents = tab:GetContents ()
-	if not contents then callback (true) end
+	local contents = tab and tab:GetContents ()
+	if not contents then callback (false) end
 	
-	if not contents:HasFilePath () then
-		VFS.OpenSaveFileDialog (
-			function (path)
-				if not path then callback (false) return end
-				if not contents or not contents:IsValid () then callback (false) return end
-				contents:SetFilePath (path)
-				self:SaveTab (tab, callback)
-			end
-		)
+	-- Determine save path
+	local path = pathOrCallback
+	if not path and contents:HasPath () then
+		path = contents:GetPath ()
+	end
+	
+	-- If the tab has no path, invoke the save as dialog.
+	if not path then
+		self:SaveAsTab (tab, callback)
 		return
 	end
 	
-	VFS.Root:OpenFile (GAuth.GetLocalId (), contents:GetFilePath (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
+	VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
 			if returnCode == VFS.ReturnCode.Success then
 				if not contents or not contents:IsValid () then fileStream:Close () callback (false) return end
 				local text = contents:GetText ()
 				fileStream:Write (text:len (), text,
 					function (returnCode)
-						local displayFilePath = fileStream:GetDisplayPath ()
+						local displayPath = fileStream:GetDisplayPath ()
 						fileStream:Close ()
 						if returnCode == VFS.ReturnCode.Success then
 							if contents and contents:IsValid () then
 								contents:MarkSaved ()
-								contents:SetDisplayFilePath (displayFilePath)
 							end
-							callback (true)
+							callback (true, fileStream:GetFile ())
 						else
 							callback (false)
 						end
@@ -498,37 +357,147 @@ function self:SaveTab (tab, callback)
 end
 
 -- Internal, do not call
-function self:HookSelectedTabContents (tab, contents)
-	if not contents then return end
-	contents:AddEventListener ("CaretMoved", tostring (self:GetTable ()),
-		function (_, caretLocation)
-			self.StatusBar:SetText ("Line " .. tostring (caretLocation:GetLine () + 1) .. ", col " .. tostring (caretLocation:GetColumn () + 1))
+function self:GetPathFile (path)
+	if not path then return nil end
+	path = path:lower ()
+	
+	if not self.OpenPaths [path] then return nil end
+	return self.OpenPaths [path].File
+end
+
+function self:GetPathTabs (path)
+	if not path then return {} end
+	path = path:lower ()
+	
+	if not self.OpenPaths [path] then return {} end
+	
+	local tabs = {}
+	for tab, _ in pairs (self.OpenPaths [path].Tabs) do
+		tabs [#tabs + 1] = tab
+	end
+	return tabs
+end
+
+function self:IsPathOpen (path)
+	if not path then return false end
+	path = path:lower ()
+	return self.OpenPaths [path] and true or false
+end
+
+function self:RegisterTabPath (tab, file, path)
+	if not path then return end
+	path = path:lower ()
+	
+	if not self.OpenPaths [path] then
+		self.OpenPaths [path] =
+		{
+			Tabs = {},
+			File = file,
+			Path = path
+		}
+	end
+	
+	self.OpenPaths [path].Tabs [tab] = true
+end
+
+function self:UnregisterTabPath (tab, file, path)
+	if not path then return end
+	path = path:lower ()
+	
+	if not self.OpenPaths [path] then return end
+	self.OpenPaths [path].Tabs [tab] = nil
+	if not next (self.OpenPaths [path].Tabs) then
+		self.OpenPaths [path] = nil
+	end
+end
+
+function self:UpdateCaretPositionText ()
+	local codeEditor = self:GetActiveCodeEditor ()
+	local caretLocation = codeEditor and codeEditor:GetCaretPos () or nil
+	if caretLocation then
+		self.CaretPositionPanel:SetText ("Line " .. tostring (caretLocation:GetLine () + 1) .. ", col " .. tostring (caretLocation:GetColumn () + 1))
+	else
+		self.CaretPositionPanel:SetText ("Line --, col --")
+	end
+end
+
+function self:UpdateLanguageText ()
+	local codeEditor = self:GetActiveCodeEditor ()
+	local compilationUnit = codeEditor and codeEditor:GetCompilationUnit ()
+	local language = compilationUnit and compilationUnit:GetLanguage ()
+	if language then
+		self.LanguagePanel:SetText (language:GetName () .. " code")
+	else
+		self.LanguagePanel:SetText ("Unknown language")
+	end
+end
+
+-- Event hooking
+function self:HookSelectedSourceFile (sourceFile)
+	sourceFile:GetCompilationUnit ():AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+		function (_, language)
+			self:UpdateLanguageText ()
 		end
 	)
 end
 
+function self:UnhookSelectedSourceFile (sourceFile)
+	sourceFile:GetCompilationUnit ():RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
+end
+
+function self:HookSelectedTabContents (tab, contents)
+	if not contents then return end
+	contents:AddEventListener ("CaretMoved", tostring (self:GetTable ()),
+		function (_, caretLocation)
+			self:UpdateCaretPositionText ()
+		end
+	)
+	contents:AddEventListener ("SourceFileChanged", tostring (self:GetTable ()),
+		function (_, oldSourceFile, sourceFile)
+			self:UnhookSelectedSourceFile (oldSourceFile)
+			self:HookSelectedSourceFile (sourceFile)
+			self:UpdateLanguageText ()
+		end
+	)
+	self:HookSelectedSourceFile (contents:GetSourceFile ())
+end
+
+function self:UnhookSelectedTabContents (tab, contents)
+	if not contents then return end
+	contents:RemoveEventListener ("CaretMoved",        tostring (self:GetTable ()))
+	contents:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
+	self:UnhookSelectedSourceFile (contents:GetSourceFile ())
+end
+
 function self:HookTabContents (tab, contents)
 	if not contents then return end
-	contents:AddEventListener ("DisplayFilePathChanged", tostring (self:GetTable ()),
-		function (_, displayFilePath)
-			tab:SetText (displayFilePath)
+	contents:AddEventListener ("PathChanged", tostring (self:GetTable ()),
+		function (_, oldPath, path)
+			self:UnregisterTabPath (tab, contents:GetFile (), oldPath)
+			self:RegisterTabPath (tab, contents:GetFile (), path)
+			tab:SetText (contents:GetFile ():GetDisplayName ())
 		end
 	)
 	contents:GetUndoRedoStack ():AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
 		function (_, canSave)
 			tab:SetIcon (contents:GetUndoRedoStack ():IsUnsaved () and "gui/g_silkicons/page_red" or "gui/g_silkicons/page")
+			
+			local canSaveAll = false
+			for tab in self.TabControl:GetEnumerator () do
+				if tab:GetContents () and tab:GetContents ():GetUndoRedoStack ():IsUnsaved () then
+					canSaveAll = true
+					break
+				end
+			end
+			
+			self.Toolbar:GetItemById ("Save All"):SetEnabled (canSaveAll)
 		end
 	)
 end
 
-function self:UnhookSelectedTabContents (tab, contents)
-	if not contents then return end
-	contents:RemoveEventListener ("CaretMoved", tostring (self:GetTable ()))
-end
-
 function self:UnhookTabContents (tab, contents)
 	if not contents then return end
-	contents:RemoveEventListener ("DisplayFilePathChanged", tostring (self:GetTable ()))
+	contents:RemoveEventListener ("PathChanged",        tostring (self:GetTable ()))
 	contents:GetUndoRedoStack ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
 end
 

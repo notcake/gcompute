@@ -1,8 +1,6 @@
 local self = {}
 GCompute.Parser = GCompute.MakeConstructor (self)
 
-local KeywordTypes = GCompute.KeywordTypes
-
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.Language = compilationUnit:GetLanguage ()
@@ -105,7 +103,7 @@ function self:AddModifier (Modifier)
 end
 
 function self:ChompModifiers ()
-	while self.CompilationUnit.Language:GetKeywordType (self.CurrentToken) == KeywordTypes.Modifier do
+	while self.CompilationUnit.Language:GetKeywordType (self.CurrentToken) == GCompute.KeywordType.Modifier do
 		self.DebugOutput:WriteLine ("Nommed modifier (" .. self.CurrentToken .. ")")
 		self.Modifiers [#self.Modifiers + 1] = self.CurrentToken
 		self:GetNextToken ()

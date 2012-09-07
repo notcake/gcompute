@@ -1,19 +1,34 @@
 local self = {}
 GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReporter)
 
--- Tokenizer : Linked list of tokens
+--[[
+	CompilationUnit
+	
+		Every CompilationUnit has a SourceFile assigned to it at construction.
+		A CompilationUnit's SourceFile cannot be changed.
+]]
+
+-- Lexer : Linked list of tokens
 -- Preprocessor : Linked list of tokens
 -- Parser : Custom tree describing code
 -- Compiler : Standardised abstract syntax tree
 -- Compiler2 : ast -> global scope entries, local scope entries etc
 
-function self:ctor (sourceFile, languageName)
-	languageName = languageName or "Expression 2"
+--[[
+	Events:
+		LanguageChanged (Language language)
+			Fired when this CompilationUnit's language has changed.
+]]
+
+function self:ctor (sourceFile)
+	if not sourceFile then
+		GCompute.Error ("CompilationUnits must be constructed with a SourceFile!")
+	end
 	
 	self.CompilationGroup = nil
 
 	self.SourceFile = sourceFile
-	self.Language = GCompute.Languages.Get (languageName)
+	self.Language = nil
 	
 	-- Messages
 	self.Messages = {}
@@ -33,6 +48,17 @@ function self:ctor (sourceFile, languageName)
 	
 	-- Profiling
 	self.PassDurations = {}
+	
+	GCompute.EventProvider (self)
+	
+	self:AutodetectLanguage ()
+end
+
+function self:AutodetectLanguage ()
+	local language = GCompute.LanguageDetector:DetectLanguage (self.SourceFile)
+	if language then
+		self:SetLanguage (language)
+	end
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -143,10 +169,13 @@ end
 
 function self:SetLanguage (languageOrLanguageName)
 	if type (languageOrLanguageName) == "string" then
-		self.Language = GCompute.Languages.Get (languageOrLanguageName)
-	else
-		self.Language = languageOrLanguageName
+		languageOrLanguageName = GCompute.Languages.Get (languageOrLanguageName)
 	end
+	
+	if self.Language == languageOrLanguageName then return end
+	self.Language = languageOrLanguageName
+	
+	self:DispatchEvent ("LanguageChanged", self)
 end
 
 -- Passes
@@ -172,6 +201,8 @@ end
 function self:Tokenize (callback)
 	callback = callback or GCompute.NullCallback
 	
+	if not self.Language then callback () return end
+	
 	if self.TokenizationInProgress then return end
 	if self.TokenizationRevision == self.SourceFile:GetCodeHash () then return end
 	
@@ -179,13 +210,13 @@ function self:Tokenize (callback)
 	self.TokenizationRevision = self.SourceFile:GetCodeHash ()
 	
 	local startTime = SysTime ()
-	local tokenizer = GCompute.Tokenizer (self)
-	tokenizer:Process (self:GetCode (), self:GetLanguage (),
+	local lexer = GCompute.Lexer (self)
+	lexer:Process (self:GetCode (), self:GetLanguage (),
 		function (tokens)
 			self.TokenizationInProgress = false
 			
 			self.Tokens = tokens
-			self:AddPassDuration ("Tokenizer", SysTime () - startTime)
+			self:AddPassDuration ("Lexer", SysTime () - startTime)
 			callback ()
 		end
 	)

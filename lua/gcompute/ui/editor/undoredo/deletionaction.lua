@@ -10,11 +10,14 @@ function self:ctor (codeEditor, selectionStartLocation, selectionEndLocation, de
 	self.DeletionEndLocation    = GCompute.Editor.LineCharacterLocation (deletionEndLocation)
 	self.Text = text
 	
+	self.PostDeletionLocation = nil
+	
 	self:SetVerb ("delete")
 end
 
 function self:Redo ()
-	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.CodeEditor.Document:Delete (self.DeletionStartLocation, self.DeletionEndLocation)))
+	self.PostDeletionLocation = self.CodeEditor.Document:Delete (self.DeletionStartLocation, self.DeletionEndLocation)
+	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.PostDeletionLocation))
 	self.CodeEditor:SetSelection (self.CodeEditor.CaretLocation, self.CodeEditor.CaretLocation)
 	
 	self.CodeEditor:ScrollToCaret ()
@@ -27,7 +30,7 @@ function self:SetVerb (verb)
 end
 
 function self:Undo ()
-	self.CodeEditor.Document:Insert (self.DeletionStartLocation, self.Text)
+	self.CodeEditor.Document:Insert (self.PostDeletionLocation, self.Text)
 	
 	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.SelectionEndLocation))
 	self.CodeEditor:SetSelection (self.CodeEditor.Document:CharacterToColumn (self.SelectionStartLocation), self.CodeEditor.CaretLocation)

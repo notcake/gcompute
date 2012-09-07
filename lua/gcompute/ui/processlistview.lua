@@ -48,7 +48,7 @@ function self:Init ()
 			local targetItem = self:GetSelectedProcesses ()
 			self.Menu:SetTargetItem (targetItem)
 			
-			self.Menu:FindItem ("Terminate"):SetEnabled (#targetItem ~= 0)
+			self.Menu:GetItemById ("Terminate"):SetEnabled (#targetItem ~= 0)
 		end
 	)
 	self.Menu:AddOption ("Terminate",

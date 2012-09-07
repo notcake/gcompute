@@ -5,12 +5,14 @@ surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
 	Events:
 		CaretMoved (LineColumnLocation caretLocation)
 			Fired when the caret has moved.
-		DisplayFilePathChanged (displayFilePath)
-			Fired when this document's displayed file path has changed.
-		FilePathChanged (filePath)
-			Fired when this document's file path has changed.
+		FileChanged (oldFile, newFile)
+			Fired when this document's file has changed.
+		PathChanged (oldPath, path)
+			Fired when this document's path has changed.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
 			Fired when the selection has changed.
+		SourceFileChanged (SourceFile oldSourceFile, SourceFile sourceFile)
+			Fired when this doumcent's SourceFile has changed.
 ]]
 
 function PANEL:Init ()
@@ -38,15 +40,17 @@ function PANEL:Init ()
 	self.VScroll = vgui.Create ("DVScrollBar", self)
 	self.VScroll:SetUp (0, 0)
 	
+	self.ContextMenu = nil
+	
 	-- Data
 	self.DefaultContents = false
-	self.FilePath = ""
-	self.DisplayFilePath = ""
+	self.File = nil
+	self.Path = ""
 	
 	self.Document = GCompute.Editor.Document ()
-	self.Document:AddEventListener ("TextCleared",  function () self:InvalidateSourceFile () self:UpdateScrollBar () end)
-	self.Document:AddEventListener ("TextDeleted",  function () self:InvalidateSourceFile () self:UpdateScrollBar () end)
-	self.Document:AddEventListener ("TextInserted", function () self:InvalidateSourceFile () self:UpdateScrollBar () end)
+	self.Document:AddEventListener ("TextCleared",  function () self:InvalidateSourceFile () self:ResetCaretBlinkTime () self:UpdateScrollBar () end)
+	self.Document:AddEventListener ("TextDeleted",  function () self:InvalidateSourceFile () self:ResetCaretBlinkTime () self:UpdateScrollBar () end)
+	self.Document:AddEventListener ("TextInserted", function () self:InvalidateSourceFile () self:ResetCaretBlinkTime () self:UpdateScrollBar () end)
 	
 	-- Caret
 	self.CaretLocation = GCompute.Editor.LineColumnLocation ()
@@ -77,6 +81,7 @@ function PANEL:Init ()
 	
 	-- Compiler
 	self.SourceFile = GCompute.SourceFileCache:CreateAnonymousSourceFile ()
+	self.CompilationUnit = nil
 	self.LastSourceFileUpdateTime = 0
 	self.SourceFileOutdated = true
 	
@@ -84,6 +89,10 @@ function PANEL:Init ()
 end
 
 -- Control
+function PANEL:GetContextMenu ()
+	return self.ContextMenu
+end
+
 function PANEL:HasFocus ()
 	return self.TextEntry:HasFocus ()
 end
@@ -106,6 +115,10 @@ function PANEL:RequestFocus ()
 	self.TextEntry:RequestFocus ()
 end
 
+function PANEL:SetContextMenu (contextMenu)
+	self.ContextMenu = contextMenu
+end
+
 -- Rendering
 function PANEL:DrawCaret ()
 	if not self:HasFocus () then return end
@@ -113,9 +126,15 @@ function PANEL:DrawCaret ()
 	local caretX = self.Settings.LineNumberWidth + (self.CaretLocation:GetColumn () - self.ViewLocation:GetColumn ()) * self.Settings.CharacterWidth
 	local caretY = (self.CaretLocation:GetLine () - self.ViewLocation:GetLine ()) * self.Settings.LineHeight
 	if (SysTime () - self.CaretBlinkTime) % 1 < 0.5 then
-		surface.SetDrawColor (128, 128, 128, 255)
+		surface.SetDrawColor (GLib.Colors.Gray)
 		surface.DrawLine (caretX, caretY, caretX, caretY + self.Settings.LineHeight)
 	end
+end
+
+function PANEL:DrawCaretLineHightlighting ()
+	local caretY = (self.CaretLocation:GetLine () - self.ViewLocation:GetLine ()) * self.Settings.LineHeight
+	surface.SetDrawColor (Color (32, 32, 64, 255))
+	surface.DrawRect (self.Settings.LineNumberWidth, caretY, self:GetWide () - self.Settings.LineNumberWidth, self.Settings.LineHeight)
 end
 
 function PANEL:DrawLine (lineOffset)
@@ -232,7 +251,8 @@ function PANEL:Paint ()
 	-- Draw background
 	surface.SetDrawColor (32, 32, 32, 255)
 	surface.DrawRect (self.Settings.LineNumberWidth, 0, self:GetWide () - self.Settings.LineNumberWidth, self:GetTall ())
-
+	
+	self:DrawCaretLineHightlighting ()
 	self:DrawSelection ()
 	self:DrawCaret ()
 	
@@ -242,7 +262,7 @@ function PANEL:Paint ()
 	end
 	
 	-- Draw line numbers
-	surface.SetDrawColor (128, 128, 128, 255)
+	surface.SetDrawColor (GLib.Colors.Gray)
 	surface.DrawRect (0, 0, self.Settings.LineNumberWidth, self:GetTall ())
 	for i = 0, math.min (self.ViewLineCount, self.Document:GetLineCount () - self.ViewLocation:GetLine () - 1) do
 		draw.SimpleText (tostring (self.ViewLocation:GetLine () + i + 1), "GComputeMonospace", self.Settings.LineNumberWidth - 16, i * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight), GLib.Colors.White, TEXT_ALIGN_RIGHT)
@@ -254,56 +274,51 @@ function PANEL:GetDocument ()
 	return self.Document
 end
 
-function PANEL:GetDisplayFilePath ()
-	return self.DisplayFilePath
+function PANEL:GetFile ()
+	return self.File
 end
 
-function PANEL:GetFilePath ()
-	return self.FilePath
+function PANEL:GetPath ()
+	return self.Path
 end
 
-function PANEL:HasFilePath ()
-	return self.FilePath and self.FilePath ~= "" or false
+function PANEL:HasFile ()
+	return self.File and true or false
+end
+
+function PANEL:HasPath ()
+	return self.Path and self.Path ~= "" or false
 end
 
 function PANEL:IsDefaultContents ()
 	return self.DefaultContents
 end
 
-function PANEL:SetDisplayFilePath (displayFilePath)
-	displayFilePath = displayFilePath or self.FilePath
-	if self.DisplayFilePath == displayFilePath then return end
-	
-	self.DisplayFilePath = displayFilePath
-	
-	self:DispatchEvent ("DisplayFilePathChanged", displayFilePath)
+function PANEL:SetDefaultContents (defaultContents)
+	self.DefaultContents = defaultContents
+	self.UndoRedoStack:SetSavableAtStart (defaultContents)
 end
 
-function PANEL:SetFilePath (filePath, displayFilePath)
-	filePath = filePath or ""
-	displayFilePath = displayFilePath or filePath
-	if self.FilePath == filePath then return end
+function PANEL:SetFile (file)
+	if self.File == file then return end
 	
-	self.FilePath = filePath
-	self.DisplayFilePath = displayFilePath
+	local oldFile = self.File
+	local oldPath = self.Path
+	self.File = file
+	self.Path = file and file:GetPath () or ""
 	
-	if self.FilePath == "" then
+	if self.Path == "" then
 		-- If our source file is not an unnamed one, create a new unnamed SourceFile
 		if self.SourceFile:HasPath () then
 			self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
 		end
 	else
-		self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (filePath))
+		self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (self.Path))
 		self:SetDefaultContents (false)
 	end
 	
-	self:DispatchEvent ("FilePathChanged", filePath)
-	self:DispatchEvent ("DisplayFilePathChanged", displayFilePath)
-end
-
-function PANEL:SetDefaultContents (defaultContents)
-	self.DefaultContents = defaultContents
-	self.UndoRedoStack:SetSavableAtStart (defaultContents)
+	self:DispatchEvent ("FileChanged", oldFile, self.File)
+	self:DispatchEvent ("PathChanged", oldPath, self.Path)
 end
 
 -- Undo / redo
@@ -373,6 +388,10 @@ function PANEL:FixupColumn (columnLocation)
 	end
 
 	return GCompute.Editor.LineColumnLocation (columnLocation:GetLine (), column)
+end
+
+function PANEL:GetCaretPos ()
+	return self.CaretLocation
 end
 
 function PANEL:MoveCaretLeft (overrideSelectionStart)
@@ -527,6 +546,18 @@ function PANEL:SetRawCaretPos (caretLocation, scrollToCaret)
 end
 
 -- Selection
+function PANEL:DeleteSelection ()
+	if self.SelectionStartLocation:Equals (self.SelectionEndLocation) then return end
+	
+	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation)
+	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation)
+	local text = self.Document:GetText (selectionStartLocation, selectionEndLocation)
+	
+	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStartLocation, selectionEndLocation, selectionStartLocation, selectionEndLocation, text)
+	deletionAction:Redo ()
+	self.UndoRedoStack:Push (deletionAction)
+end
+
 function PANEL:GetSelectionEnd ()
 	return self.SelectionEndLocation
 end
@@ -535,8 +566,25 @@ function PANEL:GetSelectionStart ()
 	return self.SelectionStartLocation
 end
 
+function PANEL:IsInSelection (location)
+	local selectionStart = self.SelectionStartLocation
+	local selectionEnd   = self.SelectionEndLocation
+	if self.SelectionStartLocation:IsAfter (self.SelectionEndLocation) then
+		selectionStart = self.SelectionEndLocation
+		selectionEnd   = self.SelectionStartLocation
+	end
+	return selectionStart:IsEqualOrBefore (location) and selectionEnd:IsEqualOrAfter (location)
+end
+
 function PANEL:IsSelectionEmpty ()
 	return self.SelectionStartLocation:Equals (self.SelectionEndLocation)
+end
+
+function PANEL:SelectAll ()
+	self:SetSelection (
+		self.Document:CharacterToColumn (self.Document:GetStart ()),
+		self.Document:CharacterToColumn (self.Document:GetEnd ())
+	)
 end
 
 function PANEL:SetSelection (selectionStart, selectionEnd)
@@ -635,6 +683,14 @@ function PANEL:Paste ()
 end
 
 -- Compiler
+function PANEL:GetCompilationUnit ()
+	if not self.SourceFile then return nil end
+	if not self.CompilationUnit then
+		self.CompilationUnit = self.SourceFile:GetCompilationUnit ()
+	end
+	return self.CompilationUnit
+end
+
 function PANEL:GetSourceFile ()
 	return self.SourceFile
 end
@@ -651,15 +707,19 @@ function PANEL:SetSourceFile (sourceFile)
 	if not sourceFile then return end
 	if self.SourceFile == sourceFile then return end
 	
+	local oldSourceFile = self.SourceFile
 	self.SourceFile = sourceFile
+	self.CompilationUnit = nil
 	self:InvalidateSourceFile ()
+	
+	self:DispatchEvent ("SourceFileChanged", oldSourceFile, sourceFile)
 end
 
 -- Internal, do not call
 function PANEL:ApplyTokenization ()
 	if not self.SourceFile then return end
 	
-	local tokens = self.SourceFile:CreateCompilationUnit ():GetTokens ()
+	local tokens = self:GetCompilationUnit ():GetTokens ()
 	if not tokens then return end
 	
 	local token = tokens.First
@@ -700,10 +760,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 		end
 	elseif keyCode == KEY_A then
 		if ctrl then
-			self:SetSelection (
-				self.Document:CharacterToColumn (self.Document:GetStart ()),
-				self.Document:CharacterToColumn (self.Document:GetEnd ())
-			)
+			self:SelectAll ()
 		end
 	end
 	
@@ -719,17 +776,28 @@ function PANEL:OnMouseDown (mouseCode, x, y)
 	self:RequestFocus ()
 	
 	if mouseCode == MOUSE_LEFT then
-		self.Selecting = true
-		
-		self:SetCaretPos (self:PointToLocation (self:CursorPos ()))
-		
-		if shift then
-			self:SetSelectionEnd (self.CaretLocation)
+		if x <= self.Settings.LineNumberWidth then
 		else
-			self:SetSelection (self.CaretLocation, self.CaretLocation)
+			self.Selecting = true
+			self:SetCaretPos (self:PointToLocation (self:CursorPos ()))
+			
+			if shift then
+				self:SetSelectionEnd (self.CaretLocation)
+			else
+				self:SetSelection (self.CaretLocation, self.CaretLocation)
+			end
+			
+			self:MouseCapture (true)
 		end
-		
-		self:MouseCapture (true)
+	elseif mouseCode == MOUSE_RIGHT then
+		if x <= self.Settings.LineNumberWidth then
+		else
+			local caretLocation = self:PointToLocation (self:CursorPos ())
+			if not self:IsInSelection (caretLocation) then
+				self:SetCaretPos (caretLocation)
+				self:SetSelection (self.CaretLocation, self.CaretLocation)
+			end
+		end
 	end
 end
 
@@ -738,6 +806,12 @@ function PANEL:OnMouseMove (mouseCode, x, y)
 		self:SetCaretPos (self:PointToLocation (x, y))
 		
 		self:SetSelectionEnd (self.CaretLocation)
+	else
+		if x <= self.Settings.LineNumberWidth then
+			self:SetCursor ("arrow")
+		else
+			self:SetCursor ("beam")
+		end
 	end
 end
 
@@ -746,6 +820,10 @@ function PANEL:OnMouseUp (mouseCode, x, y)
 		self.Selecting = false
 		
 		self:MouseCapture (false)
+	elseif mouseCode == MOUSE_RIGHT then
+		if self.ContextMenu then
+			self.ContextMenu:Open ()
+		end
 	end
 end
 
@@ -764,13 +842,13 @@ end
 function PANEL:Think ()
 	if self.SourceFileOutdated then
 		if SysTime () - self.LastSourceFileUpdateTime > 0.2 then
-			if self.SourceFile:CreateCompilationUnit ():IsTokenizing () then return end
+			if self:GetCompilationUnit ():IsTokenizing () then return end
 			
 			self.SourceFileOutdated = false
 			self.LastSourceFileUpdateTime = SysTime ()
 			
 			self.SourceFile:SetCode (self:GetText ())
-			self.SourceFile:CreateCompilationUnit ()
+			self:GetCompilationUnit ()
 				:Tokenize (
 					function ()
 						if not self or not self:IsValid () then return end

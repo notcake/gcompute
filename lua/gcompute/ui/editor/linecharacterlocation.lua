@@ -52,6 +52,20 @@ function self:IsBefore (lineCharacterLocation)
 	return false
 end
 
+function self:IsEqualOrAfter (lineCharacterLocation)
+	if self.Line < lineCharacterLocation.Line then return false end
+	if self.Line > lineCharacterLocation.Line then return true end
+	if self.Character >= lineCharacterLocation.Character then return true end
+	return false
+end
+
+function self:IsEqualOrBefore (lineCharacterLocation)
+	if self.Line < lineCharacterLocation.Line then return true end
+	if self.Line > lineCharacterLocation.Line then return false end
+	if self.Character <= lineCharacterLocation.Character then return true end
+	return false
+end
+
 function self:SetCharacter (character)
 	if character < 0 then character = 0 end
 	self.Character = character

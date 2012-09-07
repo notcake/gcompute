@@ -13,13 +13,13 @@ end
 
 -- Source Files
 function self:AddSourceFile (sourceFile, languageName)
-	languageName = languageName or "Derpscript"
-
 	self.SourceFileCount = self.SourceFileCount + 1
 	self.SourceFiles [self.SourceFileCount] = sourceFile
 	
-	local compilationUnit = sourceFile:CreateCompilationUnit ()
-	compilationUnit:SetLanguage (languageName)
+	local compilationUnit = sourceFile:GetCompilationUnit ()
+	if languageName then
+		compilationUnit:SetLanguage (languageName)
+	end
 	compilationUnit:SetCompilationGroup (self)
 	-- TODO: Fix bug where two CompilationGroups run simultaneously and use the same CompilationUnit
 	

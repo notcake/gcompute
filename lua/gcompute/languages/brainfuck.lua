@@ -1,42 +1,48 @@
 local LANGUAGE = GCompute.Languages.Create ("Brainfuck")
 
--- Tokenizer
-LANGUAGE:AddCustomSymbols ({"\"", "'"}, GCompute.TokenType.String, function (Code)
-	local i = 2
-	local Escaped = false
-	while true do
-		local c = Code:sub (i, i)
-		if c == "" then
-			return Code:sub (1, i) .. Code:sub (1, 1), i
-		else
-			if Escaped then
-				Escaped = false
-			else
-				if c == "\\" then
-					Escaped = true
-				elseif c == Code:sub (1, 1) then
-					return Code:sub (1, i), i
+-- Lexer
+LANGUAGE:GetTokenizer ()
+	:AddCustomSymbols (GCompute.TokenType.String, {"\"", "'"},
+		function (code, offset)
+			local quotationMark = code:sub (offset, offset)
+			local i = offset + 1
+			local escaped = false
+			while true do
+				local c = code:sub (i, i)
+				if c == "" then
+					return code:sub (offset, i) .. quotationMark, i
+				else
+					if escaped then
+						escaped = false
+					else
+						if c == "\\" then
+							escaped = true
+						elseif c == quotationMark then
+							return code:sub (offset, i), i - offset + 1
+						end
+					end
 				end
+				i = i + 1
 			end
 		end
-		i = i + 1
-	end
-end)
-LANGUAGE:AddCustomSymbol ("/*", GCompute.TokenType.Comment, function (Code)
-	local i = 3
-	while true do
-		local c = Code:sub (i, i + 1)
-		if c == "" then
-			return Code:sub (1, i), i
-		elseif c == "*/" then
-			return Code:sub (1, i + 1), i + 1
+	)
+	:AddCustomSymbol (GCompute.TokenType.Comment, "/*",
+		function (code, offset)
+			local i = offset + 2
+			while true do
+				local c = code:sub (i, i + 1)
+				if c == "" then
+					return code:sub (offset, i), i
+				elseif c == "*/" then
+					return code:sub (offset, i + 1), i - offset + 2
+				end
+				i = i + 1
+			end
+			return nil, 0
 		end
-		i = i + 1
-	end
-	return nil, 0
-end)
-LANGUAGE:AddSymbol ("//[^\n\r]*", GCompute.TokenType.Comment)
-LANGUAGE:AddSymbol ("[<>+\\-]+", GCompute.TokenType.Operator)
-LANGUAGE:AddSymbols ({"[", "]"}, GCompute.TokenType.Operator, false)
+	)
+	:AddPatternSymbol (GCompute.TokenType.Comment,   "//[^\n\r]*")
+	:AddPatternSymbol (GCompute.TokenType.Operator,  "[<>+\\-]+")
+	:AddPlainSymbols  (GCompute.TokenType.Operator, {"[", "]"})
 
 LANGUAGE:LoadParser ()

@@ -2,6 +2,8 @@ local self = {}
 GCompute.Containers.LinkedList = GCompute.MakeConstructor (self)
 
 function self:ctor ()
+	self.LinkedListNode = GCompute.Containers.LinkedListNode
+	
 	self.First = nil
 	self.Last = nil
 	self.Count = 0
@@ -10,7 +12,7 @@ end
 function self:AddAfter (node, value)
 	if node == nil then return self:AddFirst (value) end
 	
-	local linkedListNode = GCompute.Containers.LinkedListNode ()
+	local linkedListNode = self.LinkedListNode ()
 	linkedListNode.List = self
 	linkedListNode.Next = node.Next
 	linkedListNode.Previous = node
@@ -33,7 +35,7 @@ end
 function self:AddBefore (node, value)
 	if node == nil then return self:AddLast (value) end
 	
-	local linkedListNode = GCompute.Containers.LinkedListNode ()
+	local linkedListNode = self.LinkedListNode ()
 	linkedListNode.List = self
 	linkedListNode.Next = node
 	linkedListNode.Previous = node.Previous
@@ -55,11 +57,11 @@ end
 
 function self:AddFirst (value)
 	if not self.First then
-		self.First = GCompute.Containers.LinkedListNode ()
+		self.First = self.LinkedListNode ()
 		self.First.List = self
 		self.Last = self.First
 	else
-		self.First.Previous = GCompute.Containers.LinkedListNode ()
+		self.First.Previous = self.LinkedListNode ()
 		self.First.Previous.List = self
 		self.First.Previous.Next = self.First
 		self.First = self.First.Previous
@@ -72,11 +74,11 @@ end
 
 function self:AddLast (value)
 	if not self.Last then
-		self.First = GCompute.Containers.LinkedListNode ()
+		self.First = self.LinkedListNode ()
 		self.First.List = self
 		self.Last = self.First
 	else
-		self.Last.Next = GCompute.Containers.LinkedListNode ()
+		self.Last.Next = self.LinkedListNode ()
 		self.Last.Next.List = self
 		self.Last.Next.Previous = self.Last
 		self.Last = self.Last.Next

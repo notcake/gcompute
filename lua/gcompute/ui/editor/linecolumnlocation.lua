@@ -52,6 +52,20 @@ function self:IsBefore (lineColumnLocation)
 	return false
 end
 
+function self:IsEqualOrAfter (lineColumnLocation)
+	if self.Line < lineColumnLocation.Line then return false end
+	if self.Line > lineColumnLocation.Line then return true end
+	if self.Column >= lineColumnLocation.Column then return true end
+	return false
+end
+
+function self:IsEqualOrBefore (lineColumnLocation)
+	if self.Line < lineColumnLocation.Line then return true end
+	if self.Line > lineColumnLocation.Line then return false end
+	if self.Column <= lineColumnLocation.Column then return true end
+	return false
+end
+
 function self:SetColumn (column)
 	if column < 0 then column = 0 end
 	self.Column = column

@@ -45,17 +45,25 @@ function self:Delete (startLocation, endLocation)
 		startLocation = temp
 	end
 	
-	local after = self:GetLine (endLocation:GetLine ()):Sub (endLocation:GetCharacter ())
-	local lastRemovedChar = GLib.UTF8.Sub (after, 1, 1)
-	after = GLib.UTF8.Sub (after, 2)
-	if after == "" or lastRemovedChar == "\r" or lastRemovedChar == "\n" then
-		-- The last line's newline will be deleted.
-		local nextLine = self:GetLine (endLocation:GetLine () + 1)
-		if nextLine then
-			after = nextLine:GetText ()
-			table.remove (self.Lines, endLocation:GetLine () + 2)
-		else
-			after = ""
+	local after = nil -- The undeleted portion of the deletion span's last line
+	
+	-- Check if the deletion span's last line's line break is to be deleted.
+	if endLocation:GetCharacter () == 0 then
+		-- Impossible for this deletion span to delete the last line's line break
+		after = self:GetLine (endLocation:GetLine ()):Sub (endLocation:GetCharacter () + 1)
+	else
+		after = self:GetLine (endLocation:GetLine ()):Sub (endLocation:GetCharacter ())
+		local lastRemovedChar = GLib.UTF8.Sub (after, 1, 1)
+		after = GLib.UTF8.Sub (after, 2)
+		if after == "" or lastRemovedChar == "\r" or lastRemovedChar == "\n" then
+			-- The deletion span's last line's line break will be deleted.
+			local nextLine = self:GetLine (endLocation:GetLine () + 1)
+			if nextLine then
+				after = nextLine:GetText ()
+				table.remove (self.Lines, endLocation:GetLine () + 2)
+			else
+				after = ""
+			end
 		end
 	end
 	

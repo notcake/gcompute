@@ -142,44 +142,27 @@ function self:Insert (character, text)
 	local bitTypes = {}
 	local str = nil
 	local lastType = nil
-	for char, _ in GLib.UTF8.Iterator (text) do
-		if char == "\t" or char == " " then
-			if lastType ~= "whitespace" then
-				-- Group whitespace together in a TextStorageNode
-				bits [#bits + 1] = str
-				bitTypes [#bitTypes + 1] = lastType
-				str = ""
-				lastType = "whitespace"
-			end
-		elseif char == "\r" or char == "\n" then
-			if lastType ~= "linebreak" then
-				-- Group line breaks together in a TextStorageNode
-				bits [#bits + 1] = str
-				bitTypes [#bitTypes + 1] = lastType
-				str = ""
-				lastType = "linebreak"
-			end
-		elseif char:len () > 1 then
-			-- Non ascii characters get a TextStorageNode to themselves
-			bits [#bits + 1] = str
-			bitTypes [#bitTypes + 1] = lastType
-			str = ""
-			lastType = "utf8"
-		elseif lastType ~= "regular" then
-			bits [#bits + 1] = str
-			bitTypes [#bitTypes + 1] = lastType
-			str = ""
-			lastType = "regular"
-		elseif str and str:len () >= 100 then
-			-- Cap TextStorageNode length to 100
-			bits [#bits + 1] = str
-			bitTypes [#bitTypes + 1] = lastType
-			str = ""
+	local offset = 1
+	local match = nil
+	while offset <= string.len (text) do
+		match = string.match (text, "^[ \t]+", offset)
+		lastType = "whitespace"
+		if not match then
+			match = string.match (text, "^[\r\n]+", offset)
+			lastType = "linebreak"
 		end
-		str = str .. char
+		if not match then
+			match = string.match (text, "^[\128-\255]+", offset)
+			lastType = "utf8"
+		end
+		if not match then
+			match = string.match (text, "^[%z\1-\8\11\12\14-\31\33-\127]+", offset)
+			lastType = "regular"
+		end
+		bits [#bits + 1] = match
+		bitTypes [#bitTypes + 1] = lastType
+		offset = offset + string.len (match)
 	end
-	bits [#bits + 1] = str
-	bitTypes [#bitTypes + 1] = lastType
 	
 	local nodeAfterInsertionPoint = self:SplitNode (character)
 	local nodeBeforeInsertionPoint = nodeAfterInsertionPoint and nodeAfterInsertionPoint.Previous or self.LinkedList.Last

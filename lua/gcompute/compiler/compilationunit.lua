@@ -19,9 +19,15 @@ GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReport
 		LanguageChanged (Language language)
 			Fired when this CompilationUnit's language has changed.
 		
-		RangeAdded (Token startToken, Token endToken)
+		LexerFinished (Lexer lexer)
+			Fired when the lexing process for this CompilationUnit has finished.
+		LexerProgress (Lexer lexer, bytesProcessed, totalBytes)
+			Fired when the lexer has processed some data.
+		LexerStarted (Lexer lexer)
+			Fired when the lexing process for this CompilationUnit has started.
+		TokenRangeAdded (Token startToken, Token endToken)
 			Fired when a range of tokens has been inserted.
-		RangeRemoved (Token startToken, Token endToken)
+		TokenRangeRemoved (Token startToken, Token endToken)
 			Fired when a range of tokens has been removed.
 ]]
 
@@ -40,9 +46,11 @@ function self:ctor (sourceFile)
 	self.NextMessageId = 0
 	
 	-- Compilation
+	-- Lexing
+	self.Lexer = nil
+	self.LexingInProgress = false
+	self.LexingRevision = 0
 	self.Tokens = nil
-	self.TokenizationInProgress = false
-	self.TokenizationRevision = 0
 	
 	self.ParserJobQueue = nil
 	self.AST = nil
@@ -199,41 +207,52 @@ function self:SetPassDuration (passName, duration)
 	self.PassDurations [passName] = duration
 end
 
-function self:IsTokenizing ()
-	return self.TokenizationInProgress
+-- Lexing
+function self:GetLexer ()
+	return self.Lexer
 end
 
-function self:Tokenize (callback)
+function self:IsLexing ()
+	return self.LexingInProgress
+end
+
+function self:Lex (callback)
 	callback = callback or GCompute.NullCallback
 	
 	if not self.Language then callback () return end
 	
-	if self.TokenizationInProgress then return end
-	if self.TokenizationRevision == self.SourceFile:GetCodeHash () then return end
+	if self.LexingInProgress then return end
+	if self.LexingRevision == self.SourceFile:GetCodeHash () then return end
 	
-	self.TokenizationInProgress = true
-	self.TokenizationRevision = self.SourceFile:GetCodeHash ()
+	self.LexingInProgress = true
+	self.LexingRevision = self.SourceFile:GetCodeHash ()
 	
 	self.Tokens = GCompute.Containers.LinkedList ()
 	self.Tokens.LinkedListNode = GCompute.Token
 	
 	local startTime = SysTime ()
-	local lexer = GCompute.Lexer (self)
-	lexer:AddEventListener ("RangeAdded",
+	self.Lexer = GCompute.Lexer (self)
+	self.Lexer:AddEventListener ("Progress",
+		function (_, bytesProcessed, totalBytes)
+			self:DispatchEvent ("LexerProgress", self.Lexer, bytesProcessed, totalBytes)
+		end
+	)
+	self.Lexer:AddEventListener ("RangeAdded",
 		function (_, startToken, endToken)
 			self:DispatchEvent ("TokenRangeAdded", startToken, endToken)
 		end
 	)
-	lexer:AddEventListener ("RangeRemoved",
+	self.Lexer:AddEventListener ("RangeRemoved",
 		function (_, startToken, endToken)
 			self:DispatchEvent ("TokenRangeRemoved", startToken, endToken)
 		end
 	)
-	lexer:Process (self:GetCode (), self:GetLanguage (),
+	self:DispatchEvent ("LexerStarted", self.Lexer)
+	self.Lexer:Process (self:GetCode (), self:GetLanguage (),
 		function (tokens)
-			self.TokenizationInProgress = false
+			self.LexingInProgress = false
 			
-			self.Tokens = tokens
+			self:DispatchEvent ("LexerFinished", self.Lexer)
 			self:AddPassDuration ("Lexer", SysTime () - startTime)
 			callback ()
 		end

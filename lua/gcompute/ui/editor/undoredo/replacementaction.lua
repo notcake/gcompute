@@ -19,7 +19,7 @@ end
 function self:Redo ()
 	self.InsertionLocation = self.CodeEditor.Document:Delete (self.SelectionStartLocation, self.SelectionEndLocation)
 	self.FinalLocation = self.CodeEditor.Document:Insert (self.InsertionLocation, self.FinalText)
-	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.FinalLocation))
+	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.FinalLocation, self.CodeEditor.TextRenderer))
 	self.CodeEditor:SetSelection (self.CodeEditor.CaretLocation, self.CodeEditor.CaretLocation)
 	
 	self.CodeEditor:ScrollToCaret ()
@@ -35,8 +35,8 @@ function self:Undo ()
 	self.CodeEditor.Document:Delete (self.InsertionLocation, self.FinalLocation)
 	self.CodeEditor.Document:Insert (self.InsertionLocation, self.OriginalText)
 	
-	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.SelectionEndLocation))
-	self.CodeEditor:SetSelection (self.CodeEditor.Document:CharacterToColumn (self.SelectionStartLocation), self.CodeEditor.CaretLocation)
+	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.SelectionEndLocation, self.CodeEditor.TextRenderer))
+	self.CodeEditor:SetSelection (self.CodeEditor.Document:CharacterToColumn (self.SelectionStartLocation, self.CodeEditor.TextRenderer), self.CodeEditor.CaretLocation)
 	
 	self.CodeEditor:ScrollToCaret ()
 end

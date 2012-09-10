@@ -55,7 +55,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_END,
 	function (self, key, ctrl, shift, alt)
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
-			self.Document:GetLine (self.CaretLocation:GetLine ()):GetWidth (self.Settings.TabWidth)
+			self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer)
 		))
 		
 		if shift then

@@ -4,7 +4,7 @@ GCompute.Languages.Language = GCompute.MakeConstructor (self)
 function self:ctor (name)
 	self.Name = name
 	
-	self.Tokenizer = GCompute.Tokenizer ()
+	self.Tokenizer = GCompute.Tokenizer (self)
 	self.Keywords = {}
 	
 	self.DirectivesCaseSensitive = true

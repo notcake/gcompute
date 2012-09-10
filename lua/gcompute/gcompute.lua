@@ -165,6 +165,10 @@ include ("runtime/localprocesslist.lua")
 include ("nativegen/icodeemitter.lua")
 include ("nativegen/luaemitter.lua")
 
+-- text
+include ("text/textsegmenttree.lua")
+include ("text/textsegmenttreenode.lua")
+
 GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
 GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 

@@ -8,6 +8,48 @@ function self:ctor ()
 	self.Value = nil
 end
 
+function self:GetValue ()
+	return self.Value
+end
+
+function self:InsertNext (node)
+	if node == nil then return end
+	
+	node.List = self.List
+	node.Previous = self
+	node.Next = self.Next
+	
+	self.Next = node
+	
+	if node.Next then node.Next.Previous = node end
+	
+	if self.List then
+		self.List.Count = self.List.Count + 1
+		if self.List.Last == self then
+			self.List.Last = node
+		end
+	end
+end
+
+function self:InsertPrevious (node)
+	if node == nil then return end
+	
+	node.List = self.List
+	node.Next = self
+	node.Previous = self.Previous
+	
+	self.Previous = node
+	
+	if node.Previous then node.Previous.Next = node end
+	
+	if self.List then
+		self.List.Count = self.List.Count + 1
+		if self.List.First == self then
+			self.List.First = node
+		end
+	end
+end
+
 function self:Remove ()
 	self.List:Remove (self)
 end

@@ -7,6 +7,12 @@ surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
 			Fired when the caret has moved.
 		FileChanged (oldFile, newFile)
 			Fired when this document's file has changed.
+		LexerFinished (Lexer lexer)
+			Fired when the lexing process for this document has finished.
+		LexerProgress (Lexer lexer, bytesProcessed, totalBytes)
+			Fired when the lexer has processed some data.
+		LexerStarted (Lexer lexer)
+			Fired when the lexing process for this document has started.
 		PathChanged (oldPath, path)
 			Fired when this document's path has changed.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
@@ -37,8 +43,11 @@ function PANEL:Init ()
 		self:ScrollToCaret ()
 	end
 	
-	self.VScroll = vgui.Create ("DVScrollBar", self)
-	self.VScroll:SetUp (0, 0)
+	self.VScroll = vgui.Create ("GVScrollBar", self)
+	self.VScroll:AddEventListener ("EnabledChanged", function () self:InvalidateLayout () end)
+	self.HScroll = vgui.Create ("GHScrollBar", self)
+	self.HScroll:AddEventListener ("EnabledChanged", function () self:InvalidateLayout () end)
+	self.ScrollCorner = vgui.Create ("GScrollBarCorner", self)
 	
 	self.ContextMenu = nil
 	
@@ -48,9 +57,40 @@ function PANEL:Init ()
 	self.Path = ""
 	
 	self.Document = GCompute.Editor.Document ()
-	self.Document:AddEventListener ("TextCleared",  function () self:InvalidateSourceFile () self:ResetCaretBlinkTime () self:UpdateScrollBar () end)
-	self.Document:AddEventListener ("TextDeleted",  function () self:InvalidateSourceFile () self:ResetCaretBlinkTime () self:UpdateScrollBar () end)
-	self.Document:AddEventListener ("TextInserted", function () self:InvalidateSourceFile () self:ResetCaretBlinkTime () self:UpdateScrollBar () end)
+	self.Document:AddEventListener ("TextCleared",
+		function (_)
+			self:SetMaximumColumnCount (1)
+			
+			self:InvalidateSourceFile ()
+			self:UpdateLineNumberWidth ()
+			self:ResetCaretBlinkTime ()
+			self:UpdateScrollBars ()
+		end
+	)
+	self.Document:AddEventListener ("TextDeleted",
+		function (_, startLocation, endLocation)
+			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
+			
+			self:InvalidateSourceFile ()
+			self:UpdateLineNumberWidth ()
+			self:ResetCaretBlinkTime ()
+			self:UpdateScrollBars ()
+		end
+	)
+	self.Document:AddEventListener ("TextInserted",
+		function (_, location, text, newLocation)
+			local maximumColumnCount = 1
+			for i = location:GetLine (), newLocation:GetLine () do
+				maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (i):GetColumnCount (self.TextRenderer) + 1)
+			end
+			self:UpdateMaximumColumnCount (maximumColumnCount)
+			
+			self:InvalidateSourceFile ()
+			self:UpdateLineNumberWidth ()
+			self:ResetCaretBlinkTime ()
+			self:UpdateScrollBars ()
+		end
+	)
 	
 	-- Caret
 	self.CaretLocation = GCompute.Editor.LineColumnLocation ()
@@ -63,8 +103,9 @@ function PANEL:Init ()
 	self.SelectionEndLocation   = GCompute.Editor.LineColumnLocation ()
 	
 	-- Settings
+	self.TextRenderer = GCompute.Editor.TextRenderer ()
+	
 	self.Settings = {}
-	self.Settings.TabWidth = 4
 	
 	surface.SetFont ("GComputeMonospace")
 	self.Settings.CharacterWidth, self.Settings.FontHeight = surface.GetTextSize ("W")
@@ -74,6 +115,7 @@ function PANEL:Init ()
 	-- View
 	self.ViewLineCount = 0
 	self.ViewColumnCount = 0
+	self.MaximumColumnCount = 1
 	self.ViewLocation = GCompute.Editor.LineColumnLocation ()
 	
 	-- Editing
@@ -84,6 +126,8 @@ function PANEL:Init ()
 	self.CompilationUnit = nil
 	self.LastSourceFileUpdateTime = 0
 	self.SourceFileOutdated = true
+	
+	self.TokenApplicationQueue = GCompute.Containers.Queue ()
 	
 	self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
 	
@@ -100,16 +144,51 @@ function PANEL:HasFocus ()
 end
 
 function PANEL:PerformLayout ()
-	self.ViewLineCount = math.floor (self:GetTall () / self.Settings.LineHeight)
-	self.ViewColumnCount = math.floor ((self:GetWide () - self.Settings.LineNumberWidth) / self.Settings.CharacterWidth)
 	if self.TextEntry then
 		self.TextEntry:SetPos (0, 0)
 		self.TextEntry:SetSize (0, 0)
 	end
+	if self.VScroll and self.HScroll then
+		local w, h = self:GetSize ()
+		w = w - self.Settings.LineNumberWidth
+		self.ViewLineCount = math.floor (h / self.Settings.LineHeight)
+		self.ViewColumnCount = math.floor (w / self.Settings.CharacterWidth)
+		
+		local horizontalScrollNeeded = self.ViewColumnCount < self.MaximumColumnCount
+		if horizontalScrollNeeded then
+			h = h - self.HScroll:GetTall ()
+			self.ViewLineCount = math.floor (h / self.Settings.LineHeight)
+		end
+		local verticalScrollNeeded = self.ViewLineCount < self.Document:GetLineCount ()
+		if verticalScrollNeeded then
+			w = w - self.VScroll:GetWide ()
+			self.ViewColumnCount = math.floor (w / self.Settings.CharacterWidth)
+			if not horizontalScrollNeeded and self.ViewColumnCount < self.MaximumColumnCount then
+				h = h - self.HScroll:GetTall ()
+				self.ViewLineCount = math.floor (h / self.Settings.LineHeight)
+			end
+		end
+		
+		self:UpdateScrollBars ()
+	end
 	if self.VScroll then
+		self.VScroll:SetVisible (self.VScroll:IsEnabled ())
 		self.VScroll:SetPos (self:GetWide () - 16, 0)
 		self.VScroll:SetSize (16, self:GetTall ())
-		self.VScroll:SetUp (self.ViewLineCount, self.Document:GetLineCount ())
+	end
+	if self.HScroll then
+		self.HScroll:SetVisible (self.HScroll:IsEnabled ())
+		self.HScroll:SetPos (0, self:GetTall () - 16)
+		self.HScroll:SetSize (self:GetWide (), 16)
+	end
+	if self.VScroll:IsVisible () and self.HScroll:IsVisible () then
+		self.VScroll:SetTall (self:GetTall () - self.HScroll:GetTall ())
+		self.HScroll:SetWide (self:GetWide () - self.VScroll:GetWide ())
+		self.ScrollCorner:SetPos (self:GetWide () - self.VScroll:GetWide (), self:GetTall () - self.HScroll:GetTall ())
+		self.ScrollCorner:SetSize (self.VScroll:GetWide (), self.HScroll:GetTall ())
+		self.ScrollCorner:SetVisible (true)
+	else
+		self.ScrollCorner:SetVisible (false)
 	end
 end
 
@@ -153,9 +232,7 @@ function PANEL:DrawLine (lineOffset)
 	
 	local y = lineOffset * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight)
 	local x = self.Settings.LineNumberWidth
-	
-	local character, column = line:CharacterFromColumn (self.ViewLocation:GetColumn ())
-	x = x - (self.ViewLocation:GetColumn () - column) * self.Settings.CharacterWidth
+	local w = self:GetWide ()
 	
 	surface.SetFont ("GComputeMonospace")
 	
@@ -170,17 +247,19 @@ function PANEL:DrawLine (lineOffset)
 	local characterWidth       = self.Settings.CharacterWidth
 	local lineNumberWidth      = self.Settings.LineNumberWidth
 	
-	local renderInstructions = line:GetRenderInstructions (self.TabWidth) 
-	local renderInstruction = nil
-	for i = 1, #renderInstructions do
-		renderInstruction = renderInstructions [i]
-		if renderInstruction.StartColumn > viewLocationColumn + viewColumnCount then break end
+	local node, currentColumn = line.TextStorage:NodeFromColumn (viewLocationColumn, self.TextRenderer)
+	local columnCount
+	x = x - currentColumn * characterWidth
+	currentColumn = viewLocationColumn - currentColumn
+	while node and x <= w do
+		surface_SetTextColor (node.Color)
+		surface_SetTextPos (x, y)
+		surface_DrawText (node.Text)
 		
-		if renderInstruction.EndColumn > viewLocationColumn then
-			surface_SetTextColor (renderInstruction.Color or defaultColor)
-			surface_SetTextPos (lineNumberWidth + (renderInstruction.StartColumn - viewLocationColumn) * characterWidth, y)
-			surface_DrawText (renderInstruction.String)
-		end
+		columnCount = node:GetColumnCount (self.TextRenderer)
+		currentColumn = currentColumn + columnCount
+		x = x + columnCount * characterWidth
+		node = node.Next
 	end
 end
 
@@ -205,7 +284,7 @@ function PANEL:DrawSelection ()
 	local nextLine = self.Document:GetLine (selectionStart:GetLine ())
 	
 	leftColumn = selectionStart:GetColumn () - self.ViewLocation:GetColumn ()
-	rightColumn = nextLine:GetWidth () + 1 - self.ViewLocation:GetColumn ()
+	rightColumn = nextLine:GetColumnCount (self.TextRenderer) + 1 - self.ViewLocation:GetColumn ()
 	
 	for i = math.max (selectionStart:GetLine (), self.ViewLocation:GetLine () - 2), selectionEnd:GetLine () - 1 do
 		-- Don't bother drawing selection highlighting for lines out of view
@@ -214,7 +293,7 @@ function PANEL:DrawSelection ()
 		nextLine = self.Document:GetLine (i + 1)
 	
 		nextLeftColumn = -self.ViewLocation:GetColumn ()
-		nextRightColumn = nextLine:GetWidth () + 1 - self.ViewLocation:GetColumn ()
+		nextRightColumn = nextLine:GetColumnCount (self.TextRenderer) + 1 - self.ViewLocation:GetColumn ()
 		if i == selectionEnd:GetLine () - 1 then
 			nextRightColumn = selectionEnd:GetColumn () - self.ViewLocation:GetColumn ()
 		end
@@ -361,15 +440,15 @@ function PANEL:GetText ()
 end
 
 function PANEL:InsertText (text)
-	local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation)
+	local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
 	local insertionAction = GCompute.Editor.InsertionAction (self, insertionLocation, text)
 	insertionAction:Redo ()
 	self.UndoRedoStack:Push (insertionAction)
 end
 
 function PANEL:ReplaceSelectionText (text)
-	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation)
-	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation)
+	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
+	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
 	local originalText = self.Document:GetText (selectionStartLocation, selectionEndLocation)
 	
 	local replacementAction = GCompute.Editor.ReplacementAction (self, selectionStartLocation, selectionEndLocation, originalText, text)
@@ -378,8 +457,14 @@ function PANEL:ReplaceSelectionText (text)
 end
 
 function PANEL:SetText (text)
+
+	local startTime = SysTime ()
 	self.Document:SetText (text)
-	self:UpdateScrollBar ()
+	self:UpdateScrollBars ()
+	
+	if SysTime () - startTime > 0 then
+		ErrorNoHalt (string.format ("CodeEditor:SetText took %.5f ms.\n", (SysTime () - startTime) * 1000))
+	end
 end
 
 -- Caret
@@ -387,8 +472,8 @@ function PANEL:FixupColumn (columnLocation)
 	-- Round to nearest column
 	local line = self.Document:GetLine (columnLocation:GetLine ())
 	local column = columnLocation:GetColumn ()
-	local offset, leftColumn = line:OffsetFromColumn (column, self.Settings.TabWidth)
-	local rightColumn = leftColumn + line:GetCharacterWidth (GLib.UTF8.NextChar (line:GetText (), offset), self.Settings.TabWidth)
+	local character, leftColumn = line:CharacterFromColumn (column, self.TextRenderer)
+	local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
 	
 	if column - leftColumn < rightColumn - column then
 		column = leftColumn
@@ -409,14 +494,14 @@ function PANEL:MoveCaretLeft (overrideSelectionStart)
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine () - 1,
-			self.Document:GetLine (self.CaretLocation:GetLine () - 1):GetWidth (self.Settings.TabWidth)
+			self.Document:GetLine (self.CaretLocation:GetLine () - 1):GetColumnCount (self.TextRenderer)
 		))
 	else
 		local line = self.Document:GetLine (self.CaretLocation:GetLine ())
 		local column = self.CaretLocation:GetColumn ()
 		
-		local characterStartOffset = GLib.UTF8.GetSequenceStart (line:GetText (), line:OffsetFromColumn (column - 1, self.Settings.TabWidth))
-		column = column - line:GetCharacterWidth (GLib.UTF8.NextChar (line:GetText (), characterStartOffset), self.Settings.TabWidth)
+		local character = line:CharacterFromColumn (column, self.TextRenderer)
+		column = column - self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character - 1))
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
@@ -432,7 +517,7 @@ function PANEL:MoveCaretLeft (overrideSelectionStart)
 end
 
 function PANEL:MoveCaretRight (overrideSelectionStart)
-	if self.CaretLocation:GetColumn () == self.Document:GetLine (self.CaretLocation:GetLine ()):GetWidth (self.Settings.TabWidth) then
+	if self.CaretLocation:GetColumn () == self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer) then
 		if self.CaretLocation:GetLine () + 1 == self.Document:GetLineCount () then return end
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
@@ -443,7 +528,8 @@ function PANEL:MoveCaretRight (overrideSelectionStart)
 		local line = self.Document:GetLine (self.CaretLocation:GetLine ())
 		local column = self.CaretLocation:GetColumn ()
 		
-		column = column + line:GetCharacterWidth (GLib.UTF8.NextChar (line:GetText (), line:OffsetFromColumn (column, self.Settings.TabWidth)), self.Settings.TabWidth)
+		local character = line:CharacterFromColumn (column, self.TextRenderer)
+		column = column + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
@@ -479,7 +565,7 @@ function PANEL:MoveCaretDown (overrideSelectionStart)
 	if self.CaretLocation:GetLine () + 1 == self.Document:GetLineCount () then
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
-			self.Document:GetLine (self.CaretLocation:GetLine ()):GetWidth (self.Settings.TabWidth)
+			self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer)
 		))
 	else
 		self:SetPreferredCaretPos (GCompute.Editor.LineColumnLocation (
@@ -501,6 +587,24 @@ function PANEL:ResetCaretBlinkTime ()
 end
 
 function PANEL:ScrollToCaret ()
+	self:ScrollToCaretLine ()
+	self:ScrollToCaretColumn ()
+end
+
+function PANEL:ScrollToCaretColumn ()
+	local caretColumn = self.CaretLocation:GetColumn ()
+	local leftViewColumn = self.ViewLocation:GetColumn ()
+	local rightViewColumn = leftViewColumn + self.ViewColumnCount - 1
+	
+	if leftViewColumn <= caretColumn and caretColumn <= rightViewColumn then return end
+	if caretColumn < leftViewColumn then
+		self:SetHorizontalScrollPos (caretColumn)
+	else
+		self:SetHorizontalScrollPos (caretColumn - self.ViewColumnCount + 1)
+	end
+end
+
+function PANEL:ScrollToCaretLine ()
 	local caretLine = self.CaretLocation:GetLine ()
 	local topViewLine = self.ViewLocation:GetLine ()
 	local bottomViewLine = topViewLine + self.ViewLineCount - 1
@@ -558,8 +662,8 @@ end
 function PANEL:DeleteSelection ()
 	if self.SelectionStartLocation:Equals (self.SelectionEndLocation) then return end
 	
-	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation)
-	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation)
+	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
+	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
 	local text = self.Document:GetText (selectionStartLocation, selectionEndLocation)
 	
 	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStartLocation, selectionEndLocation, selectionStartLocation, selectionEndLocation, text)
@@ -591,8 +695,8 @@ end
 
 function PANEL:SelectAll ()
 	self:SetSelection (
-		self.Document:CharacterToColumn (self.Document:GetStart ()),
-		self.Document:CharacterToColumn (self.Document:GetEnd ())
+		self.Document:CharacterToColumn (self.Document:GetStart (), self.TextRenderer),
+		self.Document:CharacterToColumn (self.Document:GetEnd (), self.TextRenderer)
 	)
 end
 
@@ -618,18 +722,11 @@ function PANEL:SetSelectionStart (selectionStart)
 end
 
 -- View
-function PANEL:PointToLocation (x, y, floorColumn)
-	if floorColumn == nil then floorColumn = false end
+function PANEL:PointToLocation (x, y)
 	local line = self.ViewLocation:GetLine () + math.floor (y / self.Settings.LineHeight)
 	local column = self.ViewLocation:GetColumn ()
 	
-	if floorColumn then
-		-- floor column
-		column = column + math.floor ((x - self.Settings.LineNumberWidth) / self.Settings.CharacterWidth)
-	else
-		-- round column
-		column = column + math.floor ((x - self.Settings.LineNumberWidth) / self.Settings.CharacterWidth + 0.5)
-	end
+	column = column + (x - self.Settings.LineNumberWidth) / self.Settings.CharacterWidth
 	
 	-- Clamp line
 	if line < 0 then line = 0 end
@@ -637,9 +734,22 @@ function PANEL:PointToLocation (x, y, floorColumn)
 		line = self.Document:GetLineCount () - 1
 	end
 	
-	local lineWidth = self.Document:GetLine (line):GetWidth (self.Settings.TabWidth)
-	if column > lineWidth then
+	local lineWidth = self.Document:GetLine (line):GetColumnCount (self.TextRenderer)
+	if column < 0 then
+		column = 0
+	elseif column > lineWidth then
 		column = lineWidth
+	else
+		-- Snap to nearest column
+		local line = self.Document:GetLine (line)
+		local character, leftColumn = line:CharacterFromColumn (math.floor (column), self.TextRenderer)
+		local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
+		
+		if column - leftColumn < rightColumn - column then
+			column = leftColumn
+		else
+			column = rightColumn
+		end
 	end
 	return GCompute.Editor.LineColumnLocation (line, column)
 end
@@ -653,21 +763,38 @@ function PANEL:ScrollRelative (deltaLines)
 	self:SetVerticalScrollPos (topLine)
 end
 
-function PANEL:SetVerticalScrollPos (topLine)
-	if topLine < 0 then topLine = 0 end
-	self.VScroll:SetScroll (topLine)
+function PANEL:SetHorizontalScrollPos (leftColumn)
+	if leftColumn < 0 then leftColumn = 0 end
+	self.HScroll:SetViewOffset (leftColumn)
 end
 
-function PANEL:UpdateScrollBar ()
-	self.VScroll:SetUp (self.ViewLineCount, self.Document:GetLineCount ())
+function PANEL:SetVerticalScrollPos (topLine)
+	if topLine < 0 then topLine = 0 end
+	self.VScroll:SetViewOffset (topLine)
+end
+
+function PANEL:UpdateLineNumberWidth ()
+	local maxDisplayedLineNumber = tostring (self.Document:GetLineCount () + 1)
+	local lineNumberWidth = self.Settings.CharacterWidth * (string.len (maxDisplayedLineNumber) + 1) + 16
+	if self.Settings.LineNumberWidth == lineNumberWidth then return end
+	
+	self.Settings.LineNumberWidth = lineNumberWidth
+	self:InvalidateLayout ()
+end
+
+function PANEL:UpdateScrollBars ()
+	self.VScroll:SetViewSize (self.ViewLineCount)
+	self.VScroll:SetContentSize (self.Document:GetLineCount ())
+	self.HScroll:SetViewSize (self.ViewColumnCount)
+	self.HScroll:SetContentSize (self.MaximumColumnCount)
 end
 
 -- Clipboard
 function PANEL:CopySelection ()
 	if self.SelectionStartLocation:Equals (self.SelectionEndLocation) then return end
 	
-	local selectionStart = self.Document:ColumnToCharacter (self.SelectionStartLocation)
-	local selectionEnd   = self.Document:ColumnToCharacter (self.SelectionEndLocation)
+	local selectionStart = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
+	local selectionEnd   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
 	
 	Gooey.Clipboard:SetText (self.Document:GetText (selectionStart, selectionEnd))
 end
@@ -675,8 +802,8 @@ end
 function PANEL:CutSelection ()
 	if self.SelectionStartLocation:Equals (self.SelectionEndLocation) then return end
 	
-	local selectionStart = self.Document:ColumnToCharacter (self.SelectionStartLocation)
-	local selectionEnd   = self.Document:ColumnToCharacter (self.SelectionEndLocation)
+	local selectionStart = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
+	local selectionEnd   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
 	
 	local text = self.Document:GetText (selectionStart, selectionEnd)
 	Gooey.Clipboard:SetText (text)
@@ -719,7 +846,7 @@ function PANEL:SetCompilationUnit (compilationUnit)
 	if self.CompilationUnit then
 		local tokens = self.CompilationUnit:GetTokens ()
 		if tokens then
-			self:ApplyTokens (tokens.First, tokens.Last)
+			self:QueueTokenApplication (tokens.First, tokens.Last)
 		else
 			self:ClearTokenization ()
 		end
@@ -752,48 +879,95 @@ function PANEL:SetSourceFile (sourceFile)
 end
 
 -- Internal, do not call
-function PANEL:ApplyTokens (startToken, endToken)
-	if not startToken then return end
-	if not endToken then return end
+function PANEL:ApplyToken (token)
+	if not token then return end
+	local startLine = token.Line
+	local endLine = token.EndLine
 	
-	-- Invalidate the line on which startToken starts.
-	if self.Document:GetLine (startToken.Line) then
-		self.Document:GetLine (startToken.Line):InvalidateColoring ()
-	end
+	local color = self:GetTokenColor (token)
+	if not self.Document:GetLine (startLine) then return end
 	
-	-- Assign tokens to lines on which they end, or which they fully contain
-	local token = startToken
-	local terminatingToken = endToken.Next -- The token after endToken
-	local expectingStartOfLine = startToken.Line -- The line whose start token we are looking for
-	if startToken.Character > 0 then expectingStartOfLine = expectingStartOfLine + 1 end
-	
-	while token and token ~= terminatingToken do
-		while token.EndLine >= expectingStartOfLine and (token.EndLine ~= expectingStartOfLine or token.EndCharacter ~= 0) do
-			if expectingStartOfLine >= self.Document:GetLineCount () then return end
-			self.Document:GetLine (expectingStartOfLine):SetStartToken (token)
-			expectingStartOfLine = expectingStartOfLine + 1
+	if startLine == endLine then
+		self.Document:GetLine (startLine):SetColor (color, token.Character, token.EndCharacter)
+	else
+		self.Document:GetLine (startLine):SetColor (color, token.Character, nil)
+		if self.Document:GetLine (endLine) then
+			self.Document:GetLine (endLine):SetColor (color, 0, token.EndCharacter)
 		end
-		token = token.Next
+		
+		for i = startLine + 1, endLine - 1 do
+			if not self.Document:GetLine (i) then break end
+			self.Document:GetLine (i):SetColor (color)
+		end
 	end
 end
 
 function PANEL:ClearTokenization ()
 	for line in self.Document:GetEnumerator () do
-		line:SetStartToken (nil)
+		line:SetColor (nil)
 	end
+	self.TokenApplicationQueue:Clear ()
 end
 
-function PANEL:HasTokenization ()
-	return self.Document:GetLine (0):GetStartToken () and true or false
+function PANEL:GetTokenColor (token)
+	local tokenType = token.TokenType
+	if tokenType == GCompute.TokenType.String then
+		return GLib.Colors.Gray
+	elseif tokenType == GCompute.TokenType.Number then
+		return GLib.Colors.SandyBrown
+	elseif tokenType == GCompute.TokenType.Comment then
+		return GLib.Colors.ForestGreen
+	elseif tokenType == GCompute.TokenType.Keyword then
+		return GLib.Colors.RoyalBlue
+	elseif tokenType == GCompute.TokenType.Preprocessor then
+		return GLib.Colors.Yellow
+	elseif tokenType == GCompute.TokenType.Identifier then
+		return GLib.Colors.LightSkyBlue
+	elseif tokenType == GCompute.TokenType.Unknown then
+		return GLib.Colors.Tomato
+	end
+	return GLib.Colors.White
+end
+
+function PANEL:QueueTokenApplication (startToken, endToken)
+	self.TokenApplicationQueue:Enqueue ({ Start = startToken, End = endToken })
+end
+
+-- Internal, do not call
+function PANEL:SetMaximumColumnCount (columnCount)
+	if self.MaximumColumnCount == columnCount then return end
+	self.MaximumColumnCount = columnCount
+	self.HScroll:SetContentSize (columnCount)
+end
+
+function PANEL:UpdateMaximumColumnCount (columnCount)
+	if self.MaximumColumnCount >= columnCount then return end
+	self:SetMaximumColumnCount (columnCount)
 end
 
 -- Internal, do not call
 function PANEL:HookCompilationUnit (compilationUnit)
 	if not compilationUnit then return end
 	
+	compilationUnit:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
+		function (_, lexer)
+			self:DispatchEvent ("LexerFinished", lexer)
+		end
+	)
+	compilationUnit:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
+		function (_, lexer, bytesProcessed, totalBytes)
+			self:DispatchEvent ("LexerProgress", lexer, bytesProcessed, totalBytes)
+		end
+	)
+	compilationUnit:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
+		function (_, lexer)
+			self:DispatchEvent ("LexerStarted", lexer)
+		end
+	)
 	compilationUnit:AddEventListener ("TokenRangeAdded", tostring (self:GetTable ()),
 		function (_, startToken, endToken)
-			self:ApplyTokens (startToken, endToken)
+			self:QueueTokenApplication (startToken, endToken)
+			self:DispatchEvent ("LexerProgress", startToken, endToken)
 		end
 	)
 end
@@ -801,6 +975,9 @@ end
 function PANEL:UnhookCompilationUnit (compilationUnit)
 	if not compilationUnit then return end
 	
+	compilationUnit:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
+	compilationUnit:RemoveEventListener ("LexerProgress",     tostring (self:GetTable ()))
+	compilationUnit:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
 	compilationUnit:RemoveEventListener ("TokenRangeAdded",   tostring (self:GetTable ()))
 	compilationUnit:RemoveEventListener ("TokenRangeRemoved", tostring (self:GetTable ()))
 end
@@ -847,7 +1024,6 @@ function PANEL:OnKeyCodeTyped (keyCode)
 	end
 	
 	self:GetKeyboardMap ():Execute (self, keyCode, ctrl, shift, alt)
-	
 end
 
 function PANEL:OnMouseDown (mouseCode, x, y)
@@ -861,7 +1037,7 @@ function PANEL:OnMouseDown (mouseCode, x, y)
 		if x <= self.Settings.LineNumberWidth then
 		else
 			self.Selecting = true
-			self:SetCaretPos (self:PointToLocation (self:CursorPos ()))
+			self:SetRawCaretPos (self:PointToLocation (self:CursorPos ()))
 			
 			if shift then
 				self:SetSelectionEnd (self.CaretLocation)
@@ -876,7 +1052,7 @@ function PANEL:OnMouseDown (mouseCode, x, y)
 		else
 			local caretLocation = self:PointToLocation (self:CursorPos ())
 			if not self:IsInSelection (caretLocation) then
-				self:SetCaretPos (caretLocation)
+				self:SetRawCaretPos (caretLocation)
 				self:SetSelection (self.CaretLocation, self.CaretLocation)
 			end
 		end
@@ -885,7 +1061,7 @@ end
 
 function PANEL:OnMouseMove (mouseCode, x, y)
 	if self.Selecting then
-		self:SetCaretPos (self:PointToLocation (x, y))
+		self:SetRawCaretPos (self:PointToLocation (x, y))
 		
 		self:SetSelectionEnd (self.CaretLocation)
 	else
@@ -910,12 +1086,20 @@ function PANEL:OnMouseUp (mouseCode, x, y)
 end
 
 function PANEL:OnMouseWheel (delta)
-	self.VScroll:OnMouseWheeled (delta * 0.08)
+	self.VScroll:OnMouseWheeled (delta)
 end
 
-function PANEL:OnVScroll (offset)
+function PANEL:OnHScroll (viewOffset)
+	if self.ViewColumnCount < self.MaximumColumnCount then
+		self.ViewLocation:SetColumn (math.floor (viewOffset))
+	else
+		self.ViewLocation:SetColumn (0)
+	end
+end
+
+function PANEL:OnVScroll (viewOffset)
 	if self.ViewLineCount < self.Document:GetLineCount () then
-		self.ViewLocation:SetLine (math.floor (-offset))
+		self.ViewLocation:SetLine (math.floor (viewOffset))
 	else
 		self.ViewLocation:SetLine (0)
 	end
@@ -924,17 +1108,56 @@ end
 function PANEL:Think ()
 	if self.SourceFileOutdated then
 		if SysTime () - self.LastSourceFileUpdateTime > 0.2 then
-			if self:GetCompilationUnit ():IsTokenizing () then return end
+			if self:GetCompilationUnit ():IsLexing () then return end
 			
 			self.SourceFileOutdated = false
 			self.LastSourceFileUpdateTime = SysTime ()
 			
 			self.SourceFile:SetCode (self:GetText ())
-			self:GetCompilationUnit ():Tokenize (
+			self:GetCompilationUnit ():Lex (
 				function ()
 				end
 			)
+			
+			if not self:GetCompilationUnit ():IsLexing () then
+				local tokens = self:GetCompilationUnit ():GetTokens ()
+				if tokens then
+					self.TokenApplicationQueue:Clear ()
+					self:QueueTokenApplication (tokens.First, tokens.Last)
+				end
+			end
 		end
+	end
+	
+	self:TokenApplicationThink ()
+end
+
+function PANEL:TokenApplicationThink ()
+	if self.TokenApplicationQueue:IsEmpty () then return end
+	
+	local startTime = SysTime ()
+	while SysTime () - startTime < 0.010 do
+		local front = self.TokenApplicationQueue.Front
+		if not front then break end
+		
+		local appliedTokenCount = 0
+		while appliedTokenCount < 10 do
+			self:ApplyToken (front.Start)
+			if not self.Document:GetLine (front.Start.Line) then
+				self.TokenApplicationQueue:Dequeue ()
+				break
+			end
+			appliedTokenCount = appliedTokenCount + 1
+			if front.Start == front.End then
+				self.TokenApplicationQueue:Dequeue ()
+				break
+			end
+			front.Start = front.Start.Next
+		end
+	end
+	
+	if SysTime () - startTime > 0 then
+		ErrorNoHalt (string.format ("CodeEditor:TokenApplicationThink took %.5f ms.\n", (SysTime () - startTime) * 1000))
 	end
 end
 

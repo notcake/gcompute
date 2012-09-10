@@ -23,6 +23,7 @@ function self:Init ()
 			
 			self:UpdateCaretPositionText ()
 			self:UpdateLanguageText ()
+			self:UpdateProgressBar ()
 		end
 	)
 	self.TabControl:AddEventListener ("TabAdded",
@@ -70,6 +71,8 @@ function self:Init ()
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
 	self.LanguagePanel      = self.StatusBar:AddTextPanel ("Unknown language")
+	self.ProgressPanel      = self.StatusBar:AddProgressPanel ()
+	self.ProgressPanel:SetFixedWidth (128)
 	self.CaretPositionPanel = self.StatusBar:AddTextPanel ("Line 1, col 1")
 	self.CaretPositionPanel:SetFixedWidth (96)
 	
@@ -438,6 +441,23 @@ function self:UpdateLanguageText ()
 	end
 end
 
+function self:UpdateProgressBar ()
+	local codeEditor = self:GetActiveCodeEditor ()
+	local compilationUnit = codeEditor and codeEditor:GetCompilationUnit ()
+	if compilationUnit then
+		if compilationUnit:IsLexing () then
+			self.ProgressPanel:SetProgress (compilationUnit:GetLexer ():GetProgress () * 100)
+			self.ProgressPanel:CancelFade ()
+			self.ProgressPanel:SetAlpha (255)
+			self.ProgressPanel:SetVisible (true)
+		else
+			self.ProgressPanel:FadeOut (false)
+		end
+	else
+		self.ProgressPanel:FadeOut (false)
+	end
+end
+
 -- Event hooking
 function self:HookSelectedSourceFile (sourceFile)
 	sourceFile:GetCompilationUnit ():AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
@@ -458,6 +478,21 @@ function self:HookSelectedTabContents (tab, contents)
 			self:UpdateCaretPositionText ()
 		end
 	)
+	contents:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
+		function (_, lexer)
+			self:UpdateProgressBar ()
+		end
+	)
+	contents:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
+		function (_, lexer, bytesProcessed, totalBytes)
+			self:UpdateProgressBar ()
+		end
+	)
+	contents:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
+		function (_, lexer)
+			self:UpdateProgressBar ()
+		end
+	)
 	contents:AddEventListener ("SourceFileChanged", tostring (self:GetTable ()),
 		function (_, oldSourceFile, sourceFile)
 			self:UnhookSelectedSourceFile (oldSourceFile)
@@ -471,6 +506,8 @@ end
 function self:UnhookSelectedTabContents (tab, contents)
 	if not contents then return end
 	contents:RemoveEventListener ("CaretMoved",        tostring (self:GetTable ()))
+	contents:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
+	contents:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
 	contents:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
 	self:UnhookSelectedSourceFile (contents:GetSourceFile ())
 end

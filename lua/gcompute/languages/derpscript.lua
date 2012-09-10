@@ -28,26 +28,23 @@ LANGUAGE:GetTokenizer ()
 	)
 	:AddCustomSymbol (GCompute.TokenType.Comment, "/*",
 		function (code, offset)
-			local i = offset + 2
-			while true do
-				local c = code:sub (i, i + 1)
-				if c == "" then
-					return code:sub (offset, i), i
-				elseif c == "*/" then
-					return code:sub (offset, i + 1), i - offset + 2
-				end
-				i = i + 1
+			local endOffset = string.find (code, "*/", offset + 2, true)
+			if endOffset then
+				return string.sub (code, offset, endOffset + 1), endOffset - offset + 2
 			end
-			return nil, 0
+			return string.sub (code, offset), code:len () - offset + 1
 		end
 	)
 	:AddPatternSymbol (GCompute.TokenType.Comment,              "//[^\n\r]*")
 	:AddPatternSymbol (GCompute.TokenType.Identifier,           "[a-zA-Z_][a-zA-Z0-9_]*")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "0b[01]+")
 	:AddPatternSymbol (GCompute.TokenType.Number,               "0x[0-9a-fA-F]+")
-	:AddPatternSymbol (GCompute.TokenType.Number,               "[0-9]+%.[0-9]*e[+\\-]?[0-9]+")
-	:AddPatternSymbol (GCompute.TokenType.Number,               "[0-9]+%.[0-9]*")
-	:AddPatternSymbol (GCompute.TokenType.Number,               "[0-9]+e[+\\-]?[0-9]+")
-	:AddPatternSymbol (GCompute.TokenType.Number,               "[0-9]+")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+%.[0-9]*e[-+]?[0-9]+%.[0-9]*")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+%.[0-9]*e[-+]?[0-9]+")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+%.[0-9]*")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+e[-+]?[0-9]+%.[0-9]*")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+e[-+]?[0-9]+")
+	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+")
 	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"##", "++", "--", "::", "->", "==", "!=", ">=", "<=", "+=", "-=", "*=", "/=", "^=", "||", "&&"})
 	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"#", "@", "!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ":", ".", ","})
 	:AddPlainSymbol   (GCompute.TokenType.StatementTerminator,  ";")

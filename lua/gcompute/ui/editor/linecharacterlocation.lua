@@ -79,3 +79,7 @@ function self:SetLine (line)
 	if line < 0 then line = 0 end
 	self.Line = line
 end
+
+function self:ToString ()
+	return "Line " .. tostring (self.Line) .. ", char " .. tostring (self.Character)
+end

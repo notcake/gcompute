@@ -2,6 +2,7 @@ local self = {}
 GCompute.Containers.LinkedList = GCompute.MakeConstructor (self)
 
 function self:ctor ()
+	self.LinkedList     = GCompute.Containers.LinkedList
 	self.LinkedListNode = GCompute.Containers.LinkedListNode
 	
 	self.First = nil
@@ -89,6 +90,38 @@ function self:AddLast (value)
 	return self.Last
 end
 
+function self:Append (linkedList)
+	if not linkedList then return end
+	if not linkedList.First then return end
+	
+	if self.Last then
+		self.Last.Next = linkedList.First
+		
+		self.Count = self.Count + linkedList.Count
+		
+		local node = self.Last
+		while node do
+			node.List = self
+			node = node.Next
+		end
+		
+		self.Last.Next.Previous = self.Last
+		self.Last = linkedList.Last
+	else
+		self.First = linkedList.First
+		self.Last = linkedList.Last
+		self.Count = linkedList.Count
+		
+		for node in self:GetEnumerator () do
+			node.List = self
+		end
+	end
+	
+	linkedList.First = nil
+	linkedList.Last = nil
+	linkedList.Count = 0
+end
+
 function self:Clear ()
 	self.First = nil
 	self.Last = nil
@@ -138,6 +171,29 @@ function self:GetItem (n)
 	end
 	
 	return nil
+end
+
+function self:InsertNodeBefore (postInsertionNode, insertionNode)
+	if not insertionNode then return end
+	
+	if not postInsertionNode then
+		insertionNode.Previous = self.Last
+		self.Last = insertionNode
+	else
+		insertionNode.Next = postInsertionNode
+		insertionNode.Previous = postInsertionNode.Previous
+		
+		postInsertionNode.Previous = insertionNode
+	end
+	
+	if insertionNode.Previous then
+		insertionNode.Previous.Next = insertionNode
+	else
+		self.First = insertionNode
+	end
+	
+	insertionNode.List = self
+	self.Count = self.Count + 1
 end
 
 function self:IsEmpty ()
@@ -191,6 +247,38 @@ function self:RemoveRange (startNode, endNode)
 	end
 	
 	self.Count = self.Count - removalCount
+end
+
+function self:Split (node)
+	local linkedList = self.LinkedList ()
+	linkedList.LinkedList = self.LinkedList
+	linkedList.LinkedListNode = self.LinkedListNode
+	
+	if not node then return linkedList end
+	
+	linkedList.First = node
+	linkedList.Last = self.Last
+	
+	if node then
+		self.Last = node.Previous
+		if self.Last then
+			self.Last.Next = nil
+		end
+	end
+	
+	if linkedList.First then
+		linkedList.First.Previous = nil
+	end
+	if linkedList.Last then
+		linkedList.Last.Next = nil
+	end
+	for node in linkedList:GetEnumerator () do
+		node.List = linkedList
+		self.Count = self.Count - 1
+		linkedList.Count = linkedList.Count + 1
+	end
+	
+	return linkedList
 end
 
 function self:ToArray ()

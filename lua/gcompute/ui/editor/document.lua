@@ -19,15 +19,17 @@ function self:ctor ()
 	self:Clear ()
 end
 
-function self:CharacterToColumn (characterLocation, tabWidth)
+function self:CharacterToColumn (characterLocation, textRenderer)
+	if not textRenderer then GCompute.Error ("Document:CharacterToColumn : You forgot to pass a text renderer.") end
 	local columnLocation = GCompute.Editor.LineColumnLocation (characterLocation)
-	columnLocation:SetColumn (self:GetLine (characterLocation:GetLine ()):ColumnFromCharacter (characterLocation:GetCharacter (), tabWidth))
+	columnLocation:SetColumn (self:GetLine (characterLocation:GetLine ()):ColumnFromCharacter (characterLocation:GetCharacter (), textRenderer))
 	return columnLocation
 end
 
-function self:ColumnToCharacter (columnLocation, tabWidth)
+function self:ColumnToCharacter (columnLocation, textRenderer)
+	if not textRenderer then GCompute.Error ("Document:ColumnToCharacter : You forgot to pass a text renderer.") end
 	local characterLocation = GCompute.Editor.LineCharacterLocation (columnLocation)
-	characterLocation:SetCharacter (self:GetLine (columnLocation:GetLine ()):CharacterFromColumn (columnLocation:GetColumn (), tabWidth))
+	characterLocation:SetCharacter (self:GetLine (columnLocation:GetLine ()):CharacterFromColumn (columnLocation:GetColumn (), textRenderer))
 	return characterLocation
 end
 
@@ -45,42 +47,41 @@ function self:Delete (startLocation, endLocation)
 		startLocation = temp
 	end
 	
-	local after = nil -- The undeleted portion of the deletion span's last line
+	local endLine = endLocation:GetLine ()
+	local endCharacter = endLocation:GetCharacter ()
 	
-	-- Check if the deletion span's last line's line break is to be deleted.
-	if endLocation:GetCharacter () == 0 then
-		-- Impossible for this deletion span to delete the last line's line break
-		after = self:GetLine (endLocation:GetLine ()):Sub (endLocation:GetCharacter () + 1)
-	else
-		after = self:GetLine (endLocation:GetLine ()):Sub (endLocation:GetCharacter ())
-		local lastRemovedChar = GLib.UTF8.Sub (after, 1, 1)
+	-- Check if the deletion span's last line's line break is to be deleted
+	-- and adjust endLine and endCharacter if necessary.
+	if endCharacter ~= 0 then
+		local after = self:GetLine (endLine):Sub (endCharacter, endCharacter + 1)
+		local lastRemovedChar = GLib.UTF8.NextChar (after)
 		after = GLib.UTF8.Sub (after, 2)
 		if after == "" or lastRemovedChar == "\r" or lastRemovedChar == "\n" then
-			-- The deletion span's last line's line break will be deleted.
-			local nextLine = self:GetLine (endLocation:GetLine () + 1)
-			if nextLine then
-				after = nextLine:GetText ()
-				table.remove (self.Lines, endLocation:GetLine () + 2)
-			else
-				after = ""
+			if self:GetLine (endLine + 1) then
+				endLine = endLine + 1
+				endCharacter = 0
 			end
 		end
 	end
 	
-	if startLocation:GetLine () == endLocation:GetLine () then
-		-- Single line deletion
+	if startLocation:GetLine () == endLine then
+		-- Deletion span lies entirely within a single line
 		local line = self:GetLine (startLocation:GetLine ())
-		line:SetText (line:Sub (1, startLocation:GetCharacter ()) .. after)
+		line:Delete (startLocation:GetCharacter (), endLocation:GetCharacter ())
 	else
-		-- Multiple line deletion
+		-- Deletion span contains line breaks
+		local initialLine = self:GetLine (startLocation:GetLine ())
+		initialLine:Delete (startLocation:GetCharacter ())
+		
+		local finalLine = self:GetLine (endLine)
+		finalLine:Delete (0, endCharacter)
+		
+		initialLine:MergeAppend (finalLine)
 		
 		-- Delete middle lines
-		for i = endLocation:GetLine (), startLocation:GetLine () + 1, -1 do
+		for i = endLine, startLocation:GetLine () + 1, -1 do
 			table.remove (self.Lines, i + 1)
 		end
-		
-		local line = self:GetLine (startLocation:GetLine ())
-		line:SetText (line:Sub (1, startLocation:GetCharacter ()) .. after)
 	end
 	
 	self:DispatchEvent ("TextDeleted", startLocation, endLocation)
@@ -91,7 +92,7 @@ end
 function self:GetEnd ()
 	local endLocation = GCompute.Editor.LineCharacterLocation ()
 	endLocation:SetLine (self:GetLineCount () - 1)
-	endLocation:SetCharacter (self:GetLine (self:GetLineCount () - 1):RealLength ())
+	endLocation:SetCharacter (self:GetLine (self:GetLineCount () - 1):LengthIncludingLineBreak ())
 	return endLocation
 end
 
@@ -167,10 +168,12 @@ function self:Insert (location, text)
 	if text == "" then return location end
 
 	local lines = {}
+	-- If there are one or more line breaks in the text to be inserted,
+	-- the last entry in the lines array will be text prepended to the
+	-- last line that will be changed as a result of the insertion
 	
-	local newlineTerminated = true
 	local offset = 1
-	while offset <= text:len () do
+	while offset <= text:len () + 1 do
 		local crOffset = text:find ("\r", offset, true)
 		local lfOffset = text:find ("\n", offset, true)
 		local newlineOffset = crOffset or lfOffset
@@ -185,9 +188,8 @@ function self:Insert (location, text)
 				offset = newlineOffset + 1
 			end
 		else
-			-- End of text to be inserted, no newline found
+			-- End of text to be inserted, no more line breaks found
 			lines [#lines + 1] = text:sub (offset)
-			newlineTerminated = false
 			break
 		end
 	end
@@ -197,57 +199,39 @@ function self:Insert (location, text)
 	end
 	
 	local insertionLine = self.Lines [location:GetLine () + 1]
-	local beforeString = insertionLine:Sub (1, location:GetCharacter ())
-	local afterString = insertionLine:Sub (location:GetCharacter () + 1)
 	
 	local newLocation = GCompute.Editor.LineCharacterLocation (location:GetLine ())
 	
 	if #lines == 1 then
 		-- Single line insertion
+		-- No new lines created
+		insertionLine:Insert (location:GetCharacter (), lines [1])
 		
-		if newlineTerminated then
-			-- One new line created
-			insertionLine:SetText (beforeString .. lines [1])
-			table.insert (self.Lines, location:GetLine () + 2, GCompute.Editor.Line (self, afterString))
-			
-			newLocation:SetLine (location:GetLine () + 1)
-			newLocation:SetCharacter (0)
-		else
-			-- No new lines created
-			insertionLine:SetText (beforeString .. lines [1] .. afterString)
-			
-			newLocation:SetLine (location:GetLine ())
-			newLocation:SetCharacter (GLib.UTF8.Length (beforeString .. lines [1]))
-		end
+		newLocation:SetLine (location:GetLine ())
+		newLocation:SetCharacter (location:GetCharacter () + GLib.UTF8.Length (lines [1]))
 	else
 		-- Multiple line insertion
 		
-		-- Append first line
-		insertionLine:SetText (beforeString .. lines [1])
+		-- Split first line
+		local finalLine = insertionLine:Split (location:GetCharacter ())
+		insertionLine:Insert (location:GetCharacter (), lines [1])
 		
 		-- Insert middle lines
-		local nextInsertionLine = location:GetLine () + 2
+		local nextInsertionIndex = location:GetLine () + 2
 		for i = 2, #lines - 1 do
-			table.insert (self.Lines, nextInsertionLine, GCompute.Editor.Line (self, lines [i]))
-			nextInsertionLine = nextInsertionLine + 1
+			table.insert (self.Lines, nextInsertionIndex, GCompute.Editor.Line (self, lines [i]))
+			nextInsertionIndex = nextInsertionIndex + 1
 		end
 		
-		-- Prepend or insert final line
-		if newlineTerminated then
-			table.insert (self.Lines, nextInsertionLine, GCompute.Editor.Line (self, lines [#lines]))
-			table.insert (self.Lines, nextInsertionLine + 1, GCompute.Editor.Line (self, afterString))
-			
-			newLocation:SetLine (nextInsertionLine)
-			newLocation:SetCharacter (0)
-		else
-			table.insert (self.Lines, nextInsertionLine, GCompute.Editor.Line (self, lines [#lines] .. afterString))
-			
-			newLocation:SetLine (nextInsertionLine - 1)
-			newLocation:SetCharacter (GLib.UTF8.Length (lines [#lines]))
-		end
+		-- Insert final line and prepend it
+		table.insert (self.Lines, nextInsertionIndex, finalLine)
+		finalLine:Insert (0, lines [#lines])
+		
+		newLocation:SetLine (nextInsertionIndex - 1)
+		newLocation:SetCharacter (GLib.UTF8.Length (lines [#lines]))
 	end
 	
-	self:DispatchEvent ("TextInserted", location, text)
+	self:DispatchEvent ("TextInserted", location, text, newLocation)
 	
 	return newLocation
 end

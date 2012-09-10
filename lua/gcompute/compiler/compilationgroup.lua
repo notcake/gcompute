@@ -52,7 +52,7 @@ function self:Compile (callback)
 		actionChain:Add (
 			function (nextCallback)
 				local actionChain = GCompute.CallbackChain ()
-				actionChain:Add (function (callback) compilationUnit:Tokenize (callback) end)
+				actionChain:Add (function (callback) compilationUnit:Lex (callback) end)
 				actionChain:Add (function (callback) compilationUnit:Preprocess (callback) end)
 				actionChain:Add (function (callback) compilationUnit:GenerateParserJobs (callback) end)
 				actionChain:Add (function (callback) compilationUnit:Parse (callback) end)

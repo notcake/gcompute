@@ -3,8 +3,11 @@ GCompute.Tokenizer = GCompute.MakeConstructor (self)
 
 local SymbolMatchType = GCompute.SymbolMatchType
 
-function self:ctor ()
+function self:ctor (language)
+	self.Language = language
 	self.SymbolMatchers = {}
+	
+	self.NativeCode = nil
 end
 
 function self:AddCustomSymbol (tokenType, prefix, matchingFunction)
@@ -94,7 +97,101 @@ function self:AddPlainSymbols (tokenType, symbols)
 	return self
 end
 
+function self:Compile ()
+	-- Solid organic waste reification is about to occur.
+	
+	local upvalueTable = {}
+	local nextCustomMatcherId = 1
+	local nextTrieId = 1
+	
+	local trieLocalsCreated = false
+	
+	local code = "return function (self, code, offset)\n"
+	code = code .. "\tlocal match\n"
+	code = code .. "\tlocal matchLength\n"
+	for _, symbolMatcher in ipairs (self.SymbolMatchers) do
+		local symbolMatchType = symbolMatcher.MatchType
+		local tokenType = symbolMatcher.TokenType
+		
+		if symbolMatchType == SymbolMatchType.Plain then
+			code = code .. "\tif string.sub (code, offset, offset + " .. tostring (symbolMactcher.String:len () - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
+			code = code .. "\t\treturn \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", " .. symbolMatcher.String:len () .. "\n"
+			code = code .. "\tend\n"
+			code = code .. "\t\n"
+		elseif symbolMatchType == SymbolMatchType.Trie then
+			upvalueTable ["trie" .. tostring (nextTrieId)] = symbolMatcher.Trie
+			
+			if not trieLocalsCreated then
+				code = code .. "\tlocal trie\n"
+				code = code .. "\tlocal j\n"
+				code = code .. "\tlocal c\n"
+				trieLocalsCreated = true
+			end
+			code = code .. "\ttrie = trie" .. tostring (nextTrieId) .. "\n"
+			code = code .. "\tj = offset\n"
+			code = code .. "\t\n"
+			code = code .. "\tc = string.sub (code, j, j)\n"
+			code = code .. "\twhile c ~= \"\" and trie [c] do\n"
+			code = code .. "\t\ttrie = trie [c]\n"
+			code = code .. "\t\tj = j + 1\n"
+			code = code .. "\t\tc = string.sub (code, j, j)\n"
+			code = code .. "\tend\n"
+			code = code .. "\twhile trie do\n"
+			code = code .. "\t\tif trie [\"\"] then\n"
+			code = code .. "\t\t\treturn string.sub (code, offset, j - 1), j - offset, trie [\"\"]\n"
+			code = code .. "\t\tend\n"
+			code = code .. "\t\ttrie = trie.Parent\n"
+			code = code .. "\tend\n"
+			
+			nextTrieId = nextTrieId + 1
+		elseif symbolMatchType == SymbolMatchType.Pattern then
+			code = code .. "\tmatch = string.match (code, \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", offset)\n"
+			code = code .. "\tif match then return match, string.len (match), " .. tostring (symbolMatcher.TokenType) .. " end\n"
+			code = code .. "\t\n"
+		else
+			upvalueTable ["customMatcher" .. tostring (nextCustomMatcherId)] = symbolMatcher.Matcher
+			
+			code = code .. "\tif string.sub (code, offset, offset + " .. tostring (symbolMatcher.String:len () - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
+			code = code .. "\t\tmatch, matchLength = customMatcher" .. tostring (nextCustomMatcherId) .. " (code, offset)\n"
+			code = code .. "\t\tif match then return match, matchLength, " .. tostring (symbolMatcher.TokenType) .. " end\n"
+			code = code .. "\tend\n"
+			code = code .. "\t\n"
+			
+			nextCustomMatcherId = nextCustomMatcherId + 1
+		end
+	end
+	code = code .. "\treturn nil, 0, GCompute.TokenType.Unknown\n"
+	code = code .. "end\n"
+	
+	local upvalues = ""
+	local upvalueBackup = {}
+	
+	for upvalueName, value in pairs (upvalueTable) do
+		upvalueBackup [upvalueName] = _G [upvalueName]
+		_G [upvalueName] = value
+		
+		upvalues = upvalues .. "local " .. upvalueName .. " = " .. upvalueName .. "\n"
+	end
+	
+	self.NativeCode = upvalues .. code
+	local nativeFunctionFactory = CompileString (self.NativeCode, self.Language:GetName () .. ".Tokenizer")
+	local nativeFunction = nativeFunctionFactory ()
+	if not nativeFunction then
+		GCompute.Error ("Failed to create a native function for " .. self.Language:GetName () .. "'s tokenizer.")
+	end
+	self.MatchSymbol = nativeFunction or self.MatchSymbolSlow
+	
+	for upvalueName, _ in pairs (upvalueTable) do
+		_G [upvalueName] = upvalueBackup [upvalueName]
+	end
+end
+
 function self:MatchSymbol (code, offset)
+	self:Compile ()
+	return self:MatchSymbol (code, offset)
+end
+
+function self:MatchSymbolSlow (code, offset)
 	for i = 1, #self.SymbolMatchers do
 		local symbolMatcher = self.SymbolMatchers [i]
 		local symbolMatchType = symbolMatcher.MatchType

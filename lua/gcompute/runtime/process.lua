@@ -36,8 +36,9 @@ function self:ctor (processList, processId)
 	
 	self.NamespaceDefinition = {}
 	self.RuntimeNamespace = {}
-	self.StdIn = nil
-	self.StdOut = nil
+	self.StdIn  = nil
+	self.StdOut = GCompute.Pipe ()
+	self.StdErr = GCompute.Pipe ()
 	
 	GCompute.EventProvider (self)
 end
@@ -75,6 +76,18 @@ end
 
 function self:GetRuntimeNamespace ()
 	return self.RuntimeNamespace
+end
+
+function self:GetStdErr ()
+	return self.StdErr
+end
+
+function self:GetStdIn ()
+	return self.StdIn
+end
+
+function self:GetStdOut ()
+	return self.StdOut
 end
 
 function self:GetThreadEnumerator ()

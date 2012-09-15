@@ -2,14 +2,10 @@ local self = {}
 GCompute.Containers.LinkedListNode = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.List = nil
-	self.Next = nil
+	self.List     = nil
+	self.Next     = nil
 	self.Previous = nil
-	self.Value = nil
-end
-
-function self:GetValue ()
-	return self.Value
+	self.Value    = nil
 end
 
 function self:InsertNext (node)
@@ -48,10 +44,6 @@ function self:InsertPrevious (node)
 			self.List.First = node
 		end
 	end
-end
-
-function self:Remove ()
-	self.List:Remove (self)
 end
 
 function self:ToString ()

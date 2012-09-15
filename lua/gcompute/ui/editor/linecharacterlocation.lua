@@ -2,7 +2,6 @@ local self = {}
 GCompute.Editor.LineCharacterLocation = GCompute.MakeConstructor (self)
 
 function self:ctor (line, character)
-	self.FilePath = ""
 	self.Line = 0
 	self.Character = 0
 	
@@ -14,24 +13,30 @@ function self:ctor (line, character)
 	end
 end
 
+function self:AddCharacters (characters)
+	local lineCharacterLocation     = GCompute.Editor.lineCharacterLocation ()
+	lineCharacterLocation.Line      = self.Line
+	lineCharacterLocation.Character = math.max (0, self.Character + characters)
+	
+	return lineCharacterLocation
+end
+
+function self:Clone ()
+	return GCompute.Editor.LineCharacterLocation (self.Line, self.Character)
+end
+
 function self:CopyFrom (lineCharacterLocation)
-	self.FilePath  = lineCharacterLocation.FilePath  or ""
 	self.Line      = lineCharacterLocation.Line      or 0
 	self.Character = lineCharacterLocation.Character or 0
 end
 
 function self:Equals (lineCharacterLocation)
-	return self.FilePath  == lineCharacterLocation.FilePath and
-	       self.Line      == lineCharacterLocation.Line     and
+	return self.Line      == lineCharacterLocation.Line and
 	       self.Character == lineCharacterLocation.Character
 end
 
 function self:GetCharacter ()
 	return self.Character
-end
-
-function self:GetFilePath ()
-	return self.FilePath
 end
 
 function self:GetLine ()
@@ -69,10 +74,6 @@ end
 function self:SetCharacter (character)
 	if character < 0 then character = 0 end
 	self.Character = character
-end
-
-function self:SetFilePath (filePath)
-	self.FilePath = filePath
 end
 
 function self:SetLine (line)

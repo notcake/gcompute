@@ -3,7 +3,7 @@ local self = {}
 function self:Init ()
 	self:SetTitle ("Editor (WIP, not working)")
 
-	self:SetSize (ScrW () * 0.75, ScrH () * 0.75)
+	self:SetSize (ScrW () * 0.85, ScrH () * 0.85)
 	self:Center ()
 	self:SetDeleteOnClose (false)
 	self:MakePopup ()
@@ -91,6 +91,19 @@ function self:Init ()
 	self.UndoRedoController:AddRedoButton   (self.Toolbar:GetItemById ("Redo"))
 	self.UndoRedoController:AddRedoButton   (self.CodeEditorContextMenu:GetItemById ("Redo"))
 	
+	self.OutputPane = vgui.Create ("GComputeCodeEditor", self)
+	self.OutputPane:SetCompilationEnabled (false)
+	self.OutputPane:SetLineNumbersVisible (false)
+	self.OutputPane:SetReadOnly (true)
+	
+	self.SplitContainer = vgui.Create ("GSplitContainer", self)
+	self.SplitContainer:SetFixedPanel (2)
+	self.SplitContainer:SetOrientation (Gooey.Orientation.Horizontal)
+	self.SplitContainer:SetPanel1 (self.TabControl)
+	self.SplitContainer:SetPanel2 (self.OutputPane)
+	self:PerformLayout ()
+	self.SplitContainer:SetSplitterFraction (0.75)
+	
 	self:SetKeyboardMap (GCompute.Editor.EditorKeyboardMap)
 	
 	self.NextNewId = 1
@@ -111,9 +124,9 @@ function self:PerformLayout ()
 	if self.StatusBar then
 		self.StatusBar:PerformLayout ()
 	end
-	if self.TabControl then
-		self.TabControl:SetPos (2, 23 + self.Toolbar:GetTall ())
-		self.TabControl:SetSize (self:GetWide () - 4, self:GetTall () - 23 - self.Toolbar:GetTall () - 4 - self.StatusBar:GetTall ())
+	if self.SplitContainer then
+		self.SplitContainer:SetPos (2, 23 + self.Toolbar:GetTall ())
+		self.SplitContainer:SetSize (self:GetWide () - 4, self:GetTall () - 23 - self.Toolbar:GetTall () - 4 - self.StatusBar:GetTall ())
 	end
 end
 
@@ -212,9 +225,29 @@ function self:CreateEmptyCodeTab ()
 	tab:GetContents ():SetDefaultContents (true)
 	tab:GetContents ():SetText (
 [[
-@name Example
+	local a = systime ();
 
-print (1 + 2);
+	function number sum (a, b)
+	{
+		local result = 0;
+		for (local i = a, b)
+		{
+			result += i;
+		}
+		return result;
+	}
+	
+	function number factorial (n)
+	{
+		if (n <= 1) { return 1; }
+		return factorial (n - 1) * n;
+	}
+	
+	local n = 5;
+	print ("sum is " + sum (1000, 2000));
+	print ("factorial(" + n + ") is " + factorial (n));
+	print ("execution took " + ((systime () - a) * 1000) + " ms.");
+	print (n:GetHashCode ());
 ]]
 	)
 	
@@ -460,6 +493,8 @@ end
 
 -- Event hooking
 function self:HookSelectedSourceFile (sourceFile)
+	if not sourceFile then return end
+	
 	sourceFile:GetCompilationUnit ():AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
 		function (_, language)
 			self:UpdateLanguageText ()
@@ -468,6 +503,8 @@ function self:HookSelectedSourceFile (sourceFile)
 end
 
 function self:UnhookSelectedSourceFile (sourceFile)
+	if not sourceFile then return end
+	
 	sourceFile:GetCompilationUnit ():RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
 end
 
@@ -540,7 +577,7 @@ end
 
 function self:UnhookTabContents (tab, contents)
 	if not contents then return end
-	contents:RemoveEventListener ("PathChanged",        tostring (self:GetTable ()))
+	contents:RemoveEventListener ("PathChanged", tostring (self:GetTable ()))
 	contents:GetUndoRedoStack ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
 end
 
@@ -553,6 +590,14 @@ function self:Think ()
 		if selectedTab and selectedTab:GetContents () then
 			selectedTab:GetContents ():RequestFocus ()
 		end
+	end
+	
+	-- Clamp position within screen bounds
+	local x, y = self:GetPos ()
+	local newX = math.max (0, x)
+	local newY = math.max (0, y)
+	if newX ~= x or newY ~= y then
+		self:SetPos (newX, newY)
 	end
 end
 

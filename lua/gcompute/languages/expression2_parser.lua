@@ -67,7 +67,7 @@ function self:Sequence ()
 		statements [#statements + 1] = statement
 		if not statement and not accepted then
 			self:ExpectedItem ("statement")
-			self:GetNextToken ()
+			self:AdvanceToken ()
 		end
 		if self:Accept (",") and (self:PeekType () == GCompute.TokenType.EndOfFile or self:Peek () == "}") then
 			self.CompilationUnit:Error ("Expected <statement> after ','.", self:GetLastToken ().Line, self:GetLastToken ().Character)
@@ -119,13 +119,13 @@ end
 function self:StatementIf ()
 	if not self:Accept ("if") then return nil end
 	if not self:Accept ("(") then
-		self.CompilationUnit:Error ("Expected '(' after 'if'.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '(' after 'if'.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	local ifStatement = GCompute.AST.IfStatement ()
 	local condition = self:Expression ()
 	if not condition then self:ExpectedItem ("expression") end
 	if not self:Accept (")") then
-		self.CompilationUnit:Error ("Expected ')' after expression in if condition.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ')' after expression in if condition.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	local statement = self:Statement ()
 	ifStatement:AddCondition (condition, statement)
@@ -133,12 +133,12 @@ function self:StatementIf ()
 	self:AcceptWhitespaceAndNewlines ()
 	while self:Accept ("elseif") do
 		if not self:Accept ("(") then
-			self.CompilationUnit:Error ("Expected '(' after 'elseif'.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected '(' after 'elseif'.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 		local condition = self:Expression ()
 		if not condition then self:ExpectedItem ("expression") end
 		if not self:Accept (")") then
-			self.CompilationUnit:Error ("Expected ')' after elseif condition.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected ')' after elseif condition.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 		local statement = self:Statement ()
 		ifStatement:AddCondition (condition, statement)
@@ -155,31 +155,31 @@ end
 function self:StatementFor ()
 	if not self:Accept ("for") then return nil end
 	if not self:Accept ("(") then
-		self.CompilationUnit:Error ("Expected '(' after 'for'.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '(' after 'for'.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	local loopVariable = self:ForVariable ()
 	local forStatement = GCompute.AST.RangeForLoop ()
 	forStatement:SetLoopVariable (loopVariable)
 	if not self:Accept ("=") then
-		self.CompilationUnit:Error ("Expected '=' after variable in for loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '=' after variable in for loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	local startValue = self:Expression ()
 	if not startValue then
-		self.CompilationUnit:Error ("Expected <expression> after '=' in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected <expression> after '=' in for loop expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	if not self:Accept (",") then
-		self.CompilationUnit:Error ("Expected ',' after <numeric-literal> in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ',' after <numeric-literal> in for loop expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	local endValue = self:Expression ()
 	if not endValue then
-		self.CompilationUnit:Error ("Expected <expression> after ',' in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected <expression> after ',' in for loop expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	if self:Accept (",") then
 		local increment = self:Expression ()
 		if not increment then
 			forStatement:AddRange (startValue, endValue)
-			self.CompilationUnit:Error ("Expected <expression> after ',' in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected <expression> after ',' in for loop expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 		else
 			forStatement:AddRange (startValue, endValue, increment)
 		end
@@ -188,7 +188,7 @@ function self:StatementFor ()
 	end
 	
 	if not self:Accept (")") then
-		self.CompilationUnit:Error ("Expected ')' after expression in for loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ')' after expression in for loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	self:AcceptWhitespaceAndNewlines ()
@@ -201,22 +201,22 @@ end
 function self:StatementForEach ()
 	if not self:Accept ("foreach") then return nil end
 	if not self:Accept ("(") then
-		self.CompilationUnit:Error ("Expected '(' after 'foreach'.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '(' after 'foreach'.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	local forEachStatement = GCompute.AST.IteratorForLoop ()
 	forEachStatement:AddVariables (self:ForEachVariables ())
 	if not self:Accept ("=") then
-		self.CompilationUnit:Error ("Expected '=' after variable in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '=' after variable in foreach loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	local iteratorExpression = self:Expression ()
 	if not iteratorExpression then
-		self.CompilationUnit:Error ("Expected <expression> after '=' in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected <expression> after '=' in foreach loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	forEachStatement:SetIteratorExpression (iteratorExpression)
 	
 	if not self:Accept (")") then
-		self.CompilationUnit:Error ("Expected ')' after <expression> in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ')' after <expression> in foreach loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	self:AcceptWhitespaceAndNewlines ()
@@ -235,12 +235,12 @@ function self:ForVariable ()
 		local identifier = self:AcceptType (GCompute.TokenType.Identifier) 
 		variable:SetName (identifier)
 		if not identifier then
-			self.CompilationUnit:Error ("Expected <identifier> after 'local' in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected <identifier> after 'local' in for loop expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 		if self:Accept (":") then
 			local typeExpression = self:Type ()
 			if not typeExpression then
-				self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in for loop expression.", self.TokenNode.Line, self.TokenNode.Character)
+				self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in for loop expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 			end
 			variable:SetTypeExpression (typeExpression)
 		else
@@ -270,7 +270,7 @@ function self:ForEachVariables ()
 			if self:Accept (":") then
 				local typeExpression = self:Type ()
 				if not typeExpression then
-					self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
+					self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in foreach loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 				end
 				variable:SetTypeExpression (typeExpression)
 			end
@@ -282,7 +282,7 @@ function self:ForEachVariables ()
 			if self:Accept (":") then
 				local variableType = self:Type ()
 				if not variableType then
-					self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in foreach loop.", self.TokenNode.Line, self.TokenNode.Character)
+					self.CompilationUnit:Error ("Expected <type> after ':' in variable declaration in foreach loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 				end
 				identifier:AddTargetType (variableType)
 			end
@@ -290,7 +290,7 @@ function self:ForEachVariables ()
 			variables [#variables + 1] = identifier
 		end
 		if not identifier then
-			self.CompilationUnit:Error ("Expected <identifier> in foreach expression.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected <identifier> in foreach expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 	until not self:Accept (",")
 	
@@ -300,15 +300,15 @@ end
 function self:StatementWhile ()
 	if not self:Accept ("while") then return nil end
 	if not self:Accept ("(") then
-		self.CompilationUnit:Error ("Expected '(' after 'while'.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '(' after 'while'.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	local condition = self:StatementVariableDeclaration () or self:Expression ()
 	if not condition then
-		self.CompilationUnit:Error ("Expected <variable-declaration> or <expression> after '(' in while loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected <variable-declaration> or <expression> after '(' in while loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	elseif condition:Is ("VariableDeclaration") then
 		if not condition:GetRightExpression () then
-			self.CompilationUnit:Error ("<variable-declaration> in while loop must assign a value to the variable.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("<variable-declaration> in while loop must assign a value to the variable.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 	end
 	
@@ -316,7 +316,7 @@ function self:StatementWhile ()
 	whileStatement:SetCondition (condition)
 	
 	if not self:Accept (")") then
-		self.CompilationUnit:Error ("Expected ')' after <expression> in while loop.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ')' after <expression> in while loop.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	self:AcceptWhitespaceAndNewlines ()
@@ -329,27 +329,27 @@ end
 function self:StatementSwitch ()
 	if not self:Accept ("switch") then return end
 	if not self:Accept ("(") then
-		self.CompilationUnit:Error ("Expected '(' after 'switch'.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '(' after 'switch'.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 
 	local switchExpression = self:Expression ()
 	if not switchExpression then
-		self.CompilationUnit:Error ("Expected <expression> after '(' in switch statement.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected <expression> after '(' in switch statement.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	local switchStatement = GCompute.AST.SwitchStatement ()
 	switchStatement:SetSwitchExpression (switchExpression)
 	
 	if not self:Accept (")") then
-		self.CompilationUnit:Error ("Expected ')' after <expression> in switch statement.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ')' after <expression> in switch statement.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	if not self:Accept ("{") then
-		self.CompilationUnit:Error ("Expected '{' after expression in switch statement.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '{' after expression in switch statement.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
-	if not self:AcceptType (GCompute.TokenType.AST) then
-		self.CompilationUnit:Error ("Expected <pre-parsed ast> after '{' in switch statement.", self.TokenNode.Line, self.TokenNode.Character)
+	if not self:AcceptAST () then
+		self.CompilationUnit:Error ("Expected <pre-parsed ast> after '{' in switch statement.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	local switchBody = self:GetLastToken ().AST
 	
@@ -371,7 +371,7 @@ function self:StatementSwitch ()
 		elseif body then
 			body:AddStatement (statement)
 		else
-			self.CompilationUnit:Error ("Statements (" .. GCompute.String.EscapeWhitespace (statement:ToString ()) .. ") must be part of a case body in switch statements.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Statements (" .. GCompute.String.EscapeWhitespace (statement:ToString ()) .. ") must be part of a case body in switch statements.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 	end
 	if caseExpression or body then
@@ -379,7 +379,7 @@ function self:StatementSwitch ()
 	end
 	
 	if not self:Accept ("}") then
-		self.CompilationUnit:Error ("Expected '}' to close switch statement body.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected '}' to close switch statement body.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	return switchStatement
@@ -479,10 +479,9 @@ end
 
 function self:StatementBlock ()
 	if not self:Accept ("{") then return nil end
-	self:AcceptWhitespaceAndNewlines ()
 	
 	local blockStatement = nil
-	if self:AcceptType (GCompute.TokenType.AST) then
+	if self:AcceptAST () then
 		blockStatement = self:GetLastToken ().AST
 	else
 		self.CompilationUnit:Error ("Parser bug: Expected <pre-parsed block> after '{'.", self:GetLastToken ().Line, self:GetLastToken ().Character)
@@ -884,7 +883,7 @@ function self:ExpressionFunctionCall (leftExpression)
 	if not self:Accept (")") then
 		functionCallExpression:AddArguments (self:List (self.Expression))
 		if not self:Accept (")") then
-			self.CompilationUnit:Error ("Expected ')' to close function call argument list.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected ')' to close function call argument list.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 	end
 	return functionCallExpression
@@ -893,16 +892,16 @@ end
 function self:ExpressionMemberFunctionCall (leftExpression)
 	if not self:AcceptAndSave (":") then return leftExpression end
 	local unqualifiedIdentifier = self:UnqualifiedIdentifier ()
-	local identifierLine = self.TokenNode.Line
-	local identifierCharacter = self.TokenNode.Character
+	local identifierLine = self.CurrentToken.Line
+	local identifierCharacter = self.CurrentToken.Character
 	
 	local memberFunctionCallExpression = GCompute.AST.MemberFunctionCall ()
 	memberFunctionCallExpression:SetLeftExpression (leftExpression)
 	memberFunctionCallExpression:SetIdentifier (unqualifiedIdentifier)
 	
 	local noLeftParenthesis = not self:Accept ("(")
-	local leftParenthesisLine = self.TokenNode.Line
-	local leftParenthesisCharacter = self.TokenNode.Character
+	local leftParenthesisLine = self.CurrentToken.Line
+	local leftParenthesisCharacter = self.CurrentToken.Character
 	
 	local noRightParenthesis = false
 	if not self:Accept (")") then
@@ -928,7 +927,7 @@ function self:ExpressionMemberFunctionCall (leftExpression)
 		self.CompilationUnit:Error ("Expected '(' to start member function call argument list.", leftParenthesisLine, leftParenthesisCharacter)
 	end
 	if noRightParenthesis then
-		self.CompilationUnit:Error ("Expected ')' to close member function call argument list.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected ')' to close member function call argument list.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	
 	self:CommitPosition ()
@@ -943,7 +942,7 @@ function self:ExpressionArrayIndex (leftExpression)
 	if not self:Accept ("]") then
 		arrayIndexExpression:AddArguments (self:List (self.Expression))
 		if not self:Accept ("]") then
-			self.CompilationUnit:Error ("Expected ']' to close index argument list.", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Expected ']' to close index argument list.", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 	end
 	return arrayIndexExpression
@@ -956,7 +955,7 @@ function self:ExpressionIndex (leftExpression)
 	nameIndexExpression:SetLeftExpression (leftExpression)
 	local identifier = self:UnqualifiedIdentifier ()
 	if not identifier then
-		self.CompilationUnit:Error ("Expected <identifier> after '.' in name index expression.", self.TokenNode.Line, self.TokenNode.Character)
+		self.CompilationUnit:Error ("Expected <identifier> after '.' in name index expression.", self.CurrentToken.Line, self.CurrentToken.Character)
 	end
 	return nameIndexExpression
 end
@@ -1090,7 +1089,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			nameIndex:SetLeftExpression (leftExpression)
 			local unqualifiedIdentifier = self:UnqualifiedIdentifier ()
 			if not unqualifiedIdentifier then
-				self.CompilationUnit:Error ("Expected <identifier> after '.',, got " .. self:Peek (), self.TokenNode.Line, self.TokenNode.Character)
+				self.CompilationUnit:Error ("Expected <identifier> after '.',, got " .. self:Peek (), self.CurrentToken.Line, self.CurrentToken.Character)
 			end
 			
 			nameIndex:SetIdentifier (unqualifiedIdentifier)
@@ -1105,7 +1104,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 					local parameterType = self:Type ()
 					
 					if not parameterType then
-						self.CompilationUnit:Error ("Expected <type> after '(' in function type.", self.TokenNode.Line, self.TokenNode.Character)
+						self.CompilationUnit:Error ("Expected <type> after '(' in function type.", self.CurrentToken.Line, self.CurrentToken.Character)
 						break
 					end
 					if self:Accept (":") then
@@ -1133,7 +1132,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			end
 			leftExpression = functionType
 		else
-			self.CompilationUnit:Error ("Unhandled operator in type (" .. nextOperator .. ")", self.TokenNode.Line, self.TokenNode.Character)
+			self.CompilationUnit:Error ("Unhandled operator in type (" .. nextOperator .. ")", self.CurrentToken.Line, self.CurrentToken.Character)
 		end
 		nextOperator = self:Peek ()
 	end

@@ -108,8 +108,27 @@ function GCompute.Editor.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				RunString (codeEditor:GetText ())
+				local editorHelper = codeEditor and codeEditor:GetEditorHelper ()
+				if not editorHelper then return end
+				
+				local pipe = GCompute.Pipe ()
+				pipe:AddEventListener ("Data",
+					function (_, data)
+						self.OutputPane:Append (data)
+					end
+				)
+				
+				self.OutputPane:Clear ()
+				editorHelper:Run (codeEditor, pipe, pipe, pipe, pipe)
+			end
+		)
+	toolbar:AddSeparator ()
+	toolbar:AddButton ("Reload GCompute")
+		:SetIcon ("gui/g_silkicons/arrow_refresh")
+		:AddEventListener ("Click",
+			function ()
+				RunConsoleCommand ("gcompute_reload")
+				RunConsoleCommand ("gcompute_show_editor")
 			end
 		)
 	toolbar:AddSeparator ()

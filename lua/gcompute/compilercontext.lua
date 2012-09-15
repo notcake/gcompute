@@ -199,7 +199,7 @@ if CLIENT then
 				Print (compilationGroup:GetNamespaceDefinition ():ToString ())
 				
 				local process = GCompute.LocalProcessList:CreateProcess ()
-				process:SetName (sourceFile:GetPath ())
+				process:SetName (sourceFile:GetId ())
 				process:SetNamespace (compilationGroup:GetNamespaceDefinition ())
 				process:Start ()
 			end

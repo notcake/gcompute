@@ -124,9 +124,9 @@ function self:OutputMessages (outputFunction)
 	
 	for _, messageEntry in ipairs (self.Messages) do
 		if messageEntry.Character then
-			outputFunction ("Line " .. messageEntry.Line .. ", char " .. messageEntry.Character .. ": " .. messageEntry.Message, messageEntry.MessageType)
+			outputFunction ("Line " .. (messageEntry.Line + 1) .. ", char " .. (messageEntry.Character + 1) .. ": " .. messageEntry.Message, messageEntry.MessageType)
 		elseif messageEntry.Line then
-			outputFunction ("Line " .. messageEntry.Line .. ": " .. messageEntry.Message, messageEntry.MessageType)
+			outputFunction ("Line " .. (messageEntry.Line + 1) .. ": " .. messageEntry.Message, messageEntry.MessageType)
 		else
 			outputFunction (messageEntry.Message, messageEntry.MessageType)
 		end
@@ -221,8 +221,16 @@ function self:Lex (callback)
 	
 	if not self.Language then callback () return end
 	
-	if self.LexingInProgress then return end
-	if self.LexingRevision == self.SourceFile:GetCodeHash () then return end
+	if self.LexingInProgress then
+		self:AddEventListener ("LexerFinished", tostring (callback),
+			function ()
+				self:RemoveEventListener ("LexerFinished", tostring (callback))
+				callback ()
+			end
+		)
+		return
+	end
+	if self.LexingRevision == self.SourceFile:GetCodeHash () then callback () return end
 	
 	self.LexingInProgress = true
 	self.LexingRevision = self.SourceFile:GetCodeHash ()
@@ -262,6 +270,10 @@ end
 function self:Preprocess (callback)
 	callback = callback or GCompute.NullCallback
 	
+	if self.PreprocessingRevision == self.SourceFile:GetCodeHash () then callback () return end
+	
+	self.PreprocessingRevision = self.SourceFile:GetCodeHash ()
+	
 	local startTime = SysTime ()
 	GCompute.Preprocessor:Process (self, self.Tokens)
 	self:AddPassDuration ("Preprocessor", SysTime () - startTime)
@@ -295,12 +307,9 @@ function self:Parse (callback)
 			function (callback)
 				self:Debug ("Parsing from line " .. v.Start.Line .. ", char " .. v.Start.Character .. " to line " .. v.End.Line .. ", char " .. v.End.Character .. ".")
 				local parseTree = parser:Process (self.Tokens, v.Start, v.End)
-				self.Tokens:RemoveRange (v.Start, v.End)
-				local tokenNode = self.Tokens:AddAfter (v.Start.Previous, "pre-parsed ast")
-				tokenNode.AST = parseTree
-				tokenNode.TokenType = GCompute.TokenType.AST
-				tokenNode.Line = v.Start.Line
-				tokenNode.Character = v.Start.Character
+				v.Start.BlockEnd = v.End
+				v.Start.AST = parseTree
+				v.End.BlockStart = v.Start
 				timer.Simple (0, callback)
 			end
 		)

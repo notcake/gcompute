@@ -1,7 +1,7 @@
-local TextOutputBuffer = {}
-GCompute.TextOutputBuffer = GCompute.MakeConstructor (TextOutputBuffer)
+local self = {}
+GCompute.TextOutputBuffer = GCompute.MakeConstructor (self)
 
-function TextOutputBuffer:ctor ()
+function self:ctor ()
 	self.Enabled = true
 
 	self.Lines = {}
@@ -9,35 +9,35 @@ function TextOutputBuffer:ctor ()
 	self.Indent = 0
 end
 
-function TextOutputBuffer:Clear ()
+function self:Clear ()
 	self.Lines = {}
 	self.UnfinishedLine = false
 	self.Indent = 0
 end
 
-function TextOutputBuffer:DecreaseIndent ()
+function self:DecreaseIndent ()
 	self.Indent = self.Indent - 1
 end
 
-function TextOutputBuffer:Disable ()
+function self:Disable ()
 	self.Enabled = false
 end
 
-function TextOutputBuffer:Enable ()
+function self:Enable ()
 	self.Enabled = true
 end
 
-function TextOutputBuffer:IncreaseIndent ()
+function self:IncreaseIndent ()
 	self.Indent = self.Indent + 1
 end
 
-function TextOutputBuffer:OutputLines (outputFunction)
+function self:OutputLines (outputFunction)
 	for i = 1, #self.Lines do
 		outputFunction (self.Lines [i])
 	end
 end
 
-function TextOutputBuffer:Write (message)
+function self:Write (message)
 	if not self.Enabled then return end
 	
 	for i = 1, message:len () do
@@ -53,7 +53,7 @@ function TextOutputBuffer:Write (message)
 	end
 end
 
-function TextOutputBuffer:WriteLine (message)
+function self:WriteLine (message)
 	if not self.Enabled then return end
 	
 	for i = 1, message:len () do

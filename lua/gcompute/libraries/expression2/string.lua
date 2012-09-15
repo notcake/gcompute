@@ -6,7 +6,15 @@ Expression2:AddFunction ("format", { { "string", "formatString" }, { "object", "
 	:SetNativeFunction (string.format)
 	
 Expression2:AddFunction ("print", { { "object", "..." } })
-	:SetNativeFunction (print)
+	:SetNativeFunction (
+		function (...)
+			local t = {...}
+			for k, v in ipairs (t) do
+				t [k] = tostring (v)
+			end
+			executionContext:GetProcess ():GetStdOut ():WriteLine (table.concat (t, "\t"))
+		end
+	)
 
 String:AddFunction ("upper")
 	:SetReturnType ("string")

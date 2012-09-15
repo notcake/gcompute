@@ -11,6 +11,13 @@ GCompute.Lexer = GCompute.MakeConstructor (self)
 			Fired when a range of tokens has been removed.
 ]]
 
+local string_find = string.find
+local string_len  = string.len
+local string_sub  = string.sub
+
+local GLib_UTF8_Length   = GLib.UTF8.Length
+local GLib_UTF8_NextChar = GLib.UTF8.NextChar
+
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	
@@ -56,10 +63,15 @@ function self:Process (code, language, callback)
 end
 
 function self:ProcessSome ()
+	local GCompute_KeywordType_Unknown = GCompute.KeywordType.Unknown
+	local GCompute_TokenType_EndOfFile = GCompute.TokenType.EndOfFile
+	local GCompute_TokenType_Keyword   = GCompute.TokenType.Keyword
+	local GCompute_TokenType_Unknown   = GCompute.TokenType.Unknown
+	
 	local tokensProcessed
 	
 	local code       = self.Code
-	local codeLength = string.len (self.Code)
+	local codeLength = string_len (self.Code)
 	local language   = self.Language
 	local tokenizer  = language:GetTokenizer ()
 	local tokens     = self.Tokens
@@ -75,7 +87,7 @@ function self:ProcessSome ()
 	local crOffset = 0
 	local lfOffset = 0
 			
-	while SysTime () - tickStartTime < 0.010 * 10000 and offset <= codeLength do
+	while SysTime () - tickStartTime < 0.010 and offset <= codeLength do
 		tokensProcessed = 0
 		while tokensProcessed < 10 and offset <= codeLength do
 			tokensProcessed = tokensProcessed + 1
@@ -90,13 +102,13 @@ function self:ProcessSome ()
 			local lastNewlineEnd = 1
 			local matchEnd = offset + matchLength - 1
 			while lineStartOffset <= matchEnd do
-				if crOffset and crOffset < lineStartOffset then crOffset = string.find (code, "\r", lineStartOffset, true) end
-				if lfOffset and lfOffset < lineStartOffset then lfOffset = string.find (code, "\n", lineStartOffset, true) end
+				if crOffset and crOffset < lineStartOffset then crOffset = string_find (code, "\r", lineStartOffset, true) end
+				if lfOffset and lfOffset < lineStartOffset then lfOffset = string_find (code, "\n", lineStartOffset, true) end
 				local newlineOffset = crOffset or lfOffset
 				if lfOffset and lfOffset < newlineOffset then newlineOffset = lfOffset end
 				if newlineOffset then
 					if newlineOffset > matchEnd then break end
-					if string.sub (code, newlineOffset, newlineOffset + 1) == "\r\n" then
+					if string_sub (code, newlineOffset, newlineOffset + 1) == "\r\n" then
 						lineStartOffset = newlineOffset + 2
 						lineCount = lineCount + 1
 					else
@@ -120,8 +132,8 @@ function self:ProcessSome ()
 				local token = tokens:AddLast (match)
 				
 				-- Check if the token is a key word that has been classed as an identifier
-				if language:GetKeywordType (match) ~= GCompute.KeywordType.Unknown then
-					tokenType = GCompute.TokenType.Keyword
+				if language:GetKeywordType (match) ~= GCompute_KeywordType_Unknown then
+					tokenType = GCompute_TokenType_Keyword
 				end
 				
 				token.TokenType    = tokenType
@@ -129,15 +141,15 @@ function self:ProcessSome ()
 				token.Character    = character
 				token.EndLine      = line + lineCount
 				if lineCount > 0 then
-					character = GLib.UTF8.Length (string.sub (code, lastNewlineEnd, offset + matchLength - 1))
+					character = GLib_UTF8_Length (string_sub (code, lastNewlineEnd, offset + matchLength - 1))
 				else
-					character = character + GLib.UTF8.Length (match)
+					character = character + GLib_UTF8_Length (match)
 				end
 				token.EndCharacter = character
 			else
 				-- Unable to match symbol, take one character and mark it as unknown
-				local token        = tokens:AddLast (GLib.UTF8.NextChar (code, offset))
-				token.TokenType    = GCompute.TokenType.Unknown
+				local token        = tokens:AddLast (GLib_UTF8_NextChar (code, offset))
+				token.TokenType    = GCompute_TokenType_Unknown
 				token.Line         = line
 				token.Character    = character
 				token.EndLine      = line
@@ -149,7 +161,7 @@ function self:ProcessSome ()
 					character = character + 1
 				end
 				token.EndCharacter = character
-				matchLength = string.len (token.Value)
+				matchLength = string_len (token.Value)
 			end
 			
 			offset = offset + matchLength
@@ -164,7 +176,7 @@ function self:ProcessSome ()
 	
 	print ("Lexer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. (self:GetProgress () * 100) .. "%.")
 	self.CompilationUnit:Debug ("Lexer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. (self:GetProgress () * 100) .. "%.")
-	if self.Offset <= string.len (self.Code) then
+	if self.Offset <= string_len (self.Code) then
 		timer.Simple (0.001,
 			function ()
 				self.TickStartTime = SysTime ()
@@ -173,7 +185,7 @@ function self:ProcessSome ()
 		)
 	else
 		local token        = self.Tokens:AddLast ("<eof>")
-		token.TokenType    = GCompute.TokenType.EndOfFile
+		token.TokenType    = GCompute_TokenType_EndOfFile
 		token.Line         = self.Line
 		token.Character    = self.Character
 		token.EndLine      = self.Line

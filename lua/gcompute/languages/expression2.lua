@@ -55,14 +55,14 @@ LANGUAGE:GetTokenizer ()
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")
 
 LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "do", "break", "switch", "return", "continue"})
-LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using", "function"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using", "function", "local"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
 
 LANGUAGE:SetDirectiveCaseSensitivity (false)
 
 local function parseVariables (compilationUnit, directive, directiveParser)
-	directiveParser:GetNextToken () -- @
-	directiveParser:GetNextToken () -- directive name
+	directiveParser:AdvanceToken () -- @
+	directiveParser:AdvanceToken () -- directive name
 	directiveParser:AcceptWhitespace ()
 	
 	local variables = compilationUnit:GetExtraData (directive) or {}
@@ -75,7 +75,7 @@ local function parseVariables (compilationUnit, directive, directiveParser)
 			if directiveParser:PeekType () == GCompute.TokenType.Identifier then
 				typeExpression = LANGUAGE:GetParserMetatable ().Type (directiveParser)
 			else
-				compilationUnit:Error ("Expected <type> after ':'.", directiveParser.TokenNode.Line, directiveParser.TokenNode.Character)
+				compilationUnit:Error ("Expected <type> after ':'.", directiveParser.CurrentToken.Line, directiveParser.CurrentToken.Character)
 			end
 		end
 		
@@ -95,6 +95,7 @@ LANGUAGE:AddDirective ("inputs", parseVariables)
 LANGUAGE:AddDirective ("outputs", parseVariables)
 LANGUAGE:AddDirective ("persist", parseVariables)
 
+LANGUAGE:LoadEditorHelper ("expression2_editorhelper.lua")
 LANGUAGE:LoadParser ("expression2_parser.lua")
 LANGUAGE:LoadPass ("expression2_iopvariables.lua", GCompute.CompilerPassType.PostParser)
 LANGUAGE:LoadPass ("expression2_typefixer.lua", GCompute.CompilerPassType.PostParser)

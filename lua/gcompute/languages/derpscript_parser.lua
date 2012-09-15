@@ -63,11 +63,11 @@ local Parser = Parser
 
 -- Root
 function Parser:Root ()
-	local Token = self.TokenNode
+	local token = self.CurrentToken
 	--[[
-	while Token do
-		Msg ("Token: " .. tostring (Token.Value) .. " | " .. tostring (GCompute.TokenType [Token.TokenType]) .. "\n")
-		Token = Token.Next
+	while token do
+		Msg ("Token: " .. tostring (token.Value) .. " | " .. tostring (GCompute.TokenType [token.TokenType]) .. "\n")
+		token = token.Next
 	end
 	]]
 	self:Sequence ()
@@ -106,7 +106,7 @@ function Parser:Statement ()
 		return true
 	end
 	self:RestorePosition ()
-	self:GetNextToken ()
+	self:AdvanceToken ()
 	self.DebugOutput:DecreaseIndent ()
 	return false
 end

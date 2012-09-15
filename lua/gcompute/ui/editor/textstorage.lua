@@ -81,7 +81,7 @@ function self:Delete (startCharacter, endCharacter)
 	
 	while startNode ~= endNode do
 		local next = startNode.Next
-		startNode:Remove ()
+		self.LinkedList:Remove (startNode)
 		startNode = next
 	end
 	
@@ -152,15 +152,21 @@ function self:Insert (character, text)
 			lastType = "linebreak"
 		end
 		if not match then
-			match = string.match (text, "^[\128-\255]+", offset)
-			lastType = "utf8"
-		end
-		if not match then
 			match = string.match (text, "^[%z\1-\8\11\12\14-\31\33-\127]+", offset)
 			lastType = "regular"
 		end
-		bits [#bits + 1] = match
-		bitTypes [#bitTypes + 1] = lastType
+		if match then
+			bits [#bits + 1] = match
+			bitTypes [#bitTypes + 1] = lastType
+		else
+			match = string.match (text, "^[\128-\255]+", offset)
+			lastType = "utf8"
+			
+			for char, _ in GLib.UTF8.Iterator (match) do
+				bits [#bits + 1] = char
+				bitTypes [#bitTypes + 1] = lastType
+			end
+		end
 		offset = offset + string.len (match)
 	end
 	

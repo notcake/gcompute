@@ -52,21 +52,21 @@ end
 function self:AddPlainSymbol (tokenType, symbol)
 	if symbol:len () == 0 then GCompute.Error ("Tokenizer:AddPlainSymbol : Symbol cannot be zero-length.") return end
 	
-	local trie = nil
+	local lookup = nil
 	if symbol:len () <= 3 then
 		local previousSymbolMatcher = self.SymbolMatchers [#self.SymbolMatchers]
-		if not previousSymbolMatcher or previousSymbolMatcher.MatchType ~= SymbolMatchType.Trie then
-			trie = {}
+		if not previousSymbolMatcher or previousSymbolMatcher.MatchType ~= SymbolMatchType.Lookup then
+			lookup = {}
 			self.SymbolMatchers [#self.SymbolMatchers + 1] =
 			{
-				MatchType = SymbolMatchType.Trie,
-				Trie      = trie
+				MatchType = SymbolMatchType.Lookup,
+				Lookup   = lookup
 			}
 		else
-			trie = previousSymbolMatcher.Trie
+			lookup = previousSymbolMatcher.Lookup
 		end
 	end
-	if not trie then
+	if not lookup then
 		self.SymbolMatchers [#self.SymbolMatchers + 1] =
 		{
 			String    = symbol,
@@ -74,16 +74,19 @@ function self:AddPlainSymbol (tokenType, symbol)
 			TokenType = tokenType
 		}
 	else
-		for i = 1, symbol:len () do
-			local c = symbol:sub (i, i)
-			if trie [""] then
-				GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (symbol:sub (1, i - 1)) .. "\" and will never be reached.")
-				return self
-			end
-			trie [c] = trie [c] or { Parent = trie }
-			trie = trie [c]
+		if lookup [string.sub (symbol, 1, 1)] then
+			GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (string.sub (symbol, 1, 1)) .. "\" and will never be reached.")
+			return self
 		end
-		trie [""] = tokenType
+		if lookup [string.sub (symbol, 1, 2)] then
+			GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (string.sub (symbol, 1, 2)) .. "\" and will never be reached.")
+			return self
+		end
+		if lookup [string.sub (symbol, 1, 3)] then
+			GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (string.sub (symbol, 1, 3)) .. "\" and will never be reached.")
+			return self
+		end
+		lookup [symbol] = tokenType
 	end
 	
 	return self
@@ -102,9 +105,13 @@ function self:Compile ()
 	
 	local upvalueTable = {}
 	local nextCustomMatcherId = 1
-	local nextTrieId = 1
+	local nextLookupId = 1
 	
-	local trieLocalsCreated = false
+	local lookupLocalCreated = false
+	
+	upvalueTable ["string_len"]   = string.len
+	upvalueTable ["string_match"] = string.match
+	upvalueTable ["string_sub"]   = string.sub
 	
 	local code = "return function (self, code, offset)\n"
 	code = code .. "\tlocal match\n"
@@ -114,44 +121,39 @@ function self:Compile ()
 		local tokenType = symbolMatcher.TokenType
 		
 		if symbolMatchType == SymbolMatchType.Plain then
-			code = code .. "\tif string.sub (code, offset, offset + " .. tostring (symbolMactcher.String:len () - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
-			code = code .. "\t\treturn \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", " .. symbolMatcher.String:len () .. "\n"
+			code = code .. "\tif string_sub (code, offset, offset + " .. tostring (string.len (symbolMactcher.String) - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
+			code = code .. "\t\treturn \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", " .. string.len (symbolMatcher.String) .. "\n"
 			code = code .. "\tend\n"
 			code = code .. "\t\n"
-		elseif symbolMatchType == SymbolMatchType.Trie then
-			upvalueTable ["trie" .. tostring (nextTrieId)] = symbolMatcher.Trie
+		elseif symbolMatchType == SymbolMatchType.Lookup then
+			upvalueTable ["lookup" .. tostring (nextLookupId)] = symbolMatcher.Lookup
 			
-			if not trieLocalsCreated then
-				code = code .. "\tlocal trie\n"
-				code = code .. "\tlocal j\n"
-				code = code .. "\tlocal c\n"
-				trieLocalsCreated = true
+			if not lookupLocalCreated then
+				code = code .. "\tlocal lookup\n"
+				code = code .. "\tlocal lookupSymbol\n"
+				lookupLocalCreated = true
 			end
-			code = code .. "\ttrie = trie" .. tostring (nextTrieId) .. "\n"
-			code = code .. "\tj = offset\n"
+			code = code .. "\tlookup = lookup" .. tostring (nextLookupId) .. "\n"
 			code = code .. "\t\n"
-			code = code .. "\tc = string.sub (code, j, j)\n"
-			code = code .. "\twhile c ~= \"\" and trie [c] do\n"
-			code = code .. "\t\ttrie = trie [c]\n"
-			code = code .. "\t\tj = j + 1\n"
-			code = code .. "\t\tc = string.sub (code, j, j)\n"
-			code = code .. "\tend\n"
-			code = code .. "\twhile trie do\n"
-			code = code .. "\t\tif trie [\"\"] then\n"
-			code = code .. "\t\t\treturn string.sub (code, offset, j - 1), j - offset, trie [\"\"]\n"
-			code = code .. "\t\tend\n"
-			code = code .. "\t\ttrie = trie.Parent\n"
-			code = code .. "\tend\n"
+			code = code .. "\tlookupSymbol = string_sub (code, offset, offset + 2)\n"
+			code = code .. "\tif lookup [lookupSymbol] then return lookupSymbol, 3, lookup [lookupSymbol] end\n"
+			code = code .. "\t\n"
+			code = code .. "\tlookupSymbol = string_sub (lookupSymbol, 1, 2)\n"
+			code = code .. "\tif lookup [lookupSymbol] then return lookupSymbol, 2, lookup [lookupSymbol] end\n"
+			code = code .. "\t\n"
+			code = code .. "\tlookupSymbol = string_sub (lookupSymbol, 1, 1)\n"
+			code = code .. "\tif lookup [lookupSymbol] then return lookupSymbol, 1, lookup [lookupSymbol] end\n"
+			code = code .. "\t\n"
 			
-			nextTrieId = nextTrieId + 1
+			nextLookupId = nextLookupId + 1
 		elseif symbolMatchType == SymbolMatchType.Pattern then
-			code = code .. "\tmatch = string.match (code, \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", offset)\n"
-			code = code .. "\tif match then return match, string.len (match), " .. tostring (symbolMatcher.TokenType) .. " end\n"
+			code = code .. "\tmatch = string_match (code, \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", offset)\n"
+			code = code .. "\tif match then return match, string_len (match), " .. tostring (symbolMatcher.TokenType) .. " end\n"
 			code = code .. "\t\n"
 		else
 			upvalueTable ["customMatcher" .. tostring (nextCustomMatcherId)] = symbolMatcher.Matcher
 			
-			code = code .. "\tif string.sub (code, offset, offset + " .. tostring (symbolMatcher.String:len () - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
+			code = code .. "\tif string_sub (code, offset, offset + " .. tostring (string.len (symbolMatcher.String) - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
 			code = code .. "\t\tmatch, matchLength = customMatcher" .. tostring (nextCustomMatcherId) .. " (code, offset)\n"
 			code = code .. "\t\tif match then return match, matchLength, " .. tostring (symbolMatcher.TokenType) .. " end\n"
 			code = code .. "\tend\n"
@@ -203,25 +205,17 @@ function self:MatchSymbolSlow (code, offset)
 				match = symbolMatcher.String
 				matchLength = string.len (match)
 			end
-		elseif symbolMatchType == SymbolMatchType.Trie then
-			local trie = symbolMatcher.Trie
-			local j = offset
+		elseif symbolMatchType == SymbolMatchType.Lookup then
+			local lookup = symbolMatcher.Lookup
 			
-			local c = string.sub (code, j, j)
-			while c ~= "" and trie [c] do
-				trie = trie [c]
-				j = j + 1
-				c = string.sub (code, j, j)
-			end
-			while trie do
-				if trie [""] then
-					match = string.sub (code, offset, j - 1)
-					matchLength = j - offset
-					tokenType = trie [""]
-					break
-				end
-				trie = trie.Parent
-			end
+			local lookupSymbol = string.sub (code, offset, offset + 2)
+			if lookup [lookupSymbol] then return lookupSymbol, 3, lookup [lookupSymbol] end
+			
+			lookupSymbol = string.sub (lookupSymbol, 1, 2)
+			if lookup [lookupSymbol] then return lookupSymbol, 2, lookup [lookupSymbol] end
+			
+			lookupSymbol = string.sub (lookupSymbol, 1, 1)
+			if lookup [lookupSymbol] then return lookupSymbol, 1, lookup [lookupSymbol] end
 		elseif symbolMatchType == SymbolMatchType.Pattern then
 			match = string.match (code, symbolMatcher.String, offset)
 			if match then matchLength = string.len (match) end

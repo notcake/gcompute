@@ -58,5 +58,22 @@ function GCompute.Editor.CodeEditorContextMenu (self)
 				codeEditor:SelectAll ()
 			end
 		)
+	menu:AddSeparator ()
+	menu:AddOption ("Indent")
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				codeEditor:IndentSelection ()
+			end
+		)
+	menu:AddOption ("Outdent")
+		:AddEventListener ("Click",
+			function ()
+				local codeEditor = self:GetActiveCodeEditor ()
+				if not codeEditor then return end
+				codeEditor:OutdentSelection ()
+			end
+		)
 	return menu
 end

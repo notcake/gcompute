@@ -145,7 +145,7 @@ function self:Filter (filter)
 	
 	for linkedListNode in self:GetEnumerator () do
 		if not filter (linkedListNode) then
-			linkedListNode:Remove ()
+			self:Remove (linkedListNode)
 		end
 	end
 end

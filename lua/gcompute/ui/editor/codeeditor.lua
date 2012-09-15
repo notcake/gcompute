@@ -7,6 +7,8 @@ surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
 			Fired when the caret has moved.
 		FileChanged (oldFile, newFile)
 			Fired when this document's file has changed.
+		LanguageChanged (Language oldLanguage, Language newLanguage)
+			Fired when this document's language has changed.
 		LexerFinished (Lexer lexer)
 			Fired when the lexing process for this document has finished.
 		LexerProgress (Lexer lexer, bytesProcessed, totalBytes)
@@ -30,17 +32,23 @@ function PANEL:Init ()
 		self:OnKeyCodeTyped (keyCode)
 	end
 	self.TextEntry.OnTextChanged = function (textEntry)
+		local ctrl    = input.IsKeyDown (KEY_LCONTROL) or input.IsKeyDown (KEY_RCONTROL)
+		local shift   = input.IsKeyDown (KEY_LSHIFT)   or input.IsKeyDown (KEY_RSHIFT)
+		local alt     = input.IsKeyDown (KEY_LALT)     or input.IsKeyDown (KEY_RALT)
+	
+		local pasted = ctrl and input.IsKeyDown (KEY_V)
+		
 		local text = self.TextEntry:GetValue ()
-		if text == "" then return end
-		
-		if self:IsSelectionEmpty () then
-			self:InsertText (text)
-		else
-			self:ReplaceSelectionText (text)
-		end
 		self.TextEntry:SetText ("")
+		if text == "" then return end
+		if not pasted then
+			if text == "\r" or text == "\n" then return end
+		end
 		
-		self:ScrollToCaret ()
+		if not self:IsReadOnly () then
+			self:ReplaceSelectionText (text)
+			self:ScrollToCaret ()
+		end
 	end
 	
 	self.VScroll = vgui.Create ("GVScrollBar", self)
@@ -56,41 +64,62 @@ function PANEL:Init ()
 	self.File = nil
 	self.Path = ""
 	
+	self.ReadOnly = false
 	self.Document = GCompute.Editor.Document ()
 	self.Document:AddEventListener ("TextCleared",
 		function (_)
 			self:SetMaximumColumnCount (1)
 			
-			self:InvalidateSourceFile ()
-			self:UpdateLineNumberWidth ()
-			self:ResetCaretBlinkTime ()
-			self:UpdateScrollBars ()
+			self.DocumentChangeUnhandled = true
+			self.DocumentLinesUnchecked = {}
+			self:UpdateVerticalScrollBar ()
 		end
 	)
 	self.Document:AddEventListener ("TextDeleted",
 		function (_, startLocation, endLocation)
-			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
+			self.DocumentChangeUnhandled = true
 			
-			self:InvalidateSourceFile ()
-			self:UpdateLineNumberWidth ()
-			self:ResetCaretBlinkTime ()
-			self:UpdateScrollBars ()
+			local deletionStartLine = startLocation:GetLine ()
+			local deletionEndLine = endLocation:GetLine ()
+			if deletionStartLine ~= deletionEndLine then
+				local maximumColumnCount = 0
+				while next (self.DocumentLinesUnchecked) do
+					local line = next (self.DocumentLinesUnchecked)
+					self.DocumentLinesUnchecked [line] = nil
+					
+					if line < deletionStartLine or line > deletionEndLine then
+						if line > deletionEndLine then line = line - deletionEndLine + deletionStartLine end
+						
+						if self.Document:GetLine (line) then
+							maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (line):GetColumnCount (self.TextRenderer) + 1)
+						end
+					end
+				end
+				self:UpdateMaximumColumnCount (maximumColumnCount)
+			end
+			
+			self.DocumentLinesUnchecked [startLocation:GetLine ()] = true
+			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
+			self:UpdateVerticalScrollBar ()
 		end
 	)
 	self.Document:AddEventListener ("TextInserted",
 		function (_, location, text, newLocation)
-			local maximumColumnCount = 1
-			for i = location:GetLine (), newLocation:GetLine () do
-				maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (i):GetColumnCount (self.TextRenderer) + 1)
-			end
-			self:UpdateMaximumColumnCount (maximumColumnCount)
+			self.DocumentChangeUnhandled = true
 			
-			self:InvalidateSourceFile ()
-			self:UpdateLineNumberWidth ()
-			self:ResetCaretBlinkTime ()
-			self:UpdateScrollBars ()
+			local startTime = SysTime ()
+			for i = location:GetLine (), newLocation:GetLine () do
+				self.DocumentLinesUnchecked [i] = true
+			end
+			if SysTime () - startTime > 0 then
+				ErrorNoHalt (string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
+			end
+			self:UpdateVerticalScrollBar ()
 		end
 	)
+	
+	self.DocumentChangeUnhandled = false
+	self.DocumentLinesUnchecked = {}
 	
 	-- Caret
 	self.CaretLocation = GCompute.Editor.LineColumnLocation ()
@@ -99,6 +128,7 @@ function PANEL:Init ()
 	
 	-- Selection
 	self.Selecting = false
+	self.SelectionMode = GCompute.Editor.SelectionMode.Regular
 	self.SelectionStartLocation = GCompute.Editor.LineColumnLocation ()
 	self.SelectionEndLocation   = GCompute.Editor.LineColumnLocation ()
 	
@@ -110,7 +140,7 @@ function PANEL:Init ()
 	surface.SetFont ("GComputeMonospace")
 	self.Settings.CharacterWidth, self.Settings.FontHeight = surface.GetTextSize ("W")
 	self.Settings.LineHeight = self.Settings.FontHeight + 2
-	self.Settings.LineNumberWidth = self.Settings.CharacterWidth * 4 + 16
+	self:UpdateLineNumberWidth ()
 	
 	-- View
 	self.ViewLineCount = 0
@@ -118,18 +148,22 @@ function PANEL:Init ()
 	self.MaximumColumnCount = 1
 	self.ViewLocation = GCompute.Editor.LineColumnLocation ()
 	
+	self.LineNumbersVisible = true
+	
 	-- Editing
 	self.UndoRedoStack = GCompute.UndoRedoStack ()
 	
 	-- Compiler
+	self.CompilationEnabled = true
+	
 	self.SourceFile = nil
 	self.CompilationUnit = nil
+	self.Language = nil
+	self.EditorHelper = GCompute.IEditorHelper ()
 	self.LastSourceFileUpdateTime = 0
 	self.SourceFileOutdated = true
 	
 	self.TokenApplicationQueue = GCompute.Containers.Queue ()
-	
-	self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
 	
 	self:SetKeyboardMap (GCompute.Editor.CodeEditorKeyboardMap)
 end
@@ -150,7 +184,7 @@ function PANEL:PerformLayout ()
 	end
 	if self.VScroll and self.HScroll then
 		local w, h = self:GetSize ()
-		w = w - self.Settings.LineNumberWidth
+		if self:AreLineNumbersVisible () then w = w - self.Settings.LineNumberWidth end
 		self.ViewLineCount = math.floor (h / self.Settings.LineHeight)
 		self.ViewColumnCount = math.floor (w / self.Settings.CharacterWidth)
 		
@@ -211,18 +245,59 @@ end
 function PANEL:DrawCaret ()
 	if not self:HasFocus () then return end
 	
-	local caretX = self.Settings.LineNumberWidth + (self.CaretLocation:GetColumn () - self.ViewLocation:GetColumn ()) * self.Settings.CharacterWidth
+	if self:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
+		self:DrawCaretRegular ()
+	elseif self:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
+		self:DrawCaretBlock ()
+	end
+end
+
+function PANEL:DrawCaretRegular ()
+	if (SysTime () - self.CaretBlinkTime) % 1 >= 0.5 then return end
+	
+	local caretX = (self.CaretLocation:GetColumn () - self.ViewLocation:GetColumn ()) * self.Settings.CharacterWidth
+	if self:AreLineNumbersVisible () then caretX = caretX + self.Settings.LineNumberWidth end
 	local caretY = (self.CaretLocation:GetLine () - self.ViewLocation:GetLine ()) * self.Settings.LineHeight
-	if (SysTime () - self.CaretBlinkTime) % 1 < 0.5 then
-		surface.SetDrawColor (GLib.Colors.Gray)
+	
+	surface.SetDrawColor (GLib.Colors.Gray)
+	surface.DrawLine (caretX, caretY, caretX, caretY + self.Settings.LineHeight)
+end
+
+function PANEL:DrawCaretBlock ()
+	if (SysTime () - self.CaretBlinkTime) % 1 >= 0.5 then return end
+	
+	local selectionStart = self.SelectionStartLocation
+	local selectionEnd = self.SelectionEndLocation
+	
+	if selectionStart:IsAfter (selectionEnd) then
+		selectionStart = self.SelectionEndLocation
+		selectionEnd = self.SelectionStartLocation
+	end
+	
+	local startLine = math.max (selectionStart:GetLine (), self.ViewLocation:GetLine ())
+	local endLine   = math.min (selectionEnd:GetLine (), self.ViewLocation:GetLine () + self.ViewLineCount + 1)
+	
+	surface.SetDrawColor (GLib.Colors.Gray)
+	
+	local caretX
+	local caretY
+	for i = startLine, endLine do
+		caretX = (self:GetCaretColumn (i) - self.ViewLocation:GetColumn ()) * self.Settings.CharacterWidth
+		if self:AreLineNumbersVisible () then caretX = caretX + self.Settings.LineNumberWidth end
+		caretY = (i - self.ViewLocation:GetLine ()) * self.Settings.LineHeight
 		surface.DrawLine (caretX, caretY, caretX, caretY + self.Settings.LineHeight)
 	end
 end
 
+local caretLineHighlightColor = Color (32, 32, 64, 255)
 function PANEL:DrawCaretLineHightlighting ()
 	local caretY = (self.CaretLocation:GetLine () - self.ViewLocation:GetLine ()) * self.Settings.LineHeight
-	surface.SetDrawColor (Color (32, 32, 64, 255))
-	surface.DrawRect (self.Settings.LineNumberWidth, caretY, self:GetWide () - self.Settings.LineNumberWidth, self.Settings.LineHeight)
+	surface.SetDrawColor (caretLineHighlightColor)
+	if self:AreLineNumbersVisible () then
+		surface.DrawRect (self.Settings.LineNumberWidth, caretY, self:GetWide () - self.Settings.LineNumberWidth, self.Settings.LineHeight)
+	else
+		surface.DrawRect (0, caretY, self:GetWide (), self.Settings.LineHeight)
+	end
 end
 
 function PANEL:DrawLine (lineOffset)
@@ -231,7 +306,7 @@ function PANEL:DrawLine (lineOffset)
 	if not line then return end
 	
 	local y = lineOffset * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight)
-	local x = self.Settings.LineNumberWidth
+	local x = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
 	local w = self:GetWide ()
 	
 	surface.SetFont ("GComputeMonospace")
@@ -245,29 +320,41 @@ function PANEL:DrawLine (lineOffset)
 	local viewColumnCount      = self.ViewColumnCount
 	local viewLocationColumn   = self.ViewLocation:GetColumn ()
 	local characterWidth       = self.Settings.CharacterWidth
-	local lineNumberWidth      = self.Settings.LineNumberWidth
 	
-	local node, currentColumn = line.TextStorage:NodeFromColumn (viewLocationColumn, self.TextRenderer)
+	local index, currentColumn = line.TextStorage:SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
 	local columnCount
 	x = x - currentColumn * characterWidth
 	currentColumn = viewLocationColumn - currentColumn
-	while node and x <= w do
-		surface_SetTextColor (node.Color)
+	local segment = line.TextStorage:GetSegment (index)
+	while segment and x <= w do
+		surface_SetTextColor (segment.Color)
 		surface_SetTextPos (x, y)
-		surface_DrawText (node.Text)
+		surface_DrawText (segment.Text)
 		
-		columnCount = node:GetColumnCount (self.TextRenderer)
+		columnCount = line.TextStorage:GetSegmentColumnCount (segment, self.TextRenderer)
 		currentColumn = currentColumn + columnCount
 		x = x + columnCount * characterWidth
-		node = node.Next
+		
+		index = index + 1
+		segment = line.TextStorage:GetSegment (index)
 	end
 end
 
 function PANEL:DrawSelection ()
+	if self:IsSelectionEmpty () then return end
+	
+	if self:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
+		self:DrawSelectionRegular ()
+	elseif self:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
+		self:DrawSelectionBlock ()
+	end
+end
+
+function PANEL:DrawSelectionRegular ()
+	local lineNumberWidth = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
+	
 	local selectionStart = self.SelectionStartLocation
 	local selectionEnd = self.SelectionEndLocation
-	
-	if selectionStart:Equals (selectionEnd) then return end
 	
 	if selectionStart:IsAfter (selectionEnd) then
 		selectionStart = self.SelectionEndLocation
@@ -281,18 +368,18 @@ function PANEL:DrawSelection ()
 	local nextLeftColumn = 0
 	local nextRightColumn = 0
 	
-	local nextLine = self.Document:GetLine (selectionStart:GetLine ())
+	-- Don't bother drawing selection highlighting for lines out of view
+	local startLine = math.max (selectionStart:GetLine (), self.ViewLocation:GetLine () - 2)
+	local endLine   = math.min (selectionEnd:GetLine () - 1, self.ViewLocation:GetLine () + self.ViewLineCount + 2)
+	local nextLine  = self.Document:GetLine (startLine)
 	
-	leftColumn = selectionStart:GetColumn () - self.ViewLocation:GetColumn ()
+	leftColumn  = selectionStart:GetColumn () - self.ViewLocation:GetColumn ()
 	rightColumn = nextLine:GetColumnCount (self.TextRenderer) + 1 - self.ViewLocation:GetColumn ()
 	
-	for i = math.max (selectionStart:GetLine (), self.ViewLocation:GetLine () - 2), selectionEnd:GetLine () - 1 do
-		-- Don't bother drawing selection highlighting for lines out of view
-		if i > self.ViewLocation:GetLine () + self.ViewLineCount + 2 then break end
-	
+	for i = startLine, endLine do
 		nextLine = self.Document:GetLine (i + 1)
 	
-		nextLeftColumn = -self.ViewLocation:GetColumn ()
+		nextLeftColumn  = -self.ViewLocation:GetColumn ()
 		nextRightColumn = nextLine:GetColumnCount (self.TextRenderer) + 1 - self.ViewLocation:GetColumn ()
 		if i == selectionEnd:GetLine () - 1 then
 			nextRightColumn = selectionEnd:GetColumn () - self.ViewLocation:GetColumn ()
@@ -301,17 +388,17 @@ function PANEL:DrawSelection ()
 		if leftColumn ~= rightColumn then
 			draw.RoundedBoxEx (
 				4,
-				self.Settings.LineNumberWidth + leftColumn * self.Settings.CharacterWidth,
+				lineNumberWidth + leftColumn * self.Settings.CharacterWidth,
 				(i - self.ViewLocation:GetLine ()) * self.Settings.LineHeight,
 				(rightColumn - leftColumn) * self.Settings.CharacterWidth,
 				self.Settings.LineHeight,
 				GLib.Colors.SteelBlue,
 				roundTopLeft, roundTopRight,
-				nextLeftColumn > leftColumn or nextRightColumn <= leftColumn, nextRightColumn < rightColumn
+				nextLeftColumn > leftColumn or nextRightColumn <= leftColumn, nextRightColumn < rightColumn or nextLeftColumn >= rightColumn
 			)
 		end
 		
-		roundTopLeft = nextLeftColumn < leftColumn
+		roundTopLeft = nextLeftColumn < leftColumn or nextLeftColumn >= rightColumn
 		roundTopRight = nextRightColumn > rightColumn or nextRightColumn <= leftColumn
 		
 		leftColumn  = nextLeftColumn
@@ -324,7 +411,7 @@ function PANEL:DrawSelection ()
 	if leftColumn ~= rightColumn then
 		draw.RoundedBoxEx (
 			4,
-			self.Settings.LineNumberWidth + leftColumn * self.Settings.CharacterWidth,
+			lineNumberWidth + leftColumn * self.Settings.CharacterWidth,
 			(selectionEnd:GetLine () - self.ViewLocation:GetLine ()) * self.Settings.LineHeight,
 			(rightColumn - leftColumn) * self.Settings.CharacterWidth,
 			self.Settings.LineHeight,
@@ -335,10 +422,91 @@ function PANEL:DrawSelection ()
 	end
 end
 
+function PANEL:DrawSelectionBlock ()
+	local lineNumberWidth = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
+	
+	local selectionStart = self.SelectionStartLocation
+	local selectionEnd = self.SelectionEndLocation
+	
+	if selectionStart:IsAfter (selectionEnd) then
+		selectionStart = self.SelectionEndLocation
+		selectionEnd = self.SelectionStartLocation
+	end
+	
+	if selectionStart:GetColumn () == selectionEnd:GetColumn () then return end
+	
+	local startColumn = math.min (selectionStart:GetColumn (), selectionEnd:GetColumn ())
+	local endColumn   = math.max (selectionStart:GetColumn (), selectionEnd:GetColumn ())
+	
+	local roundTopLeft = true
+	local roundTopRight = true
+	local leftColumn = 0
+	local rightColumn = 0
+	local nextLeftColumn = 0
+	local nextRightColumn = 0
+	
+	-- Don't bother drawing selection highlighting for lines out of view
+	local startLine = math.max (selectionStart:GetLine (), self.ViewLocation:GetLine () - 2)
+	local endLine   = math.min (selectionEnd:GetLine () - 1, self.ViewLocation:GetLine () + self.ViewLineCount + 2)
+	local nextLine  = self.Document:GetLine (startLine)
+	
+	leftColumn  = startColumn < nextLine:GetColumnCount (self.TextRenderer) and self:FixupColumn (startLine, startColumn) or startColumn
+	rightColumn = endColumn   < nextLine:GetColumnCount (self.TextRenderer) and self:FixupColumn (startLine, endColumn)   or endColumn
+	leftColumn  = leftColumn  - self.ViewLocation:GetColumn ()
+	rightColumn = rightColumn - self.ViewLocation:GetColumn ()
+	
+	for i = startLine, endLine do
+		nextLine = self.Document:GetLine (i + 1)
+	
+		nextLeftColumn  = startColumn < nextLine:GetColumnCount (self.TextRenderer) and self:FixupColumn (i + 1, startColumn) or startColumn
+		nextRightColumn = endColumn   < nextLine:GetColumnCount (self.TextRenderer) and self:FixupColumn (i + 1, endColumn)   or endColumn
+		nextLeftColumn  = nextLeftColumn  - self.ViewLocation:GetColumn ()
+		nextRightColumn = nextRightColumn - self.ViewLocation:GetColumn ()
+		
+		if leftColumn ~= rightColumn then
+			draw.RoundedBoxEx (
+				4,
+				lineNumberWidth + leftColumn * self.Settings.CharacterWidth,
+				(i - self.ViewLocation:GetLine ()) * self.Settings.LineHeight,
+				(rightColumn - leftColumn) * self.Settings.CharacterWidth,
+				self.Settings.LineHeight,
+				GLib.Colors.SteelBlue,
+				roundTopLeft, roundTopRight,
+				nextLeftColumn > leftColumn or nextRightColumn <= leftColumn, nextRightColumn < rightColumn or nextLeftColumn >= rightColumn
+			)
+		end
+		
+		roundTopLeft = nextLeftColumn < leftColumn or nextLeftColumn >= rightColumn
+		roundTopRight = nextRightColumn > rightColumn or nextRightColumn <= leftColumn
+		
+		leftColumn  = nextLeftColumn
+		rightColumn = nextRightColumn
+	end
+	
+	if leftColumn ~= rightColumn then
+		draw.RoundedBoxEx (
+			4,
+			lineNumberWidth + leftColumn * self.Settings.CharacterWidth,
+			(selectionEnd:GetLine () - self.ViewLocation:GetLine ()) * self.Settings.LineHeight,
+			(rightColumn - leftColumn) * self.Settings.CharacterWidth,
+			self.Settings.LineHeight,
+			GLib.Colors.SteelBlue,
+			roundTopLeft, roundTopRight,
+			true, true
+		)
+	end
+end
+
+function PANEL:GetTextRenderer ()
+	return self.TextRenderer
+end
+
 function PANEL:Paint ()
+	local lineNumberWidth = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
+	
 	-- Draw background
 	surface.SetDrawColor (32, 32, 32, 255)
-	surface.DrawRect (self.Settings.LineNumberWidth, 0, self:GetWide () - self.Settings.LineNumberWidth, self:GetTall ())
+	surface.DrawRect (lineNumberWidth, 0, self:GetWide () - lineNumberWidth, self:GetTall ())
 	
 	self:DrawCaretLineHightlighting ()
 	self:DrawSelection ()
@@ -350,14 +518,32 @@ function PANEL:Paint ()
 	end
 	
 	-- Draw line numbers
-	surface.SetDrawColor (GLib.Colors.Gray)
-	surface.DrawRect (0, 0, self.Settings.LineNumberWidth, self:GetTall ())
-	for i = 0, math.min (self.ViewLineCount, self.Document:GetLineCount () - self.ViewLocation:GetLine () - 1) do
-		draw.SimpleText (tostring (self.ViewLocation:GetLine () + i + 1), "GComputeMonospace", self.Settings.LineNumberWidth - 16, i * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight), GLib.Colors.White, TEXT_ALIGN_RIGHT)
+	if self:AreLineNumbersVisible () then
+		surface.SetDrawColor (GLib.Colors.Gray)
+		surface.DrawRect (0, 0, self.Settings.LineNumberWidth, self:GetTall ())
+		for i = 0, math.min (self.ViewLineCount, self.Document:GetLineCount () - self.ViewLocation:GetLine () - 1) do
+			draw.SimpleText (tostring (self.ViewLocation:GetLine () + i + 1), "GComputeMonospace", self.Settings.LineNumberWidth - 16, i * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight), GLib.Colors.White, TEXT_ALIGN_RIGHT)
+		end
 	end
 end
 
 -- Data
+function PANEL:Append (text)
+	local autoscroll = self:IsLineVisible (self:GetDocument ():GetLineCount () - 1)
+	
+	self:GetDocument ():Insert (self:GetDocument ():GetEnd (), text)
+	
+	if autoscroll then
+		self:SetVerticalScrollPos (self:GetDocument ():GetLineCount () - self.ViewLineCount)
+	end
+end
+
+function PANEL:Clear ()
+	self.Document:Clear ()
+	self:SetCaretPos (GCompute.Editor.LineColumnLocation (0, 0))
+	self:SetSelection (GCompute.Editor.LineColumnLocation (0, 0), GCompute.Editor.LineColumnLocation (0, 0))
+end
+
 function PANEL:GetDocument ()
 	return self.Document
 end
@@ -380,6 +566,10 @@ end
 
 function PANEL:IsDefaultContents ()
 	return self.DefaultContents
+end
+
+function PANEL:IsReadOnly ()
+	return self.ReadOnly
 end
 
 function PANEL:SetDefaultContents (defaultContents)
@@ -409,6 +599,10 @@ function PANEL:SetFile (file)
 	self:DispatchEvent ("PathChanged", oldPath, self.Path)
 end
 
+function PANEL:SetReadOnly (readOnly)
+	self.ReadOnly = readOnly
+end
+
 -- Undo / redo
 function PANEL:CanSave ()
 	return self.UndoRedoStack:CanSave ()
@@ -435,25 +629,49 @@ function PANEL:Undo ()
 end
 
 -- Editing
+function PANEL:DeleteSelection ()
+	if self.SelectionStartLocation:Equals (self.SelectionEndLocation) then return end
+	
+	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
+	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
+	local text = self.Document:GetText (selectionStartLocation, selectionEndLocation)
+	
+	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStartLocation, selectionEndLocation, selectionStartLocation, selectionEndLocation, text)
+	deletionAction:Redo ()
+	self.UndoRedoStack:Push (deletionAction)
+end
+
 function PANEL:GetText ()
 	return self.Document:GetText ()
 end
 
-function PANEL:InsertText (text)
-	local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
-	local insertionAction = GCompute.Editor.InsertionAction (self, insertionLocation, text)
-	insertionAction:Redo ()
-	self.UndoRedoStack:Push (insertionAction)
+function PANEL:IndentSelection ()
+	local indentationAction = GCompute.Editor.IndentationAction (self, self:CreateSelectionSnapshot ())
+	indentationAction:Redo ()
+	self.UndoRedoStack:Push (indentationAction)
+end
+
+function PANEL:OutdentSelection ()
+	local outdentationAction = GCompute.Editor.OutdentationAction (self, self:CreateSelectionSnapshot ())
+	outdentationAction:Redo ()
+	self.UndoRedoStack:Push (outdentationAction)
 end
 
 function PANEL:ReplaceSelectionText (text)
-	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
-	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
-	local originalText = self.Document:GetText (selectionStartLocation, selectionEndLocation)
-	
-	local replacementAction = GCompute.Editor.ReplacementAction (self, selectionStartLocation, selectionEndLocation, originalText, text)
-	replacementAction:Redo ()
-	self.UndoRedoStack:Push (replacementAction)
+	if self:IsSelectionEmpty () then
+		local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
+		local insertionAction = GCompute.Editor.InsertionAction (self, insertionLocation, text)
+		insertionAction:Redo ()
+		self.UndoRedoStack:Push (insertionAction)
+	else
+		local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
+		local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
+		local originalText = self.Document:GetText (selectionStartLocation, selectionEndLocation)
+		
+		local replacementAction = GCompute.Editor.ReplacementAction (self, selectionStartLocation, selectionEndLocation, originalText, text)
+		replacementAction:Redo ()
+		self.UndoRedoStack:Push (replacementAction)
+	end
 end
 
 function PANEL:SetText (text)
@@ -468,10 +686,9 @@ function PANEL:SetText (text)
 end
 
 -- Caret
-function PANEL:FixupColumn (columnLocation)
+function PANEL:FixupColumn (line, column)
 	-- Round to nearest column
-	local line = self.Document:GetLine (columnLocation:GetLine ())
-	local column = columnLocation:GetColumn ()
+	local line = self.Document:GetLine (line)
 	local character, leftColumn = line:CharacterFromColumn (column, self.TextRenderer)
 	local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
 	
@@ -480,8 +697,15 @@ function PANEL:FixupColumn (columnLocation)
 	else
 		column = rightColumn
 	end
+	
+	return column
+end
 
-	return GCompute.Editor.LineColumnLocation (columnLocation:GetLine (), column)
+function PANEL:GetCaretColumn (line)
+	local caretColumn = self.CaretLocation:GetColumn ()
+	local pastEndOfLine = caretColumn > self.Document:GetLine (line):GetColumnCount (self.TextRenderer)
+	local column = pastEndOfLine and caretColumn or self:FixupColumn (line, caretColumn)
+	return column, pastEndOfLine
 end
 
 function PANEL:GetCaretPos ()
@@ -621,7 +845,8 @@ end
 -- @param caretLocation The new caret location
 -- @param scrollToCaret Whether the view should be scrolled to make the caret visible
 function PANEL:SetCaretPos (caretLocation, scrollToCaret)
-	self:SetRawCaretPos (self:FixupColumn (caretLocation), scrollToCaret)
+	caretLocation = GCompute.Editor.LineColumnLocation (caretLocation:GetLine (), self:FixupColumn (caretLocation:GetLine (), caretLocation:GetColumn ()))
+	self:SetRawCaretPos (caretLocation, scrollToCaret)
 end
 
 --- Sets the preferred caret location. The actual caret location is adjusted to the nearest available column.
@@ -631,8 +856,9 @@ function PANEL:SetPreferredCaretPos (preferredCaretLocation, scrollToCaret)
 	if scrollToCaret == nil then scrollToCaret = true end
 	if self.PreferredCaretLocation:Equals (preferredCaretLocation) then return end
 	
-	self.CaretLocation:CopyFrom (self:FixupColumn (preferredCaretLocation))
 	self.PreferredCaretLocation:CopyFrom (preferredCaretLocation)
+	preferredCaretLocation = GCompute.Editor.LineColumnLocation (preferredCaretLocation:GetLine (), self:FixupColumn (preferredCaretLocation:GetLine (), preferredCaretLocation:GetColumn ()))
+	self.CaretLocation:CopyFrom (preferredCaretLocation)
 	self:DispatchEvent ("CaretMoved", self.CaretLocation)
 	
 	self:ResetCaretBlinkTime ()
@@ -659,20 +885,22 @@ function PANEL:SetRawCaretPos (caretLocation, scrollToCaret)
 end
 
 -- Selection
-function PANEL:DeleteSelection ()
-	if self.SelectionStartLocation:Equals (self.SelectionEndLocation) then return end
-	
-	local selectionStartLocation = self.Document:ColumnToCharacter (self.SelectionStartLocation, self.TextRenderer)
-	local selectionEndLocation   = self.Document:ColumnToCharacter (self.SelectionEndLocation, self.TextRenderer)
-	local text = self.Document:GetText (selectionStartLocation, selectionEndLocation)
-	
-	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStartLocation, selectionEndLocation, selectionStartLocation, selectionEndLocation, text)
-	deletionAction:Redo ()
-	self.UndoRedoStack:Push (deletionAction)
+function PANEL:CreateSelectionSnapshot ()
+	local selectionSnapshot = GCompute.Editor.SelectionSnapshot ()
+	selectionSnapshot:SetSelectionMode (self.SelectionMode)
+	selectionSnapshot:SetSelectionStart (self.SelectionStartLocation)
+	selectionSnapshot:SetSelectionEnd (self.SelectionEndLocation)
+	selectionSnapshot:SetCaretPosition (self.CaretLocation)
+	selectionSnapshot:SetPreferredCaretPosition (self.PreferredCaretLocation)
+	return selectionSnapshot
 end
 
 function PANEL:GetSelectionEnd ()
 	return self.SelectionEndLocation
+end
+
+function PANEL:GetSelectionMode ()
+	return self.SelectionMode
 end
 
 function PANEL:GetSelectionStart ()
@@ -693,7 +921,20 @@ function PANEL:IsSelectionEmpty ()
 	return self.SelectionStartLocation:Equals (self.SelectionEndLocation)
 end
 
+function PANEL:IsSelectionMultiline ()
+	return self.SelectionStartLocation:GetLine () ~= self.SelectionEndLocation:GetLine ()
+end
+
+function PANEL:RestoreSelectionSnapshot (selectionSnapshot)
+	self.SelectionMode = selectionSnapshot:GetSelectionMode ()
+	self.SelectionStartLocation:CopyFrom (selectionSnapshot:GetSelectionStart ())
+	self.SelectionEndLocation:CopyFrom (selectionSnapshot:GetSelectionEnd ())
+	self.CaretLocation:CopyFrom (selectionSnapshot:GetCaretPosition ())
+	self.PreferredCaretLocation:CopyFrom (selectionSnapshot:GetPreferredCaretPosition ())
+end
+
 function PANEL:SelectAll ()
+	self:SetSelectionMode (GCompute.Editor.SelectionMode.Regular)
 	self:SetSelection (
 		self.Document:CharacterToColumn (self.Document:GetStart (), self.TextRenderer),
 		self.Document:CharacterToColumn (self.Document:GetEnd (), self.TextRenderer)
@@ -706,27 +947,52 @@ function PANEL:SetSelection (selectionStart, selectionEnd)
 	self.SelectionStartLocation:CopyFrom (selectionStart)
 	self.SelectionEndLocation:CopyFrom (selectionEnd)
 	
-	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.CaretLocation)
+	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.SelectionEndLocation)
 end
 
 function PANEL:SetSelectionEnd (selectionEnd)
 	self.SelectionEndLocation:CopyFrom (selectionEnd)
 	
-	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.CaretLocation)
+	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.SelectionEndLocation)
+end
+
+function PANEL:SetSelectionMode (selectionMode)
+	if self.SelectionMode == selectionMode then return end
+	
+	self.SelectionMode = selectionMode
+	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.SelectionEndLocation)
 end
 
 function PANEL:SetSelectionStart (selectionStart)
 	self.SelectionStartLocation:CopyFrom (selectionStart)
 	
-	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.CaretLocation)
+	self:DispatchEvent ("SelectionChanged", self.SelectionStartLocation, self.SelectionEndLocation)
 end
 
 -- View
+function PANEL:AreLineNumbersVisible ()
+	return self.LineNumbersVisible
+end
+
+function PANEL:IsLineFullyVisible (line)
+	return line >= self.ViewLocation:GetLine () and line <= self.ViewLocation:GetLine () + self.ViewLineCount + 1
+end
+
+function PANEL:IsLineVisible (line)
+	return line >= self.ViewLocation:GetLine () and line <= self.ViewLocation:GetLine () + self.ViewLineCount
+end
+
+--- Converts a position in the editor control to a line-column location.
+-- If a block selection is in progress, the returned location is not clamped to the end of its line.
+-- @param x The x coordinate of the position in the editor control
+-- @param y The y coordinate of the position in the editor control
+-- @return The line, column location corresponding to the given coordinates
 function PANEL:PointToLocation (x, y)
 	local line = self.ViewLocation:GetLine () + math.floor (y / self.Settings.LineHeight)
 	local column = self.ViewLocation:GetColumn ()
 	
-	column = column + (x - self.Settings.LineNumberWidth) / self.Settings.CharacterWidth
+	if self:AreLineNumbersVisible () then x = x - self.Settings.LineNumberWidth end
+	column = column + x / self.Settings.CharacterWidth
 	
 	-- Clamp line
 	if line < 0 then line = 0 end
@@ -738,7 +1004,11 @@ function PANEL:PointToLocation (x, y)
 	if column < 0 then
 		column = 0
 	elseif column > lineWidth then
-		column = lineWidth
+		if self:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
+			column = math.floor (column + 0.5)
+		else
+			column = lineWidth
+		end
 	else
 		-- Snap to nearest column
 		local line = self.Document:GetLine (line)
@@ -768,13 +1038,20 @@ function PANEL:SetHorizontalScrollPos (leftColumn)
 	self.HScroll:SetViewOffset (leftColumn)
 end
 
+function PANEL:SetLineNumbersVisible (lineNumbersVisible)
+	if self.LineNumbersVisible == lineNumbersVisible then return end
+	
+	self.LineNumbersVisible = lineNumbersVisible
+	self:InvalidateLayout ()
+end
+
 function PANEL:SetVerticalScrollPos (topLine)
 	if topLine < 0 then topLine = 0 end
 	self.VScroll:SetViewOffset (topLine)
 end
 
 function PANEL:UpdateLineNumberWidth ()
-	local maxDisplayedLineNumber = tostring (self.Document:GetLineCount () + 1)
+	local maxDisplayedLineNumber = tostring (self.Document:GetLineCount ())
 	local lineNumberWidth = self.Settings.CharacterWidth * (string.len (maxDisplayedLineNumber) + 1) + 16
 	if self.Settings.LineNumberWidth == lineNumberWidth then return end
 	
@@ -783,10 +1060,14 @@ function PANEL:UpdateLineNumberWidth ()
 end
 
 function PANEL:UpdateScrollBars ()
-	self.VScroll:SetViewSize (self.ViewLineCount)
-	self.VScroll:SetContentSize (self.Document:GetLineCount ())
+	self:UpdateVerticalScrollBar ()
 	self.HScroll:SetViewSize (self.ViewColumnCount)
 	self.HScroll:SetContentSize (self.MaximumColumnCount)
+end
+
+function PANEL:UpdateVerticalScrollBar ()
+	self.VScroll:SetViewSize (self.ViewLineCount)
+	self.VScroll:SetContentSize (self.Document:GetLineCount ())
 end
 
 -- Clipboard
@@ -823,6 +1104,10 @@ function PANEL:GetCompilationUnit ()
 	return self.CompilationUnit
 end
 
+function PANEL:GetEditorHelper ()
+	return self.EditorHelper
+end
+
 function PANEL:GetSourceFile ()
 	return self.SourceFile
 end
@@ -831,8 +1116,16 @@ function PANEL:InvalidateSourceFile ()
 	self.SourceFileOutdated = true
 end
 
+function PANEL:IsCompilationEnabled ()
+	return self.CompilationEnabled
+end
+
 function PANEL:IsSourceFileOutdated ()
 	return self.SourceFileOutdated
+end
+
+function PANEL:SetCompilationEnabled (compilationEnabled)
+	self.CompilationEnabled = compilationEnabled
 end
 
 -- Internal function, do not call
@@ -850,9 +1143,27 @@ function PANEL:SetCompilationUnit (compilationUnit)
 		else
 			self:ClearTokenization ()
 		end
+		self:SetLanguage (self.CompilationUnit:GetLanguage ())
 	else
 		self:ClearTokenization ()
+		self:SetLanguage (nil)
 	end
+end
+
+-- Internal function, do not call
+function PANEL:SetLanguage (language)
+	if self.Language == language then return end
+	
+	local oldLanguage = self.Language
+	self.Language = language
+	
+	if self.Language then
+		self.EditorHelper = self.Language:GetEditorHelper ()
+	else
+		self.EditorHelper = GCompute.IEditorHelper ()
+	end
+	
+	self:DispatchEvent ("LanguageChanged", oldLanguage, self.Language)
 end
 
 -- Internal function, do not call
@@ -881,21 +1192,22 @@ end
 -- Internal, do not call
 function PANEL:ApplyToken (token)
 	if not token then return end
-	local startLine = token.Line
-	local endLine = token.EndLine
+	local tokenStartLine = token.Line
+	local tokenEndLine = token.EndLine
 	
 	local color = self:GetTokenColor (token)
-	if not self.Document:GetLine (startLine) then return end
+	local startLine = self.Document:GetLine (tokenStartLine)
+	if not startLine then return end
 	
-	if startLine == endLine then
-		self.Document:GetLine (startLine):SetColor (color, token.Character, token.EndCharacter)
+	if tokenStartLine == tokenEndLine then
+		startLine:SetColor (color, token.Character, token.EndCharacter)
 	else
-		self.Document:GetLine (startLine):SetColor (color, token.Character, nil)
-		if self.Document:GetLine (endLine) then
-			self.Document:GetLine (endLine):SetColor (color, 0, token.EndCharacter)
+		startLine:SetColor (color, token.Character, nil)
+		if self.Document:GetLine (tokenEndLine) then
+			self.Document:GetLine (tokenEndLine):SetColor (color, 0, token.EndCharacter)
 		end
 		
-		for i = startLine + 1, endLine - 1 do
+		for i = tokenStartLine + 1, tokenEndLine - 1 do
 			if not self.Document:GetLine (i) then break end
 			self.Document:GetLine (i):SetColor (color)
 		end
@@ -949,6 +1261,11 @@ end
 function PANEL:HookCompilationUnit (compilationUnit)
 	if not compilationUnit then return end
 	
+	compilationUnit:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+		function (_, language)
+			self:SetLanguage (language)
+		end
+	)
 	compilationUnit:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
 		function (_, lexer)
 			self:DispatchEvent ("LexerFinished", lexer)
@@ -975,6 +1292,7 @@ end
 function PANEL:UnhookCompilationUnit (compilationUnit)
 	if not compilationUnit then return end
 	
+	compilationUnit:RemoveEventListener ("LanguageChanged",   tostring (self:GetTable ()))
 	compilationUnit:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
 	compilationUnit:RemoveEventListener ("LexerProgress",     tostring (self:GetTable ()))
 	compilationUnit:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
@@ -1012,10 +1330,25 @@ function PANEL:OnKeyCodeTyped (keyCode)
 	local alt     = input.IsKeyDown (KEY_LALT)     or input.IsKeyDown (KEY_RALT)
 	
 	if keyCode == KEY_TAB then
-		if self:IsSelectionEmpty () then
-			self:InsertText ("\t")
-		else
-			self:ReplaceSelectionText ("\t")
+		if not self:IsReadOnly () then
+			if shift then
+				self:OutdentSelection ()
+			else
+				if self:IsSelectionMultiline () then
+					self:IndentSelection ()
+				else
+					self:ReplaceSelectionText ("\t")
+				end
+			end
+		end
+	elseif keyCode == KEY_ENTER then
+		if not self:IsReadOnly () then
+			local location = self.SelectionStartLocation
+			if self.SelectionEndLocation:IsBefore (location) then
+				location = self.SelectionEndLocation
+			end
+			location = self.Document:ColumnToCharacter (location, self.TextRenderer)
+			self:ReplaceSelectionText ("\n" .. self.EditorHelper:GetNewLineIndentation (self, location))
 		end
 	elseif keyCode == KEY_A then
 		if ctrl then
@@ -1034,11 +1367,11 @@ function PANEL:OnMouseDown (mouseCode, x, y)
 	self:RequestFocus ()
 	
 	if mouseCode == MOUSE_LEFT then
-		if x <= self.Settings.LineNumberWidth then
+		if self:AreLineNumbersVisible () and x <= self.Settings.LineNumberWidth then
 		else
 			self.Selecting = true
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 			self:SetRawCaretPos (self:PointToLocation (self:CursorPos ()))
-			
 			if shift then
 				self:SetSelectionEnd (self.CaretLocation)
 			else
@@ -1048,7 +1381,7 @@ function PANEL:OnMouseDown (mouseCode, x, y)
 			self:MouseCapture (true)
 		end
 	elseif mouseCode == MOUSE_RIGHT then
-		if x <= self.Settings.LineNumberWidth then
+		if self:AreLineNumbersVisible () and x <= self.Settings.LineNumberWidth then
 		else
 			local caretLocation = self:PointToLocation (self:CursorPos ())
 			if not self:IsInSelection (caretLocation) then
@@ -1065,7 +1398,7 @@ function PANEL:OnMouseMove (mouseCode, x, y)
 		
 		self:SetSelectionEnd (self.CaretLocation)
 	else
-		if x <= self.Settings.LineNumberWidth then
+		if self:AreLineNumbersVisible () and x <= self.Settings.LineNumberWidth then
 			self:SetCursor ("arrow")
 		else
 			self:SetCursor ("beam")
@@ -1106,7 +1439,11 @@ function PANEL:OnVScroll (viewOffset)
 end
 
 function PANEL:Think ()
-	if self.SourceFileOutdated then
+	if self:IsCompilationEnabled () and self.SourceFileOutdated then
+		if not self:GetSourceFile () then
+			self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
+			self:SetCompilationUnit (self:GetSourceFile ():GetCompilationUnit ())
+		end
 		if SysTime () - self.LastSourceFileUpdateTime > 0.2 then
 			if self:GetCompilationUnit ():IsLexing () then return end
 			
@@ -1129,7 +1466,32 @@ function PANEL:Think ()
 		end
 	end
 	
+	self:DocumentUpdateThink ()
 	self:TokenApplicationThink ()
+end
+
+function PANEL:DocumentUpdateThink ()
+	if self.DocumentChangeUnhandled then
+		self:InvalidateSourceFile ()
+		self:UpdateLineNumberWidth ()
+		self:ResetCaretBlinkTime ()
+		self:UpdateScrollBars ()
+		
+		self.DocumentChangeUnhandled = false
+	end
+	
+	if next (self.DocumentLinesUnchecked) then
+		local startTime = SysTime ()
+		local maximumColumnCount = 0
+		while SysTime () - startTime < 0.010 do
+			local line = next (self.DocumentLinesUnchecked)
+			if not line then break end
+			
+			self.DocumentLinesUnchecked [line] = nil
+			maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (line):GetColumnCount (self.TextRenderer) + 1)
+		end
+		self:UpdateMaximumColumnCount (maximumColumnCount)
+	end
 end
 
 function PANEL:TokenApplicationThink ()

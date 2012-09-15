@@ -1,5 +1,7 @@
 GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 	function (self, key, ctrl, shift, alt)
+		if self:IsReadOnly () then return end
+		
 		local deletionStart = nil
 		local deletionEnd = nil
 		

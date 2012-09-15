@@ -16,7 +16,7 @@ end
 
 function self:Dequeue ()
 	local node = self.LinkedList.First
-	node:Remove ()
+	self.LinkedList:Remove (node)
 	self.Count = self.Count - 1
 	
 	self.Front = self.LinkedList.First and self.LinkedList.First.Value or nil

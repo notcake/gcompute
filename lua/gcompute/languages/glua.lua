@@ -92,3 +92,5 @@ LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "then", "else", "els
 LANGUAGE:AddKeyword  (GCompute.KeywordType.Control,   "continue")
 LANGUAGE:AddKeywords (GCompute.KeywordType.Operator, {"not", "and", "or"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "nil"})
+
+LANGUAGE:LoadEditorHelper ("glua_editorhelper.lua")

@@ -92,7 +92,7 @@ function self:Merge (node)
 	self.Length = GLib.UTF8.Length (self.Text)
 	self.ColumnCountValid = false
 	
-	node:Remove ()
+	self.List:Remove (node)
 end
 
 function self:SetColor (color)

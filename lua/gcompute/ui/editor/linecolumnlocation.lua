@@ -2,7 +2,6 @@ local self = {}
 GCompute.Editor.LineColumnLocation = GCompute.MakeConstructor (self)
 
 function self:ctor (line, column)
-	self.FilePath = ""
 	self.Line = 0
 	self.Column = 0
 	
@@ -14,24 +13,30 @@ function self:ctor (line, column)
 	end
 end
 
+function self:AddColumns (columns)
+	local lineColumnLocation    = GCompute.Editor.LineColumnLocation ()
+	lineColumnLocation.Line     = self.Line
+	lineColumnLocation.Column   = math.max (0, self.Column + columns)
+	
+	return lineColumnLocation
+end
+
+function self:Clone ()
+	return GCompute.Editor.LineColumnLocation (self.Line, self.Column)
+end
+
 function self:CopyFrom (lineColumnLocation)
-	self.FilePath = lineColumnLocation.FilePath or ""
 	self.Line     = lineColumnLocation.Line     or 0
 	self.Column   = lineColumnLocation.Column   or 0
 end
 
 function self:Equals (lineColumnLocation)
-	return self.FilePath == lineColumnLocation.FilePath and
-	       self.Line     == lineColumnLocation.Line     and
+	return self.Line     == lineColumnLocation.Line     and
 	       self.Column   == lineColumnLocation.Column
 end
 
 function self:GetColumn ()
 	return self.Column
-end
-
-function self:GetFilePath ()
-	return self.FilePath
 end
 
 function self:GetLine ()
@@ -69,10 +74,6 @@ end
 function self:SetColumn (column)
 	if column < 0 then column = 0 end
 	self.Column = column
-end
-
-function self:SetFilePath (filePath)
-	self.FilePath = filePath
 end
 
 function self:SetLine (line)

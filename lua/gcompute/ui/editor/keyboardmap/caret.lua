@@ -1,42 +1,52 @@
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_LEFT,
 	function (self, key, ctrl, shift, alt)
-		self:MoveCaretLeft (not shift)
+		if ctrl then
+		else
+			self:MoveCaretLeft (not shift)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
+		end
 	end
 )
 
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_RIGHT,
 	function (self, key, ctrl, shift, alt)
-		self:MoveCaretRight (not shift)
+		if ctrl then
+		else
+			self:MoveCaretRight (not shift)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
+		end
 	end
 )
 
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_UP,
 	function (self, key, ctrl, shift, alt)
-		self:MoveCaretUp (not shift)
+		if ctrl then
+			self:ScrollRelative (-1)
+		else
+			self:MoveCaretUp (not shift)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
+		end
 	end
 )
 
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_DOWN,
 	function (self, key, ctrl, shift, alt)
-		self:MoveCaretDown (not shift)
+		if ctrl then
+			self:ScrollRelative (1)
+		else
+			self:MoveCaretDown (not shift)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
+		end
 	end
 )
 
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_HOME,
 	function (self, key, ctrl, shift, alt)
-		local homeColumn = 0
 		local line = self.Document:GetLine (self.CaretLocation:GetLine ())
 		local text = line:GetText ()
+		local homeColumn = self.TextRenderer:GetStringColumnCount (string.match (text, "^[ \t]*"))
 		local offset = 1
 		local char = ""
-		while true do
-			char, offset = GLib.UTF8.NextChar (text, offset)
-			if char == "\t" or char == " " then
-				homeColumn = homeColumn + line:GetCharacterWidth (char)
-			else
-				break
-			end
-		end
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
@@ -45,6 +55,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_HOME,
 		
 		if shift then
 			self:SetSelectionEnd (self.CaretLocation)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 		else
 			self:SetSelection (self.CaretLocation, self.CaretLocation)
 		end
@@ -60,6 +71,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_END,
 		
 		if shift then
 			self:SetSelectionEnd (self.CaretLocation)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 		else
 			self:SetSelection (self.CaretLocation, self.CaretLocation)
 		end
@@ -78,6 +90,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_PAGEUP,
 		
 		if shift then
 			self:SetSelectionEnd (self.CaretLocation)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 		else
 			self:SetSelection (self.CaretLocation, self.CaretLocation)
 		end
@@ -96,6 +109,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_PAGEDOWN,
 		
 		if shift then
 			self:SetSelectionEnd (self.CaretLocation)
+			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 		else
 			self:SetSelection (self.CaretLocation, self.CaretLocation)
 		end

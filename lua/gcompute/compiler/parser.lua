@@ -6,37 +6,51 @@ function self:ctor (compilationUnit)
 	self.Language = compilationUnit:GetLanguage ()
 	self.DebugOutput = GCompute.NullOutputBuffer
 	
-	self.LastAccepted = nil
-	self.LastAcceptedType = nil
-	self.LastToken = nil
 	self.Tokens = nil
-	self.CurrentToken = nil
-	self.CurrentTokenType = nil
-	self.TokenNode = nil
+	self.LastAcceptedToken      = nil
+	self.LastAcceptedTokenValue = nil
+	self.LastAcceptedTokenType  = nil
+	self.CurrentToken           = nil
+	self.CurrentTokenValue      = nil
+	self.CurrentTokenType       = nil
 	
 	self.TokenStack = GCompute.Containers.Stack ()
 	self.Modifiers = {}
 end
 
 function self:Accept (token)
-	if self.CurrentToken == token and self.CurrentTokenType ~= GCompute.TokenType.String then
-		self.LastAccepted = self.CurrentToken
-		self.LastAcceptedType = self.CurrentTokenType
-		self:GetNextToken ()
-		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAccepted .. ")")
-		return self.LastAccepted
+	if self.CurrentTokenValue == token and self.CurrentTokenType ~= GCompute.TokenType.String then
+		self.LastAcceptedTokenValue = self.CurrentTokenValue
+		self.LastAcceptedTokenType  = self.CurrentTokenType
+		self:AdvanceToken ()
+		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAcceptedTokenValue .. ")")
+		return self.LastAcceptedTokenValue
 	end
 	return nil
 end
 
 function self:AcceptAndSave (token)
-	if self.CurrentToken == token and self.CurrentTokenType ~= GCompute.TokenType.String then
-		self.LastAccepted = self.CurrentToken
-		self.LastAcceptedType = self.CurrentTokenType
+	if self.CurrentTokenValue == token and self.CurrentTokenType ~= GCompute.TokenType.String then
+		self.LastAcceptedTokenValue = self.CurrentTokenValue
+		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:SavePosition ()
-		self:GetNextToken ()
-		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAccepted .. ")")
-		return self.LastAccepted
+		self:AdvanceToken ()
+		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAcceptedTokenValue .. ")")
+		return self.LastAcceptedTokenValue
+	end
+	return nil
+end
+
+function self:AcceptAST ()
+	if self.CurrentToken.AST then
+		self.LastAcceptedToken      = self.CurrentToken
+		self.LastAcceptedTokenValue = self.CurrentTokenValue
+		self.LastAcceptedTokenType  = self.CurrentTokenType
+		self.CurrentToken           = self.CurrentToken.BlockEnd.Next
+		self.CurrentTokenValue      = self.CurrentToken.Value
+		self.CurrentTokenType       = self.CurrentToken.TokenType
+		
+		return self.LastAcceptedTokenValue
 	end
 	return nil
 end
@@ -50,34 +64,34 @@ function self:AcceptTokens (tokens)
 	if #tokens > 0 then
 		self.DebugOutput:WriteLine ("Parser:AcceptTokens : Tokens should be a table of keys, not an array (" .. table.concat (tokens, ", ") .. ").")
 	end
-	if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
-		self.LastAccepted = self.CurrentToken
-		self.LastAcceptedType = self.CurrentTokenType
-		self:GetNextToken ()
-		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAccepted .. ")")
-		return self.LastAccepted
+	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
+		self.LastAcceptedTokenValue = self.CurrentTokenValue
+		self.LastAcceptedTokenType  = self.CurrentTokenType
+		self:AdvanceToken ()
+		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAcceptedTokenValue .. ")")
+		return self.LastAcceptedTokenValue
 	end
 	return nil
 end
 
 function self:AcceptTypes (tokenTypes)
 	if tokenTypes [self.CurrentTokenType] then
-		self.LastAccepted = self.CurrentToken
-		self.LastAcceptedType = self.CurrentTokenType
-		self:GetNextToken ()
-		self.DebugOutput:WriteLine ("Accepted type " .. tostring (GCompute.TokenType [self.LastAcceptedType]) .. " (" .. GCompute.String.Escape (self.LastAccepted) .. ")")
-		return self.LastAccepted
+		self.LastAcceptedTokenValue = self.CurrentTokenValue
+		self.LastAcceptedTokenType  = self.CurrentTokenType
+		self:AdvanceToken ()
+		self.DebugOutput:WriteLine ("Accepted type " .. tostring (GCompute.TokenType [self.LastAcceptedTokenType]) .. " (" .. GCompute.String.Escape (self.LastAcceptedTokenValue) .. ")")
+		return self.LastAcceptedTokenValue
 	end
 	return nil
 end
 
 function self:AcceptType (tokenType)
 	if self.CurrentTokenType == tokenType then
-		self.LastAccepted = self.CurrentToken
-		self.LastAcceptedType = self.CurrentTokenType
-		self:GetNextToken ()
-		self.DebugOutput:WriteLine ("Accepted type " .. GCompute.TokenType [tokenType] .. " (" .. GCompute.String.Escape (self.LastAccepted) .. ")")
-		return self.LastAccepted
+		self.LastAcceptedTokenValue = self.CurrentTokenValue
+		self.LastAcceptedTokenType  = self.CurrentTokenType
+		self:AdvanceToken ()
+		self.DebugOutput:WriteLine ("Accepted type " .. GCompute.TokenType [tokenType] .. " (" .. GCompute.String.Escape (self.LastAcceptedTokenValue) .. ")")
+		return self.LastAcceptedTokenValue
 	end
 	return nil
 end
@@ -102,11 +116,26 @@ function self:AddModifier (Modifier)
 	self.Modifiers [#self.Modifiers + 1] = Modifier
 end
 
+function self:AdvanceToken ()
+	if not self.CurrentToken then return nil, nil end
+	
+	self.LastAcceptedToken = self.CurrentToken
+	self.CurrentToken = self.CurrentToken.Next
+	if not self.CurrentToken then
+		self.CurrentTokenValue = nil
+		self.CurrentTokenType  = nil
+		return nil, nil
+	end
+	self.CurrentTokenValue = self.CurrentToken.Value
+	self.CurrentTokenType  = self.CurrentToken.TokenType
+	return self.CurrentTokenValue, self.CurrentTokenType
+end
+
 function self:ChompModifiers ()
-	while self.CompilationUnit.Language:GetKeywordType (self.CurrentToken) == GCompute.KeywordType.Modifier do
-		self.DebugOutput:WriteLine ("Nommed modifier (" .. self.CurrentToken .. ")")
-		self.Modifiers [#self.Modifiers + 1] = self.CurrentToken
-		self:GetNextToken ()
+	while self.CompilationUnit.Language:GetKeywordType (self.CurrentTokenValue) == GCompute.KeywordType.Modifier do
+		self.DebugOutput:WriteLine ("Nommed modifier (" .. self.CurrentTokenValue .. ")")
+		self.Modifiers [#self.Modifiers + 1] = self.CurrentTokenValue
+		self:AdvanceToken ()
 	end
 end
 
@@ -129,73 +158,58 @@ function self:DiscardParseItem ()
 end
 
 function self:ExpectedItem (item)
-	local current = self.TokenNode
-	local currentToken = "<eof>"
-	local line = 0
+	local currentToken      = self.CurrentToken
+	local currentTokenValue = "<eof>"
+	local line      = 0
 	local character = 0
-	if current then
-		currentToken = "\"" .. GCompute.String.Escape (current.Value) .. "\""
-		line = current.Line
-		character = current.Character
+	if currentToken then
+		currentTokenValue = "\"" .. GCompute.String.Escape (currentToken.Value) .. "\""
+		line      = currentToken.Line
+		character = currentToken.Character
 	else
-		line = self.Tokens.Last.Line
+		line      = self.Tokens.Last.Line
 		character = self.Tokens.Last.Character
 	end
 	if self.CompilationUnit then
-		self.CompilationUnit:Error ("Expected <" .. item .. ">, got " .. currentToken .. ".", line, character)
+		self.CompilationUnit:Error ("Expected <" .. item .. ">, got " .. currentTokenValue .. ".", line, character)
 	else
-		GCompute.Error ("Expected <" .. item .. ">, got " .. currentToken .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
+		GCompute.Error ("Expected <" .. item .. ">, got " .. currentTokenValue .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
 	end
 end
 
 function self:ExpectedToken (token)
-	local current = self.TokenNode
-	local currentToken = "<eof>"
-	local line = 0
+	local currentToken      = self.CurrentToken
+	local currentTokenValue = "<eof>"
+	local line      = 0
 	local character = 0
-	if current then
-		currentToken = "\"" .. GCompute.String.Escape (current.Value) .. "\""
-		line = current.Line
-		character = current.Character
+	if currentToken then
+		currentTokenValue = "\"" .. GCompute.String.Escape (currentToken.Value) .. "\""
+		line      = currentToken.Line
+		character = currentToken.Character
 	else
-		line = self.Tokens.Last.Line
+		line      = self.Tokens.Last.Line
 		character = self.Tokens.Last.Character
 	end
 	if self.CompilationUnit then
-		self.CompilationUnit:Error ("Expected \"" .. token .. "\", got " .. currentToken .. ".", line, character)
+		self.CompilationUnit:Error ("Expected \"" .. token .. "\", got " .. currentTokenValue .. ".", line, character)
 	else
-		GCompute.Error ("Expected \"" .. token .. "\", got " .. currentToken .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
+		GCompute.Error ("Expected \"" .. token .. "\", got " .. currentTokenValue .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
 	end
 end
 
 function self:GetLastToken ()
-	return self.LastToken
-end
-
-function self:GetNextToken ()
-	if not self.TokenNode then return nil, nil end
-	
-	self.LastToken = self.TokenNode
-	self.TokenNode = self.TokenNode.Next
-	if not self.TokenNode then
-		self.CurrentToken = nil
-		self.CurrentTokenType = nil
-		return nil, nil
-	end
-	self.CurrentToken = self.TokenNode.Value
-	self.CurrentTokenType = self.TokenNode.TokenType
-	return self.CurrentToken, self.CurrentTokenType
+	return self.LastAcceptedToken
 end
 
 function self:Initialize (tokens, startToken, endToken)
 	self.Tokens = tokens
-	self.TokenNode = startToken or tokens.First
-	self.CurrentToken = self.TokenNode.Value
-	self.CurrentTokenType = self.TokenNode.TokenType
+	self.CurrentToken      = startToken or tokens.First
+	self.CurrentTokenValue = self.CurrentToken.Value
+	self.CurrentTokenType  = self.CurrentToken.TokenType
 end
 
 function self:IsTokenAvailable ()
-	return self.CurrentToken ~= nil
+	return self.CurrentTokenValue ~= nil
 end
 
 function self:List (subParseFunction, delimiter)
@@ -223,7 +237,7 @@ function self:Process (tokens, startToken, endToken)
 end
 
 function self:Peek ()
-	return self.CurrentToken, self.CurrentTokenType
+	return self.CurrentTokenValue, self.CurrentTokenType
 end
 
 function self:PeekType ()
@@ -239,11 +253,11 @@ function self:RecurseLeft (subParseFunction, tokens)
 		gotExpression = false
 		-- The looping of this bit will ensure (I think) that left associativity is preserved.
 		self:AcceptWhitespaceAndNewlines ()
-		if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
+		if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 			gotExpression = true
 			local nextLeftExpression = GCompute.AST.BinaryOperator ()
-			nextLeftExpression:SetOperator (self.CurrentToken)
-			self:GetNextToken ()
+			nextLeftExpression:SetOperator (self.CurrentTokenValue)
+			self:AdvanceToken ()
 			self:AcceptWhitespaceAndNewlines ()
 			nextLeftExpression:SetLeftExpression (leftExpression)
 			nextLeftExpression:SetRightExpression (subParseFunction (self))
@@ -259,10 +273,10 @@ function self:RecurseRight (subParseFunction, tokens)
 	if not leftExpression then return nil end
 	
 	self:AcceptWhitespaceAndNewlines ()
-	if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		local binaryOperatorExpression = GCompute.AST.BinaryOperator ()
-		binaryOperatorExpression:SetOperator (self.CurrentToken)
-		self:GetNextToken ()
+		binaryOperatorExpression:SetOperator (self.CurrentTokenValue)
+		self:AdvanceToken ()
 		self:AcceptWhitespaceAndNewlines ()
 		binaryOperatorExpression:SetLeftExpression (leftExpression)
 		local rightExpression = self:RecurseRight (subParseFunction, tokens)
@@ -275,10 +289,10 @@ function self:RecurseRight (subParseFunction, tokens)
 end
 
 function self:RecurseRightUnary (subParseFunction, tokens, subItemName)
-	if tokens [self.CurrentToken] and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		local unaryExpression = GCompute.AST.LeftUnaryOperator ()
-		unaryExpression:SetOperator (self.CurrentToken)
-		self:GetNextToken ()
+		unaryExpression:SetOperator (self.CurrentTokenValue)
+		self:AdvanceToken ()
 		unaryExpression:SetRightExpression (self:RecurseRightUnary (subParseFunction, tokens))
 		if not unaryExpression:GetRightExpression () then
 			self:ExpectedItem (subItemName)
@@ -290,29 +304,29 @@ end
 
 function self:RestorePosition ()
 	self.DebugOutput:WriteLine ("Position restored.")
-	self.TokenNode = self.TokenStack:Pop ()
-	if self.TokenNode then
-		self.CurrentToken = self.TokenNode.Value
-		self.CurrentTokenType = self.TokenNode.TokenType
+	self.CurrentToken = self.TokenStack:Pop ()
+	if self.CurrentToken then
+		self.CurrentTokenValue = self.CurrentToken.Value
+		self.CurrentTokenType  = self.CurrentToken.TokenType
 	else
-		self.CurrentToken = nil
-		self.CurrentTokenType = nil
+		self.CurrentTokenValue = nil
+		self.CurrentTokenType  = nil
 	end
 end
 
 function self:SavePosition ()
-	self.TokenStack:Push (self.TokenNode)
+	self.TokenStack:Push (self.CurrentToken)
 end
 
 function self:SyntaxError (syntaxError)
-	local current = self.TokenNode
-	local line = 0
+	local currentToken = self.CurrentToken
+	local line      = 0
 	local character = 0
-	if current then
-		line = current.Line
-		character = current.Character
+	if currentToken then
+		line      = currentToken.Line
+		character = currentToken.Character
 	else
-		line = self.Tokens.Last.Line
+		line      = self.Tokens.Last.Line
 		character = self.Tokens.Last.Character
 	end
 	if self.CompilationUnit then

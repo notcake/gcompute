@@ -37,12 +37,18 @@ function GCompute.NullCallback () return end
 
 include ("callbackchain.lua")
 include ("ierrorreporter.lua")
+include ("ieditorhelper.lua")
 include ("iobject.lua")
 include ("deferrednameresolution.lua")
 
+-- memory usage
 include ("memoryusagereport.lua")
 
+-- containers
 include ("containers.lua")
+
+-- pipes
+include ("pipe.lua")
 
 -- compiler
 include ("astnode.lua")

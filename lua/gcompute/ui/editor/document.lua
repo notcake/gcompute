@@ -5,14 +5,17 @@ GCompute.Editor.Document = GCompute.MakeConstructor (self)
 	Events:
 		TextCleared ()
 			Fired when this document has been cleared.
-		TextDeleted (deletionStartLocation, deletionEndLocation)
+		TextDeleted (LineCharacterLocation deletionStartLocation, LineCharacterLocation deletionEndLocation)
 			Fired when text has been deleted.
-		TextInserted (insertionLocation, text)
+		TextInserted (LineCharacterLocation insertionLocation, text, LineCharacterLocation newLocation)
 			Fired when text has been inserted.
 ]]
 
 function self:ctor ()
 	self.Lines = {}
+	
+	-- Reusable LineCharacterLocations for events
+	self.InsertionNewLocation = GCompute.Editor.LineCharacterLocation ()
 	
 	GCompute.EventProvider (self)
 	
@@ -60,6 +63,8 @@ function self:Delete (startLocation, endLocation)
 			if self:GetLine (endLine + 1) then
 				endLine = endLine + 1
 				endCharacter = 0
+				
+				endLocation = GCompute.Editor.LineCharacterLocation (endLine, endCharacter)
 			end
 		end
 	end
@@ -87,6 +92,23 @@ function self:Delete (startLocation, endLocation)
 	self:DispatchEvent ("TextDeleted", startLocation, endLocation)
 	
 	return startLocation
+end
+
+function self:DeleteWithinLine (startLocation, endLocation)
+	if startLocation:GetLine () ~= endLocation:GetLine () then GCompute.Error ("Document:DeleteWithinLine : startLocation and endLocation must be on the same line.") return end
+	
+	local line = self:GetLine (startLocation:GetLine ())
+	if not line then return end
+	
+	if startLocation:IsAfter (endLocation) then
+		local temp = endLocation
+		endLocation = startLocation
+		startLocation = temp
+	end
+	
+	line:Delete (startLocation:GetCharacter (), endLocation:GetCharacter ())
+	
+	self:DispatchEvent ("TextDeleted", startLocation, endLocation)
 end
 
 function self:GetEnd ()
@@ -172,24 +194,26 @@ function self:Insert (location, text)
 	-- the last entry in the lines array will be text prepended to the
 	-- last line that will be changed as a result of the insertion
 	
+	local startTime = SysTime ()
 	local offset = 1
+	local crOffset = 0
+	local lfOffset = 0
 	while offset <= text:len () + 1 do
-		local crOffset = text:find ("\r", offset, true)
-		local lfOffset = text:find ("\n", offset, true)
+		if crOffset and crOffset < offset then crOffset = string.find (text, "\r", offset, true) end
+		if lfOffset and lfOffset < offset then lfOffset = string.find (text, "\n", offset, true) end
 		local newlineOffset = crOffset or lfOffset
-		if crOffset and crOffset < newlineOffset then newlineOffset = crOffset end
 		if lfOffset and lfOffset < newlineOffset then newlineOffset = lfOffset end
 		if newlineOffset then
-			if text:sub (newlineOffset, newlineOffset + 1) == "\r\n" then
-				lines [#lines + 1] = text:sub (offset, newlineOffset + 1)
+			if string.sub (text, newlineOffset, newlineOffset + 1) == "\r\n" then
+				lines [#lines + 1] = string.sub (text, offset, newlineOffset + 1)
 				offset = newlineOffset + 2
 			else
-				lines [#lines + 1] = text:sub (offset, newlineOffset)
+				lines [#lines + 1] = string.sub (text, offset, newlineOffset)
 				offset = newlineOffset + 1
 			end
 		else
 			-- End of text to be inserted, no more line breaks found
-			lines [#lines + 1] = text:sub (offset)
+			lines [#lines + 1] = string.sub (text, offset)
 			break
 		end
 	end
@@ -234,6 +258,17 @@ function self:Insert (location, text)
 	self:DispatchEvent ("TextInserted", location, text, newLocation)
 	
 	return newLocation
+end
+
+function self:InsertWithinLine (location, text)
+	local line = self:GetLine (location:GetLine ())
+	if not line then return end
+	
+	line:Insert (location:GetCharacter (), text)
+	
+	self.InsertionNewLocation:SetLine (location:GetLine ())
+	self.InsertionNewLocation:SetCharacter (location:GetCharacter () + GLib.UTF8.Length (text))
+	self:DispatchEvent ("TextInserted", location, text, self.InsertionNewLocation)
 end
 
 function self:SetText (text)

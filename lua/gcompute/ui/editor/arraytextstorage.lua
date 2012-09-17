@@ -116,7 +116,7 @@ end
 
 function self:GetCharacterColor (character)
 	local segment = self.Segments [self:SegmentIndexFromCharacter (character)]
-	return segment and segment.Object or nil
+	return segment and segment.Color or nil
 end
 
 function self:GetCharacterObject (character)
@@ -233,7 +233,7 @@ function self:SegmentIndexFromCharacter (character)
 	
 	local i = 1
 	local segment = self.Segments [i]
-	while character > segment.Length do
+	while character >= segment.Length do
 		character = character - segment.Length
 		i = i + 1
 		segment = self.Segments [i]

@@ -1032,6 +1032,10 @@ end
 function PANEL:PointToRawLocation (x, y)
 	local line = self.ViewLocation:GetLine () + math.floor (y / self.Settings.LineHeight)
 	local column = self.ViewLocation:GetColumn ()
+	
+	if self:AreLineNumbersVisible () then x = x - self.Settings.LineNumberWidth end
+	column = column + x / self.Settings.CharacterWidth
+	
 	return GCompute.Editor.LineColumnLocation (line, column)
 end
 

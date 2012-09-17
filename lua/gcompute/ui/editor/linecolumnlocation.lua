@@ -72,12 +72,10 @@ function self:IsEqualOrBefore (lineColumnLocation)
 end
 
 function self:SetColumn (column)
-	if column < 0 then GCompute.PrintStackTrace () column = 0 end
 	self.Column = column
 end
 
 function self:SetLine (line)
-	if line < 0 then GCompute.PrintStackTrace () line = 0 end
 	self.Line = line
 end
 

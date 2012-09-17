@@ -72,12 +72,10 @@ function self:IsEqualOrBefore (lineCharacterLocation)
 end
 
 function self:SetCharacter (character)
-	if character < 0 then GCompute.PrintStackTrace () character = 0 end
 	self.Character = character
 end
 
 function self:SetLine (line)
-	if line < 0 then GCompute.PrintStackTrace () line = 0 end
 	self.Line = line
 end
 

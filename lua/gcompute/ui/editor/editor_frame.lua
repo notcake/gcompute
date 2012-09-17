@@ -13,13 +13,24 @@ function self:Init ()
 	self.TabControl = vgui.Create ("GTabControl", self)
 	self.TabControl:AddEventListener ("SelectedContentsChanged",
 		function (_, oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
-			local undoRedoStack = selectedContents and selectedContents:GetUndoRedoStack () or nil
 			if selectedContents then selectedContents:RequestFocus () end
-			self.UndoRedoController:SetUndoRedoStack (undoRedoStack)
-			self.ClipboardController:SetControl (selectedContents)
+			if selectedTab.HasUndoRedoStack then
+				self.UndoRedoController:SetUndoRedoStack (selectedContents and selectedContents:GetUndoRedoStack () or nil)
+			else
+				self.UndoRedoController:SetUndoRedoStack (nil)
+			end
+			if selectedTab.HasSelection then
+				self.ClipboardController:SetControl (selectedContents)
+			else
+				self.ClipboardController:SetControl (nil)
+			end
 			
-			self:UnhookSelectedTabContents (oldSelectedTab, oldSelectedContents)
-			self:HookSelectedTabContents (selectedTab, selectedContents)
+			if oldSelectedTab.ContentType == "CodeEditor" then
+				self:UnhookSelectedCodeEditor (oldSelectedTab, oldSelectedContents)
+			end
+			if selectedTab.ContentType == "CodeEditor" then
+				self:HookSelectedCodeEditor (selectedTab, selectedContents)
+			end
 			
 			self:UpdateCaretPositionText ()
 			self:UpdateLanguageText ()
@@ -33,7 +44,7 @@ function self:Init ()
 			tab:SetContextMenu (self.TabContextMenu)
 			
 			self:HookTabContents (tab, contents)
-			if contents then
+			if tab.HasFile and contents then
 				self:RegisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
 			end
 		end
@@ -45,11 +56,13 @@ function self:Init ()
 	)
 	self.TabControl:AddEventListener ("TabContentsChanged",
 		function (_, tab, oldContents, contents)
-			if oldContents then
-				self:UnregisterTabPath (tab, oldContents:GetFile (), oldContents:GetFile () and oldContents:GetFile ():GetPath ())
-			end
-			if contents then
-				self:RegisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
+			if tab.HasFile then
+				if oldContents then
+					self:UnregisterTabPath (tab, oldContents:GetFile (), oldContents:GetFile () and oldContents:GetFile ():GetPath ())
+				end
+				if contents then
+					self:RegisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
+				end
 			end
 			self:UnhookTabContents (tab, oldContents)
 			self:HookTabContents (tab, contents)
@@ -60,7 +73,7 @@ function self:Init ()
 			local contents = tab:GetContents ()
 			self:UnhookTabContents (tab, contents)
 			
-			if contents then
+			if tab.HasFile and contents then
 				self:UnregisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
 			end
 		end
@@ -108,7 +121,10 @@ function self:Init ()
 	
 	self.NextNewId = 1
 	
-	self.OpenPaths = {} -- map of paths to 
+	self.OpenPaths = {} -- map of paths to tabs
+	
+	-- Namespace browser
+	self.RootNamespaceBrowserTab = nil
 	
 	self:InvalidateLayout ()
 	
@@ -143,6 +159,8 @@ function self:CanCloseTab (tab)
 	local contents = tab:GetContents ()
 	if not contents then return true end -- Broken tab
 	
+	if tab.ContentType ~= "CodeEditor" then return true end -- Can always close non-editor tabs.
+	
 	if self.TabControl:GetTabCount () == 1 and
 	   contents:IsDefaultContents () and
 	   not contents:IsUnsaved () then
@@ -165,7 +183,7 @@ function self:CloseTab (tab, callback)
 		return
 	end
 	
-	if contents and contents:IsUnsaved () then
+	if tab.Savable and contents and contents:IsUnsaved () then
 		Gooey.YesNoDialog ()
 			:SetTitle ("Save")
 			:SetText ("Save \"" .. tab:GetText () .. "\"?")
@@ -213,7 +231,29 @@ function self:CreateCodeTab (...)
 	local codeEditor = vgui.Create ("GComputeCodeEditor")
 	codeEditor:SetContextMenu (self.CodeEditorContextMenu)
 	
+	tab.ContentType = "CodeEditor"
+	tab.HasSelection = true
+	tab.HasFile = true
+	tab.HasUndoRedoStack = true
+	tab.Savable = true
 	tab:SetContents (codeEditor)
+	
+	return tab
+end
+
+function self:CreateNamespaceBrowserTab (namespaceDefinition)
+	local tab = self.TabControl:AddTab ("Namespace Browser")
+	tab:SetIcon ("gui/g_silkicons/application_side_list")
+	tab:SetCloseButtonVisible (true)
+	
+	local namespaceBrowser = vgui.Create ("GComputeNamespaceTreeView")
+	
+	tab.ContentType = "NamespaceBrowser"
+	tab.HasSelection = false
+	tab.HasFile = false
+	tab.HasUndoRedoStack = false
+	tab.Savable = false
+	tab:SetContents (namespaceBrowser)
 	
 	return tab
 end
@@ -257,6 +297,7 @@ end
 function self:GetActiveCodeEditor ()
 	local selectedTab = self:GetSelectedTab ()
 	if not selectedTab then return nil end
+	if selectedTab.ContentType ~= "CodeEditor" then return nil end
 	return selectedTab:GetContents ()
 end
 
@@ -469,8 +510,10 @@ function self:UpdateLanguageText ()
 	local language = compilationUnit and compilationUnit:GetLanguage ()
 	if language then
 		self.LanguagePanel:SetText (language:GetName () .. " code")
-	else
+	elseif codeEditor then
 		self.LanguagePanel:SetText ("Unknown language")
+	else
+		self.LanguagePanel:SetText ("")
 	end
 end
 
@@ -508,45 +551,47 @@ function self:UnhookSelectedSourceFile (sourceFile)
 	sourceFile:GetCompilationUnit ():RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
 end
 
-function self:HookSelectedTabContents (tab, contents)
-	if not contents then return end
-	contents:AddEventListener ("CaretMoved", tostring (self:GetTable ()),
+function self:HookSelectedCodeEditor (tab, codeEditor)
+	if not codeEditor then return end
+	
+	codeEditor:AddEventListener ("CaretMoved", tostring (self:GetTable ()),
 		function (_, caretLocation)
 			self:UpdateCaretPositionText ()
 		end
 	)
-	contents:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
+	codeEditor:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
 		function (_, lexer)
 			self:UpdateProgressBar ()
 		end
 	)
-	contents:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
+	codeEditor:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
 		function (_, lexer, bytesProcessed, totalBytes)
 			self:UpdateProgressBar ()
 		end
 	)
-	contents:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
+	codeEditor:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
 		function (_, lexer)
 			self:UpdateProgressBar ()
 		end
 	)
-	contents:AddEventListener ("SourceFileChanged", tostring (self:GetTable ()),
+	codeEditor:AddEventListener ("SourceFileChanged", tostring (self:GetTable ()),
 		function (_, oldSourceFile, sourceFile)
 			self:UnhookSelectedSourceFile (oldSourceFile)
 			self:HookSelectedSourceFile (sourceFile)
 			self:UpdateLanguageText ()
 		end
 	)
-	self:HookSelectedSourceFile (contents:GetSourceFile ())
+	
+	self:HookSelectedSourceFile (codeEditor:GetSourceFile ())
 end
 
-function self:UnhookSelectedTabContents (tab, contents)
-	if not contents then return end
-	contents:RemoveEventListener ("CaretMoved",        tostring (self:GetTable ()))
-	contents:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
-	contents:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
-	contents:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
-	self:UnhookSelectedSourceFile (contents:GetSourceFile ())
+function self:UnhookSelectedCodeEditor (tab, codeEditor)
+	if not codeEditor then return end
+	codeEditor:RemoveEventListener ("CaretMoved",        tostring (self:GetTable ()))
+	codeEditor:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
+	codeEditor:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
+	codeEditor:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
+	self:UnhookSelectedSourceFile (codeEditor:GetSourceFile ())
 end
 
 function self:HookTabContents (tab, contents)
@@ -558,27 +603,31 @@ function self:HookTabContents (tab, contents)
 			tab:SetText (contents:GetFile ():GetDisplayName ())
 		end
 	)
-	contents:GetUndoRedoStack ():AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
-		function (_, canSave)
-			tab:SetIcon (contents:GetUndoRedoStack ():IsUnsaved () and "gui/g_silkicons/page_red" or "gui/g_silkicons/page")
-			
-			local canSaveAll = false
-			for tab in self.TabControl:GetEnumerator () do
-				if tab:GetContents () and tab:GetContents ():GetUndoRedoStack ():IsUnsaved () then
-					canSaveAll = true
-					break
+	if tab.HasUndoRedoStack then
+		contents:GetUndoRedoStack ():AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
+			function (_, canSave)
+				tab:SetIcon (contents:GetUndoRedoStack ():IsUnsaved () and "gui/g_silkicons/page_red" or "gui/g_silkicons/page")
+				
+				local canSaveAll = false
+				for tab in self.TabControl:GetEnumerator () do
+					if tab.HasUndoRedoStack and tab:GetContents () and tab:GetContents ():GetUndoRedoStack ():IsUnsaved () then
+						canSaveAll = true
+						break
+					end
 				end
+				
+				self.Toolbar:GetItemById ("Save All"):SetEnabled (canSaveAll)
 			end
-			
-			self.Toolbar:GetItemById ("Save All"):SetEnabled (canSaveAll)
-		end
-	)
+		)
+	end
 end
 
 function self:UnhookTabContents (tab, contents)
 	if not contents then return end
 	contents:RemoveEventListener ("PathChanged", tostring (self:GetTable ()))
-	contents:GetUndoRedoStack ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
+	if tab.HasUndoRedoStack then
+		contents:GetUndoRedoStack ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
+	end
 end
 
 -- Event handlers

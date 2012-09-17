@@ -326,7 +326,7 @@ function PANEL:DrawLine (lineOffset)
 	local viewLocationColumn   = self.ViewLocation:GetColumn ()
 	local characterWidth       = self.Settings.CharacterWidth
 	
-	local index, currentColumn = line.TextStorage:SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
+	local index, currentColumn = line:GetTextStorage ():SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
 	local columnCount
 	x = x - currentColumn * characterWidth
 	currentColumn = viewLocationColumn - currentColumn

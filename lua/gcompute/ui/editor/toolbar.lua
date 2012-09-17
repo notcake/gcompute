@@ -41,11 +41,10 @@ function GCompute.Editor.Toolbar (self)
 			function ()
 				local unsaved = {}
 				for i = 1, self.TabControl:GetTabCount () do
-					local contents = self.TabControl:GetTab (i):GetContents ()
-					if contents then
-						if contents:IsUnsaved () then
-							unsaved [#unsaved + 1] = self.TabControl:GetTab (i)
-						end
+					local tab = self.TabControl:GetTab (i)
+					local contents = tab:GetContents ()
+					if tab.Savable and contents and contents:IsUnsaved () then
+						unsaved [#unsaved + 1] = self.TabControl:GetTab (i)
 					end
 				end
 				
@@ -120,6 +119,17 @@ function GCompute.Editor.Toolbar (self)
 				
 				self.OutputPane:Clear ()
 				editorHelper:Run (codeEditor, pipe, pipe, pipe, pipe)
+			end
+		)
+	toolbar:AddSeparator ()
+	toolbar:AddButton ("Namespace Browser")
+		:SetIcon ("gui/g_silkicons/application_side_list")
+		:AddEventListener ("Click",
+			function ()
+				if not self.RootNamespaceBrowserTab then
+					self.RootNamespaceBrowserTab = self:CreateNamespaceBrowserTab (GCompute.GlobalNamespace)
+				end
+				self.RootNamespaceBrowserTab:Select ()
 			end
 		)
 	toolbar:AddSeparator ()

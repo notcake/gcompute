@@ -11,39 +11,32 @@ function self:ctor (document, text)
 end
 
 function self:CharacterFromColumn (column, textRenderer)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:CharacterFromColumn (column, textRenderer)
+	return self:GetTextStorage ():CharacterFromColumn (column, textRenderer)
 end
 
 function self:ColumnFromCharacter (character, textRenderer)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:ColumnFromCharacter (character, textRenderer)
+	return self:GetTextStorage ():ColumnFromCharacter (character, textRenderer)
 end
 
 -- Should only be called by Document member functions
 function self:Delete (startCharacter, endCharacter)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	self.TextStorage:Delete (startCharacter, endCharacter)
+	self:GetTextStorage ():Delete (startCharacter, endCharacter)
 end
 
 function self:GetCharacter (character)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:GetCharacter (character)
+	return self:GetTextStorage ():GetCharacter (character)
 end
 
 function self:GetCharacterColor (character)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:GetCharacterColor (character)
+	return self:GetTextStorage ():GetCharacterColor (character)
 end
 
 function self:GetCharacterObject (character)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:GetCharacterObject (character)
+	return self:GetTextStorage ():GetCharacterObject (character)
 end
 
 function self:GetColumnCount (textRenderer)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:GetColumnCount (textRenderer)
+	return self:GetTextStorage ():GetColumnCount (textRenderer)
 end
 
 --- Returns the line number of this Line. Runs in linear time.
@@ -69,36 +62,30 @@ end
 
 -- Should only be called by Document member functions
 function self:Insert (character, text)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	self.TextStorage:Insert (character, text)
+	self:GetTextStorage ():Insert (character, text)
 end
 
 function self:LengthIncludingLineBreak ()
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:GetLengthIncludingLineBreak ()
+	return self:GetTextStorage ():GetLengthIncludingLineBreak ()
 end
 
 function self:LengthExcludingLineBreak ()
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:GetLengthExcludingLineBreak ()
+	return self:GetTextStorage ():GetLengthExcludingLineBreak ()
 end
 
 -- The given line should be discarded after MergeAppend is called
 -- Should only be called by Document member functions
 function self:MergeAppend (line)
 	if not line then return end
-	if not self.TextStorage then self:InitializeTextStorage () end
-	self.TextStorage:Append (line.TextStorage)
+	self:GetTextStorage ():Append (line.TextStorage)
 end
 
 function self:SetColor (color, startCharacter, endCharacter)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	self.TextStorage:SetColor (color, startCharacter, endCharacter)
+	self:GetTextStorage ():SetColor (color, startCharacter, endCharacter)
 end
 
 function self:SetObject (object, startCharacter, endCharacter)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	self.TextStorage:SetObject (object, startCharacter, endCharacter)
+	self:GetTextStorage ():SetObject (object, startCharacter, endCharacter)
 end
 
 -- Should only be called by Document member functions
@@ -114,12 +101,10 @@ end
 -- Should only be called by Document member functions
 function self:Split (character)
 	local nextLine = GCompute.Editor.Line (self.Document)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	nextLine.TextStorage = self.TextStorage:Split (character)
+	nextLine.TextStorage = self:GetTextStorage ():Split (character)
 	return nextLine
 end
 
 function self:Sub (startCharacter, endCharacter)
-	if not self.TextStorage then self:InitializeTextStorage () end
-	return self.TextStorage:Sub (startCharacter, endCharacter)
+	return self:GetTextStorage ():Sub (startCharacter, endCharacter)
 end

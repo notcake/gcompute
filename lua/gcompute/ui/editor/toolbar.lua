@@ -97,10 +97,56 @@ function GCompute.Editor.Toolbar (self)
 	-- Don't register click handlers for undo / redo.
 	-- They should get registered with an UndoRedoController which will
 	-- register click handlers.
-	toolbar:AddButton ("Undo")
+	toolbar:AddSplitButton ("Undo")
 		:SetIcon ("gui/g_silkicons/arrow_undo")
-	toolbar:AddButton ("Redo")
+		:AddEventListener ("DropDownClosed",
+			function (_, dropDownMenu)
+				dropDownMenu:Clear ()
+			end
+		)
+		:AddEventListener ("DropDownOpening",
+			function (_, dropDownMenu)
+				local undoRedoStack = self:GetActiveUndoRedoStack ()
+				if not undoRedoStack then return end
+				local stack = undoRedoStack:GetUndoStack ()
+				for i = 0, 19 do
+					local item = stack:Peek (i)
+					if not item then return end
+					
+					dropDownMenu:AddOption (item:GetDescription ())
+						:AddEventListener ("Click",
+							function ()
+								undoRedoStack:Undo (i + 1)
+							end
+						)
+				end
+			end
+		)
+	toolbar:AddSplitButton ("Redo")
 		:SetIcon ("gui/g_silkicons/arrow_redo")
+		:AddEventListener ("DropDownClosed",
+			function (_, dropDownMenu)
+				dropDownMenu:Clear ()
+			end
+		)
+		:AddEventListener ("DropDownOpening",
+			function (_, dropDownMenu)
+				local undoRedoStack = self:GetActiveUndoRedoStack ()
+				if not undoRedoStack then return end
+				local stack = undoRedoStack:GetRedoStack ()
+				for i = 0, 19 do
+					local item = stack:Peek (i)
+					if not item then return end
+					
+					dropDownMenu:AddOption (item:GetDescription ())
+						:AddEventListener ("Click",
+							function ()
+								undoRedoStack:Redo (i + 1)
+							end
+						)
+				end
+			end
+		)
 	toolbar:AddSeparator ()
 	toolbar:AddButton ("Run Code")
 		:SetIcon ("gui/g_silkicons/resultset_next")
@@ -128,6 +174,11 @@ function GCompute.Editor.Toolbar (self)
 			function ()
 				if not self.RootNamespaceBrowserTab then
 					self.RootNamespaceBrowserTab = self:CreateNamespaceBrowserTab (GCompute.GlobalNamespace)
+					self.RootNamespaceBrowserTab:AddEventListener ("Removed",
+						function ()
+							self.RootNamespaceBrowserTab = nil
+						end
+					)
 				end
 				self.RootNamespaceBrowserTab:Select ()
 			end

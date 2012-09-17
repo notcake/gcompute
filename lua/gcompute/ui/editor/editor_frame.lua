@@ -14,21 +14,21 @@ function self:Init ()
 	self.TabControl:AddEventListener ("SelectedContentsChanged",
 		function (_, oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
 			if selectedContents then selectedContents:RequestFocus () end
-			if selectedTab.HasUndoRedoStack then
+			if selectedTab and selectedTab.HasUndoRedoStack then
 				self.UndoRedoController:SetUndoRedoStack (selectedContents and selectedContents:GetUndoRedoStack () or nil)
 			else
 				self.UndoRedoController:SetUndoRedoStack (nil)
 			end
-			if selectedTab.HasSelection then
+			if selectedTab and selectedTab.HasSelection then
 				self.ClipboardController:SetControl (selectedContents)
 			else
 				self.ClipboardController:SetControl (nil)
 			end
 			
-			if oldSelectedTab.ContentType == "CodeEditor" then
+			if oldSelectedTab and oldSelectedTab.ContentType == "CodeEditor" then
 				self:UnhookSelectedCodeEditor (oldSelectedTab, oldSelectedContents)
 			end
-			if selectedTab.ContentType == "CodeEditor" then
+			if selectedTab and selectedTab.ContentType == "CodeEditor" then
 				self:HookSelectedCodeEditor (selectedTab, selectedContents)
 			end
 			
@@ -146,12 +146,6 @@ function self:PerformLayout ()
 	end
 end
 
-function self:Remove ()
-	self.TabControl:Clear ()
-	
-	_R.Panel.Remove (self)
-end
-
 --- Returns false if the tab is the last remaining tab and contains the unchanged default text
 function self:CanCloseTab (tab)
 	if not tab then return false end
@@ -247,6 +241,7 @@ function self:CreateNamespaceBrowserTab (namespaceDefinition)
 	tab:SetCloseButtonVisible (true)
 	
 	local namespaceBrowser = vgui.Create ("GComputeNamespaceTreeView")
+	namespaceBrowser:SetNamespaceDefinition (GCompute.GlobalNamespace)
 	
 	tab.ContentType = "NamespaceBrowser"
 	tab.HasSelection = false
@@ -299,6 +294,10 @@ function self:GetActiveCodeEditor ()
 	if not selectedTab then return nil end
 	if selectedTab.ContentType ~= "CodeEditor" then return nil end
 	return selectedTab:GetContents ()
+end
+
+function self:GetActiveUndoRedoStack ()
+	return self.UndoRedoController:GetUndoRedoStack ()
 end
 
 function self:GetSelectedTab ()
@@ -628,6 +627,11 @@ function self:UnhookTabContents (tab, contents)
 	if tab.HasUndoRedoStack then
 		contents:GetUndoRedoStack ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
 	end
+end
+
+-- Event handlers
+function self:OnRemoved ()
+	self.TabControl:Clear ()
 end
 
 -- Event handlers

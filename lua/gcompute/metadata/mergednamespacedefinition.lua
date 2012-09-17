@@ -137,6 +137,10 @@ function self:GetUniqueNameMap ()
 	return self.UniqueNameMap
 end
 
+function self:IsNamespace ()
+	return true
+end
+
 function self:IsRoot ()
 	return self:GetContainingNamespace () == nil
 end

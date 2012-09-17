@@ -235,13 +235,6 @@ function PANEL:RequestFocus ()
 	self.TextEntry:RequestFocus ()
 end
 
-function PANEL:Remove ()
-	self:SetSourceFile (nil)
-	self:SetCompilationUnit (nil)
-
-	_R.Panel.Remove (self)
-end
-
 function PANEL:SetContextMenu (contextMenu)
 	self.ContextMenu = contextMenu
 end
@@ -326,22 +319,23 @@ function PANEL:DrawLine (lineOffset)
 	local viewLocationColumn   = self.ViewLocation:GetColumn ()
 	local characterWidth       = self.Settings.CharacterWidth
 	
-	local index, currentColumn = line:GetTextStorage ():SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
+	local textStorage = line:GetTextStorage ()
+	local index, currentColumn = textStorage:SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
 	local columnCount
 	x = x - currentColumn * characterWidth
 	currentColumn = viewLocationColumn - currentColumn
-	local segment = line.TextStorage:GetSegment (index)
+	local segment = textStorage:GetSegment (index)
 	while segment and x <= w do
 		surface_SetTextColor (segment.Color)
 		surface_SetTextPos (x, y)
 		surface_DrawText (segment.Text)
 		
-		columnCount = line.TextStorage:GetSegmentColumnCount (segment, self.TextRenderer)
+		columnCount = textStorage:GetSegmentColumnCount (segment, self.TextRenderer)
 		currentColumn = currentColumn + columnCount
 		x = x + columnCount * characterWidth
 		
 		index = index + 1
-		segment = line.TextStorage:GetSegment (index)
+		segment = textStorage:GetSegment (index)
 	end
 end
 
@@ -1477,6 +1471,11 @@ function PANEL:OnHScroll (viewOffset)
 	end
 end
 
+function PANEL:OnRemoved ()
+	self:SetSourceFile (nil)
+	self:SetCompilationUnit (nil)
+end
+
 function PANEL:OnVScroll (viewOffset)
 	if self.ViewLineCount < self.Document:GetLineCount () then
 		self.ViewLocation:SetLine (math.floor (viewOffset))
@@ -1548,6 +1547,20 @@ function PANEL:HoverThink ()
 	
 	if SysTime () - self.HoverStartTime > 0.5 then
 		self.HoverActionPerformed = true
+		
+		if not self.Popup then
+			self.Popup = vgui.Create ("GPanel", self)
+			self.Popup:SetSize (128, 64)
+			self.Popup.Label = vgui.Create ("DLabel", self.Popup)
+			self.Popup.Label:SetPos (0, 0)
+			self.Popup.Label:SetSize (128, 64)
+		end
+		self.Popup.Label:SetText (self.HoveredToken:ToString ())
+		self.Popup:SetPos (gui.MousePos ())
+		
+		self.Popup:MakePopup ()
+		self.Popup:SetKeyboardInputEnabled (false)
+		self.Popup:SetMouseInputEnabled (false)
 		ErrorNoHalt (self.HoveredToken:ToString () .. "\n")
 	end
 end

@@ -84,13 +84,16 @@ function self:Push (undoRedoItem)
 	self:DispatchEvent ("CanSaveChanged", self:CanSave ())
 end
 
-function self:Redo ()
-	if self.RedoStack.Count == 0 then return end
-	
-	self.RedoStack.Top:Redo ()
-	self.UndoStack:Push (self.RedoStack:Pop ())
-	
-	self:DispatchEvent ("ItemRedone", self.UndoStack.Top)
+function self:Redo (count)
+	count = count or 1
+	for i = 1, count do
+		if self.RedoStack.Count == 0 then return end
+		
+		self.RedoStack.Top:Redo ()
+		self.UndoStack:Push (self.RedoStack:Pop ())
+		
+		self:DispatchEvent ("ItemRedone", self.UndoStack.Top)
+	end
 	self:DispatchEvent ("CanSaveChanged", self:CanSave ())
 end
 
@@ -99,12 +102,15 @@ function self:SetSavableAtStart (savableAtStart)
 	self:DispatchEvent ("CanSaveChanged", self:CanSave ())
 end
 
-function self:Undo ()
-	if self.UndoStack.Count == 0 then return end
-	
-	self.UndoStack.Top:Undo ()
-	self.RedoStack:Push (self.UndoStack:Pop ())
-	
-	self:DispatchEvent ("ItemUndone", self.RedoStack.Top)
+function self:Undo (count)
+	count = count or 1
+	for i = 1, count do
+		if self.UndoStack.Count == 0 then return end
+		
+		self.UndoStack.Top:Undo ()
+		self.RedoStack:Push (self.UndoStack:Pop ())
+		
+		self:DispatchEvent ("ItemUndone", self.RedoStack.Top)
+	end
 	self:DispatchEvent ("CanSaveChanged", self:CanSave ())
 end

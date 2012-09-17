@@ -113,11 +113,6 @@ function self:Init ()
 	}
 end
 
-function self:Remove ()
-	self:SetProcessList (nil)
-	_R.Panel.Remove (self)
-end
-
 function self.DefaultComparator (a, b)
 	return a:GetText ():lower () < b:GetText ():lower ()
 end
@@ -234,6 +229,11 @@ end
 function self:UpdateIcon (listViewItem)
 	local process = listViewItem.Process
 	listViewItem:SetIcon ("gui/g_silkicons/application_xp_terminal")
+end
+
+-- Event handlers
+function self:OnRemoved ()
+	self:SetProcessList (nil)
 end
 
 -- Event handlers

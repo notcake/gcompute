@@ -209,6 +209,10 @@ function self:IsMergedTypeDefinition ()
 	return false
 end
 
+function self:IsNamespace ()
+	return false
+end
+
 --- Gets whether this object is a TypeDefinition
 -- @return A boolean indicating whether this object is a TypeDefinition
 function self:IsTypeDefinition ()

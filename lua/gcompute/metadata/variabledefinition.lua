@@ -30,6 +30,10 @@ function self:GetType ()
 	return self.Type
 end
 
+function self:IsVariable ()
+	return true
+end
+
 --- Sets the type of this object
 -- @param type The Type of this object
 function self:SetType (typeName)

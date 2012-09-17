@@ -131,6 +131,10 @@ function self:IsTypeDefinition ()
 	return false
 end
 
+function self:IsVariable ()
+	return false
+end
+
 --- Resolves all types
 function self:ResolveTypes (globalNamespace)
 	ErrorNoHalt (self:GetLocation () .. ":ResolveTypes : Not implemented.\n")

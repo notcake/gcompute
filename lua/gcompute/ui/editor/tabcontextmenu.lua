@@ -6,10 +6,21 @@ function GCompute.Editor.TabContextMenu (self)
 			
 			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:CanCloseTab (tab))
 			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (self.TabControl:GetTabCount () > 1)
-			self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (contents and contents:CanSave ())
-			self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (contents and contents:HasPath ())
-			self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (contents and contents:HasPath ())
-			self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (contents and contents:HasPath ())
+			
+			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Save")                  :SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Save as...")            :SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Rename")                :SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Delete")                :SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Separator2")            :SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetVisible (tab.ContentType == "CodeEditor")
+			
+			if tab.ContentType == "CodeEditor" then
+				self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (contents and contents:CanSave ())
+				self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (contents and contents:HasPath ())
+				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (contents and contents:HasPath ())
+				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (contents and contents:HasPath ())
+			end
 		end
 	)
 	
@@ -45,7 +56,7 @@ function GCompute.Editor.TabContextMenu (self)
 				closeIterator (true)
 			end
 		)
-	menu:AddSeparator ()
+	menu:AddSeparator ("Separator1")
 	menu:AddOption ("Save")
 		:SetIcon ("gui/g_silkicons/disk")
 		:AddEventListener ("Click",
@@ -68,7 +79,7 @@ function GCompute.Editor.TabContextMenu (self)
 	menu:AddOption ("Delete")
 		:SetIcon ("gui/g_silkicons/cross")
 		:SetVisible (false)
-	menu:AddSeparator ()
+	menu:AddSeparator ("Separator2")
 	menu:AddOption ("Copy path to clipboard")
 		:SetIcon ("gui/g_silkicons/page_white_copy")
 		:AddEventListener ("Click",

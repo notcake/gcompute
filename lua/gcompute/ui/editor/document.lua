@@ -25,14 +25,24 @@ end
 function self:CharacterToColumn (characterLocation, textRenderer)
 	if not textRenderer then GCompute.Error ("Document:CharacterToColumn : You forgot to pass a text renderer.") end
 	local columnLocation = GCompute.Editor.LineColumnLocation (characterLocation)
-	columnLocation:SetColumn (self:GetLine (characterLocation:GetLine ()):ColumnFromCharacter (characterLocation:GetCharacter (), textRenderer))
+	local line = self:GetLine (characterLocation:GetLine ())
+	if line then
+		columnLocation:SetColumn (line:ColumnFromCharacter (characterLocation:GetCharacter (), textRenderer))
+	else
+		columnLocation:SetColumn (characterLocation:GetCharacter ())
+	end
 	return columnLocation
 end
 
 function self:ColumnToCharacter (columnLocation, textRenderer)
 	if not textRenderer then GCompute.Error ("Document:ColumnToCharacter : You forgot to pass a text renderer.") end
 	local characterLocation = GCompute.Editor.LineCharacterLocation (columnLocation)
-	characterLocation:SetCharacter (self:GetLine (columnLocation:GetLine ()):CharacterFromColumn (columnLocation:GetColumn (), textRenderer))
+	local line = self:GetLine (columnLocation:GetLine ())
+	if line then
+		characterLocation:SetCharacter (line:CharacterFromColumn (columnLocation:GetColumn (), textRenderer))
+	else
+		characterLocation:SetCharacter (columnLocation:GetColumn ())
+	end
 	return characterLocation
 end
 

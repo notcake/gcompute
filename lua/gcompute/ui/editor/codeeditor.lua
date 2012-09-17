@@ -163,6 +163,11 @@ function PANEL:Init ()
 	self.LastSourceFileUpdateTime = 0
 	self.SourceFileOutdated = true
 	
+	-- Autocomplete
+	self.HoveredToken = nil
+	self.HoverStartTime = 0
+	self.HoverActionPerformed = false
+	
 	self.TokenApplicationQueue = GCompute.Containers.Queue ()
 	
 	self:SetKeyboardMap (GCompute.Editor.CodeEditorKeyboardMap)
@@ -1024,6 +1029,12 @@ function PANEL:PointToLocation (x, y)
 	return GCompute.Editor.LineColumnLocation (line, column)
 end
 
+function PANEL:PointToRawLocation (x, y)
+	local line = self.ViewLocation:GetLine () + math.floor (y / self.Settings.LineHeight)
+	local column = self.ViewLocation:GetColumn ()
+	return GCompute.Editor.LineColumnLocation (line, column)
+end
+
 function PANEL:ScrollRelative (deltaLines)
 	local topLine = self.ViewLocation:GetLine () + deltaLines
 	if topLine + self.ViewLineCount >= self.Document:GetLineCount () then
@@ -1189,6 +1200,7 @@ function PANEL:SetSourceFile (sourceFile)
 	self:DispatchEvent ("SourceFileChanged", oldSourceFile, sourceFile)
 end
 
+-- Syntax highlighting
 -- Internal, do not call
 function PANEL:ApplyToken (token)
 	if not token then return end
@@ -1200,15 +1212,19 @@ function PANEL:ApplyToken (token)
 	if not startLine then return end
 	
 	if tokenStartLine == tokenEndLine then
+		startLine:SetObject (token, token.Character, token.EndCharacter)
 		startLine:SetColor (color, token.Character, token.EndCharacter)
 	else
+		startLine:SetObject (token, token.Character, nil)
 		startLine:SetColor (color, token.Character, nil)
 		if self.Document:GetLine (tokenEndLine) then
+			self.Document:GetLine (tokenEndLine):SetObject (token, 0, token.EndCharacter)
 			self.Document:GetLine (tokenEndLine):SetColor (color, 0, token.EndCharacter)
 		end
 		
 		for i = tokenStartLine + 1, tokenEndLine - 1 do
 			if not self.Document:GetLine (i) then break end
+			self.Document:GetLine (i):SetObject (token)
 			self.Document:GetLine (i):SetColor (color)
 		end
 	end
@@ -1245,6 +1261,14 @@ function PANEL:QueueTokenApplication (startToken, endToken)
 	self.TokenApplicationQueue:Enqueue ({ Start = startToken, End = endToken })
 end
 
+function PANEL:TokenFromLocation (lineColumnLocation)
+	local lineCharacterLocation = self.Document:ColumnToCharacter (lineColumnLocation, self.TextRenderer)
+	local line = self.Document:GetLine (lineCharacterLocation:GetLine ())
+	if not line then return nil end
+	
+	return line:GetCharacterObject (lineCharacterLocation:GetCharacter ())
+end
+
 -- Internal, do not call
 function PANEL:SetMaximumColumnCount (columnCount)
 	if self.MaximumColumnCount == columnCount then return end
@@ -1255,6 +1279,19 @@ end
 function PANEL:UpdateMaximumColumnCount (columnCount)
 	if self.MaximumColumnCount >= columnCount then return end
 	self:SetMaximumColumnCount (columnCount)
+end
+
+-- Autocomplete
+function PANEL:GetHoveredToken ()
+	return self.HoveredToken
+end
+
+function PANEL:SetHoveredToken (token)
+	if self.HoveredToken == token then return end
+	
+	self.HoveredToken = token
+	self.HoverStartTime = SysTime ()
+	self.HoverActionPerformed = false
 end
 
 -- Internal, do not call
@@ -1392,6 +1429,10 @@ function PANEL:OnMouseDown (mouseCode, x, y)
 	end
 end
 
+function PANEL:OnMouseLeave ()
+	self:SetHoveredToken (nil)
+end
+
 function PANEL:OnMouseMove (mouseCode, x, y)
 	if self.Selecting then
 		self:SetRawCaretPos (self:PointToLocation (x, y))
@@ -1404,6 +1445,8 @@ function PANEL:OnMouseMove (mouseCode, x, y)
 			self:SetCursor ("beam")
 		end
 	end
+	
+	self:SetHoveredToken (self:TokenFromLocation (self:PointToRawLocation (x, y)))
 end
 
 function PANEL:OnMouseUp (mouseCode, x, y)
@@ -1467,6 +1510,7 @@ function PANEL:Think ()
 	end
 	
 	self:DocumentUpdateThink ()
+	self:HoverThink ()
 	self:TokenApplicationThink ()
 end
 
@@ -1491,6 +1535,16 @@ function PANEL:DocumentUpdateThink ()
 			maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (line):GetColumnCount (self.TextRenderer) + 1)
 		end
 		self:UpdateMaximumColumnCount (maximumColumnCount)
+	end
+end
+
+function PANEL:HoverThink ()
+	if not self.HoveredToken then return end
+	if self.HoverActionPerformed then return end
+	
+	if SysTime () - self.HoverStartTime > 0.5 then
+		self.HoverActionPerformed = true
+		ErrorNoHalt (self.HoveredToken:ToString () .. "\n")
 	end
 end
 

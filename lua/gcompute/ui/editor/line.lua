@@ -30,6 +30,14 @@ function self:GetCharacter (character)
 	return self.TextStorage:GetCharacter (character)
 end
 
+function self:GetCharacterColor (character)
+	return self.TextStorage:GetCharacterColor (character)
+end
+
+function self:GetCharacterObject (character)
+	return self.TextStorage:GetCharacterObject (character)
+end
+
 --- Returns the line number of this Line. Runs in linear time.
 -- @return This Line's line number
 function self:GetLineNumber ()
@@ -64,9 +72,12 @@ function self:MergeAppend (line)
 	self.TextStorage:Append (line.TextStorage)
 end
 
--- Should only be called by Document member functions
 function self:SetColor (color, startCharacter, endCharacter)
 	self.TextStorage:SetColor (color, startCharacter, endCharacter)
+end
+
+function self:SetObject (object, startCharacter, endCharacter)
+	self.TextStorage:SetObject (object, startCharacter, endCharacter)
 end
 
 -- Should only be called by Document member functions

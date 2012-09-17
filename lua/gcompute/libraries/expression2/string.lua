@@ -18,15 +18,17 @@ Expression2:AddFunction ("print", { { "object", "..." } })
 
 String:AddFunction ("upper")
 	:SetReturnType ("string")
+	:SetNativeString ("string.upper (%self%)")
 	:SetNativeFunction (string.upper)
 
 String:AddFunction ("lower")
 	:SetReturnType ("string")
-	:SetNativeFunction (string.upper)
+	:SetNativeString ("string.lower (%self%)")
+	:SetNativeFunction (string.lower)
 	
 String:AddFunction ("operator+", { { "string", "str" } })
 	:SetReturnType ("string")
-	:SetNativeString ("(%self% .. %str%")
+	:SetNativeString ("(%self% .. %str%)")
 	:SetNativeFunction (
 		function (self, str)
 			return self .. str

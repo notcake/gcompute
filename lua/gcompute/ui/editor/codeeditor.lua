@@ -170,6 +170,9 @@ function PANEL:Init ()
 	
 	self.TokenApplicationQueue = GCompute.Containers.Queue ()
 	
+	-- Profiling
+	self.LastRenderTime = 0
+	
 	self:SetKeyboardMap (GCompute.Editor.CodeEditorKeyboardMap)
 end
 
@@ -330,7 +333,7 @@ function PANEL:DrawLine (lineOffset)
 		surface_SetTextPos (x, y)
 		surface_DrawText (segment.Text)
 		
-		columnCount = textStorage:GetSegmentColumnCount (segment, self.TextRenderer)
+		columnCount = textStorage:GetSegmentColumnCount (index, self.TextRenderer)
 		currentColumn = currentColumn + columnCount
 		x = x + columnCount * characterWidth
 		
@@ -501,6 +504,8 @@ function PANEL:GetTextRenderer ()
 end
 
 function PANEL:Paint ()
+	local startTime = SysTime ()
+	
 	local lineNumberWidth = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
 	
 	-- Draw background
@@ -524,6 +529,8 @@ function PANEL:Paint ()
 			draw.SimpleText (tostring (self.ViewLocation:GetLine () + i + 1), "GComputeMonospace", self.Settings.LineNumberWidth - 16, i * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight), GLib.Colors.White, TEXT_ALIGN_RIGHT)
 		end
 	end
+	
+	self.LastRenderTime = SysTime () - startTime
 end
 
 -- Data
@@ -689,7 +696,7 @@ function PANEL:FixupColumn (line, column)
 	-- Round to nearest column
 	local line = self.Document:GetLine (line)
 	local character, leftColumn = line:CharacterFromColumn (column, self.TextRenderer)
-	local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
+	local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), leftColumn)
 	
 	if column - leftColumn < rightColumn - column then
 		column = leftColumn
@@ -724,11 +731,10 @@ function PANEL:MoveCaretLeft (overrideSelectionStart)
 		local column = self.CaretLocation:GetColumn ()
 		
 		local character = line:CharacterFromColumn (column, self.TextRenderer)
-		column = column - self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character - 1))
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
-			column
+			self.TextRenderer:GetStringColumnCount (line:Sub (1, character - 1), 0)
 		))
 	end
 	
@@ -752,7 +758,7 @@ function PANEL:MoveCaretRight (overrideSelectionStart)
 		local column = self.CaretLocation:GetColumn ()
 		
 		local character = line:CharacterFromColumn (column, self.TextRenderer)
-		column = column + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
+		column = column + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), column)
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine (),
@@ -1012,7 +1018,7 @@ function PANEL:PointToLocation (x, y)
 		-- Snap to nearest column
 		local line = self.Document:GetLine (line)
 		local character, leftColumn = line:CharacterFromColumn (math.floor (column), self.TextRenderer)
-		local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character))
+		local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), leftColumn)
 		
 		if column - leftColumn < rightColumn - column then
 			column = leftColumn

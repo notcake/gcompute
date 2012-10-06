@@ -4,17 +4,19 @@ GCompute.Editor.TextSegment = GCompute.MakeConstructor (self)
 function GCompute.Editor.TextSegment (text)
 	return
 	{
-		Text     = text or "",
-		TextType = "none",
-		Length   = GLib.UTF8.Length (text or ""),
+		Text        = text or "",
+		TextType    = "none",
+		Length      = GLib.UTF8.Length (text or ""),
 		
-		Color    = GLib.Colors.White,
+		Color       = GLib.Colors.White,
 		
 		ColumnCount             = 0,
+		CumulativeColumnCount   = 0,
+		ColumnCountRevision     = 0,
 		ColumnCountValid        = false,
 		ColumnCountValidityHash = "",
 		
-		ToString = self.ToString
+		ToString    = self.ToString
 	}
 end
 

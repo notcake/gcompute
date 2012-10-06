@@ -11,22 +11,23 @@ function self:ctor ()
 	self.TabWidth = 4
 end
 
-function self:CharacterFromColumn (text, column)
-	local currentColumn = 0
+function self:CharacterFromColumn (text, column, currentColumn)
+	currentColumn = currentColumn or 0
+	local relativeCurrentColumn = 0
 	local character = 0
 	for char, _ in GLib.UTF8.Iterator (text) do
-		local nextCharacterColumnCount = self:GetCharacterColumnCount (char)
-		if currentColumn == column or currentColumn + nextCharacterColumnCount > column then
-			return character, currentColumn
+		local nextCharacterColumnCount = self:GetCharacterColumnCount (char, currentColumn + relativeCurrentColumn)
+		if relativeCurrentColumn == column or relativeCurrentColumn + nextCharacterColumnCount > column then
+			return character, relativeCurrentColumn
 		end
-		currentColumn = currentColumn + nextCharacterColumnCount
+		relativeCurrentColumn = relativeCurrentColumn + nextCharacterColumnCount
 		character = character + 1
 	end
-	return character, currentColumn
+	return character, relativeCurrentColumn
 end
 
 function self:ColumnFromCharacter (text, character)
-	return self:GetStringColumnCount (GLib.UTF8.Sub (text, 1, character))
+	return self:GetStringColumnCount (GLib.UTF8.Sub (text, 1, character), 0)
 end
 
 function self:Clone ()
@@ -37,20 +38,21 @@ function self:Clone ()
 	return textRenderer
 end
 
-function self:GetCharacterColumnCount (character)
+function self:GetCharacterColumnCount (character, currentColumn)
 	if character == "" then return 0 end
-	if character == "\t" then return self.TabWidth end
+	if character == "\t" then return self.TabWidth - currentColumn % self.TabWidth end
 	if character == "\r" or character == "\n" then return 0 end
 	if string_len (character) > 1 then return 2 end
 	return 1
 end
 
-function self:GetStringColumnCount (text)
-	local columnWidth = 0
+function self:GetStringColumnCount (text, currentColumn)
+	currentColumn = currentColumn or 0
+	local columnCount = 0
 	for character, _ in GLib.UTF8.Iterator (text) do
-		columnWidth = columnWidth + self:GetCharacterColumnCount (character)
+		columnCount = columnCount + self:GetCharacterColumnCount (character, currentColumn + columnCount)
 	end
-	return columnWidth
+	return columnCount
 end
 
 function self:GetStateHash ()

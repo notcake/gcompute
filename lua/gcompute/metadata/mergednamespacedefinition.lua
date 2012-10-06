@@ -1,5 +1,5 @@
 local self = {}
-GCompute.MergedNamespaceDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
+GCompute.MergedNamespaceDefinition = GCompute.MakeConstructor (self, GCompute.INamespace)
 
 --- @param name The name of this namespace
 function self:ctor (name)
@@ -135,10 +135,6 @@ function self:GetUniqueNameMap ()
 		self.UniqueNameMap = GCompute.UniqueNameMap ()
 	end
 	return self.UniqueNameMap
-end
-
-function self:IsNamespace ()
-	return true
 end
 
 function self:IsRoot ()

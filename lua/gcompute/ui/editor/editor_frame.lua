@@ -84,6 +84,7 @@ function self:Init ()
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
 	self.LanguagePanel      = self.StatusBar:AddTextPanel ("Unknown language")
+	self.ProfilerPanel      = self.StatusBar:AddTextPanel ("0.000 ms, 0 %")
 	self.ProgressPanel      = self.StatusBar:AddProgressPanel ()
 	self.ProgressPanel:SetFixedWidth (128)
 	self.CaretPositionPanel = self.StatusBar:AddTextPanel ("Line 1, col 1")
@@ -652,6 +653,11 @@ function self:Think ()
 	if newX ~= x or newY ~= y then
 		self:SetPos (newX, newY)
 	end
+	
+	-- Profiler
+	local tabContents = self.TabControl:GetSelectedContents ()
+	local lastRenderTime = tabContents and tabContents.LastRenderTime or 0
+	self.ProfilerPanel:SetText (string.format ("%.3f ms, %.2f %%", lastRenderTime * 1000, lastRenderTime / FrameTime () * 100))
 end
 
 vgui.Register ("GComputeEditorFrame", self, "GFrame")

@@ -1,5 +1,5 @@
 local self = {}
-GCompute.NamespaceDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
+GCompute.NamespaceDefinition = GCompute.MakeConstructor (self, GCompute.INamespace)
 
 --- @param name The name of this namespace
 function self:ctor (name)
@@ -178,12 +178,6 @@ end
 -- @return A boolean indicating whether this namespace definition has no members
 function self:IsEmpty ()
 	return next (self.Members) == nil
-end
-
---- Gets whether this object is a NamespaceDefinition
--- @return A boolean indicating whether this object is a NamespaceDefinition
-function self:IsNamespace ()
-	return true
 end
 
 function self:IsRoot ()

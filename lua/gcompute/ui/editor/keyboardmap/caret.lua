@@ -44,7 +44,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_HOME,
 	function (self, key, ctrl, shift, alt)
 		local line = self.Document:GetLine (self.CaretLocation:GetLine ())
 		local text = line:GetText ()
-		local homeColumn = self.TextRenderer:GetStringColumnCount (string.match (text, "^[ \t]*"))
+		local homeColumn = self.TextRenderer:GetStringColumnCount (string.match (text, "^[ \t]*"), 0)
 		local offset = 1
 		local char = ""
 		

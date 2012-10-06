@@ -15,6 +15,7 @@ function self:ctor ()
 	self.LengthIncludingLineBreakValid = false
 	
 	self.ColumnCount = 0
+	self.ColumnCountRevision = 0
 	self.ColumnCountValid = false
 	self.ColumnCountValidityHash = ""
 end
@@ -39,15 +40,17 @@ function self:CharacterFromColumn (column, textRenderer)
 	local character = 0
 	local actualColumn = 0
 	local segment
+	local segmentColumnCount
 	for i = 1, #self.Segments do
 		segment = self.Segments [i]
-		if column <= self:GetSegmentColumnCount (segment, textRenderer) then break end
-		column = column - self:GetSegmentColumnCount (segment, textRenderer)
+		segmentColumnCount = self:GetSegmentColumnCount (i, textRenderer)
+		if column <= segmentColumnCount then break end
+		column = column - segmentColumnCount
 		character = character + segment.Length
-		actualColumn = actualColumn + self:GetSegmentColumnCount (segment, textRenderer)
+		actualColumn = actualColumn + segmentColumnCount
 	end
 	
-	local relativeCharacter, relativeActualColumn = self:SegmentCharacterFromColumn (segment, column, textRenderer)
+	local relativeCharacter, relativeActualColumn = textRenderer:CharacterFromColumn (segment.Text, column, actualColumn)
 	return character + relativeCharacter, actualColumn + relativeActualColumn
 end
 
@@ -83,10 +86,10 @@ function self:ColumnFromCharacter (character, textRenderer)
 		segment = self.Segments [i]
 		if character <= segment.Length then break end
 		character = character - segment.Length
-		column = column + self:GetSegmentColumnCount (segment, textRenderer)
+		column = column + self:GetSegmentColumnCount (i, textRenderer)
 	end
 	
-	return column + textRenderer:GetStringColumnCount (GLib.UTF8.Sub (segment.Text, 1, character))
+	return column + textRenderer:GetStringColumnCount (GLib.UTF8.Sub (segment.Text, 1, character), column)
 end
 
 function self:Delete (startCharacter, endCharacter)
@@ -126,13 +129,26 @@ end
 
 function self:GetColumnCount (textRenderer)
 	if not self.ColumnCountValid or self.ColumnCountValidityHash ~= textRenderer:GetStateHash () then
-		self.ColumnCount = textRenderer:GetStringColumnCount (self.Text)
+		self.ColumnCount = textRenderer:GetStringColumnCount (self.Text, 0)
 		
 		self.ColumnCountValid = true
 		self.ColumnCountValidityHash = textRenderer:GetStateHash ()
 	end
 	
 	return self.ColumnCount
+end
+
+function self:GetCumulativeSegmentColumnCount (segmentIndex, textRenderer)
+	if segmentIndex <= 0 then return 0 end
+	if segmentIndex >= #self.Segments then return self:GetColumnCount (textRenderer) end
+	
+	local segment = self.Segments [segmentIndex]
+	if not segment.ColumnCountValid or
+	   segment.ColumnCountRevision ~= self.ColumnCountRevision or
+	   segment.ColumnCountValidityHash ~= textRenderer:GetStateHash () then
+		self:ComputeSegmentColumnCount (segmentIndex, textRenderer)
+	end
+	return segment.CumulativeColumnCount
 end
 
 function self:GetLengthExcludingLineBreak ()
@@ -160,6 +176,16 @@ end
 
 function self:GetSegment (index)
 	return self.Segments [index]
+end
+
+function self:GetSegmentColumnCount (segmentIndex, textRenderer)
+	local segment = self.Segments [segmentIndex]
+	if not segment.ColumnCountValid or
+	   segment.ColumnCountRevision ~= self.ColumnCountRevision or
+	   segment.ColumnCountValidityHash ~= textRenderer:GetStateHash () then
+		self:ComputeSegmentColumnCount (segmentIndex, textRenderer)
+	end
+	return segment.ColumnCount
 end
 
 function self:GetSegmentCount ()
@@ -225,7 +251,9 @@ end
 function self:InvalidateCache ()
 	self.LengthExcludingLineBreakValid = false
 	self.LengthIncludingLineBreakValid = false
+	
 	self.ColumnCountValid = false
+	self.ColumnCountRevision = self.ColumnCountRevision + 1
 end
 
 function self:SegmentIndexFromCharacter (character)
@@ -247,10 +275,14 @@ function self:SegmentIndexFromColumn (column, textRenderer)
 	
 	local i = 1
 	local segment = self.Segments [i]
-	while column > self:GetSegmentColumnCount (segment, textRenderer) do
-		column = column - self:GetSegmentColumnCount (segment, textRenderer)
+	local currentColumn = 0
+	local columnCount = self:GetSegmentColumnCount (i, textRenderer)
+	while column > columnCount do
+		column = column - columnCount
+		currentColumn = currentColumn + columnCount
 		i = i + 1
 		segment = self.Segments [i]
+		columnCount = self:GetSegmentColumnCount (i, textRenderer)
 	end
 	
 	return i, column
@@ -379,6 +411,16 @@ function self:CanMergeSegments (segment1, segment2)
 	return true
 end
 
+function self:ComputeSegmentColumnCount (segmentIndex, textRenderer)
+	local segment = self.Segments [segmentIndex]
+	local cumulativeColumnCount = segmentIndex > 1 and self:GetCumulativeSegmentColumnCount (segmentIndex - 1, textRenderer) or 0
+	segment.ColumnCount = textRenderer:GetStringColumnCount (segment.Text, cumulativeColumnCount)
+	segment.CumulativeColumnCount = cumulativeColumnCount + segment.ColumnCount
+	segment.ColumnCountRevision = self.ColumnCountRevision
+	segment.ColumnCountValid = true
+	segment.ColumnCountValidityHash = textRenderer:GetStateHash ()
+end
+
 function self:CopySegmentFormatting (destinationSegment, sourceSegment)
 	if not sourceSegment then return end
 	
@@ -389,32 +431,4 @@ function self:CopySegmentMetadata (destinationSegment, sourceSegment)
 	if not sourceSegment then return end
 	
 	destinationSegment.TextType = sourceSegment.TextType
-end
-
-function self:GetSegmentColumnCount (segment, textRenderer)
-	if not segment.ColumnCountValid or segment.ColumnCountValidityHash ~= textRenderer:GetStateHash () then
-		segment.ColumnCount = textRenderer:GetStringColumnCount (segment.Text)
-		
-		segment.ColumnCountValid = true
-		segment.ColumnCountValidityHash = textRenderer:GetStateHash ()
-	end
-	
-	return segment.ColumnCount
-end
-
-function self:SegmentCharacterFromColumn (segment, column, textRenderer)
-	if column == 0 then return 0, 0 end
-	
-	local currentColumn = 0
-	local character = 0
-	for char, _ in GLib.UTF8.Iterator (segment.Text) do
-		local nextCharacterColumnCount = textRenderer:GetCharacterColumnCount (char)
-		if currentColumn == column or currentColumn + nextCharacterColumnCount > column then
-			return character, currentColumn
-		end
-		currentColumn = currentColumn + nextCharacterColumnCount
-		character = character + 1
-	end
-	
-	return character, currentColumn
 end

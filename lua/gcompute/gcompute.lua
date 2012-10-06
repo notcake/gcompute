@@ -119,6 +119,8 @@ include ("nulloutputbuffer.lua")
 include ("metadata/namespacetype.lua")
 
 include ("metadata/objectdefinition.lua")
+include ("metadata/inamespace.lua")
+
 include ("metadata/aliasdefinition.lua")
 include ("metadata/namespacedefinition.lua")
 include ("metadata/typedefinition.lua")

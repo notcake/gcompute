@@ -103,6 +103,7 @@ end
 function self:Split (character)
 	local nextLine = GCompute.Editor.Line (self.Document)
 	nextLine.TextStorage = self:GetTextStorage ():Split (character)
+	nextLine.Text = nil
 	return nextLine
 end
 

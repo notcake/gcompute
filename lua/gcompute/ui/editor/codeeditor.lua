@@ -301,6 +301,7 @@ function PANEL:DrawCaretLineHightlighting ()
 	end
 end
 
+local indentationGuideColor = Color (128, 128, 128, 16)
 function PANEL:DrawLine (lineOffset)
 	local lineNumber = self.ViewLocation:GetLine () + lineOffset
 	local line = self.Document:GetLine (lineNumber)
@@ -314,14 +315,24 @@ function PANEL:DrawLine (lineOffset)
 	
 	-- Localize values used in loop
 	local surface              = surface
+	local surface_DrawLine     = surface.DrawLine
+	local surface_DrawText     = surface.DrawText
+	local surface_SetDrawColor = surface.SetDrawColor
 	local surface_SetTextColor = surface.SetTextColor
 	local surface_SetTextPos   = surface.SetTextPos
-	local surface_DrawText     = surface.DrawText
 	local defaultColor         = GLib.Colors.White
 	local viewColumnCount      = self.ViewColumnCount
 	local viewLocationColumn   = self.ViewLocation:GetColumn ()
 	local characterWidth       = self.Settings.CharacterWidth
 	
+	-- Draw indentation guides
+	local preceedingWhitespaceColumnCount = self.TextRenderer:GetStringColumnCount (line:GetText ():match ("^[ \t]*"), 0)
+	for i = self.TextRenderer:GetTabWidth (), preceedingWhitespaceColumnCount - 1, self.TextRenderer:GetTabWidth () do
+		surface_SetDrawColor (indentationGuideColor)
+		surface_DrawLine (x + (i - viewLocationColumn) * characterWidth, lineOffset * self.Settings.LineHeight, x + (i - viewLocationColumn) * characterWidth, (lineOffset + 1) * self.Settings.LineHeight)
+	end
+	
+	-- Draw text
 	local textStorage = line:GetTextStorage ()
 	local index, currentColumn = textStorage:SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
 	local columnCount
@@ -514,12 +525,12 @@ function PANEL:Paint ()
 	
 	self:DrawCaretLineHightlighting ()
 	self:DrawSelection ()
-	self:DrawCaret ()
 	
 	-- Draw ViewLineCount lines and then the one that's partially out of view.
 	for i = 0, self.ViewLineCount do
 		self:DrawLine (i)
 	end
+	self:DrawCaret ()
 	
 	-- Draw line numbers
 	if self:AreLineNumbersVisible () then

@@ -28,11 +28,6 @@ function GCompute.PrintDebug (Message)
 	end
 end
 
-function GCompute.Enum (enum)
-	GCompute.InvertTable (enum)
-	return enum
-end
-
 function GCompute.NullCallback () return end
 
 include ("callbackchain.lua")

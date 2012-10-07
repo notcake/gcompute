@@ -90,6 +90,7 @@ end
 
 -- Should only be called by Document member functions
 function self:SetText (text)
+	text = text or ""
 	if self.TextStorage then
 		self.TextStorage:Clear ()
 		self.TextStorage:Insert (0, text)

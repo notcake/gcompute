@@ -3,6 +3,7 @@ GCompute.LanguageDetector = GCompute.MakeConstructor (self)
 
 function self:ctor ()
 	self.PathPatterns = {}
+	self.DefaultLanguage = "GLua"
 end
 
 function self:AddPathPattern (language, pattern)
@@ -29,7 +30,15 @@ function self:DetectLanguage (sourceFile)
 end
 
 function self:DetectLanguageByContents (sourceFile)
-	return GCompute.Languages.Get ("Expression 2")
+	return self:GetDefaultLanguage ()
+end
+
+function self:GetDefaultLanguage ()
+	return GCompute.Languages.Get (self.DefaultLanguage) or GCompute.Languages.Get ("GLua")
+end
+
+function self:SetDefaultLanguage (defaultLanguage)
+	self.DefaultLanguage = defaultLanguage
 end
 
 GCompute.LanguageDetector = GCompute.LanguageDetector ()

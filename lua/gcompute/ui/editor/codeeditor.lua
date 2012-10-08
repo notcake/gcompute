@@ -21,6 +21,8 @@ surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
 			Fired when the selection has changed.
 		SourceFileChanged (SourceFile oldSourceFile, SourceFile sourceFile)
 			Fired when this doumcent's SourceFile has changed.
+		TextChanged ()
+			Fired when this document's text has changed.
 ]]
 
 function PANEL:Init ()
@@ -73,6 +75,8 @@ function PANEL:Init ()
 			self.DocumentChangeUnhandled = true
 			self.DocumentLinesUnchecked = {}
 			self:UpdateVerticalScrollBar ()
+			
+			self:DispatchEvent ("TextChanged")
 		end
 	)
 	self.Document:AddEventListener ("TextDeleted",
@@ -101,6 +105,8 @@ function PANEL:Init ()
 			self.DocumentLinesUnchecked [startLocation:GetLine ()] = true
 			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
 			self:UpdateVerticalScrollBar ()
+			
+			self:DispatchEvent ("TextChanged")
 		end
 	)
 	self.Document:AddEventListener ("TextInserted",
@@ -115,6 +121,8 @@ function PANEL:Init ()
 				ErrorNoHalt (string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
 			end
 			self:UpdateVerticalScrollBar ()
+			
+			self:DispatchEvent ("TextChanged")
 		end
 	)
 	

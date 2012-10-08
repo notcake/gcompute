@@ -2,6 +2,7 @@ GCompute.Editor = {}
 
 GCompute.IncludeDirectory ("gcompute/ui/editor")
 GCompute.IncludeDirectory ("gcompute/ui/editor/keyboardmap")
+GCompute.IncludeDirectory ("gcompute/ui/editor/plugins")
 
 include ("editor/undoredo/undoredostack.lua")
 include ("editor/undoredo/undoredoitem.lua")

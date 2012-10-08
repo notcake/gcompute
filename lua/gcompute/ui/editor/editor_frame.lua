@@ -1,5 +1,11 @@
 local self = {}
 
+--[[
+	Events
+		SelectedContentsChanged (Tab oldSelectedTab, Panel oldSelectedContents, Tab selectedTab, Panel selectedContents)
+			Fired when the active tab has changed or the active tab's contents have changed.
+]]
+
 function self:Init ()
 	self:SetTitle ("Editor (WIP, not working)")
 
@@ -35,6 +41,8 @@ function self:Init ()
 			self:UpdateCaretPositionText ()
 			self:UpdateLanguageText ()
 			self:UpdateProgressBar ()
+			
+			self:DispatchEvent ("SelectedContentsChanged", oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
 		end
 	)
 	self.TabControl:AddEventListener ("TabAdded",
@@ -47,6 +55,8 @@ function self:Init ()
 			if tab.HasFile and contents then
 				self:RegisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
 			end
+			
+			self:InvalidateSavedTabs ()
 		end
 	)
 	self.TabControl:AddEventListener ("TabCloseRequested",
@@ -76,6 +86,8 @@ function self:Init ()
 			if tab.HasFile and contents then
 				self:UnregisterTabPath (tab, contents:GetFile (), contents:GetFile () and contents:GetFile ():GetPath () or nil)
 			end
+			
+			self:InvalidateSavedTabs ()
 		end
 	)
 	
@@ -129,7 +141,22 @@ function self:Init ()
 	
 	self:InvalidateLayout ()
 	
-	self:CreateEmptyCodeTab ()
+	-- Plugin loading
+	GCompute.Editor.Plugins:Initialize (self)
+	
+	-- Tab saving
+	self.TabSavingEnabled = true
+	self.TabsUnsaved = false
+	
+	self:SetCanSaveTabs (false)
+	self:LoadTabs (
+		function ()
+			self:SetCanSaveTabs (true)
+			if self.TabControl:GetTabCount () == 0 then
+				self:CreateEmptyCodeTab ()
+			end
+		end
+	)
 end
 
 function self:PerformLayout ()
@@ -242,7 +269,7 @@ function self:CreateNamespaceBrowserTab (namespaceDefinition)
 	tab:SetCloseButtonVisible (true)
 	
 	local namespaceBrowser = vgui.Create ("GComputeNamespaceTreeView")
-	namespaceBrowser:SetNamespaceDefinition (GCompute.GlobalNamespace)
+	namespaceBrowser:SetNamespaceDefinition (namespaceDefinition or GCompute.GlobalNamespace)
 	
 	tab.ContentType = "NamespaceBrowser"
 	tab.HasSelection = false
@@ -297,12 +324,87 @@ function self:GetActiveCodeEditor ()
 	return selectedTab:GetContents ()
 end
 
+function self:GetActiveContents ()
+	local selectedTab = self:GetSelectedTab ()
+	if not selectedTab then return nil end
+	return selectedTab:GetContents ()
+end
+
 function self:GetActiveUndoRedoStack ()
 	return self.UndoRedoController:GetUndoRedoStack ()
 end
 
 function self:GetSelectedTab ()
 	return self.TabControl:GetSelectedTab ()
+end
+
+-- Tab saving
+function self:AreTabsUnsaved ()
+	return self.TabsUnsaved
+end
+
+function self:CanSaveTabs ()
+	return self.TabSavingEnabled
+end
+
+function self:InvalidateSavedTabs ()
+	self.TabsUnsaved = true
+end
+
+function self:LoadTabs (callback)
+	local tabs = string.Split (file.Read ("gcompute_editor_tabs.txt") or "", "\n")
+	local finishedTabs = 0
+	local tabCount = 0
+	local loopDone = false
+	for _, tabData in ipairs (tabs) do
+		tabData = string.Split (tabData, ";")
+		local contentType = tabData [1]
+		if contentType == "CodeEditor" then
+			tabCount = tabCount + 1
+			self:OpenPath (tabData [2],
+				function ()
+					finishedTabs = finishedTabs + 1
+					if loopDone and finishedTabs == tabCount then
+						callback ()
+					end
+				end
+			)
+		elseif contentType == "NamespaceBrowser" then
+			self:CreateNamespaceBrowserTab ()
+			finishedTabs = finishedTabs + 1
+			tabCount = tabCount + 1
+		end
+	end
+	loopDone = true
+	if finishedTabs == tabCount then
+		callback ()
+	end
+end
+
+function self:SaveTabs ()
+	if not self:CanSaveTabs () then return end
+	if not self:AreTabsUnsaved () then return end
+	self.TabsUnsaved = false
+	
+	local data = {}
+	for tab in self.TabControl:GetEnumerator () do
+		if tab:GetContents () then
+			local contentType = tab.ContentType
+			if contentType == "CodeEditor" then
+				local file = tab:GetContents ():GetFile ()
+				if file then
+					data [#data + 1] = "CodeEditor;" .. file:GetPath ()
+				end
+			elseif contentType == "NamespaceBrowser" then
+				data [#data + 1] = "NamespaceBrowser;"
+			end
+		end
+	end
+	file.Write ("gcompute_editor_tabs.txt", table.concat (data, "\n"))
+end
+
+function self:SetCanSaveTabs (canSaveTabs)
+	self.TabSavingEnabled = canSaveTabs
 end
 
 --- Opens a new tab for the IFile. Use OpenPath instead if you have a path only.
@@ -481,6 +583,8 @@ function self:RegisterTabPath (tab, file, path)
 	end
 	
 	self.OpenPaths [path].Tabs [tab] = true
+	
+	self:InvalidateSavedTabs ()
 end
 
 function self:UnregisterTabPath (tab, file, path)
@@ -492,6 +596,8 @@ function self:UnregisterTabPath (tab, file, path)
 	if not next (self.OpenPaths [path].Tabs) then
 		self.OpenPaths [path] = nil
 	end
+	
+	self:InvalidateSavedTabs ()
 end
 
 function self:UpdateCaretPositionText ()
@@ -632,7 +738,10 @@ end
 
 -- Event handlers
 function self:OnRemoved ()
+	self:SetCanSaveTabs (false)
 	self.TabControl:Clear ()
+	
+	GCompute.Editor.Plugins:Uninitialize ()
 end
 
 -- Event handlers
@@ -652,6 +761,11 @@ function self:Think ()
 	local newY = math.max (0, y)
 	if newX ~= x or newY ~= y then
 		self:SetPos (newX, newY)
+	end
+	
+	-- Tab saving
+	if self:AreTabsUnsaved () and self:CanSaveTabs () then
+		self:SaveTabs ()
 	end
 	
 	-- Profiler

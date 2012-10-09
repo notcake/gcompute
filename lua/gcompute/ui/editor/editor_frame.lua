@@ -504,7 +504,7 @@ function self:SaveAsTab (tab, callback)
 	local contents = tab and tab:GetContents ()
 	if not contents then callback (true) end
 	
-	VFS.OpenSaveFileDialog (
+	VFS.OpenSaveFileDialog ("GCompute.Editor",
 		function (path, file)
 			if not path then callback (false) return end
 			if not contents or not contents:IsValid () then callback (false) return end

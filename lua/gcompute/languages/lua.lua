@@ -72,6 +72,8 @@ LANGUAGE:GetTokenizer ()
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")
 
 LANGUAGE:AddKeywords (GCompute.KeywordType.Modifier, {"function", "local"})
-LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "then", "else", "elseif", "end", "while", "for", "do", "break", "repeat", "until", "return"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "then", "else", "elseif", "end", "while", "for", "in", "do", "break", "repeat", "until", "return"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Operator, {"not", "and", "or"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "nil"})
+
+LANGUAGE:LoadEditorHelper ("glua_editorhelper.lua")

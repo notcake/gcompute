@@ -11,7 +11,7 @@ function GCompute.Editor.Toolbar (self)
 		:SetIcon ("gui/g_silkicons/folder_page")
 		:AddEventListener ("Click",
 			function ()
-				VFS.OpenOpenFileDialog (
+				VFS.OpenOpenFileDialog ("GCompute.Editor",
 					function (path, file)
 						if not path then return end
 						if not self or not self:IsValid () then return end

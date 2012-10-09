@@ -788,8 +788,17 @@ function self:Think ()
 	
 	-- Clamp position within screen bounds
 	local x, y = self:GetPos ()
+	local w, h = self:GetSize ()
 	local newX = math.max (0, x)
 	local newY = math.max (0, y)
+	
+	if w <= ScrW () and x + w > ScrW () then
+		newX = ScrW () - w
+	end
+	if h <= ScrH () and y + h > ScrH () then
+		newY = ScrH () - h
+	end
+	
 	if newX ~= x or newY ~= y then
 		self:SetPos (newX, newY)
 	end

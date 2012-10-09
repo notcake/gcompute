@@ -183,8 +183,12 @@ function self:Visit (astVisitor, ...)
 	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
 	
 	for i = 1, self:GetConditionCount () do
-		self:SetCondition (i, self:GetCondition (i):Visit (astVisitor, ...) or self:GetCondition (i))
-		self:SetConditionBody (i, self:GetConditionBody (i):Visit (astVisitor, ...) or self:GetConditionBody (i))
+		if self:GetCondition (i) then
+			self:SetCondition (i, self:GetCondition (i):Visit (astVisitor, ...) or self:GetCondition (i))
+		end
+		if self:GetConditionBody (i) then
+			self:SetConditionBody (i, self:GetConditionBody (i):Visit (astVisitor, ...) or self:GetConditionBody (i))
+		end
 	end
 	if self:GetElseStatement () then
 		self:SetElseStatement (self:GetElseStatement ():Visit (astVisitor, ...) or self:GetElseStatement ())

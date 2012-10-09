@@ -95,7 +95,38 @@ function self:Init ()
 	self.CodeEditorContextMenu = GCompute.Editor.CodeEditorContextMenu (self)
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
-	self.LanguagePanel      = self.StatusBar:AddTextPanel ("Unknown language")
+	self.LanguagePanel      = self.StatusBar:AddComboBoxPanel ("Unknown language")
+	self.LanguagePanel:AddEventListener ("MenuOpening",
+		function (_, menu)
+			menu:Clear ()
+			local languages = {}
+			for language in GCompute.Languages.GetEnumerator () do
+				languages [#languages + 1] = language
+			end
+			table.sort (languages,
+				function (a, b)
+					return a:GetName ():lower () < b:GetName ():lower ()
+				end
+			)
+			
+			local currentLanguage = self:GetActiveCodeEditor () and self:GetActiveCodeEditor ():GetLanguage ()
+			for _, language in ipairs (languages) do
+				local option = menu:AddOption (language:GetName ())
+				option:AddEventListener ("Click",
+					function ()
+						local codeEditor = self:GetActiveCodeEditor ()
+						if not codeEditor then return end
+						codeEditor:SetLanguage (language)
+						GCompute.LanguageDetector:SetDefaultLanguage (language)
+					end
+				)
+				if language == currentLanguage then
+					option:SetIcon ("gui/g_silkicons/bullet_black")
+				end
+			end
+		end
+	)
+	
 	self.ProfilerPanel      = self.StatusBar:AddTextPanel ("0.000 ms, 0 %")
 	self.ProgressPanel      = self.StatusBar:AddProgressPanel ()
 	self.ProgressPanel:SetFixedWidth (128)

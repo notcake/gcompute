@@ -34,7 +34,10 @@ function self:DetectLanguageByContents (sourceFile)
 end
 
 function self:GetDefaultLanguage ()
-	return GCompute.Languages.Get (self.DefaultLanguage) or GCompute.Languages.Get ("GLua")
+	if type (self.DefaultLanguage) == "string" then
+		return GCompute.Languages.Get (self.DefaultLanguage) or GCompute.Languages.Get ("GLua")
+	end
+	return self.DefaultLanguage
 end
 
 function self:SetDefaultLanguage (defaultLanguage)

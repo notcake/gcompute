@@ -1142,6 +1142,10 @@ function PANEL:GetEditorHelper ()
 	return self.EditorHelper
 end
 
+function PANEL:GetLanguage ()
+	return self.Language
+end
+
 function PANEL:GetSourceFile ()
 	return self.SourceFile
 end
@@ -1195,6 +1199,11 @@ function PANEL:SetLanguage (language)
 		self.EditorHelper = self.Language:GetEditorHelper ()
 	else
 		self.EditorHelper = GCompute.IEditorHelper ()
+	end
+	
+	self.SourceFileOutdated = true
+	if self.CompilationUnit then
+		self.CompilationUnit:SetLanguage (language)
 	end
 	
 	self:DispatchEvent ("LanguageChanged", oldLanguage, self.Language)

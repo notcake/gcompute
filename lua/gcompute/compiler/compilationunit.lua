@@ -188,7 +188,10 @@ function self:SetLanguage (languageOrLanguageName)
 	if self.Language == languageOrLanguageName then return end
 	self.Language = languageOrLanguageName
 	
-	self:DispatchEvent ("LanguageChanged", self)
+	-- Reset cached data
+	self.LexingRevision = 0
+	
+	self:DispatchEvent ("LanguageChanged", self.Language)
 end
 
 -- Passes

@@ -17,12 +17,18 @@ function self:ctor (editor)
 	)
 end
 
-hook.Add ("PlayerBindPress", "Metastruct",
-	function (_, command, _)
-		if command == "messagemode2" then
-			GCompute.Editor:GetFrame ():SetVisible (true)
-			GCompute.Editor:GetFrame ():MoveToFront ()
-			return false
+timer.Simple (1,
+	function ()
+		if chatbox then
+			chatbox._ShowChat2Box = chatbox._ShowChat2Box or chatbox.ShowChat2Box
+			function chatbox.ShowChat2Box (tab)
+				if GCompute and GCompute.Editor and tab == 2 then
+					GCompute.Editor:GetFrame ():SetVisible (true)
+					GCompute.Editor:GetFrame ():MoveToFront ()
+				else
+					chatbox._ShowChat2Box (tab)
+				end
+			end
 		end
 	end
 )

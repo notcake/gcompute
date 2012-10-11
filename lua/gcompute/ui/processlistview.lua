@@ -162,14 +162,14 @@ function self:SetProcessList (processList)
 	self.ProcessList = processList
 	self:MergeRefresh ()
 	
-	self.ProcessList:AddEventListener ("ProcessCreated", tostring (self),
+	self.ProcessList:AddEventListener ("ProcessCreated", tostring (self:GetTable ()),
 		function (_, process)
 			self:AddProcess (process)
 			self:Sort ()
 		end
 	)
 	
-	self.ProcessList:AddEventListener ("ProcessDestroyed", tostring (self),
+	self.ProcessList:AddEventListener ("ProcessDestroyed", tostring (self:GetTable ()),
 		function (_, process)
 			self:Sort ()
 		end

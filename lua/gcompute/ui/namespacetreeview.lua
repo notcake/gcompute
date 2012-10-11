@@ -46,9 +46,9 @@ function self:Populate (objectDefinition, treeViewNode)
 			childNode.Metadata = metadata
 			
 			if definition:IsNamespace () then
-				childNode:SetIcon ("gui/g_silkicons/folder")
+				childNode:SetIcon ("gui/codeicons/namespace")
 			elseif definition:IsVariable () then
-				childNode:SetIcon ("gui/g_silkicons/table")
+				childNode:SetIcon ("gui/codeicons/field")
 			elseif definition:IsAlias () then
 				childNode:SetIcon ("gui/g_silkicons/link_go")
 			else
@@ -68,7 +68,7 @@ function self:PopulateOverloadedFunctionDefinition (overloadedFunctionDefinition
 		childNode.Metadata = metadata
 		
 		childNode:SetText (definition:ToString ())
-		childNode:SetIcon ("gui/g_silkicons/cog")
+		childNode:SetIcon ("gui/codeicons/method")
 	end
 end
 
@@ -78,7 +78,7 @@ function self:PopulateOverloadedTypeDefinition (overloadedTypeDefinition, treeVi
 		childNode.Definition = definition
 		childNode.Metadata = metadata
 		
-		childNode:SetIcon ("gui/g_silkicons/box")
+		childNode:SetIcon (definition:GetTypeParameterList ():GetParameterCount () > 0 and "gui/codeicons/parametrictype" or "gui/codeicons/class")
 		childNode:SetExpandable (not definition:IsEmpty ())
 	end
 end

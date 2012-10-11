@@ -14,8 +14,16 @@ function self:CharacterFromColumn (column, textRenderer)
 	return self:GetTextStorage ():CharacterFromColumn (column, textRenderer)
 end
 
+function self:CharacterToColumn (character, textRenderer)
+	return self:GetTextStorage ():ColumnFromCharacter (character, textRenderer)
+end
+
 function self:ColumnFromCharacter (character, textRenderer)
 	return self:GetTextStorage ():ColumnFromCharacter (character, textRenderer)
+end
+
+function self:ColumnToCharacter (column, textRenderer)
+	return self:GetTextStorage ():CharacterFromColumn (column, textRenderer)
 end
 
 -- Should only be called by Document member functions

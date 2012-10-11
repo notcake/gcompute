@@ -1,20 +1,14 @@
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_LEFT,
 	function (self, key, ctrl, shift, alt)
-		if ctrl then
-		else
-			self:MoveCaretLeft (not shift)
-			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
-		end
+		self:MoveCaretLeft (ctrl, not shift)
+		self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 	end
 )
 
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_RIGHT,
 	function (self, key, ctrl, shift, alt)
-		if ctrl then
-		else
-			self:MoveCaretRight (not shift)
-			self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
-		end
+		self:MoveCaretRight (ctrl, not shift)
+		self:SetSelectionMode (alt and GCompute.Editor.SelectionMode.Block or GCompute.Editor.SelectionMode.Regular)
 	end
 )
 

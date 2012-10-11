@@ -172,9 +172,10 @@ function PANEL:Init ()
 	self.SourceFileOutdated = true
 	
 	-- Autocomplete
+	self.ToolTipController = Gooey.ToolTipController ()
+	
 	self.HoveredToken = nil
 	self.HoverStartTime = 0
-	self.HoverActionPerformed = false
 	
 	self.TokenApplicationQueue = GCompute.Containers.Queue ()
 	
@@ -737,7 +738,7 @@ function PANEL:GetCaretPos ()
 	return self.CaretLocation
 end
 
-function PANEL:MoveCaretLeft (overrideSelectionStart)
+function PANEL:MoveCaretLeft (toWordBoundary, overrideSelectionStart)
 	if self.CaretLocation:GetColumn () == 0 then
 		if self.CaretLocation:GetLine () == 0 then return end
 		
@@ -746,14 +747,68 @@ function PANEL:MoveCaretLeft (overrideSelectionStart)
 			self.Document:GetLine (self.CaretLocation:GetLine () - 1):GetColumnCount (self.TextRenderer)
 		))
 	else
-		local line = self.Document:GetLine (self.CaretLocation:GetLine ())
+		local lineNumber = self.CaretLocation:GetLine ()
+		local line = self.Document:GetLine (lineNumber)
 		local column = self.CaretLocation:GetColumn ()
 		
 		local character = line:CharacterFromColumn (column, self.TextRenderer)
 		
+		if toWordBoundary then
+			local text = line:GetText ()
+			local offset = GLib.UTF8.CharacterToOffset (text, character + 1)
+			local iterator = GLib.UTF8.ReverseGraphemeIterator (text, offset)
+			
+			local rightGrapheme = iterator ()
+			if not rightGrapheme then
+				if lineNumber > 0 then
+					lineNumber = lineNumber - 1
+					column = self.Document:GetLine (lineNumber):GetColumnCount (self.TextRenderer)
+				end
+			else
+				local rightCategory = GLib.Unicode.GetCharacterCategory (rightGrapheme)
+				local rightAlphanumeric = rightGrapheme:sub (1, 1) == "_" or GLib.Unicode.IsLetterOrDigitCategory (rightCategory)
+				local rightWhitespace = GLib.Unicode.IsWhitespace (rightGrapheme)
+				character = character - GLib.UTF8.Length (rightGrapheme)
+				
+				local leftGrapheme
+				local leftCategory
+				local leftAlphanumeric
+				local leftWhitespace
+				
+				while true do
+					leftGrapheme      = iterator ()
+					if not leftGrapheme then
+						if rightWhitespace and lineNumber > 0 then
+							lineNumber = lineNumber - 1
+							character = self.Document:GetLine (lineNumber):LengthExcludingLineBreak ()
+						end
+						break
+					end
+					leftCategory      = GLib.Unicode.GetCharacterCategory (leftGrapheme)
+					leftAlphanumeric  = leftGrapheme:sub (1, 1) == "_" or GLib.Unicode.IsLetterOrDigitCategory (leftCategory)
+					leftWhitespace    = GLib.Unicode.IsWhitespace (leftGrapheme)
+					
+					if leftWhitespace and not rightWhitespace then break end
+					if leftAlphanumeric and not rightAlphanumeric and not rightWhitespace then break end
+					if not leftAlphanumeric and rightAlphanumeric then break end
+					
+					character         = character - GLib.UTF8.Length (leftGrapheme)
+					rightGrapheme     = leftGrapheme
+					rightCategory     = leftCategory
+					rightAlphanumeric = leftAlphanumeric
+					rightWhitespace   = leftWhitespace
+					
+				end
+				
+				column = line:CharacterToColumn (character, self.TextRenderer)
+			end
+		else
+			column = self.TextRenderer:GetStringColumnCount (line:Sub (1, character - 1), 0)
+		end
+		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
-			self.CaretLocation:GetLine (),
-			self.TextRenderer:GetStringColumnCount (line:Sub (1, character - 1), 0)
+			lineNumber,
+			column
 		))
 	end
 	
@@ -764,7 +819,7 @@ function PANEL:MoveCaretLeft (overrideSelectionStart)
 	end
 end
 
-function PANEL:MoveCaretRight (overrideSelectionStart)
+function PANEL:MoveCaretRight (toWordBoundary, overrideSelectionStart)
 	if self.CaretLocation:GetColumn () == self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer) then
 		if self.CaretLocation:GetLine () + 1 == self.Document:GetLineCount () then return end
 		
@@ -773,14 +828,60 @@ function PANEL:MoveCaretRight (overrideSelectionStart)
 			0
 		))
 	else
-		local line = self.Document:GetLine (self.CaretLocation:GetLine ())
+		local lineNumber = self.CaretLocation:GetLine ()
+		local line = self.Document:GetLine (lineNumber)
 		local column = self.CaretLocation:GetColumn ()
 		
 		local character = line:CharacterFromColumn (column, self.TextRenderer)
-		column = column + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), column)
+		
+		if toWordBoundary then
+			local text = line:GetText ()
+			local offset = GLib.UTF8.CharacterToOffset (text, character + 1)
+			local iterator = GLib.UTF8.GraphemeIterator (text, offset)
+			
+			local leftGrapheme = iterator ()
+			if leftGrapheme:sub (1, 1) == "\r" or leftGrapheme:sub (1, 1) == "\n" then
+				if lineNumber + 1 < self.Document:GetLineCount () then
+					lineNumber = lineNumber + 1
+					column = 0
+				end
+			else
+				local leftCategory = GLib.Unicode.GetCharacterCategory (leftGrapheme)
+				local leftAlphanumeric = leftGrapheme:sub (1, 1) == "_" or GLib.Unicode.IsLetterOrDigitCategory (leftCategory)
+				local leftWhitespace = GLib.Unicode.IsWhitespace (leftGrapheme)
+				character = character + GLib.UTF8.Length (leftGrapheme)
+				
+				local rightGrapheme
+				local rightCategory
+				local rightAlphanumeric
+				local rightWhitespace
+				
+				while true do
+					rightGrapheme     = iterator ()
+					if not rightGrapheme or rightGrapheme:sub (1, 1) == "\r" or rightGrapheme:sub (1, 1) == "\n" then break end
+					rightCategory     = GLib.Unicode.GetCharacterCategory (rightGrapheme)
+					rightAlphanumeric = rightGrapheme:sub (1, 1) == "_" or GLib.Unicode.IsLetterOrDigitCategory (rightCategory)
+					rightWhitespace   = GLib.Unicode.IsWhitespace (rightGrapheme)
+					
+					if leftWhitespace and not rightWhitespace then break end
+					if leftAlphanumeric and not rightAlphanumeric and not rightWhitespace then break end
+					if not leftAlphanumeric and rightAlphanumeric then break end
+					
+					character         = character + GLib.UTF8.Length (rightGrapheme)
+					leftGrapheme      = rightGrapheme
+					leftCategory      = rightCategory
+					leftAlphanumeric  = rightAlphanumeric
+					leftWhitespace    = rightWhitespace
+				end
+				
+				column = line:CharacterToColumn (character, self.TextRenderer)
+			end
+		else
+			column = column + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), column)
+		end
 		
 		self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
-			self.CaretLocation:GetLine (),
+			lineNumber,
 			column
 		))
 	end
@@ -1323,7 +1424,8 @@ function PANEL:SetHoveredToken (token)
 	
 	self.HoveredToken = token
 	self.HoverStartTime = SysTime ()
-	self.HoverActionPerformed = false
+	
+	self.ToolTipController:HideToolTip ()
 end
 
 -- Internal, do not call
@@ -1577,25 +1679,10 @@ end
 
 function PANEL:HoverThink ()
 	if not self.HoveredToken then return end
-	if self.HoverActionPerformed then return end
+	if self.ToolTipController:IsToolTipVisible () then return end
 	
 	if SysTime () - self.HoverStartTime > 0.5 then
-		self.HoverActionPerformed = true
-		
-		if not self.Popup then
-			self.Popup = vgui.Create ("GPanel", self)
-			self.Popup:SetSize (128, 64)
-			self.Popup.Label = vgui.Create ("DLabel", self.Popup)
-			self.Popup.Label:SetPos (0, 0)
-			self.Popup.Label:SetSize (128, 64)
-		end
-		self.Popup.Label:SetText (self.HoveredToken:ToString ())
-		self.Popup:SetPos (gui.MousePos ())
-		
-		self.Popup:MakePopup ()
-		self.Popup:SetKeyboardInputEnabled (false)
-		self.Popup:SetMouseInputEnabled (false)
-		ErrorNoHalt (self.HoveredToken:ToString () .. "\n")
+		self.ToolTipController:ShowToolTip (self.HoveredToken:ToString ())
 	end
 end
 

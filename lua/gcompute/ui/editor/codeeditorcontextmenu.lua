@@ -9,12 +9,12 @@ function GCompute.Editor.CodeEditorContextMenu (self)
 		end
 	)
 	menu:AddOption ("Undo")
-		:SetIcon ("gui/g_silkicons/arrow_undo")
+		:SetIcon ("icon16/arrow_undo.png")
 	menu:AddOption ("Redo")
-		:SetIcon ("gui/g_silkicons/arrow_redo")
+		:SetIcon ("icon16/arrow_redo.png")
 	menu:AddSeparator ()
 	menu:AddOption ("Cut")
-		:SetIcon ("gui/g_silkicons/cut")
+		:SetIcon ("icon16/cut.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -23,7 +23,7 @@ function GCompute.Editor.CodeEditorContextMenu (self)
 			end
 		)
 	menu:AddOption ("Copy")
-		:SetIcon ("gui/g_silkicons/page_white_copy")
+		:SetIcon ("icon16/page_white_copy.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -32,7 +32,7 @@ function GCompute.Editor.CodeEditorContextMenu (self)
 			end
 		)
 	menu:AddOption ("Paste")
-		:SetIcon ("gui/g_silkicons/paste_plain")
+		:SetIcon ("icon16/paste_plain.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -41,7 +41,7 @@ function GCompute.Editor.CodeEditorContextMenu (self)
 			end
 		)
 	menu:AddOption ("Delete")
-		:SetIcon ("gui/g_silkicons/cross")
+		:SetIcon ("icon16/cross.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()

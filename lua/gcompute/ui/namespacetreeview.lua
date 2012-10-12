@@ -50,9 +50,9 @@ function self:Populate (objectDefinition, treeViewNode)
 			elseif definition:IsVariable () then
 				childNode:SetIcon ("gui/codeicons/field")
 			elseif definition:IsAlias () then
-				childNode:SetIcon ("gui/g_silkicons/link_go")
+				childNode:SetIcon ("icon16/link_go.png")
 			else
-				childNode:SetIcon ("gui/g_silkicons/exclamation")
+				childNode:SetIcon ("icon16/exclamation.png")
 			end
 			childNode:SetExpandable (definition:IsNamespace () and not definition:IsEmpty ())
 		end

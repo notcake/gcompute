@@ -1,5 +1,12 @@
 local PANEL = {}
-surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
+surface.CreateFont ("GComputeMonospace",
+	{
+		font   = "Courier New",
+		size   = 16,
+		weight = 400,
+		antialias = true
+	}
+)
 
 --[[
 	Events:
@@ -523,7 +530,7 @@ function PANEL:GetTextRenderer ()
 	return self.TextRenderer
 end
 
-function PANEL:Paint ()
+function PANEL:Paint (w, h)
 	local startTime = SysTime ()
 	
 	local lineNumberWidth = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0

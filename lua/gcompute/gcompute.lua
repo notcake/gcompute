@@ -8,7 +8,7 @@ GCompute.Types.Bottom = nil
 include ("glib/glib.lua")
 GLib.Import (GCompute)
 GCompute.EventProvider (GCompute)
--- GCompute.AddCSLuaFolderRecursive ("gcompute")
+GCompute.AddCSLuaFolderRecursive ("gcompute")
 
 GCompute.GlobalNamespace = nil
 

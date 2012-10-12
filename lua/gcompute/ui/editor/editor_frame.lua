@@ -602,6 +602,7 @@ end
 
 function self:RegisterTabPath (tab, file, path)
 	if not path then return end
+	tab:SetToolTipText (file:GetDisplayPath ())
 	path = path:lower ()
 	
 	if not self.OpenPaths [path] then
@@ -620,6 +621,7 @@ end
 
 function self:UnregisterTabPath (tab, file, path)
 	if not path then return end
+	tab:SetToolTipText (nil)
 	path = path:lower ()
 	
 	if not self.OpenPaths [path] then return end

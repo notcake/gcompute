@@ -224,13 +224,13 @@ function PANEL:PerformLayout ()
 	end
 	if self.VScroll then
 		self.VScroll:SetVisible (self.VScroll:IsEnabled ())
-		self.VScroll:SetPos (self:GetWide () - 16, 0)
-		self.VScroll:SetSize (16, self:GetTall ())
+		self.VScroll:SetPos (self:GetWide () - self.VScroll:GetWide (), 0)
+		self.VScroll:SetTall (self:GetTall ())
 	end
 	if self.HScroll then
 		self.HScroll:SetVisible (self.HScroll:IsEnabled ())
-		self.HScroll:SetPos (0, self:GetTall () - 16)
-		self.HScroll:SetSize (self:GetWide (), 16)
+		self.HScroll:SetPos (0, self:GetTall () - self.HScroll:GetTall ())
+		self.HScroll:SetWide (self:GetWide ())
 	end
 	if self.VScroll:IsVisible () and self.HScroll:IsVisible () then
 		self.VScroll:SetTall (self:GetTall () - self.HScroll:GetTall ())

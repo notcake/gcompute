@@ -179,7 +179,8 @@ function PANEL:Init ()
 	self.SourceFileOutdated = true
 	
 	-- Autocomplete
-	self.ToolTipController = Gooey.ToolTipController ()
+	self.ToolTipController = Gooey.ToolTipController (self)
+	self.ToolTipController:SetManual (true)
 	
 	self.HoveredToken = nil
 	self.HoverStartTime = 0

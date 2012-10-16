@@ -1,12 +1,5 @@
 local PANEL = {}
-surface.CreateFont ("GComputeMonospace",
-	{
-		font   = "Courier New",
-		size   = 16,
-		weight = 400,
-		antialias = true
-	}
-)
+surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
 
 --[[
 	Events:

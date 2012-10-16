@@ -25,7 +25,7 @@ function GCompute.Editor.TabContextMenu (self)
 	)
 	
 	menu:AddOption ("Close")
-		:SetIcon ("icon16/tab_delete.png")
+		:SetIcon ("gui/g_silkicons/tab_delete.png")
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
@@ -33,7 +33,7 @@ function GCompute.Editor.TabContextMenu (self)
 			end
 		)
 	menu:AddOption ("Close all others")
-		:SetIcon ("icon16/tab_delete.png")
+		:SetIcon ("gui/g_silkicons/tab_delete.png")
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
@@ -58,7 +58,7 @@ function GCompute.Editor.TabContextMenu (self)
 		)
 	menu:AddSeparator ("Separator1")
 	menu:AddOption ("Save")
-		:SetIcon ("icon16/disk.png")
+		:SetIcon ("gui/g_silkicons/disk.png")
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
@@ -66,7 +66,7 @@ function GCompute.Editor.TabContextMenu (self)
 			end
 		)
 	menu:AddOption ("Save as...")
-		:SetIcon ("icon16/disk.png")
+		:SetIcon ("gui/g_silkicons/disk.png")
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
@@ -74,14 +74,14 @@ function GCompute.Editor.TabContextMenu (self)
 			end
 		)
 	menu:AddOption ("Rename")
-		:SetIcon ("icon16/page_edit.png")
+		:SetIcon ("gui/g_silkicons/page_edit.png")
 		:SetVisible (false)
 	menu:AddOption ("Delete")
-		:SetIcon ("icon16/cross.png")
+		:SetIcon ("gui/g_silkicons/cross.png")
 		:SetVisible (false)
 	menu:AddSeparator ("Separator2")
 	menu:AddOption ("Copy path to clipboard")
-		:SetIcon ("icon16/page_white_copy.png")
+		:SetIcon ("gui/g_silkicons/page_white_copy.png")
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end

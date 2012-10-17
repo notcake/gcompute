@@ -310,7 +310,7 @@ end
 function self:GetMergedLocalScope (memberDefinition)
 	local namespace = memberDefinition:GetContainingNamespace ()
 	local mergedLocalScope = nil
-	while not mergedLocalScope do
+	while not mergedLocalScope and namespace do
 		while not namespace:GetMergedLocalScope () do
 			namespace = namespace:GetContainingNamespace ()
 		end
@@ -320,6 +320,9 @@ function self:GetMergedLocalScope (memberDefinition)
 		else
 			namespace = namespace:GetContainingNamespace ()
 		end
+	end
+	if not namespace then
+		self.CompilationUnit:Error ("Failed to find MergedLocalScope for " .. memberDefinition:ToString ())
 	end
 	return mergedLocalScope
 end

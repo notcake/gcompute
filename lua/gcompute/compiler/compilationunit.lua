@@ -304,21 +304,21 @@ function self:Parse (callback)
 	local startTime = SysTime ()
 	local parser = self.Language:Parser (self)
 	parser.DebugOutput = GCompute.TextOutputBuffer ()
-	local actionChain = GCompute.CallbackChain ()
+	local callbackChain = GCompute.CallbackChain ()
 	for _, v in ipairs (self.ParserJobQueue) do
-		actionChain:Add (
-			function (callback)
+		callbackChain:Then (
+			function (callback, errorCallback)
 				self:Debug ("Parsing from line " .. v.Start.Line .. ", char " .. v.Start.Character .. " to line " .. v.End.Line .. ", char " .. v.End.Character .. ".")
 				local parseTree = parser:Process (self.Tokens, v.Start, v.End)
 				v.Start.BlockEnd = v.End
 				v.Start.AST = parseTree
 				v.End.BlockStart = v.Start
-				timer.Simple (0, callback)
+				timer.Simple (0.001, callback)
 			end
 		)
 	end
-	actionChain:Add (
-		function (_)
+	callbackChain:Then (
+		function (callback, errorCallback)
 			-- parser.DebugOutput:OutputLines (print)
 			self.AST = self.Tokens.First.AST
 			self:AddPassDuration ("Parser", SysTime () - startTime)
@@ -326,7 +326,8 @@ function self:Parse (callback)
 			callback ()
 		end
 	)
-	actionChain:Execute ()
+	callbackChain:ThenUnwrap (callback)
+	callbackChain:Execute ()
 end
 
 function self:PostParse (callback)
@@ -334,22 +335,23 @@ function self:PostParse (callback)
 	if not self.Language.Passes.PostParser then callback () return end
 	
 	local startTime = SysTime ()
-	local actionChain = GCompute.CallbackChain ()
+	local callbackChain = GCompute.CallbackChain ()
 	for _, pass in ipairs (self.Language.Passes.PostParser) do
-		actionChain:Add (
-			function (callback)
+		callbackChain:Then (
+			function (callback, errorCallback)
 				pass (self):Process (self.AST, callback)
 			end
 		)
 	end
-	actionChain:Add (
-		function (_)
+	callbackChain:Then (
+		function (callback, errorCallback)
 			self:AddPassDuration ("PostParser", SysTime () - startTime)
 			
 			callback ()
 		end
 	)
-	actionChain:Execute ()
+	callbackChain:ThenUnwrap (callback)
+	callbackChain:Execute ()
 end
 
 function self:BuildNamespace (callback)
@@ -368,22 +370,23 @@ function self:PostBuildNamespace (callback)
 	if not self.Language.Passes.PostNamespaceBuilder then callback () return end
 	
 	local startTime = SysTime ()
-	local actionChain = GCompute.CallbackChain ()
+	local callbackChain = GCompute.CallbackChain ()
 	for _, pass in ipairs (self.Language.Passes.PostNamespaceBuilder) do
-		actionChain:Add (
-			function (callback)
+		callbackChain:Then (
+			function (callback, errorCallback)
 				pass (self):Process (self.AST, callback)
 			end
 		)
 	end
-	actionChain:Add (
-		function (_)
+	callbackChain:Then (
+		function (callback, errorCallback)
 			self:AddPassDuration ("PostNamespaceBuilder", SysTime () - startTime)
 			
 			callback ()
 		end
 	)
-	actionChain:Execute ()
+	callbackChain:ThenUnwrap (callback)
+	callbackChain:Execute ()
 end
 
 function self:RunPass (passName, passConstructor, callback)

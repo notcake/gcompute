@@ -72,11 +72,16 @@ end
 -- @return A function which handles runtime namespace initialization
 function self:GetConstructor (name)
 	return function (executionContext)
-		local actionChain = GCompute.CallbackChain ()
+		local callbackChain = GCompute.CallbackChain ()
 		for _, namespaceDefinition in ipairs (self.SourceNamespaces) do
-			actionChain:Add (function (callback) namespaceDefinition:GetConstructor () (executionContext) callback () end)
+			callbackChain:Then (
+				function (callback, errorCallback)
+					namespaceDefinition:GetConstructor () (executionContext)
+					callback ()
+				end
+			)
 		end
-		actionChain:Execute ()
+		callbackChain:Execute ()
 	end
 end
 

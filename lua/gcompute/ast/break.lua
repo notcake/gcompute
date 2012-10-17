@@ -17,6 +17,16 @@ function self:Evaluate (executionContext)
 	executionContext:Break ()
 end
 
+function self:ExecuteAsAST (astRunner)
+	astRunner:PopNode ()
+	
+	executionContext:Break ()
+end
+
 function self:ToString ()
 	return "break"
+end
+
+function self:Visit (astVisitor, ...)
+	return astVisitor:VisitStatement (self, ...)
 end

@@ -23,12 +23,14 @@ if VERSION < 150 then
 			if chatbox then
 				chatbox._ShowChat2Box = chatbox._ShowChat2Box or chatbox.ShowChat2Box
 				function chatbox.ShowChat2Box (tab)
-					if GCompute and GCompute.Editor and tab == 2 then
-						GCompute.Editor:GetFrame ():SetVisible (true)
-						GCompute.Editor:GetFrame ():MoveToFront ()
-					else
-						chatbox._ShowChat2Box (tab)
-					end
+					pcall (function ()
+						if GCompute and GCompute.Editor and tab == 2 then
+							GCompute.Editor:GetFrame ():SetVisible (true)
+							GCompute.Editor:GetFrame ():MoveToFront ()
+						else
+							chatbox._ShowChat2Box (tab)
+						end
+					end)
 				end
 			end
 		end

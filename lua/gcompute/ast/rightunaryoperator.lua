@@ -42,6 +42,45 @@ function self:Evaluate (executionContext)
 	return value
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- State 0: Evaluate left
+	-- State 1: Call
+	if state == 0 then
+		-- Return to state 1
+		astRunner:PushState (1)
+	
+		-- Expression, state 0
+		astRunner:PushNode (self:GetLeftExpression ())
+		astRunner:PushState (0)
+	elseif state == 2 then
+		-- Discard BinaryOperator
+		astRunner:PopNode ()
+		
+		local left = astRunner:PopValue ()
+		
+		local functionCallPlan = self.FunctionCallPlan
+		local functionDefinition = functionCallPlan:GetFunctionDefinition ()
+		local func = functionCallPlan:GetFunction ()
+		if not func and functionDefinition then
+			func = functionDefinition:GetNativeFunction ()
+		end
+		
+		if func then
+			astRunner:PushValue (func (left))
+		elseif functionDefinition then
+			local block = functionDefinition:GetBlock ()
+			if block then
+				astRunner:PushNode (functionDefinition:GetBlock ())
+				astRunner:PushState (0)
+			else
+				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
+			end
+		else
+			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
+		end
+	end
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end
@@ -65,4 +104,10 @@ function self:ToString ()
 	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Unknown Expression]"
 	
 	return leftExpression .. self.Operator
+end
+
+function self:Visit (astVisitor, ...)
+	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	
+	return astVisitor:VisitExpression (self, ...)
 end

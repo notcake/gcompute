@@ -46,27 +46,27 @@ end
 function self:Compile (callback)
 	callback = callback or GCompute.NullCallback
 
-	local actionChain = GCompute.CallbackChain ()
+	local callbackChain = GCompute.CallbackChain ()
 	for sourceFile in self:GetEnumerator () do
 		local compilationUnit = sourceFile:GetCompilationUnit ()
-		actionChain:Add (
-			function (nextCallback)
-				local actionChain = GCompute.CallbackChain ()
-				actionChain:Add (function (callback) compilationUnit:Lex (callback) end)
-				actionChain:Add (function (callback) compilationUnit:Preprocess (callback) end)
-				actionChain:Add (function (callback) compilationUnit:GenerateParserJobs (callback) end)
-				actionChain:Add (function (callback) compilationUnit:Parse (callback) end)
-				actionChain:Add (function (callback) compilationUnit:PostParse (callback) end)
-				actionChain:Add (function (callback) compilationUnit:RunPass ("BlockStatementInserter", GCompute.BlockStatementInserter, callback) end)
-				actionChain:Add (function (callback) compilationUnit:BuildNamespace (callback) end)
-				actionChain:Add (function (callback) compilationUnit:PostBuildNamespace (callback) end)
-				actionChain:AddUnwrap (nextCallback)
-				actionChain:Execute ()
+		callbackChain:Then (
+			function (callback, errorCallback)
+				local callbackChain = GCompute.CallbackChain ()
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:Lex (callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:Preprocess (callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:GenerateParserJobs (callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:Parse (callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:PostParse (callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("BlockStatementInserter", GCompute.BlockStatementInserter, callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:BuildNamespace (callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:PostBuildNamespace (callback) end)
+				callbackChain:ThenUnwrap (callback)
+				callbackChain:Execute ()
 			end
 		)
 	end
-	actionChain:Add (
-		function (callback)
+	callbackChain:Then (
+		function (callback, errorCallback)
 			self.NamespaceDefinition:AddSourceNamespace (GCompute.GlobalNamespace)
 			for sourceFile in self:GetEnumerator () do
 				self.NamespaceDefinition:AddSourceNamespace (sourceFile:GetCompilationUnit ():GetNamespaceDefinition ())
@@ -78,20 +78,20 @@ function self:Compile (callback)
 			
 	for sourceFile in self:GetEnumerator () do
 		local compilationUnit = sourceFile:GetCompilationUnit ()
-		actionChain:Add (
-			function (nextCallback)
-				local actionChain = GCompute.CallbackChain ()
-				actionChain:Add (function (callback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
-				actionChain:Add (function (callback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
-				actionChain:Add (function (callback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
-				actionChain:AddUnwrap (nextCallback)
-				actionChain:Execute ()
+		callbackChain:Then (
+			function (callback, errorCallback)
+				local callbackChain = GCompute.CallbackChain ()
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
+				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
+				callbackChain:ThenUnwrap (callback)
+				callbackChain:Execute ()
 			end
 		)
 	end
 	
-	actionChain:AddUnwrap (callback)
-	actionChain:Execute ()
+	callbackChain:ThenUnwrap (callback)
+	callbackChain:Execute ()
 end
 
 function self:GetNamespaceDefinition ()

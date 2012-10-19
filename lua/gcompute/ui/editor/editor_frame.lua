@@ -317,33 +317,7 @@ function self:CreateEmptyCodeTab ()
 	self.NextNewId = self.NextNewId + 1
 	
 	tab:GetContents ():SetDefaultContents (true)
-	tab:GetContents ():SetText (
-[[
-	local a = systime ();
-
-	function number sum (a, b)
-	{
-		local result = 0;
-		for (local i = a, b)
-		{
-			result += i;
-		}
-		return result;
-	}
-	
-	function number factorial (n)
-	{
-		if (n <= 1) { return 1; }
-		return factorial (n - 1) * n;
-	}
-	
-	local n = 5;
-	print ("sum is " + sum (1000, 2000));
-	print ("factorial(" + n + ") is " + factorial (n));
-	print ("execution took " + ((systime () - a) * 1000) + " ms.");
-	print (n:GetHashCode ());
-]]
-	)
+	tab:GetContents ():SetText ("")
 	
 	return tab
 end

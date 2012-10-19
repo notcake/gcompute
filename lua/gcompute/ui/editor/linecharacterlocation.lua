@@ -30,45 +30,12 @@ function self:CopyFrom (lineCharacterLocation)
 	self.Character = lineCharacterLocation.Character or 0
 end
 
-function self:Equals (lineCharacterLocation)
-	return self.Line      == lineCharacterLocation.Line and
-	       self.Character == lineCharacterLocation.Character
-end
-
 function self:GetCharacter ()
 	return self.Character
 end
 
 function self:GetLine ()
 	return self.Line
-end
-
-function self:IsAfter (lineCharacterLocation)
-	if self.Line < lineCharacterLocation.Line then return false end
-	if self.Line > lineCharacterLocation.Line then return true end
-	if self.Character > lineCharacterLocation.Character then return true end
-	return false
-end
-
-function self:IsBefore (lineCharacterLocation)
-	if self.Line < lineCharacterLocation.Line then return true end
-	if self.Line > lineCharacterLocation.Line then return false end
-	if self.Character < lineCharacterLocation.Character then return true end
-	return false
-end
-
-function self:IsEqualOrAfter (lineCharacterLocation)
-	if self.Line < lineCharacterLocation.Line then return false end
-	if self.Line > lineCharacterLocation.Line then return true end
-	if self.Character >= lineCharacterLocation.Character then return true end
-	return false
-end
-
-function self:IsEqualOrBefore (lineCharacterLocation)
-	if self.Line < lineCharacterLocation.Line then return true end
-	if self.Line > lineCharacterLocation.Line then return false end
-	if self.Character <= lineCharacterLocation.Character then return true end
-	return false
 end
 
 function self:SetCharacter (character)
@@ -81,4 +48,23 @@ end
 
 function self:ToString ()
 	return "Line " .. tostring (self.Line) .. ", char " .. tostring (self.Character)
+end
+
+function self:__eq (lineCharacterLocation)
+	return self.Line      == lineCharacterLocation.Line and
+	       self.Character == lineCharacterLocation.Character
+end
+
+function self:__lt (lineCharacterLocation)
+	if self.Line < lineCharacterLocation.Line then return true end
+	if self.Line > lineCharacterLocation.Line then return false end
+	if self.Character < lineCharacterLocation.Character then return true end
+	return false
+end
+
+function self:__le (lineCharacterLocation)
+	if self.Line < lineCharacterLocation.Line then return true end
+	if self.Line > lineCharacterLocation.Line then return false end
+	if self.Character <= lineCharacterLocation.Character then return true end
+	return false
 end

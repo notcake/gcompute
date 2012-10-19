@@ -30,45 +30,12 @@ function self:CopyFrom (lineColumnLocation)
 	self.Column   = lineColumnLocation.Column   or 0
 end
 
-function self:Equals (lineColumnLocation)
-	return self.Line     == lineColumnLocation.Line     and
-	       self.Column   == lineColumnLocation.Column
-end
-
 function self:GetColumn ()
 	return self.Column
 end
 
 function self:GetLine ()
 	return self.Line
-end
-
-function self:IsAfter (lineColumnLocation)
-	if self.Line < lineColumnLocation.Line then return false end
-	if self.Line > lineColumnLocation.Line then return true end
-	if self.Column > lineColumnLocation.Column then return true end
-	return false
-end
-
-function self:IsBefore (lineColumnLocation)
-	if self.Line < lineColumnLocation.Line then return true end
-	if self.Line > lineColumnLocation.Line then return false end
-	if self.Column < lineColumnLocation.Column then return true end
-	return false
-end
-
-function self:IsEqualOrAfter (lineColumnLocation)
-	if self.Line < lineColumnLocation.Line then return false end
-	if self.Line > lineColumnLocation.Line then return true end
-	if self.Column >= lineColumnLocation.Column then return true end
-	return false
-end
-
-function self:IsEqualOrBefore (lineColumnLocation)
-	if self.Line < lineColumnLocation.Line then return true end
-	if self.Line > lineColumnLocation.Line then return false end
-	if self.Column <= lineColumnLocation.Column then return true end
-	return false
 end
 
 function self:SetColumn (column)
@@ -81,4 +48,23 @@ end
 
 function self:ToString ()
 	return "Line " .. tostring (self.Line) .. ", col " .. tostring (self.Column)
+end
+
+function self:__eq (lineColumnLocation)
+	return self.Line     == lineColumnLocation.Line     and
+	       self.Column   == lineColumnLocation.Column
+end
+
+function self:__le (lineColumnLocation)
+	if self.Line < lineColumnLocation.Line then return true end
+	if self.Line > lineColumnLocation.Line then return false end
+	if self.Column <= lineColumnLocation.Column then return true end
+	return false
+end
+
+function self:__lt (lineColumnLocation)
+	if self.Line < lineColumnLocation.Line then return true end
+	if self.Line > lineColumnLocation.Line then return false end
+	if self.Column < lineColumnLocation.Column then return true end
+	return false
 end

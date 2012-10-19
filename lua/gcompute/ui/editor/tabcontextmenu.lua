@@ -87,7 +87,7 @@ function GCompute.Editor.TabContextMenu (self)
 				if not tab then return end
 				if not tab:GetContents () then return end
 				if not tab:GetContents ():HasPath () then return end
-				SetClipboardText (tab:GetContents ():GetPath ())
+				Gooey.Clipboard:SetText (tab:GetContents ():GetPath ())
 			end
 		)
 		

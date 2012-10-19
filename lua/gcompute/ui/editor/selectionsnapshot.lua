@@ -2,9 +2,7 @@ local self = {}
 GCompute.Editor.SelectionSnapshot = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.SelectionMode	        = GCompute.Editor.SelectionMode.Regular
-	self.SelectionStart         = GCompute.Editor.LineColumnLocation ()
-	self.SelectionEnd           = GCompute.Editor.LineColumnLocation ()
+	self.Selection              = GCompute.Editor.TextSelection ()
 	self.CaretPosition          = GCompute.Editor.LineColumnLocation ()
 	self.PreferredCaretPosition = GCompute.Editor.LineColumnLocation ()
 end
@@ -17,20 +15,20 @@ function self:GetPreferredCaretPosition ()
 	return self.PreferredCaretPosition
 end
 
-function self:GetSelectionMode ()
-	return self.SelectionMode
+function self:GetSelection ()
+	return self.Selection
 end
 
 function self:GetSelectionEnd ()
-	return self.SelectionEnd
+	return self.Selection:GetSelectionEnd ()
 end
 
 function self:GetSelectionMode ()
-	return self.SelectionMode
+	return self.Selection:GetSelectionMode ()
 end
 
 function self:GetSelectionStart ()
-	return self.SelectionStart
+	return self.Selection:GetSelectionStart ()
 end
 
 function self:SetCaretPosition (caretPosition)
@@ -39,16 +37,4 @@ end
 
 function self:SetPreferredCaretPosition (preferredCaretPosition)
 	self.PreferredCaretPosition:CopyFrom (preferredCaretPosition)
-end
-
-function self:SetSelectionEnd (selectionEnd)
-	self.SelectionEnd:CopyFrom (selectionEnd)
-end
-
-function self:SetSelectionMode (selectionMode)
-	self.SelectionMode = selectionMode
-end
-
-function self:SetSelectionStart (selectionStart)
-	self.SelectionStart:CopyFrom (selectionStart)
 end

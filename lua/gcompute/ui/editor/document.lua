@@ -54,7 +54,7 @@ function self:Clear ()
 end
 
 function self:Delete (startLocation, endLocation)
-	if startLocation:IsAfter (endLocation) then
+	if startLocation > endLocation then
 		local temp = endLocation
 		endLocation = startLocation
 		startLocation = temp
@@ -110,7 +110,7 @@ function self:DeleteWithinLine (startLocation, endLocation)
 	local line = self:GetLine (startLocation:GetLine ())
 	if not line then return end
 	
-	if startLocation:IsAfter (endLocation) then
+	if startLocation > endLocation then
 		local temp = endLocation
 		endLocation = startLocation
 		startLocation = temp
@@ -161,7 +161,7 @@ end
 function self:GetText (startLocation, endLocation)
 	if not startLocation then startLocation = self:GetStart () end
 	if not endLocation   then endLocation   = self:GetEnd ()   end
-	if startLocation:IsAfter (endLocation) then
+	if startLocation > endLocation then
 		local temp = endLocation
 		endLocation = startLocation
 		startLocation = temp
@@ -169,10 +169,10 @@ function self:GetText (startLocation, endLocation)
 	
 	-- Clamp locations to end of document
 	local documentEndLocation = self:GetEnd ()
-	if endLocation:IsAfter (documentEndLocation) then
+	if endLocation > documentEndLocation then
 		endLocation = documentEndLocation
 	end
-	if startLocation:IsAfter (documentEndLocation) then
+	if startLocation > documentEndLocation then
 		endLocation = documentEndLocation
 	end
 	

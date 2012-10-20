@@ -384,7 +384,7 @@ function PANEL:DrawSelectionSpans ()
 	-- Don't bother drawing selection highlighting for lines out of view
 	local startLine = self.ViewLocation:GetLine () - 2
 	local endLine   = self.ViewLocation:GetLine () + self.ViewLineCount + 2
-	local enumerator = self.Selection:GetSpanEnumerator (startLine, self.Document, self.TextRenderer)
+	local enumerator = self.Selection:GetSpanEnumerator (startLine, self, self.Document, self.TextRenderer)
 	
 	local line, leftColumn, rightColumn = enumerator ()
 	local nextLine, nextLeftColumn, nextRightColumn
@@ -417,19 +417,19 @@ function PANEL:DrawSelectionSpans ()
 		line        = nextLine
 		leftColumn  = nextLeftColumn
 		rightColumn = nextRightColumn
+	end
 	
-		if leftColumn ~= rightColumn then
-			draw.RoundedBoxEx (
-				4,
-				lineNumberWidth + leftColumn * self.Settings.CharacterWidth,
-				(line - self.ViewLocation:GetLine ()) * self.Settings.LineHeight,
-				(rightColumn - leftColumn) * self.Settings.CharacterWidth,
-				self.Settings.LineHeight,
-				GLib.Colors.SteelBlue,
-				roundTopLeft, roundTopRight,
-				true, true
-			)
-		end
+	if leftColumn ~= rightColumn then
+		draw.RoundedBoxEx (
+			4,
+			lineNumberWidth + leftColumn * self.Settings.CharacterWidth,
+			(line - self.ViewLocation:GetLine ()) * self.Settings.LineHeight,
+			(rightColumn - leftColumn) * self.Settings.CharacterWidth,
+			self.Settings.LineHeight,
+			GLib.Colors.SteelBlue,
+			roundTopLeft, roundTopRight,
+			true, true
+		)
 	end
 end
 

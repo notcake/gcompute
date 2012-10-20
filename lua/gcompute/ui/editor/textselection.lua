@@ -29,7 +29,7 @@ function self:CopyFrom (textSelection)
 	self:DispatchEvent ("SelectionChanged")
 end
 
-function self:GetSpanEnumerator (line, document, textRenderer)
+function self:GetSpanEnumerator (line, codeEditor, document, textRenderer)
 	local selectionStart, selectionEnd = self:GetSelectionEndPoints ()
 	local startLine = selectionStart:GetLine ()
 	local endLine   = selectionEnd:GetLine ()
@@ -58,7 +58,10 @@ function self:GetSpanEnumerator (line, document, textRenderer)
 		return function ()
 			i = i + 1
 			if i > endLine then return nil, nil, nil end
-			return i, startColumn, endColumn
+			local columnCount = document:GetLine (i):GetColumnCount (textRenderer)
+			return i,
+			       startColumn < columnCount and codeEditor:FixupColumn (i, startColumn) or startColumn,
+				   endColumn   < columnCount and codeEditor:FixupColumn (i, endColumn)   or endColumn
 		end
 	end
 end

@@ -48,7 +48,7 @@ function PANEL:Init ()
 		end
 		
 		if not self:IsReadOnly () then
-			self:ReplaceSelectionText (text)
+			self:ReplaceSelectionText (text, pasted)
 			self:ScrollToCaret ()
 		end
 	end
@@ -136,7 +136,7 @@ function PANEL:Init ()
 	
 	-- Selection
 	self.Selecting = false
-	self.Selection = GCompute.Editor.TextSelection ()
+	self.Selection = GCompute.Editor.TextSelection (self)
 	self.SelectionController = GCompute.Editor.TextSelectionController (self, self.Selection)
 	self.Selection:AddEventListener ("SelectionChanged",
 		function (_, selectionStart, selectionEnd)
@@ -384,7 +384,7 @@ function PANEL:DrawSelectionSpans ()
 	-- Don't bother drawing selection highlighting for lines out of view
 	local startLine = self.ViewLocation:GetLine () - 2
 	local endLine   = self.ViewLocation:GetLine () + self.ViewLineCount + 2
-	local enumerator = self.Selection:GetSpanEnumerator (startLine, self, self.Document, self.TextRenderer)
+	local enumerator = self.Selection:GetSpanEnumerator (startLine)
 	
 	local line, leftColumn, rightColumn = enumerator ()
 	local nextLine, nextLeftColumn, nextRightColumn
@@ -597,20 +597,31 @@ function PANEL:OutdentSelection ()
 	self.UndoRedoStack:Push (outdentationAction)
 end
 
-function PANEL:ReplaceSelectionText (text)
+function PANEL:ReplaceSelectionText (text, pasted)
+	local undoRedoItem = nil
 	if self:IsSelectionEmpty () then
 		local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
-		local insertionAction = GCompute.Editor.InsertionAction (self, insertionLocation, text)
-		insertionAction:Redo ()
-		self.UndoRedoStack:Push (insertionAction)
+		undoRedoItem = GCompute.Editor.InsertionAction (self, insertionLocation, text)
 	else
 		local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
 		local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
 		local originalText = self.Document:GetText (selectionStart, selectionEnd)
 		
-		local replacementAction = GCompute.Editor.ReplacementAction (self, selectionStart, selectionEnd, originalText, text)
-		replacementAction:Redo ()
-		self.UndoRedoStack:Push (replacementAction)
+		undoRedoItem = GCompute.Editor.ReplacementAction (self, selectionStart, selectionEnd, originalText, text)
+	end
+	undoRedoItem:Redo ()
+	self.UndoRedoStack:Push (undoRedoItem)
+	
+	if pasted then return end
+	local autoOutdentationAction
+	if self:GetEditorHelper ():ShouldOutdent (self, self.Document:ColumnToCharacter (self:GetCaretPos (), self.TextRenderer)) then
+		autoOutdentationAction = autoOutdentationAction or GCompute.Editor.AutoOutdentationAction (self)
+		autoOutdentationAction:AddLine (self:GetCaretPos ():GetLine ())
+	end
+	
+	if autoOutdentationAction then
+		autoOutdentationAction:Redo ()
+		undoRedoItem:ChainItem (autoOutdentationAction)
 	end
 end
 

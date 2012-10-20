@@ -7,7 +7,9 @@ GCompute.Editor.TextSelection = GCompute.MakeConstructor (self)
 			Fired when the selection has changed.
 ]]
 
-function self:ctor ()
+function self:ctor (codeEditor)
+	self.Editor = codeEditor
+	
 	self.SelectionMode  = GCompute.Editor.SelectionMode.Regular
 	self.SelectionStart = GCompute.Editor.LineColumnLocation (0, 0)
 	self.SelectionEnd   = GCompute.Editor.LineColumnLocation (0, 0)
@@ -29,13 +31,22 @@ function self:CopyFrom (textSelection)
 	self:DispatchEvent ("SelectionChanged")
 end
 
-function self:GetSpanEnumerator (line, codeEditor, document, textRenderer)
+function self:GetSpan (line)
+	local spanLine, spanStart, spanEnd = self:GetSpanEnumerator (line) ()
+	if spanLine ~= line then return nil, nil end
+	return spanStart, spanEnd
+end
+
+function self:GetSpanEnumerator (line)
 	local selectionStart, selectionEnd = self:GetSelectionEndPoints ()
 	local startLine = selectionStart:GetLine ()
 	local endLine   = selectionEnd:GetLine ()
 	
 	local i = (line or startLine) - 1
 	if i < startLine - 1 then i = startLine - 1 end
+	
+	local document = self.Editor:GetDocument ()
+	local textRenderer = self.Editor:GetTextRenderer ()
 	
 	if self.SelectionMode == GCompute.Editor.SelectionMode.Regular then
 		if startLine == endLine then
@@ -53,6 +64,7 @@ function self:GetSpanEnumerator (line, codeEditor, document, textRenderer)
 			return i, 0, document:GetLine (i):GetColumnCount (textRenderer) + 1
 		end
 	else
+		local codeEditor  = self.Editor
 		local startColumn = math.min (selectionStart:GetColumn (), selectionEnd:GetColumn ())
 		local endColumn   = math.max (selectionStart:GetColumn (), selectionEnd:GetColumn ())
 		return function ()
@@ -97,8 +109,8 @@ function self:IsInSelection (location)
 		local startLine = math.min (self.SelectionStart:GetLine (), self.SelectionEnd:GetLine ())
 		local endLine   = math.max (self.SelectionStart:GetLine (), self.SelectionEnd:GetLine ())
 		if location:GetLine () < startLine or location:GetLine () > endLine then return false end
-		local startColumn = math.min (self.SelectionStart:GetColumn (), self.SelectionEnd:GetColumn ())
-		local endColumn   = math.max (self.SelectionStart:GetColumn (), self.SelectionEnd:GetColumn ())
+		local startColumn = self.Editor:FixupColumn (location:GetLine (), math.min (self.SelectionStart:GetColumn (), self.SelectionEnd:GetColumn ()))
+		local endColumn   = self.Editor:FixupColumn (location:GetLine (), math.max (self.SelectionStart:GetColumn (), self.SelectionEnd:GetColumn ()))
 		if location:GetColumn () < startColumn or location:GetColumn () > endColumn then return false end
 		return true
 	else

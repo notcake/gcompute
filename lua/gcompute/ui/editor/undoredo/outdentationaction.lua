@@ -25,7 +25,7 @@ function self:Redo ()
 	local character
 	
 	local deletionStart = GCompute.Editor.LineCharacterLocation ()
-	local deletionEnd = GCompute.Editor.LineCharacterLocation ()
+	local deletionEnd   = GCompute.Editor.LineCharacterLocation ()
 	deletionStart:SetCharacter (0)
 	
 	for i = startLine, endLine do

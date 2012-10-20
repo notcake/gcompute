@@ -61,3 +61,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		end
 	)
 end
+
+function self:ShouldOutdent (codeEditor, location)
+	return false
+end

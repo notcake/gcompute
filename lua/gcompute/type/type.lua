@@ -17,23 +17,23 @@ function self:CanConvertTo (destinationType, typeConversionMethod)
 		GCompute.Error ("Type:CanConvertTo : " .. destinationType:ToString () .. " is not a type.")
 		return false
 	end
-	if typeConversionMethod & GCompute.TypeConversionMethod.Identity != 0 and
+	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Identity) ~= 0 and
 	   self:Equals (destinationType) then
 		return true
 	end
-	if typeConversionMethod & GCompute.TypeConversionMethod.Downcast != 0 and
+	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Downcast) ~= 0 and
 	   self:IsBaseType (destinationType) then
 		return true
 	end
-	if typeConversionMethod & GCompute.TypeConversionMethod.ImplicitCast != 0 and
+	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.ImplicitCast) ~= 0 and
 	   self:CanImplicitCastTo (destinationType) then
 		return true
 	end
-	if typeConversionMethod & GCompute.TypeConversionMethod.ExplicitCast != 0 and
+	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.ExplicitCast) ~= 0 and
 	   self:CanExplicitCastTo (destinationType) then
 		return true
 	end
-	if typeConversionMethod & GCompute.TypeConversionMethod.Constructor != 0 and
+	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Constructor) ~= 0 and
 	   destinationType:CanConstructFrom (self) then
 		return true
 	end

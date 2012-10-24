@@ -1,5 +1,12 @@
 local PANEL = {}
-surface.CreateFont ("Courier New", 16, 400, false, false, "GComputeMonospace")
+surface.CreateFont (
+	"GComputeMonospace",
+	{
+		font   = "Courier New",
+		size   = 16,
+		weight = 400
+	}
+)
 
 --[[
 	Events:
@@ -387,6 +394,8 @@ function PANEL:DrawSelectionSpans ()
 	local enumerator = self.Selection:GetSpanEnumerator (startLine)
 	
 	local line, leftColumn, rightColumn = enumerator ()
+	if not line then return end
+	
 	local nextLine, nextLeftColumn, nextRightColumn
 	leftColumn  = leftColumn  - self.ViewLocation:GetColumn ()
 	rightColumn = rightColumn - self.ViewLocation:GetColumn ()
@@ -599,7 +608,9 @@ end
 
 function PANEL:ReplaceSelectionText (text, pasted)
 	local undoRedoItem = nil
-	if self:IsSelectionEmpty () then
+	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
+		local blockReplacementAction = nil
+	elseif self.Selection:IsSelectionEmpty () then
 		local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
 		undoRedoItem = GCompute.Editor.InsertionAction (self, insertionLocation, text)
 	else
@@ -622,6 +633,16 @@ function PANEL:ReplaceSelectionText (text, pasted)
 	if autoOutdentationAction then
 		autoOutdentationAction:Redo ()
 		undoRedoItem:ChainItem (autoOutdentationAction)
+		
+		-- Update caret
+		if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
+			local deltaColumns = self.TextRenderer:GetStringColumnCount (autoOutdentationAction:GetLineIndentation (self.Selection:GetSelectionEnd ():GetLine ()), 0)
+			self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
+				self.Selection:GetSelectionEnd ():GetLine (),
+				self.Selection:GetSelectionEnd ():GetColumn () - deltaColumns
+			))
+			self.Selection:SetSelection (self:GetCaretPos ())
+		end
 	end
 end
 
@@ -730,7 +751,7 @@ function PANEL:MoveCaretRight (toWordBoundary, overrideSelectionStart)
 	if self.CaretLocation:GetColumn () == self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer) then
 		if self.CaretLocation:GetLine () + 1 == self.Document:GetLineCount () then return end
 		
-		self.SelectionController:SelectionLocation (GCompute.Editor.LineColumnLocation (
+		self.SelectionController:SelectLocation (GCompute.Editor.LineColumnLocation (
 			self.CaretLocation:GetLine () + 1,
 			0
 		), not overrideSelectionStart)

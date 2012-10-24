@@ -121,7 +121,7 @@ function self:Init ()
 					end
 				)
 				if language == currentLanguage then
-					option:SetIcon ("gui/g_silkicons/bullet_black.png")
+					option:SetIcon ("icon16/bullet_black.png")
 				end
 			end
 		end
@@ -278,7 +278,7 @@ end
 
 function self:CreateCodeTab (...)
 	local tab = self.TabControl:AddTab (...)
-	tab:SetIcon ("gui/g_silkicons/page.png")
+	tab:SetIcon ("icon16/page.png")
 	tab:SetCloseButtonVisible (true)
 	
 	local codeEditor = vgui.Create ("GComputeCodeEditor")
@@ -296,7 +296,7 @@ end
 
 function self:CreateNamespaceBrowserTab (namespaceDefinition)
 	local tab = self.TabControl:AddTab ("Namespace Browser")
-	tab:SetIcon ("gui/g_silkicons/application_side_list.png")
+	tab:SetIcon ("icon16/application_side_list.png")
 	tab:SetCloseButtonVisible (true)
 	
 	local namespaceBrowser = vgui.Create ("GComputeNamespaceTreeView")
@@ -719,7 +719,7 @@ function self:HookTabContents (tab, contents)
 	if tab.HasUndoRedoStack then
 		contents:GetUndoRedoStack ():AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
 			function (_, canSave)
-				tab:SetIcon (contents:GetUndoRedoStack ():IsUnsaved () and "gui/g_silkicons/page_red.png" or "gui/g_silkicons/page.png")
+				tab:SetIcon (contents:GetUndoRedoStack ():IsUnsaved () and "icon16/page_red.png" or "icon16/page.png")
 				
 				local canSaveAll = false
 				for tab in self.TabControl:GetEnumerator () do

@@ -16,6 +16,10 @@ function self:ctor (codeEditor, selectionSnapshot)
 	self:SetDescription ("outdent " .. lineCount .. " line" .. (lineCount == 1 and "" or "s"))
 end
 
+function self:GetLineIndentation (line)
+	return self.Indentations [line]
+end
+
 function self:Redo ()
 	local startLine = math.min (self.SelectionSnapshot:GetSelectionStart ():GetLine (), self.SelectionSnapshot:GetSelectionEnd ():GetLine ())
 	local endLine   = math.max (self.SelectionSnapshot:GetSelectionStart ():GetLine (), self.SelectionSnapshot:GetSelectionEnd ():GetLine ())

@@ -57,26 +57,26 @@ function self:Init ()
 				process:Terminate ()
 			end
 		end
-	):SetIcon ("gui/g_silkicons/cross.png")
+	):SetIcon ("icon16/cross.png")
 	self.Menu:AddOption ("Suspend",
 		function (targetProcesses)
 			for _, process in ipairs (targetProcesses) do
 				process:Suspend ()
 			end
 		end
-	):SetIcon ("gui/g_silkicons/control_pause_blue.png")
+	):SetIcon ("icon16/control_pause_blue.png")
 	self.Menu:AddOption ("Resume",
 		function (targetProcesses)
 			for _, process in ipairs (targetProcesses) do
 				process:Resume ()
 			end
 		end
-	):SetIcon ("gui/g_silkicons/control_play_blue.png")
+	):SetIcon ("icon16/control_play_blue.png")
 	self.Menu:AddSeparator ()
 	self.Menu:AddOption ("Properties",
 		function (targetProcesses)
 		end
-	):SetIcon ("gui/g_silkicons/application_view_list.png")
+	):SetIcon ("icon16/application_view_list.png")
 	
 	self:AddEventListener ("DoubleClick",
 		function (_, item)
@@ -228,7 +228,7 @@ end
 
 function self:UpdateIcon (listViewItem)
 	local process = listViewItem.Process
-	listViewItem:SetIcon ("gui/g_silkicons/application_xp_terminal.png")
+	listViewItem:SetIcon ("icon16/application_xp_terminal.png")
 end
 
 -- Event handlers

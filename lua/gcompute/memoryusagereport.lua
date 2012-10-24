@@ -85,6 +85,14 @@ function self:CreditTableStructure (poolName, object)
 	self.Pools [poolName] = self.Pools [poolName] + size
 end
 
+function self:GetTotalBytes ()
+	local totalBytes = 0
+	for _, poolBytes in pairs (self.Pools) do
+		totalBytes = totalBytes + poolBytes
+	end
+	return totalBytes
+end
+
 function self:IsCounted (object)
 	return self.CountedTables [object] or self.CountedStrings [object] or self.CountedFunctions [object] or false
 end

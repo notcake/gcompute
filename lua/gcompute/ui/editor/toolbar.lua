@@ -1,14 +1,14 @@
 function GCompute.Editor.Toolbar (self)
 	local toolbar = vgui.Create ("GToolbar", self)
 	toolbar:AddButton ("New")
-		:SetIcon ("gui/g_silkicons/page_white_add.png")
+		:SetIcon ("icon16/page_white_add.png")
 		:AddEventListener ("Click",
 			function ()
 				self:CreateEmptyCodeTab ():Select ()
 			end
 		)
 	toolbar:AddButton ("Open")
-		:SetIcon ("gui/g_silkicons/folder_page.png")
+		:SetIcon ("icon16/folder_page.png")
 		:AddEventListener ("Click",
 			function ()
 				VFS.OpenOpenFileDialog ("GCompute.Editor",
@@ -29,14 +29,14 @@ function GCompute.Editor.Toolbar (self)
 			end
 		)
 	toolbar:AddButton ("Save")
-		:SetIcon ("gui/g_silkicons/disk.png")
+		:SetIcon ("icon16/disk.png")
 		:AddEventListener ("Click",
 			function ()
 				self:SaveTab (self:GetSelectedTab ())
 			end
 		)
 	toolbar:AddButton ("Save All")
-		:SetIcon ("gui/g_silkicons/disk_multiple.png")
+		:SetIcon ("icon16/disk_multiple.png")
 		:AddEventListener ("Click",
 			function ()
 				local unsaved = {}
@@ -64,7 +64,7 @@ function GCompute.Editor.Toolbar (self)
 		)
 	toolbar:AddSeparator ()
 	toolbar:AddButton ("Cut")
-		:SetIcon ("gui/g_silkicons/cut.png")
+		:SetIcon ("icon16/cut.png")
 		:SetEnabled (false)
 		:AddEventListener ("Click",
 			function ()
@@ -74,7 +74,7 @@ function GCompute.Editor.Toolbar (self)
 			end
 		)
 	toolbar:AddButton ("Copy")
-		:SetIcon ("gui/g_silkicons/page_white_copy.png")
+		:SetIcon ("icon16/page_white_copy.png")
 		:SetEnabled (false)
 		:AddEventListener ("Click",
 			function ()
@@ -84,7 +84,7 @@ function GCompute.Editor.Toolbar (self)
 			end
 		)
 	toolbar:AddButton ("Paste")
-		:SetIcon ("gui/g_silkicons/paste_plain.png")
+		:SetIcon ("icon16/paste_plain.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -98,7 +98,7 @@ function GCompute.Editor.Toolbar (self)
 	-- They should get registered with an UndoRedoController which will
 	-- register click handlers.
 	toolbar:AddSplitButton ("Undo")
-		:SetIcon ("gui/g_silkicons/arrow_undo.png")
+		:SetIcon ("icon16/arrow_undo.png")
 		:AddEventListener ("DropDownClosed",
 			function (_, dropDownMenu)
 				dropDownMenu:Clear ()
@@ -123,7 +123,7 @@ function GCompute.Editor.Toolbar (self)
 			end
 		)
 	toolbar:AddSplitButton ("Redo")
-		:SetIcon ("gui/g_silkicons/arrow_redo.png")
+		:SetIcon ("icon16/arrow_redo.png")
 		:AddEventListener ("DropDownClosed",
 			function (_, dropDownMenu)
 				dropDownMenu:Clear ()
@@ -149,7 +149,7 @@ function GCompute.Editor.Toolbar (self)
 		)
 	toolbar:AddSeparator ()
 	toolbar:AddButton ("Run Code")
-		:SetIcon ("gui/g_silkicons/resultset_next.png")
+		:SetIcon ("icon16/resultset_next.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -169,7 +169,7 @@ function GCompute.Editor.Toolbar (self)
 		)
 	toolbar:AddSeparator ()
 	toolbar:AddButton ("Namespace Browser")
-		:SetIcon ("gui/g_silkicons/application_side_list.png")
+		:SetIcon ("icon16/application_side_list.png")
 		:AddEventListener ("Click",
 			function ()
 				if not self.RootNamespaceBrowserTab then
@@ -185,7 +185,7 @@ function GCompute.Editor.Toolbar (self)
 		)
 	toolbar:AddSeparator ()
 	toolbar:AddButton ("Reload GCompute")
-		:SetIcon ("gui/g_silkicons/arrow_refresh.png")
+		:SetIcon ("icon16/arrow_refresh.png")
 		:AddEventListener ("Click",
 			function ()
 				RunConsoleCommand ("gcompute_reload")
@@ -194,7 +194,7 @@ function GCompute.Editor.Toolbar (self)
 		)
 	toolbar:AddSeparator ()
 	toolbar:AddButton ("Stress Test")
-		:SetIcon ("gui/g_silkicons/exclamation.png")
+		:SetIcon ("icon16/exclamation.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -234,7 +234,7 @@ A:B:C:D:E:F:G:H:I:J:K:L:M:N:O:P:Q:R:S:T:U:V:W:X:Y:Z:a:b:c:d:e:f:g:h:i:j:k:l:m:n:
 			end
 		)
 	toolbar:AddButton ("Unicode Stress Test")
-		:SetIcon ("gui/g_silkicons/exclamation.png")
+		:SetIcon ("icon16/exclamation.png")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()

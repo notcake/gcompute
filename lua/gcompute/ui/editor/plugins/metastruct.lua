@@ -1,5 +1,7 @@
 local self = GCompute.Editor.Plugins:Create ("Metastruct")
 
+CreateClientConVar ("gcompute_editor_5ever", 1, true, false)
+
 function self:ctor (editor)
 	self.Editor = editor
 	self.TypingCode = false
@@ -17,25 +19,23 @@ function self:ctor (editor)
 	)
 end
 
-if VERSION < 150 then
-	timer.Simple (1,
-		function ()
-			if chatbox then
-				chatbox._ShowChat2Box = chatbox._ShowChat2Box or chatbox.ShowChat2Box
-				function chatbox.ShowChat2Box (tab)
-					pcall (function ()
-						if GCompute and GCompute.Editor and tab == 2 then
-							GCompute.Editor:GetFrame ():SetVisible (true)
-							GCompute.Editor:GetFrame ():MoveToFront ()
-						else
-							chatbox._ShowChat2Box (tab)
-						end
-					end)
-				end
+timer.Simple (1,
+	function ()
+		if chatbox then
+			chatbox._ShowChat2Box = chatbox._ShowChat2Box or chatbox.ShowChat2Box
+			function chatbox.ShowChat2Box (tab)
+				pcall (function ()
+					if GetConVar ("gcompute_editor_5ever"):GetBool () and GCompute and GCompute.Editor and tab == 2 then
+						GCompute.Editor:GetFrame ():SetVisible (true)
+						GCompute.Editor:GetFrame ():MoveToFront ()
+					else
+						chatbox._ShowChat2Box (tab)
+					end
+				end)
 			end
 		end
-	)
-end
+	end
+)
 
 function self:dtor ()
 	self.Editor:RemoveEventListener ("VisibleChanged", "Metastruct")

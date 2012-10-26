@@ -6,6 +6,7 @@ GCompute.Types.Top = nil
 GCompute.Types.Bottom = nil
 
 include ("glib/glib.lua")
+include ("vfs/vfs.lua")
 GLib.Import (GCompute)
 GCompute.EventProvider (GCompute)
 GCompute.AddCSLuaFolderRecursive ("gcompute")
@@ -13,19 +14,11 @@ GCompute.AddCSLuaFolderRecursive ("gcompute")
 GCompute.GlobalNamespace = nil
 
 function GCompute.ClearDebug ()
-	if LMsgConsoleClear then
-		LMsgConsoleClear ()
-	end
 end
 
-function GCompute.PrintDebug (Message)
-	if Message == nil then
-		return
-	end
-	Msg (Message .. "\n")
-	if LMsgConsole ~= nil then
-		LMsgConsole (Message)
-	end
+function GCompute.PrintDebug (message)
+	if message == nil then return end
+	Msg (message .. "\n")
 end
 
 function GCompute.NullCallback () return end

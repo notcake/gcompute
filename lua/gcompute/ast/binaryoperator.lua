@@ -166,8 +166,12 @@ function self:ToString ()
 end
 
 function self:Visit (astVisitor, ...)
-	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
-	self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
+	if self:GetLeftExpression () then
+		self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	end
+	if self:GetRightExpression () then
+		self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
+	end
 	
 	return astVisitor:VisitExpression (self, ...)
 end

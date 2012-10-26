@@ -163,8 +163,17 @@ function GCompute.Editor.Toolbar (self)
 					end
 				)
 				
+				local errorPipe = GCompute.Pipe ()
+				errorPipe:AddEventListener ("Data",
+					function (_, data)
+						local endPos = self.OutputPane:GetDocument ():GetEnd ()
+						self.OutputPane:Append (data)
+						self.OutputPane:GetDocument ():SetColor (GLib.Colors.Red, endPos, self.OutputPane:GetDocument ():GetEnd ())
+					end
+				)
+				
 				self.OutputPane:Clear ()
-				editorHelper:Run (codeEditor, pipe, pipe, pipe, pipe)
+				editorHelper:Run (codeEditor, pipe, errorPipe, pipe, errorPipe)
 			end
 		)
 	toolbar:AddSeparator ()

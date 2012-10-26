@@ -167,14 +167,13 @@ function self:GetText (startLocation, endLocation)
 		startLocation = temp
 	end
 	
-	-- Clamp locations to end of document
-	local documentEndLocation = self:GetEnd ()
-	if endLocation > documentEndLocation then
-		endLocation = documentEndLocation
-	end
-	if startLocation > documentEndLocation then
-		endLocation = documentEndLocation
-	end
+	-- Clamp locations
+	local documentStartLocation = self:GetStart ()
+	local documentEndLocation   = self:GetEnd ()
+	if endLocation   < documentStartLocation then endLocation   = documentStartLocation end
+	if startLocation < documentStartLocation then startLocation = documentStartLocation end
+	if endLocation   > documentEndLocation   then endLocation   = documentEndLocation   end
+	if startLocation > documentEndLocation   then startLocation = documentEndLocation   end
 	
 	local text = ""
 	if startLocation:GetLine () == endLocation:GetLine () then
@@ -279,6 +278,38 @@ function self:InsertWithinLine (location, text)
 	self.InsertionNewLocation:SetLine (location:GetLine ())
 	self.InsertionNewLocation:SetCharacter (location:GetCharacter () + GLib.UTF8.Length (text))
 	self:DispatchEvent ("TextInserted", location, text, self.InsertionNewLocation)
+end
+
+function self:SetColor (color, startLocation, endLocation)
+	if not startLocation then startLocation = self:GetStart () end
+	if not endLocation   then endLocation   = self:GetEnd ()   end
+	if startLocation > endLocation then
+		local temp = endLocation
+		endLocation = startLocation
+		startLocation = temp
+	end
+	
+	-- Clamp locations
+	local documentStartLocation = self:GetStart ()
+	local documentEndLocation   = self:GetEnd ()
+	if endLocation   < documentStartLocation then endLocation   = documentStartLocation end
+	if startLocation < documentStartLocation then startLocation = documentStartLocation end
+	if endLocation   > documentEndLocation   then endLocation   = documentEndLocation   end
+	if startLocation > documentEndLocation   then startLocation = documentEndLocation   end
+	
+	if startLocation:GetLine () == endLocation:GetLine () then
+		-- Single line section
+		self:GetLine (startLocation:GetLine ()):SetColor (color, startLocation:GetCharacter (), endLocation:GetCharacter ())
+	else
+		-- Multiple line section
+		self:GetLine (startLocation:GetLine ()):SetColor (color, startLocation:GetCharacter ())
+		
+		for i = startLocation:GetLine () + 1, endLocation:GetLine () - 1 do
+			self:GetLine (i):SetColor (color)
+		end
+		
+		self:GetLine (endLocation:GetLine ()):SetColor (color, nil, endLocation:GetCharacter ())
+	end
 end
 
 function self:SetText (text)

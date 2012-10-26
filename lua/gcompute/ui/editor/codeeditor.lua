@@ -125,7 +125,7 @@ function PANEL:Init ()
 				self.DocumentLinesUnchecked [i] = true
 			end
 			if SysTime () - startTime > 0 then
-				ErrorNoHalt (string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
+				MsgC (GLib.Colors.Orange, string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
 			end
 			self:UpdateVerticalScrollBar ()
 			
@@ -610,7 +610,7 @@ function PANEL:ReplaceSelectionText (text, pasted)
 	local undoRedoItem = nil
 	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
 		local blockReplacementAction = nil
-	elseif self.Selection:IsSelectionEmpty () then
+	elseif self.Selection:IsEmpty () then
 		local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
 		undoRedoItem = GCompute.Editor.InsertionAction (self, insertionLocation, text)
 	else
@@ -653,7 +653,7 @@ function PANEL:SetText (text)
 	self:UpdateScrollBars ()
 	
 	if SysTime () - startTime > 0 then
-		ErrorNoHalt (string.format ("CodeEditor:SetText took %.5f ms.\n", (SysTime () - startTime) * 1000))
+		MsgC (GLib.Colors.Orange, string.format ("CodeEditor:SetText took %.5f ms.\n", (SysTime () - startTime) * 1000))
 	end
 end
 
@@ -1566,7 +1566,7 @@ function PANEL:TokenApplicationThink ()
 	end
 	
 	if SysTime () - startTime > 0 then
-		ErrorNoHalt (string.format ("CodeEditor:TokenApplicationThink took %.5f ms.\n", (SysTime () - startTime) * 1000))
+		MsgC (GLib.Colors.Orange, string.format ("CodeEditor:TokenApplicationThink took %.5f ms.\n", (SysTime () - startTime) * 1000))
 	end
 end
 

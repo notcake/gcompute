@@ -115,6 +115,10 @@ function self:Visit (astVisitor, ...)
 	local astOverride = astVisitor:VisitStatement (self, ...)
 	if astOverride then return astOverride:Visit (astVisitor, ...) or astOverride end
 	
-	self:SetCondition (self:GetCondition ():Visit (astVisitor, ...) or self:GetCondition ())
-	self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
+	if self:GetCondition () then
+		self:SetCondition (self:GetCondition ():Visit (astVisitor, ...) or self:GetCondition ())
+	end
+	if self:GetBody () then
+		self:SetBody (self:GetBody ():Visit (astVisitor, ...) or self:GetBody ())
+	end
 end

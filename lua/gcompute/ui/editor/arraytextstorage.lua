@@ -180,6 +180,8 @@ end
 
 function self:GetSegmentColumnCount (segmentIndex, textRenderer)
 	local segment = self.Segments [segmentIndex]
+	if not segment then return 0 end
+	
 	if not segment.ColumnCountValid or
 	   segment.ColumnCountRevision ~= self.ColumnCountRevision or
 	   segment.ColumnCountValidityHash ~= textRenderer:GetStateHash () then

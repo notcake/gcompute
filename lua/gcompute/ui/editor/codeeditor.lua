@@ -608,7 +608,9 @@ end
 
 function PANEL:ReplaceSelectionText (text, pasted)
 	local undoRedoItem = nil
-	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Block and self.Selection:IsMultiline () then
+	
+	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Block and
+	   self.Selection:IsMultiline () then
 		undoRedoItem = GCompute.Editor.BlockReplacementAction (self, self:CreateSelectionSnapshot (), text)
 	elseif self.Selection:IsEmpty () then
 		local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
@@ -1069,20 +1071,35 @@ end
 function PANEL:CopySelection ()
 	if self.Selection:IsEmpty () then return end
 	
-	local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
-	local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
+	local text
+	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
+		local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
+		local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
+		
+		text = self.Document:GetText (selectionStart, selectionEnd)
+	else
+		local lines = {}
+		local line
+		for lineNumber, startColumn, endColumn in self.Selection:GetSpanEnumerator () do
+			line = self.Document:GetLine (lineNumber)
+			lines [#lines + 1] = line:Sub (
+				line:ColumnToCharacter (startColumn, self.TextRenderer) + 1,
+				line:ColumnToCharacter (endColumn,   self.TextRenderer)
+			)
+		end
+		text = table.concat (lines, "\n")
+	end
+	Gooey.Clipboard:SetText (text)
 	
-	Gooey.Clipboard:SetText (self.Document:GetText (selectionStart, selectionEnd))
+	return text
 end
 
 function PANEL:CutSelection ()
 	if self.Selection:IsEmpty () then return end
 	
+	local text = self:CopySelection ()
 	local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
 	local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
-	
-	local text = self.Document:GetText (selectionStart, selectionEnd)
-	Gooey.Clipboard:SetText (text)
 	
 	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStart, selectionEnd, selectionStart, selectionEnd, text)
 	deletionAction:SetVerb ("cut")
@@ -1374,6 +1391,8 @@ function PANEL:OnKeyCodeTyped (keyCode)
 		end
 	elseif keyCode == KEY_ENTER then
 		if not self:IsReadOnly () then
+			self.Selection:Flatten ()
+			
 			local replacementLocation = self.Selection:GetSelectionEndPoints ()
 			replacementLocation = self.Document:ColumnToCharacter (replacementLocation, self.TextRenderer)
 			self:ReplaceSelectionText ("\n" .. self.EditorHelper:GetNewLineIndentation (self, replacementLocation))

@@ -16,6 +16,15 @@ function self:Redo ()
 	local deletionStart = GCompute.Editor.LineCharacterLocation ()
 	local deletionEnd   = GCompute.Editor.LineCharacterLocation ()
 	
+	local text = {}
+	if self.Text:find ("\n") then
+		local lines = self.Text:Split ("\n")
+		local startLine, endLine = self.SelectionSnapshot:GetSelectionLineSpan ()
+		for i = startLine, endLine do
+			text [i] = lines [i - startLine + 1] and lines [i - startLine + 1]:gsub ("\r", "") or ""
+		end
+	end
+	
 	local line
 	local startCharacter
 	local endCharacter
@@ -38,19 +47,20 @@ function self:Redo ()
 			self.OriginalTexts [lineNumber] = nil
 		end
 		
-		endCharacter = self.CodeEditor.Document:InsertWithinLine (deletionStart, self.Text):GetCharacter ()
+		endCharacter = self.CodeEditor.Document:InsertWithinLine (deletionStart, text [lineNumber] or self.Text):GetCharacter ()
 		self.FinalEndCharacters [lineNumber] = endCharacter
 	end
 	
+	self.CodeEditor:SetSelectionMode (self.SelectionSnapshot:GetSelectionMode ())
 	self.CodeEditor:SetSelectionStart (
 		GCompute.Editor.LineColumnLocation (
-			self.CodeEditor:GetSelectionStart ():GetLine (),
+			self.SelectionSnapshot:GetSelectionStart ():GetLine (),
 			line:CharacterToColumn (endCharacter, self.CodeEditor:GetTextRenderer ())
 		)
 	)
 	self.CodeEditor:SetSelectionEnd (
 		GCompute.Editor.LineColumnLocation (
-			self.CodeEditor:GetSelectionEnd ():GetLine (),
+			self.SelectionSnapshot:GetSelectionEnd ():GetLine (),
 			line:CharacterToColumn (endCharacter, self.CodeEditor:GetTextRenderer ())
 		)
 	)

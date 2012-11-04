@@ -32,6 +32,25 @@ function self:CopyFrom (textSelection)
 	self:DispatchEvent ("SelectionChanged")
 end
 
+function self:Flatten ()
+	if self:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
+		self:SetSelectionMode (GCompute.Editor.SelectionMode.Regular)
+		self:SetSelectionStart (
+			GCompute.Editor.LineColumnLocation (
+				self.SelectionEnd:GetLine (),
+				self.Editor:FixupColumn (self.SelectionEnd:GetLine (), self.SelectionStart:GetColumn ())
+			)
+		)
+	end
+end
+
+function self:GetLineSpan ()
+	if self.SelectionStart > self.SelectionEnd then
+		return self.SelectionEnd:GetLine (), self.SelectionStart:GetLine ()
+	end
+	return self.SelectionStart:GetLine (), self.SelectionEnd:GetLine ()
+end
+
 function self:GetSpan (line)
 	local spanLine, spanStart, spanEnd = self:GetSpanEnumerator (line) ()
 	if spanLine ~= line then return nil, nil end

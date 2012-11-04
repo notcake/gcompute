@@ -31,6 +31,10 @@ function self:GetSelectionEnumerator ()
 	return self.Selection:GetSpanEnumerator ()
 end
 
+function self:GetSelectionLineSpan ()
+	return self.Selection:GetLineSpan ()
+end
+
 function self:GetSelectionMode ()
 	return self.Selection:GetSelectionMode ()
 end

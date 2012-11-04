@@ -124,7 +124,7 @@ end
 function self:GetEnd ()
 	local endLocation = GCompute.Editor.LineCharacterLocation ()
 	endLocation:SetLine (self:GetLineCount () - 1)
-	endLocation:SetCharacter (self:GetLine (self:GetLineCount () - 1):LengthIncludingLineBreak ())
+	endLocation:SetCharacter (self:GetLine (self:GetLineCount () - 1):GetLengthIncludingLineBreak ())
 	return endLocation
 end
 
@@ -152,6 +152,71 @@ function self:GetLineNumber (line)
 		if self.Lines [i] == line then return i - 1 end
 	end
 	return nil
+end
+
+function self:GetNextWordBoundary (lineCharacterLocation)
+	local lineNumber = lineCharacterLocation:GetLine ()
+	local character  = lineCharacterLocation:GetCharacter ()
+	
+	local text = self:GetLine (lineNumber):GetText ()
+	local offset = GLib.UTF8.CharacterToOffset (text, character + 1)
+	
+	local wordBoundaryOffset = offset
+	local leftWordType
+	local rightWordType
+	wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.NextWordBoundary (text, wordBoundaryOffset)
+	
+	if leftWordType == GLib.WordType.None or leftWordType == GLib.WordType.LineBreak then
+		if lineNumber + 1 < self:GetLineCount () then
+			lineNumber = lineNumber + 1
+			character = 0
+		end
+	else
+		while rightWordType == GLib.WordType.Whitespace do
+			wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.NextWordBoundary (text, wordBoundaryOffset)
+		end
+		character = character + GLib.UTF8.Length (text:sub (offset, wordBoundaryOffset - 1))
+	end
+	
+	return GCompute.Editor.LineCharacterLocation (lineNumber, character)
+end
+
+function self:GetPreviousWordBoundary (lineCharacterLocation)
+	local lineNumber = lineCharacterLocation:GetLine ()
+	local character  = lineCharacterLocation:GetCharacter ()
+	
+	local text = self:GetLine (lineNumber):GetText ()
+	local offset = GLib.UTF8.CharacterToOffset (text, character + 1)
+	
+	local wordBoundaryOffset = offset
+	local leftWordType
+	local rightWordType
+	wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.PreviousWordBoundary (text, wordBoundaryOffset)
+	
+	if rightWordType == GLib.WordType.None then
+		if lineNumber > 0 then
+			lineNumber = lineNumber - 1
+			character = self:GetLine (lineNumber):GetLengthExcludingLineBreak ()
+		end
+	else
+		while rightWordType == GLib.WordType.Whitespace do
+			if leftWordType == GLib.WordType.None then break end
+			wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.PreviousWordBoundary (text, wordBoundaryOffset)
+		end
+		
+		if leftWordType == GLib.WordType.None and rightWordType == GLib.WordType.Whitespace then
+			if lineNumber == 0 then
+				character = 0
+			else
+				lineNumber = lineNumber - 1
+				character = self:GetLine (lineNumber):GetLengthExcludingLineBreak ()
+			end
+		else
+			character = character - GLib.UTF8.Length (text:sub (wordBoundaryOffset, offset - 1))
+		end
+	end
+	
+	return GCompute.Editor.LineCharacterLocation (lineNumber, character)
 end
 
 function self:GetStart ()
@@ -278,6 +343,8 @@ function self:InsertWithinLine (location, text)
 	self.InsertionNewLocation:SetLine (location:GetLine ())
 	self.InsertionNewLocation:SetCharacter (location:GetCharacter () + GLib.UTF8.Length (text))
 	self:DispatchEvent ("TextInserted", location, text, self.InsertionNewLocation)
+	
+	return self.InsertionNewLocation
 end
 
 function self:SetColor (color, startLocation, endLocation)

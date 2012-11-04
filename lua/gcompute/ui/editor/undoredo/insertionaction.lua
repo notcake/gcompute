@@ -21,6 +21,16 @@ function self:Redo ()
 	self.CodeEditor:ScrollToCaret ()
 end
 
+function self:SetFinalLocation (finalLocation)
+	self.FinalLocation:CopyFrom (finalLocation)
+end
+
+function self:SetText (text)
+	self.Text = text
+	
+	self:SetDescription (verb .. " \"" .. GLib.String.Escape (GLib.UTF8.Sub (self.Text, 1, 32)) .. "\"")
+end
+
 function self:SetVerb (verb)
 	verb = verb or "insert"
 	

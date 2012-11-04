@@ -23,6 +23,14 @@ function self:GetSelectionEnd ()
 	return self.Selection:GetSelectionEnd ()
 end
 
+function self:GetSelectionEndPoints ()
+	return self.Selection:GetSelectionEndPoints ()
+end
+
+function self:GetSelectionEnumerator ()
+	return self.Selection:GetSpanEnumerator ()
+end
+
 function self:GetSelectionMode ()
 	return self.Selection:GetSelectionMode ()
 end

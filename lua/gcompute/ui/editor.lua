@@ -7,6 +7,7 @@ GCompute.IncludeDirectory ("gcompute/ui/editor/plugins")
 include ("editor/undoredo/undoredostack.lua")
 include ("editor/undoredo/undoredoitem.lua")
 
+include ("editor/undoredo/blockreplacementaction.lua")
 include ("editor/undoredo/deletionaction.lua")
 include ("editor/undoredo/insertionaction.lua")
 include ("editor/undoredo/replacementaction.lua")

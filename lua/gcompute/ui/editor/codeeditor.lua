@@ -608,8 +608,8 @@ end
 
 function PANEL:ReplaceSelectionText (text, pasted)
 	local undoRedoItem = nil
-	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Block then
-		local blockReplacementAction = nil
+	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Block and self.Selection:IsMultiline () then
+		undoRedoItem = GCompute.Editor.BlockReplacementAction (self, self:CreateSelectionSnapshot (), text)
 	elseif self.Selection:IsEmpty () then
 		local insertionLocation = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
 		undoRedoItem = GCompute.Editor.InsertionAction (self, insertionLocation, text)
@@ -700,36 +700,9 @@ function PANEL:MoveCaretLeft (toWordBoundary, overrideSelectionStart)
 		local character = line:CharacterFromColumn (column, self.TextRenderer)
 		
 		if toWordBoundary then
-			local text = line:GetText ()
-			local offset = GLib.UTF8.CharacterToOffset (text, character + 1)
-			
-			local wordBoundaryOffset = offset
-			local leftWordType
-			local rightWordType
-			wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.PreviousWordBoundary (text, wordBoundaryOffset)
-			
-			if rightWordType == GLib.WordType.None then
-				if lineNumber > 0 then
-					lineNumber = lineNumber - 1
-					column = self.Document:GetLine (lineNumber):GetColumnCount (self.TextRenderer)
-				end
-			else
-				while rightWordType == GLib.WordType.Whitespace do
-					if leftWordType == GLib.WordType.None then break end
-					wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.PreviousWordBoundary (text, wordBoundaryOffset)
-				end
-				
-				if leftWordType == GLib.WordType.None and rightWordType == GLib.WordType.Whitespace then
-					if lineNumber == 0 then
-						column = 0
-					else
-						lineNumber = lineNumber - 1
-						column = self.Document:GetLine (lineNumber):GetColumnCount (self.TextRenderer)
-					end
-				else
-					column = line:CharacterToColumn (character - GLib.UTF8.Length (text:sub (wordBoundaryOffset, offset - 1)), self.TextRenderer)
-				end
-			end
+			local newLocation = self.Document:CharacterToColumn (self.Document:GetPreviousWordBoundary (GCompute.Editor.LineCharacterLocation (lineNumber, character)), self.TextRenderer)
+			lineNumber = newLocation:GetLine ()
+			column     = newLocation:GetColumn ()
 		else
 			column = self.TextRenderer:GetStringColumnCount (line:Sub (1, character - 1), 0)
 		end
@@ -763,25 +736,9 @@ function PANEL:MoveCaretRight (toWordBoundary, overrideSelectionStart)
 		local character = line:CharacterFromColumn (column, self.TextRenderer)
 		
 		if toWordBoundary then
-			local text = line:GetText ()
-			local offset = GLib.UTF8.CharacterToOffset (text, character + 1)
-			
-			local wordBoundaryOffset = offset
-			local leftWordType
-			local rightWordType
-			wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.NextWordBoundary (text, wordBoundaryOffset)
-			
-			if leftWordType == GLib.WordType.None or leftWordType == GLib.WordType.LineBreak then
-				if lineNumber + 1 < self.Document:GetLineCount () then
-					lineNumber = lineNumber + 1
-					column = 0
-				end
-			else
-				while rightWordType == GLib.WordType.Whitespace do
-					wordBoundaryOffset, leftWordType, rightWordType = GLib.UTF8.NextWordBoundary (text, wordBoundaryOffset)
-				end
-				column = line:CharacterToColumn (character + GLib.UTF8.Length (text:sub (offset, wordBoundaryOffset - 1)), self.TextRenderer)
-			end
+			local newLocation = self.Document:CharacterToColumn (self.Document:GetNextWordBoundary (GCompute.Editor.LineCharacterLocation (lineNumber, character)), self.TextRenderer)
+			lineNumber = newLocation:GetLine ()
+			column     = newLocation:GetColumn ()
 		else
 			column = column + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), column)
 		end

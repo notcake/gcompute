@@ -47,6 +47,14 @@ function self:GetColumnCount (textRenderer)
 	return self:GetTextStorage ():GetColumnCount (textRenderer)
 end
 
+function self:GetLengthIncludingLineBreak ()
+	return self:GetTextStorage ():GetLengthIncludingLineBreak ()
+end
+
+function self:GetLengthExcludingLineBreak ()
+	return self:GetTextStorage ():GetLengthExcludingLineBreak ()
+end
+
 --- Returns the line number of this Line. Runs in linear time.
 -- @return This Line's line number
 function self:GetLineNumber ()
@@ -71,14 +79,6 @@ end
 -- Should only be called by Document member functions
 function self:Insert (character, text)
 	self:GetTextStorage ():Insert (character, text)
-end
-
-function self:LengthIncludingLineBreak ()
-	return self:GetTextStorage ():GetLengthIncludingLineBreak ()
-end
-
-function self:LengthExcludingLineBreak ()
-	return self:GetTextStorage ():GetLengthExcludingLineBreak ()
 end
 
 -- The given line should be discarded after MergeAppend is called

@@ -25,6 +25,7 @@ end
 
 function self:CopyFrom (textSelection)
 	if not textSelection then return end
+	self.Editor = textSelection.Editor
 	self.SelectionMode = textSelection.SelectionMode
 	self.SelectionStart:CopyFrom (textSelection.SelectionStart)
 	self.SelectionEnd:CopyFrom (textSelection.SelectionEnd)
@@ -120,6 +121,10 @@ end
 
 function self:IsMultiline ()
 	return self.SelectionStart:GetLine () ~= self.SelectionEnd:GetLine ()
+end
+
+function self:IsSingleLine ()
+	return self.SelectionStart:GetLine () == self.SelectionEnd:GetLine ()
 end
 
 function self:SetSelection (selectionStart, selectionEnd)

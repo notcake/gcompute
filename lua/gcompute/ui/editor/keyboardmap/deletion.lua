@@ -17,9 +17,13 @@ GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 				-- merge the current line with the previous one
 				deletionStart = GCompute.Editor.LineCharacterLocation ()
 				deletionStart:SetLine (self.CaretLocation:GetLine () - 1)
-				deletionStart:SetCharacter (self.Document:GetLine (deletionStart:GetLine ()):LengthExcludingLineBreak ())
+				deletionStart:SetCharacter (self.Document:GetLine (deletionStart:GetLine ()):GetLengthExcludingLineBreak ())
 				deletionEnd = GCompute.Editor.LineCharacterLocation (deletionStart)
 				deletionEnd:SetCharacter (deletionEnd:GetCharacter () + 1)
+			elseif ctrl then
+				-- Erase the previous word
+				deletionStart = self.Document:GetPreviousWordBoundary (self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer))
+				deletionEnd   = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
 			else
 				-- Erase the previous character
 				deletionStart = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
@@ -31,6 +35,10 @@ GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 				-- Selection deletion
 				deletionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
 				deletionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
+			elseif ctrl then
+				-- Erase the previous word
+				deletionStart = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
+				deletionEnd   = self.Document:GetNextWordBoundary (self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer))
 			else
 				-- Erase the next character
 				deletionStart = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)

@@ -100,7 +100,7 @@ function self:ShouldOutdent (codeEditor, location)
 	local line = codeEditor:GetDocument ():GetLine (location:GetLine ())
 	local beforeCaret = " " .. line:Sub (1, location:GetCharacter ())
 	
-	if location:GetCharacter () < line:LengthExcludingLineBreak () then return false end
+	if location:GetCharacter () < line:GetLengthExcludingLineBreak () then return false end
 	
 	if beforeCaret:match ("[^_a-zA-Z0-9]if[^_a-zA-Z0-9].*[^_a-zA-Z0-9]end$") then
 	elseif beforeCaret:sub (-4, -1):match ("[^_a-zA-Z0-9]end$") then

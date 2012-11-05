@@ -5,6 +5,8 @@ GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 		local deletionStart = nil
 		local deletionEnd = nil
 		
+		-- TODO: Block cutting support
+		
 		if key == KEY_BACKSPACE then
 			if not self:IsSelectionEmpty () then
 				-- Selection deletion

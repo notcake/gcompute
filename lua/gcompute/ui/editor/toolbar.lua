@@ -156,23 +156,38 @@ function GCompute.Editor.Toolbar (self)
 				local editorHelper = codeEditor and codeEditor:GetEditorHelper ()
 				if not editorHelper then return end
 				
+				local outputPaneCleared = false
+				
 				local pipe = GCompute.Pipe ()
 				pipe:AddEventListener ("Data",
-					function (_, data)
+					function (_, data, color)
+						if not outputPaneCleared then
+							self.OutputPane:Clear ()
+							outputPaneCleared = true
+						end
+						
+						local endPos = self.OutputPane:GetDocument ():GetEnd ()
 						self.OutputPane:Append (data)
+						if color then
+							self.OutputPane:GetDocument ():SetColor (color, endPos, self.OutputPane:GetDocument ():GetEnd ())
+						end
 					end
 				)
 				
 				local errorPipe = GCompute.Pipe ()
 				errorPipe:AddEventListener ("Data",
-					function (_, data)
+					function (_, data, color)
+						if not outputPaneCleared then
+							self.OutputPane:Clear ()
+							outputPaneCleared = true
+						end
+						
 						local endPos = self.OutputPane:GetDocument ():GetEnd ()
 						self.OutputPane:Append (data)
-						self.OutputPane:GetDocument ():SetColor (GLib.Colors.Red, endPos, self.OutputPane:GetDocument ():GetEnd ())
+						self.OutputPane:GetDocument ():SetColor (color or GLib.Colors.IndianRed, endPos, self.OutputPane:GetDocument ():GetEnd ())
 					end
 				)
 				
-				self.OutputPane:Clear ()
 				editorHelper:Run (codeEditor, pipe, errorPipe, pipe, errorPipe)
 			end
 		)

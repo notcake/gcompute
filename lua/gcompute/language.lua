@@ -20,6 +20,12 @@ function self:ctor (name)
 	self.Passes = {}
 end
 
+function self:dtor ()
+	if self.EditorHelper then
+		self.EditorHelper:dtor ()
+	end
+end
+
 function self:GetName ()
 	return self.Name
 end

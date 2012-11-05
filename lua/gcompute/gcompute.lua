@@ -38,6 +38,8 @@ include ("containers.lua")
 -- pipes
 include ("pipe.lua")
 
+include ("epoe.lua")
+
 -- compiler
 include ("astnode.lua")
 include ("ast.lua")

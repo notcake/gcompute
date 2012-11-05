@@ -1,5 +1,20 @@
 local self = EditorHelper
 
+function self:ctor ()
+	self.LastStdOut = nil
+	self.LastStdErr = nil
+	
+	GCompute.EPOE:AddEventListener ("LineReceived", tostring (self),
+		function (_, lineData)
+			self:ProcessEPOELine (lineData)
+		end
+	)
+end
+
+function self:dtor ()
+	GCompute.EPOE:RemoveEventListener ("LineReceived", tostring (self))
+end
+
 function self:GetNewLineIndentation (codeEditor, location)
 	local line = codeEditor:GetDocument ():GetLine (location:GetLine ())
 	local baseIndentation = string.match (line:GetText (), "^[ \t]*")
@@ -37,12 +52,17 @@ function self:GetNewLineIndentation (codeEditor, location)
 end
 
 function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
+	self.LastStdOut = stdOut
+	self.LastStdErr = stdErr
+	PrintTable (EPOE)
+	
 	local menu = vgui.Create ("GMenu")
 	local playerMenu = vgui.Create ("GMenu")
 	menu:AddOption ("Run on self")
 		:SetIcon ("icon16/user_go.png")
 		:AddEventListener ("Click",
 			function ()
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				RunStringEx (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId ())
 			end
 		)
@@ -50,6 +70,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:SetIcon ("icon16/server_go.png")
 		:AddEventListener ("Click",
 			function ()
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnServer (codeEditor:GetText ())
 			end
 		)
@@ -60,6 +81,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:SetIcon ("icon16/group_go.png")
 		:AddEventListener ("Click",
 			function ()
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnClients (codeEditor:GetText ())
 			end
 		)
@@ -67,6 +89,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:SetIcon ("icon16/world_go.png")
 		:AddEventListener ("Click",
 			function ()
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnShared (codeEditor:GetText ())
 			end
 		)
@@ -88,6 +111,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			:SetIcon (v:IsAdmin () and "icon16/shield_go.png" or "icon16/user_go.png")
 			:AddEventListener ("Click",
 				function ()
+					if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 					luadev.RunOnClient (codeEditor:GetText (), nil, v)
 				end
 			)
@@ -118,4 +142,27 @@ function self:ShouldOutdent (codeEditor, location)
 	end
 	
 	return false
+end
+
+-- Internal, do not call
+function self:ProcessEPOELine (lineData)
+	if not self.LastStdErr then return end
+	
+	local localSteamId = LocalPlayer ():SteamID ():sub (string.len ("STEAM_") + 1)
+	if lineData.Text:find (localSteamId) then
+		for _, segmentData in ipairs (lineData) do
+			self.LastStdErr:WriteColor (segmentData.Text, segmentData.Color)
+		end
+		self.LastStdErr:WriteLine ("")
+	end
+end
+
+function self:ValidateCode (code, sourceId, stdOut, stdErr)
+	local f = CompileString (code, sourceId, false)
+	if type (f) == "string" then
+		stdErr:WriteLine (f)
+		return false
+	end
+	
+	return true
 end

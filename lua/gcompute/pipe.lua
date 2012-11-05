@@ -7,8 +7,8 @@ end
 
 function self:Chain (pipe)
 	pipe:AddEventListener ("Data", tostring (self),
-		function (_, data)
-			self:DispatchEvent ("Data", data)
+		function (_, data, color)
+			self:DispatchEvent ("Data", data, color)
 		end
 	)
 end
@@ -18,9 +18,16 @@ function self:Unchain (pipe)
 end
 
 function self:Write (data)
-	self:DispatchEvent ("Data", data)
+	data = data or ""
+	self:DispatchEvent ("Data", data, nil)
+end
+
+function self:WriteColor (data, color)
+	data = data or ""
+	self:DispatchEvent ("Data", data, color)
 end
 
 function self:WriteLine (data)
-	self:DispatchEvent ("Data", data .. "\n")
+	data = data or ""
+	self:DispatchEvent ("Data", data .. "\n", nil)
 end

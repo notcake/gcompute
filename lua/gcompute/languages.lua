@@ -1,6 +1,4 @@
-if not GCompute.Languages then
-	GCompute.Languages = {}
-end
+GCompute.Languages = GCompute.Languages or {}
 local Languages = GCompute.Languages
 Languages.Languages = {}
 

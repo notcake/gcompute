@@ -128,6 +128,12 @@ include ("metadata/usingdirective.lua")
 
 include ("metadata/mergedlocalscope.lua")
 
+-- lua
+GCompute.Lua = {}
+include ("metadata/lua/table.lua")
+include ("metadata/lua/function.lua")
+include ("metadata/lua/variable.lua")
+
 include ("reflection/memberinfo.lua")
 include ("reflection/membertypes.lua")
 

@@ -375,7 +375,7 @@ function self:LoadTabs (callback)
 				end
 			)
 		elseif contentType == "NamespaceBrowser" then
-			self:CreateNamespaceBrowserTab ()
+			self:CreateNamespaceBrowserTab (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
 			finishedTabs = finishedTabs + 1
 			tabCount = tabCount + 1
 		end

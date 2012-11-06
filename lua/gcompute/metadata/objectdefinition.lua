@@ -32,6 +32,10 @@ function self:GetContainingNamespace ()
 	return self.ContainingNamespace
 end
 
+function self:GetDisplayText ()
+	return self:GetName ()
+end
+
 --- Gets the location of this object
 -- @return The location of this object
 function self:GetFullName ()
@@ -81,6 +85,10 @@ end
 -- @return A boolean indicating whether this object is inaccessible from code in other files
 function self:IsFileStatic ()
 	return self.FileStatic
+end
+
+function self:IsFunction ()
+	return false
 end
 
 --- Gets whether this local object's state is preserved between function calls

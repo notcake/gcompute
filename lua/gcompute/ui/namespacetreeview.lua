@@ -31,6 +31,9 @@ function self.ItemComparator (a, b)
 	if defA:IsTypeDefinition () and not defB:IsTypeDefinition () then return true end
 	if defB:IsTypeDefinition () and not defA:IsTypeDefinition () then return false end
 	
+	if defA:IsFunction () and not defB:IsFunction () then return true end
+	if defB:IsFunction () and not defA:IsFunction () then return false end
+	
 	return a:GetText () < b:GetText ()
 end
 
@@ -44,6 +47,7 @@ function self:Populate (objectDefinition, treeViewNode)
 			local childNode = treeViewNode:AddNode (name)
 			childNode.Definition = definition
 			childNode.Metadata = metadata
+			childNode:SetText (definition:GetDisplayText ())
 			
 			if definition:IsNamespace () then
 				childNode:SetIcon ("gui/codeicons/namespace")
@@ -51,6 +55,8 @@ function self:Populate (objectDefinition, treeViewNode)
 				childNode:SetIcon ("gui/codeicons/field")
 			elseif definition:IsAlias () then
 				childNode:SetIcon ("icon16/link_go.png")
+			elseif definition:IsFunction () then
+				childNode:SetIcon ("gui/codeicons/method")
 			else
 				childNode:SetIcon ("icon16/exclamation.png")
 			end
@@ -67,7 +73,7 @@ function self:PopulateOverloadedFunctionDefinition (overloadedFunctionDefinition
 		childNode.Definition = definition
 		childNode.Metadata = metadata
 		
-		childNode:SetText (definition:ToString ())
+		childNode:SetText (definition:GetDisplayText ())
 		childNode:SetIcon ("gui/codeicons/method")
 	end
 end
@@ -78,6 +84,7 @@ function self:PopulateOverloadedTypeDefinition (overloadedTypeDefinition, treeVi
 		childNode.Definition = definition
 		childNode.Metadata = metadata
 		
+		childNode:SetText (definition:GetDisplayText ())
 		childNode:SetIcon (definition:GetTypeParameterList ():GetParameterCount () > 0 and "gui/codeicons/parametrictype" or "gui/codeicons/class")
 		childNode:SetExpandable (not definition:IsEmpty ())
 	end

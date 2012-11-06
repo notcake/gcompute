@@ -136,6 +136,10 @@ function self:GetTypeParameterList ()
 	return self.TypeParameterList
 end
 
+function self:IsFunction ()
+	return true
+end
+
 --- Gets whether this function is a member function
 -- @return A boolean indicating whether this function is a member function
 function self:IsMemberFunction ()

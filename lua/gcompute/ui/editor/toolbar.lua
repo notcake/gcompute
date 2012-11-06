@@ -197,7 +197,7 @@ function GCompute.Editor.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				if not self.RootNamespaceBrowserTab then
-					self.RootNamespaceBrowserTab = self:CreateNamespaceBrowserTab (GCompute.GlobalNamespace)
+					self.RootNamespaceBrowserTab = self:CreateNamespaceBrowserTab (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
 					self.RootNamespaceBrowserTab:AddEventListener ("Removed",
 						function ()
 							self.RootNamespaceBrowserTab = nil

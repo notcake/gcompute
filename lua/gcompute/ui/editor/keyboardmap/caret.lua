@@ -15,6 +15,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_RIGHT,
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_UP,
 	function (self, key, ctrl, shift, alt)
 		if ctrl then
+			if shift then return false end
 			self:ScrollRelative (-1)
 		else
 			self:MoveCaretUp (not shift)
@@ -26,6 +27,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_UP,
 GCompute.Editor.CodeEditorKeyboardMap:Register (KEY_DOWN,
 	function (self, key, ctrl, shift, alt)
 		if ctrl then
+			if shift then return false end
 			self:ScrollRelative (1)
 		else
 			self:MoveCaretDown (not shift)

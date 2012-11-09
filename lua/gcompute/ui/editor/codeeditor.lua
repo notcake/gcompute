@@ -12,8 +12,8 @@ surface.CreateFont (
 	Events:
 		CaretMoved (LineColumnLocation caretLocation)
 			Fired when the caret has moved.
-		FileChanged (oldFile, newFile)
-			Fired when this document's file has changed.
+		DocumentChanged (Document oldDocument, Document newDocument)
+			Fired when this editor's document has changed.
 		LanguageChanged (Language oldLanguage, Language newLanguage)
 			Fired when this document's language has changed.
 		LexerFinished (Lexer lexer)
@@ -22,8 +22,6 @@ surface.CreateFont (
 			Fired when the lexer has processed some data.
 		LexerStarted (Lexer lexer)
 			Fired when the lexing process for this document has started.
-		PathChanged (oldPath, path)
-			Fired when this document's path has changed.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
 			Fired when the selection has changed.
 		SourceFileChanged (SourceFile oldSourceFile, SourceFile sourceFile)
@@ -69,72 +67,11 @@ function PANEL:Init ()
 	self.ContextMenu = nil
 	
 	-- Data
-	self.DefaultContents = false
-	self.File = nil
-	self.Path = ""
-	
 	self.ReadOnly = false
-	self.Document = GCompute.Editor.Document ()
-	self.Document:AddEventListener ("TextCleared",
-		function (_)
-			self:SetMaximumColumnCount (1)
-			
-			self.DocumentChangeUnhandled = true
-			self.DocumentLinesUnchecked = {}
-			self:UpdateVerticalScrollBar ()
-			
-			self:DispatchEvent ("TextChanged")
-		end
-	)
-	self.Document:AddEventListener ("TextDeleted",
-		function (_, startLocation, endLocation)
-			self.DocumentChangeUnhandled = true
-			
-			local deletionStartLine = startLocation:GetLine ()
-			local deletionEndLine = endLocation:GetLine ()
-			if deletionStartLine ~= deletionEndLine then
-				local maximumColumnCount = 0
-				while next (self.DocumentLinesUnchecked) do
-					local line = next (self.DocumentLinesUnchecked)
-					self.DocumentLinesUnchecked [line] = nil
-					
-					if line < deletionStartLine or line > deletionEndLine then
-						if line > deletionEndLine then line = line - deletionEndLine + deletionStartLine end
-						
-						if self.Document:GetLine (line) then
-							maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (line):GetColumnCount (self.TextRenderer) + 1)
-						end
-					end
-				end
-				self:UpdateMaximumColumnCount (maximumColumnCount)
-			end
-			
-			self.DocumentLinesUnchecked [startLocation:GetLine ()] = true
-			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
-			self:UpdateVerticalScrollBar ()
-			
-			self:DispatchEvent ("TextChanged")
-		end
-	)
-	self.Document:AddEventListener ("TextInserted",
-		function (_, location, text, newLocation)
-			self.DocumentChangeUnhandled = true
-			
-			local startTime = SysTime ()
-			for i = location:GetLine (), newLocation:GetLine () do
-				self.DocumentLinesUnchecked [i] = true
-			end
-			if SysTime () - startTime > 0 then
-				MsgC (GLib.Colors.Orange, string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
-			end
-			self:UpdateVerticalScrollBar ()
-			
-			self:DispatchEvent ("TextChanged")
-		end
-	)
-	
+	self.Document = nil
 	self.DocumentChangeUnhandled = false
 	self.DocumentLinesUnchecked = {}
+	self:SetDocument (GCompute.Editor.CodeDocument ())
 	
 	-- Caret
 	self.CaretLocation = GCompute.Editor.LineColumnLocation ()
@@ -168,9 +105,6 @@ function PANEL:Init ()
 	self.ViewLocation = GCompute.Editor.LineColumnLocation ()
 	
 	self.LineNumbersVisible = true
-	
-	-- Editing
-	self.UndoRedoStack = GCompute.UndoRedoStack ()
 	
 	-- Compiler
 	self.CompilationEnabled = true
@@ -497,55 +431,20 @@ function PANEL:GetDocument ()
 	return self.Document
 end
 
-function PANEL:GetFile ()
-	return self.File
-end
-
-function PANEL:GetPath ()
-	return self.Path
-end
-
-function PANEL:HasFile ()
-	return self.File and true or false
-end
-
-function PANEL:HasPath ()
-	return self.Path and self.Path ~= "" or false
-end
-
-function PANEL:IsDefaultContents ()
-	return self.DefaultContents
-end
-
 function PANEL:IsReadOnly ()
 	return self.ReadOnly
 end
 
-function PANEL:SetDefaultContents (defaultContents)
-	self.DefaultContents = defaultContents
-	self.UndoRedoStack:SetSavableAtStart (defaultContents)
-end
-
-function PANEL:SetFile (file)
-	if self.File == file then return end
+function PANEL:SetDocument (document)
+	if self.Document == document then return end
 	
-	local oldFile = self.File
-	local oldPath = self.Path
-	self.File = file
-	self.Path = file and file:GetPath () or ""
+	local oldDocument = self.Document
+	self.Document = document
 	
-	if self.Path == "" then
-		-- If our source file is not an unnamed one, create a new unnamed SourceFile
-		if self.SourceFile:HasPath () then
-			self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
-		end
-	else
-		self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (self.Path))
-		self:SetDefaultContents (false)
-	end
+	self:UnhookDocument (oldDocument)
+	self:HookDocument (self.Document)
 	
-	self:DispatchEvent ("FileChanged", oldFile, self.File)
-	self:DispatchEvent ("PathChanged", oldPath, self.Path)
+	self:DispatchEvent ("DocumentChanged", oldDocument, self.Document)
 end
 
 function PANEL:SetReadOnly (readOnly)
@@ -553,28 +452,16 @@ function PANEL:SetReadOnly (readOnly)
 end
 
 -- Undo / redo
-function PANEL:CanSave ()
-	return self.UndoRedoStack:CanSave ()
-end
-
 function PANEL:GetUndoRedoStack ()
-	return self.UndoRedoStack
-end
-
-function PANEL:IsUnsaved ()
-	return self.UndoRedoStack:IsUnsaved ()
-end
-
-function PANEL:MarkSaved ()
-	self.UndoRedoStack:MarkSaved ()
+	return self.Document:GetUndoRedoStack ()
 end
 
 function PANEL:Redo ()
-	self.UndoRedoStack:Redo ()
+	self:GetUndoRedoStack ():Redo ()
 end
 
 function PANEL:Undo ()
-	self.UndoRedoStack:Undo ()
+	self:GetUndoRedoStack ():Undo ()
 end
 
 -- Editing
@@ -587,7 +474,7 @@ function PANEL:DeleteSelection ()
 	
 	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStartLocation, selectionEndLocation, selectionStart, selectionEnd, text)
 	deletionAction:Redo ()
-	self.UndoRedoStack:Push (deletionAction)
+	self:GetUndoRedoStack ():Push (deletionAction)
 end
 
 function PANEL:GetText ()
@@ -597,13 +484,13 @@ end
 function PANEL:IndentSelection ()
 	local indentationAction = GCompute.Editor.IndentationAction (self, self:CreateSelectionSnapshot ())
 	indentationAction:Redo ()
-	self.UndoRedoStack:Push (indentationAction)
+	self:GetUndoRedoStack ():Push (indentationAction)
 end
 
 function PANEL:OutdentSelection ()
 	local outdentationAction = GCompute.Editor.OutdentationAction (self, self:CreateSelectionSnapshot ())
 	outdentationAction:Redo ()
-	self.UndoRedoStack:Push (outdentationAction)
+	self:GetUndoRedoStack ():Push (outdentationAction)
 end
 
 function PANEL:ReplaceSelectionText (text, pasted)
@@ -623,7 +510,7 @@ function PANEL:ReplaceSelectionText (text, pasted)
 		undoRedoItem = GCompute.Editor.ReplacementAction (self, selectionStart, selectionEnd, originalText, text)
 	end
 	undoRedoItem:Redo ()
-	self.UndoRedoStack:Push (undoRedoItem)
+	self:GetUndoRedoStack ():Push (undoRedoItem)
 	
 	if pasted then return end
 	local autoOutdentationAction
@@ -879,6 +766,10 @@ function PANEL:CreateSelectionSnapshot (selectionSnapshot)
 	return selectionSnapshot
 end
 
+function PANEL:GetSelection ()
+	return self.Selection
+end
+
 function PANEL:GetSelectionEnd ()
 	return self.Selection:GetSelectionEnd ()
 end
@@ -1098,13 +989,19 @@ function PANEL:CutSelection ()
 	if self.Selection:IsEmpty () then return end
 	
 	local text = self:CopySelection ()
-	local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
-	local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
-	
-	local deletionAction = GCompute.Editor.DeletionAction (self, selectionStart, selectionEnd, selectionStart, selectionEnd, text)
-	deletionAction:SetVerb ("cut")
+	local deletionAction
+	if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
+		local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
+		local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
+		
+		deletionAction = GCompute.Editor.DeletionAction (self, selectionStart, selectionEnd, selectionStart, selectionEnd, text)
+		deletionAction:SetVerb ("cut")
+	else
+		deletionAction = GCompute.Editor.BlockDeletionAction (self, self:CreateSelectionSnapshot ())
+		deletionAction:SetDescription ("block cut")
+	end
 	deletionAction:Redo ()
-	self.UndoRedoStack:Push (deletionAction)
+	self:GetUndoRedoStack ():Push (deletionAction)
 end
 
 function PANEL:Paste ()
@@ -1348,6 +1245,89 @@ function PANEL:UnhookCompilationUnit (compilationUnit)
 	compilationUnit:RemoveEventListener ("TokenRangeRemoved", tostring (self:GetTable ()))
 end
 
+function PANEL:HookDocument (document)
+	if not document then return end
+	
+	document:AddEventListener ("PathChanged", tostring (self:GetTable ()),
+		function (_, oldPath, path)
+			if path and self.SourceFile then
+				-- If our source file is not an unnamed one, create a new unnamed SourceFile
+				if self.SourceFile:HasPath () then
+					self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
+				end
+			else
+				self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (self.Path))
+			end
+		end
+	)
+	document:AddEventListener ("TextCleared", tostring (self:GetTable ()),
+		function (_)
+			self:SetMaximumColumnCount (1)
+			
+			self.DocumentChangeUnhandled = true
+			self.DocumentLinesUnchecked = {}
+			self:UpdateVerticalScrollBar ()
+			
+			self:DispatchEvent ("TextChanged")
+		end
+	)
+	document:AddEventListener ("TextDeleted", tostring (self:GetTable ()),
+		function (_, startLocation, endLocation)
+			self.DocumentChangeUnhandled = true
+			
+			local deletionStartLine = startLocation:GetLine ()
+			local deletionEndLine = endLocation:GetLine ()
+			if deletionStartLine ~= deletionEndLine then
+				local maximumColumnCount = 0
+				while next (self.DocumentLinesUnchecked) do
+					local line = next (self.DocumentLinesUnchecked)
+					self.DocumentLinesUnchecked [line] = nil
+					
+					if line < deletionStartLine or line > deletionEndLine then
+						if line > deletionEndLine then line = line - deletionEndLine + deletionStartLine end
+						
+						if self.Document:GetLine (line) then
+							maximumColumnCount = math.max (maximumColumnCount, self.Document:GetLine (line):GetColumnCount (self.TextRenderer) + 1)
+						end
+					end
+				end
+				self:UpdateMaximumColumnCount (maximumColumnCount)
+			end
+			
+			self.DocumentLinesUnchecked [startLocation:GetLine ()] = true
+			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
+			self:UpdateVerticalScrollBar ()
+			
+			self:DispatchEvent ("TextChanged")
+		end
+	)
+	document:AddEventListener ("TextInserted", tostring (self:GetTable ()),
+		function (_, location, text, newLocation)
+			self.DocumentChangeUnhandled = true
+			
+			local startTime = SysTime ()
+			for i = location:GetLine (), newLocation:GetLine () do
+				self.DocumentLinesUnchecked [i] = true
+			end
+			if SysTime () - startTime > 0 then
+				MsgC (GLib.Colors.Orange, string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
+			end
+			self:UpdateVerticalScrollBar ()
+			
+			self:DispatchEvent ("TextChanged")
+		end
+	)
+end
+
+function PANEL:UnhookDocument (document)
+	if not document then return end
+	
+	document:RemoveEventListener ("TextCleared",  tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextDeleted",  tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextInserted", tostring (self:GetTable ()))
+	document:RemoveEventListener ("PathChanged",  tostring (self:GetTable ()))
+end
+
 function PANEL:HookSourceFile (sourceFile)
 	if not sourceFile then return end
 	sourceFile:AddEventListener ("CompilationUnitCreated", tostring (self:GetTable ()),
@@ -1378,7 +1358,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 	local alt     = input.IsKeyDown (KEY_LALT)     or input.IsKeyDown (KEY_RALT)
 	
 	if keyCode == KEY_TAB then
-		if not self:IsReadOnly () then
+		if not ctrl and not self:IsReadOnly () then
 			if shift then
 				self:OutdentSelection ()
 			else

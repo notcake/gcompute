@@ -90,4 +90,4 @@ function self:PopulateOverloadedTypeDefinition (overloadedTypeDefinition, treeVi
 	end
 end
 
-vgui.Register ("GComputeNamespaceTreeView", self, "GTreeView")
+Gooey.Register ("GComputeNamespaceTreeView", self, "GTreeView")

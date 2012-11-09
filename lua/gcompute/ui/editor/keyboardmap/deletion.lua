@@ -1,11 +1,10 @@
 GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 	function (self, key, ctrl, shift, alt)
 		if self:IsReadOnly () then return end
+		if self:GetSelection ():GetSelectionMode () ~= GCompute.Editor.SelectionMode.Regular then return false end
 		
 		local deletionStart = nil
 		local deletionEnd = nil
-		
-		-- TODO: Block cutting support
 		
 		if key == KEY_BACKSPACE then
 			if not self:IsSelectionEmpty () then
@@ -38,7 +37,7 @@ GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 				deletionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
 				deletionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
 			elseif ctrl then
-				-- Erase the previous word
+				-- Erase the next word
 				deletionStart = self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer)
 				deletionEnd   = self.Document:GetNextWordBoundary (self.Document:ColumnToCharacter (self.CaretLocation, self.TextRenderer))
 			else
@@ -57,6 +56,6 @@ GCompute.Editor.CodeEditorKeyboardMap:Register ({ KEY_BACKSPACE, KEY_DELETE },
 		
 		local deletionAction = GCompute.Editor.DeletionAction (self, selectionStartLocation, selectionEndLocation, deletionStart, deletionEnd, text)
 		deletionAction:Redo ()
-		self.UndoRedoStack:Push (deletionAction)
+		self:GetUndoRedoStack ():Push (deletionAction)
 	end
 )

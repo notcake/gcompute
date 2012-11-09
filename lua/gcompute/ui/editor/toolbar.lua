@@ -19,9 +19,9 @@ function GCompute.Editor.Toolbar (self)
 						if not file then GCompute.Error ("VFS.OpenOpenFileDialog returned a path but not an IFile???") end
 						
 						self:OpenFile (file,
-							function (success, file, tab)
-								if not tab then return end
-								tab:Select ()
+							function (success, file, view)
+								if not view then return end
+								view:Select ()
 							end
 						)
 					end
@@ -43,7 +43,7 @@ function GCompute.Editor.Toolbar (self)
 				for i = 1, self.TabControl:GetTabCount () do
 					local tab = self.TabControl:GetTab (i)
 					local contents = tab:GetContents ()
-					if tab.Savable and contents and contents:IsUnsaved () then
+					if tab.View:GetSavable () and tab.View:GetSavable ():IsUnsaved () then
 						unsaved [#unsaved + 1] = self.TabControl:GetTab (i)
 					end
 				end
@@ -68,9 +68,9 @@ function GCompute.Editor.Toolbar (self)
 		:SetEnabled (false)
 		:AddEventListener ("Click",
 			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:CutSelection ()
+				local clipboardTarget = self:GetActiveClipboardTarget ()
+				if not clipboardTarget then return end
+				clipboardTarget:Cut ()
 			end
 		)
 	toolbar:AddButton ("Copy")
@@ -78,18 +78,18 @@ function GCompute.Editor.Toolbar (self)
 		:SetEnabled (false)
 		:AddEventListener ("Click",
 			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:CopySelection ()
+				local clipboardTarget = self:GetActiveClipboardTarget ()
+				if not clipboardTarget then return end
+				clipboardTarget:Copy ()
 			end
 		)
 	toolbar:AddButton ("Paste")
 		:SetIcon ("icon16/paste_plain.png")
 		:AddEventListener ("Click",
 			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:Paste ()
+				local clipboardTarget = self:GetActiveClipboardTarget ()
+				if not clipboardTarget then return end
+				clipboardTarget:Paste ()
 			end
 		)
 	toolbar:AddSeparator ()
@@ -196,15 +196,15 @@ function GCompute.Editor.Toolbar (self)
 		:SetIcon ("icon16/application_side_list.png")
 		:AddEventListener ("Click",
 			function ()
-				if not self.RootNamespaceBrowserTab then
-					self.RootNamespaceBrowserTab = self:CreateNamespaceBrowserTab (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
-					self.RootNamespaceBrowserTab:AddEventListener ("Removed",
+				if not self.RootNamespaceBrowserView then
+					self.RootNamespaceBrowserView = self:CreateNamespaceBrowserTab (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
+					self.RootNamespaceBrowserView:AddEventListener ("Removed",
 						function ()
-							self.RootNamespaceBrowserTab = nil
+							self.RootNamespaceBrowserView = nil
 						end
 					)
 				end
-				self.RootNamespaceBrowserTab:Select ()
+				self.RootNamespaceBrowserView:Select ()
 			end
 		)
 	toolbar:AddSeparator ()

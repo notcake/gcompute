@@ -7,19 +7,20 @@ function GCompute.Editor.TabContextMenu (self)
 			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:CanCloseTab (tab))
 			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (self.TabControl:GetTabCount () > 1)
 			
-			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (tab.ContentType == "CodeEditor")
-			self.TabContextMenu:GetItemById ("Save")                  :SetVisible (tab.ContentType == "CodeEditor")
-			self.TabContextMenu:GetItemById ("Save as...")            :SetVisible (tab.ContentType == "CodeEditor")
-			self.TabContextMenu:GetItemById ("Rename")                :SetVisible (tab.ContentType == "CodeEditor")
-			self.TabContextMenu:GetItemById ("Delete")                :SetVisible (tab.ContentType == "CodeEditor")
-			self.TabContextMenu:GetItemById ("Separator2")            :SetVisible (tab.ContentType == "CodeEditor")
-			self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetVisible (tab.ContentType == "CodeEditor")
+			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Save")                  :SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Save as...")            :SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Rename")                :SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Delete")                :SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Separator2")            :SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetVisible (tab.View:GetType () == "Code")
 			
-			if tab.ContentType == "CodeEditor" then
-				self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (contents and contents:CanSave ())
-				self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (contents and contents:HasPath ())
-				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (contents and contents:HasPath ())
-				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (contents and contents:HasPath ())
+			if tab.View:GetType () == "Code" then
+				self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():CanSave ())
+				self.TabContextMenu:GetItemById ("Save as...")            :SetEnabled (tab.View:GetSavable () and true or false)
+				self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():HasPath ())
+				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():HasPath ())
+				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():HasPath ())
 			end
 		end
 	)
@@ -85,9 +86,9 @@ function GCompute.Editor.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				if not tab:GetContents () then return end
-				if not tab:GetContents ():HasPath () then return end
-				Gooey.Clipboard:SetText (tab:GetContents ():GetPath ())
+				if not tab.View:GetSavable () then return end
+				if not tab.View:GetSavable ():HasPath () then return end
+				Gooey.Clipboard:SetText (tab.View:GetSavable ():GetPath ())
 			end
 		)
 		

@@ -27,6 +27,7 @@ include ("callbackchain.lua")
 include ("ierrorreporter.lua")
 include ("ieditorhelper.lua")
 include ("iobject.lua")
+include ("isavable.lua")
 include ("deferrednameresolution.lua")
 
 -- memory usage

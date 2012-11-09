@@ -17,27 +17,27 @@ function GCompute.Editor.CodeEditorContextMenu (self)
 		:SetIcon ("icon16/cut.png")
 		:AddEventListener ("Click",
 			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:CutSelection ()
+				local clipboardTarget = self:GetActiveClipboardTarget ()
+				if not clipboardTarget then return end
+				clipboardTarget:Cut ()
 			end
 		)
 	menu:AddOption ("Copy")
 		:SetIcon ("icon16/page_white_copy.png")
 		:AddEventListener ("Click",
 			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:CopySelection ()
+				local clipboardTarget = self:GetActiveClipboardTarget ()
+				if not clipboardTarget then return end
+				clipboardTarget:Copy ()
 			end
 		)
 	menu:AddOption ("Paste")
 		:SetIcon ("icon16/paste_plain.png")
 		:AddEventListener ("Click",
 			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				if not codeEditor then return end
-				codeEditor:Paste ()
+				local clipboardTarget = self:GetActiveClipboardTarget ()
+				if not clipboardTarget then return end
+				clipboardTarget:Paste ()
 			end
 		)
 	menu:AddOption ("Delete")

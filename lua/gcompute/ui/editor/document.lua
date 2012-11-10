@@ -13,6 +13,7 @@ GCompute.Editor.Document = GCompute.MakeConstructor (self, GCompute.ISavable)
 
 function self:ctor ()
 	self.Title = nil
+	self.Id = nil
 	
 	-- ISavable
 	self.SavePoint = nil
@@ -29,12 +30,27 @@ function self:ctor ()
 	)
 end
 
+function self:GetId ()
+	return self.Id
+end
+
 function self:GetType ()
 	return self.__Type
 end
 
 function self:GetUndoRedoStack ()
 	return self.UndoRedoStack
+end
+
+function self:SetId (id)
+	self.Id = id
+end
+
+-- Persistance
+function self:LoadSession (inBuffer)
+end
+
+function self:SaveSession (outBuffer)
 end
 
 -- ISavable

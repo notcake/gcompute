@@ -108,7 +108,9 @@ function self:ToString ()
 end
 
 function self:Visit (astVisitor, ...)
-	self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
+	if self:GetRightExpression () then
+		self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
+	end
 	
 	return astVisitor:VisitExpression (self, ...)
 end

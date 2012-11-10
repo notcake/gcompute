@@ -1,10 +1,11 @@
-local self = {}
-GCompute.Editor.CodeDocument = GCompute.MakeConstructor (self, GCompute.Editor.Document)
+local self = GCompute.Editor.DocumentTypes:CreateType ("CodeDocument")
 
 --[[
 	Events:
 		LinesShifted (startLine, endLine, shift)
 			Fired when lines of this document have been shifted up or down.
+		TextChanged ()
+			Fired when this document's text has changed.
 		TextCleared ()
 			Fired when this document has been cleared.
 		TextDeleted (LineCharacterLocation deletionStartLocation, LineCharacterLocation deletionEndLocation)
@@ -51,6 +52,7 @@ function self:Clear ()
 	self.Lines [#self.Lines + 1] = GCompute.Editor.Line (self)
 	
 	self:DispatchEvent ("TextCleared")
+	self:DispatchEvent ("TextChanged")
 end
 
 function self:Delete (startLocation, endLocation)
@@ -100,6 +102,7 @@ function self:Delete (startLocation, endLocation)
 	end
 	
 	self:DispatchEvent ("TextDeleted", startLocation, endLocation)
+	self:DispatchEvent ("TextChanged")
 	
 	return startLocation
 end
@@ -119,6 +122,7 @@ function self:DeleteWithinLine (startLocation, endLocation)
 	line:Delete (startLocation:GetCharacter (), endLocation:GetCharacter ())
 	
 	self:DispatchEvent ("TextDeleted", startLocation, endLocation)
+	self:DispatchEvent ("TextChanged")
 end
 
 function self:GetEnd ()
@@ -330,6 +334,7 @@ function self:Insert (location, text)
 	end
 	
 	self:DispatchEvent ("TextInserted", location, text, newLocation)
+	self:DispatchEvent ("TextChanged")
 	
 	return newLocation
 end
@@ -343,6 +348,7 @@ function self:InsertWithinLine (location, text)
 	self.InsertionNewLocation:SetLine (location:GetLine ())
 	self.InsertionNewLocation:SetCharacter (location:GetCharacter () + GLib.UTF8.Length (text))
 	self:DispatchEvent ("TextInserted", location, text, self.InsertionNewLocation)
+	self:DispatchEvent ("TextChanged")
 	
 	return self.InsertionNewLocation
 end
@@ -441,4 +447,45 @@ function self:ShiftLines (startLine, endLine, shift)
 	end
 	
 	self:DispatchEvent ("LinesShifted", startLine, endLine, shift)
+	self:DispatchEvent ("TextChanged")
+end
+
+-- Persistance
+function self:LoadSession (inBuffer)
+	local hasPath = inBuffer:Boolean ()
+	if hasPath then
+		local path = inBuffer:String ()
+		VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Read,
+			function (returnCode, fileStream)
+				if returnCode ~= VFS.ReturnCode.Success then
+					self:SetPath (path)
+					return
+				end
+				self:SetFile (fileStream:GetFile ())
+				fileStream:Read (fileStream:GetLength (),
+					function (returnCode, data)
+						if returnCode == VFS.ReturnCode.Progress then return end
+						fileStream:Close ()
+						
+						self:SetText (data)
+					end
+				)
+			end
+		)
+	else
+		if inBuffer:Boolean () then
+			self:MarkUnsaved ()
+		end
+		self:SetText (inBuffer:String ())
+	end
+end
+
+function self:SaveSession (outBuffer)
+	outBuffer:Boolean (self:HasPath ())
+	if self:HasPath () then
+		outBuffer:String (self:GetPath ())
+	else
+		outBuffer:Boolean (self:IsUnsaved ())
+		outBuffer:String (self:GetText ())
+	end
 end

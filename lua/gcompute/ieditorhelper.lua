@@ -10,8 +10,8 @@ end
 
 function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	local code = codeEditor:GetText ()
-	local sourceFile = codeEditor:GetSourceFile ()
-	local compilationUnit = codeEditor:GetCompilationUnit ()
+	local sourceFile = codeEditor:GetSyntaxHighlighter ():GetSourceFile ()
+	local compilationUnit = codeEditor:GetSyntaxHighlighter ():GetCompilationUnit ()
 	
 	local compilationGroup = GCompute.CompilationGroup ()
 	sourceFile:SetCode (code)

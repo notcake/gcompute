@@ -69,44 +69,14 @@ end
 
 -- Persistance
 function self:LoadSession (inBuffer)
-	local saveMode = inBuffer:UInt8 ()
-	if saveMode == 0 then
-		local path = inBuffer:String ()
-		VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Read,
-			function (returnCode, fileStream)
-				if returnCode ~= VFS.ReturnCode.Success then
-					self:SetTitle (path)
-					self:GetSavable ():SetPath (path)
-					return
-				end
-				self:GetSavable ():SetFile (fileStream:GetFile ())
-				fileStream:Read (fileStream:GetLength (),
-					function (returnCode, data)
-						if returnCode == VFS.ReturnCode.Progress then return end
-						fileStream:Close ()
-						
-						self:SetCode (data)
-					end
-				)
-			end
-		)
-	else
-		self:SetTitle (inBuffer:String ())
-		if inBuffer:Boolean () then
-			self:GetDocument ():MarkUnsaved ()
-		end
-		self:SetCode (inBuffer:String ())
-	end
+	local title = inBuffer:String ()
+	
+	local documentId = inBuffer:String ()
+	self:GetEditor ():SetDocument (self:GetDocumentManager ():GetDocumentById (documentId))
+	self:SetTitle (title)
 end
 
 function self:SaveSession (outBuffer)
-	if self:GetSavable ():GetPath () then
-		outBuffer:UInt8 (0)
-		outBuffer:String (self:GetSavable ():GetPath () or "")
-	else
-		outBuffer:UInt8 (1)
-		outBuffer:String (self:GetTitle ())
-		outBuffer:Boolean (self:GetSavable ():IsUnsaved ())
-		outBuffer:String (self:GetCode ())
-	end
+	outBuffer:String (self:GetTitle () or "")
+	outBuffer:String (self:GetDocument () and self:GetDocument ():GetId () or "")
 end

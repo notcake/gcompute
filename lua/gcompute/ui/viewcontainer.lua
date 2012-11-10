@@ -4,6 +4,8 @@ function PANEL:Init ()
 	self.Frame = nil
 	self.Tab = nil
 	
+	self.DocumentManager = nil
+	
 	self:AddEventListener ("Removed",
 		function ()
 			if self:GetContents () then
@@ -18,6 +20,10 @@ function PANEL:GetContents ()
 		self.Contents = self:GetChildren () [1]
 	end
 	return self.Contents
+end
+
+function PANEL:GetDocumentManager ()
+	return self.DocumentManager
 end
 
 function PANEL:Paint (w, h)
@@ -39,6 +45,10 @@ end
 
 function PANEL:Select ()
 	if self.Tab then self.Tab:Select () end
+end
+
+function PANEL:SetDocumentManager (documentManager)
+	self.DocumentManager = documentManager
 end
 
 function PANEL:SetTab (tab)

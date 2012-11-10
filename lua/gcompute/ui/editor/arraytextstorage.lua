@@ -263,7 +263,7 @@ function self:SegmentIndexFromCharacter (character)
 	
 	local i = 1
 	local segment = self.Segments [i]
-	while character >= segment.Length do
+	while segment and character >= segment.Length do
 		character = character - segment.Length
 		i = i + 1
 		segment = self.Segments [i]
@@ -358,7 +358,7 @@ end
 function self:SplitSegment (character)
 	if character >= self:GetLengthIncludingLineBreak () then return #self.Segments + 1 end
 	local i = 1
-	while character >= self.Segments [i].Length do
+	while i <= #self.Segments and character >= self.Segments [i].Length do
 		character = character - self.Segments [i].Length
 		i = i + 1
 	end
@@ -366,6 +366,7 @@ function self:SplitSegment (character)
 	if character <= 0 then return i end
 	
 	local segmentToSplit = self.Segments [i]
+	if not segmentToSplit then return #self.Segments + 1 end
 	local before, after = GLib.UTF8.SplitAt (segmentToSplit.Text, character + 1)
 	
 	segmentToSplit.Text = before

@@ -14,18 +14,10 @@ surface.CreateFont (
 			Fired when the caret has moved.
 		DocumentChanged (Document oldDocument, Document newDocument)
 			Fired when this editor's document has changed.
-		LanguageChanged (Language oldLanguage, Language newLanguage)
-			Fired when this document's language has changed.
-		LexerFinished (Lexer lexer)
-			Fired when the lexing process for this document has finished.
-		LexerProgress (Lexer lexer, bytesProcessed, totalBytes)
-			Fired when the lexer has processed some data.
-		LexerStarted (Lexer lexer)
-			Fired when the lexing process for this document has started.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
 			Fired when the selection has changed.
-		SourceFileChanged (SourceFile oldSourceFile, SourceFile sourceFile)
-			Fired when this doumcent's SourceFile has changed.
+		SyntaxHighlighterChanged (SyntaxHighlighter oldSyntaxHighlighter, SyntaxHighlighter syntaxHighlighter)
+			Fired when the syntax highlighter has changed.
 		TextChanged ()
 			Fired when this document's text has changed.
 ]]
@@ -71,7 +63,6 @@ function PANEL:Init ()
 	self.Document = nil
 	self.DocumentChangeUnhandled = false
 	self.DocumentLinesUnchecked = {}
-	self:SetDocument (GCompute.Editor.CodeDocument ())
 	
 	-- Caret
 	self.CaretLocation = GCompute.Editor.LineColumnLocation ()
@@ -96,7 +87,6 @@ function PANEL:Init ()
 	surface.SetFont ("GComputeMonospace")
 	self.Settings.CharacterWidth, self.Settings.FontHeight = surface.GetTextSize ("W")
 	self.Settings.LineHeight = self.Settings.FontHeight + 2
-	self:UpdateLineNumberWidth ()
 	
 	-- View
 	self.ViewLineCount = 0
@@ -108,13 +98,7 @@ function PANEL:Init ()
 	
 	-- Compiler
 	self.CompilationEnabled = true
-	
-	self.SourceFile = nil
-	self.CompilationUnit = nil
-	self.Language = nil
 	self.EditorHelper = GCompute.IEditorHelper ()
-	self.LastSourceFileUpdateTime = 0
-	self.SourceFileOutdated = true
 	
 	-- Autocomplete
 	self.ToolTipController = Gooey.ToolTipController (self)
@@ -129,6 +113,9 @@ function PANEL:Init ()
 	self.LastRenderTime = 0
 	
 	self:SetKeyboardMap (GCompute.Editor.CodeEditorKeyboardMap)
+	
+	-- Final initialization
+	self:SetDocument (GCompute.Editor.DocumentTypes:Create ("CodeDocument"))
 end
 
 -- Control
@@ -393,7 +380,7 @@ function PANEL:Paint (w, h)
 	self:DrawSelection ()
 	
 	-- Draw ViewLineCount lines and then the one that's partially out of view.
-	for i = 0, self.ViewLineCount do
+	for i = 0, self.ViewLineCount + 1 do
 		self:DrawLine (i)
 	end
 	self:DrawCaret ()
@@ -442,9 +429,33 @@ function PANEL:SetDocument (document)
 	self.Document = document
 	
 	self:UnhookDocument (oldDocument)
+	
+	self.EditorHelper = nil
+	if self.Document then
+		if not self.Document.SyntaxHighlighter then
+			self.Document.SyntaxHighlighter = GCompute.Editor.SyntaxHighlighter (self.Document)
+			self:GetSyntaxHighlighter ():SetEnabled (self:IsCompilationEnabled ())
+		end
+		if self.Document.SyntaxHighlighter:GetLanguage () then
+			self.EditorHelper = self.Document.SyntaxHighlighter:GetLanguage ():GetEditorHelper ()
+		end
+	end
+	
 	self:HookDocument (self.Document)
+	self:UpdateLineNumberWidth ()
+	
+	self.DocumentChangeUnhandled = true
+	self.DocumentLinesUnchecked = {}
+	for i = 0, self.Document:GetLineCount () - 1 do
+		self.DocumentLinesUnchecked [i] = true
+	end
+	
+	if not self.EditorHelper then
+		self.EditorHelper = GCompute.IEditorHelper ()
+	end
 	
 	self:DispatchEvent ("DocumentChanged", oldDocument, self.Document)
+	self:DispatchEvent ("SyntaxHighlighterChanged", oldDocument and oldDocument.SyntaxHighlighter, self.Document.SyntaxHighlighter)
 end
 
 function PANEL:SetReadOnly (readOnly)
@@ -536,14 +547,8 @@ function PANEL:ReplaceSelectionText (text, pasted)
 end
 
 function PANEL:SetText (text)
-
-	local startTime = SysTime ()
 	self.Document:SetText (text)
 	self:UpdateScrollBars ()
-	
-	if SysTime () - startTime > 0 then
-		MsgC (GLib.Colors.Orange, string.format ("CodeEditor:SetText took %.5f ms.\n", (SysTime () - startTime) * 1000))
-	end
 end
 
 -- Caret
@@ -1009,163 +1014,24 @@ function PANEL:Paste ()
 end
 
 -- Compiler
-function PANEL:GetCompilationUnit ()
-	return self.CompilationUnit
-end
-
 function PANEL:GetEditorHelper ()
 	return self.EditorHelper
 end
 
-function PANEL:GetLanguage ()
-	return self.Language
-end
-
-function PANEL:GetSourceFile ()
-	return self.SourceFile
-end
-
-function PANEL:InvalidateSourceFile ()
-	self.SourceFileOutdated = true
+function PANEL:GetSyntaxHighlighter ()
+	if not self:GetDocument () then return end
+	return self:GetDocument ().SyntaxHighlighter
 end
 
 function PANEL:IsCompilationEnabled ()
 	return self.CompilationEnabled
 end
 
-function PANEL:IsSourceFileOutdated ()
-	return self.SourceFileOutdated
-end
-
 function PANEL:SetCompilationEnabled (compilationEnabled)
 	self.CompilationEnabled = compilationEnabled
-end
-
--- Internal function, do not call
-function PANEL:SetCompilationUnit (compilationUnit)
-	if self.CompilationUnit == compilationUnit then return end
-	
-	self:UnhookCompilationUnit (self.CompilationUnit)
-	self.CompilationUnit = compilationUnit
-	self:HookCompilationUnit (self.CompilationUnit)
-	
-	if self.CompilationUnit then
-		local tokens = self.CompilationUnit:GetTokens ()
-		if tokens then
-			self:QueueTokenApplication (tokens.First, tokens.Last)
-		else
-			self:ClearTokenization ()
-		end
-		self:SetLanguage (self.CompilationUnit:GetLanguage ())
-	else
-		self:ClearTokenization ()
-		self:SetLanguage (nil)
+	if self:GetSyntaxHighlighter () then
+		self:GetSyntaxHighlighter ():SetEnabled (self.CompilationEnabled)
 	end
-end
-
--- Internal function, do not call
-function PANEL:SetLanguage (language)
-	if self.Language == language then return end
-	
-	local oldLanguage = self.Language
-	self.Language = language
-	
-	if self.Language then
-		self.EditorHelper = self.Language:GetEditorHelper ()
-	else
-		self.EditorHelper = GCompute.IEditorHelper ()
-	end
-	
-	self.SourceFileOutdated = true
-	if self.CompilationUnit then
-		self.CompilationUnit:SetLanguage (language)
-	end
-	
-	self:DispatchEvent ("LanguageChanged", oldLanguage, self.Language)
-end
-
--- Internal function, do not call
-function PANEL:SetSourceFile (sourceFile)
-	if not sourceFile then return end
-	if self.SourceFile == sourceFile then return end
-	
-	local oldSourceFile = self.SourceFile
-	if self.SourceFile then
-		self:UnhookSourceFile (self.SourceFile)
-		self:SetCompilationUnit (nil)
-	end
-	
-	self.SourceFile = sourceFile
-	
-	if self.SourceFile then
-		self:HookSourceFile (self.SourceFile)
-		if self.SourceFile:HasCompilationUnit () then
-			self:SetCompilationUnit (self.SourceFile:GetCompilationUnit ())
-		end
-	end
-	
-	self:DispatchEvent ("SourceFileChanged", oldSourceFile, sourceFile)
-end
-
--- Syntax highlighting
--- Internal, do not call
-function PANEL:ApplyToken (token)
-	if not token then return end
-	local tokenStartLine = token.Line
-	local tokenEndLine = token.EndLine
-	
-	local color = self:GetTokenColor (token)
-	local startLine = self.Document:GetLine (tokenStartLine)
-	if not startLine then return end
-	
-	if tokenStartLine == tokenEndLine then
-		startLine:SetObject (token, token.Character, token.EndCharacter)
-		startLine:SetColor (color, token.Character, token.EndCharacter)
-	else
-		startLine:SetObject (token, token.Character, nil)
-		startLine:SetColor (color, token.Character, nil)
-		if self.Document:GetLine (tokenEndLine) then
-			self.Document:GetLine (tokenEndLine):SetObject (token, 0, token.EndCharacter)
-			self.Document:GetLine (tokenEndLine):SetColor (color, 0, token.EndCharacter)
-		end
-		
-		for i = tokenStartLine + 1, tokenEndLine - 1 do
-			if not self.Document:GetLine (i) then break end
-			self.Document:GetLine (i):SetObject (token)
-			self.Document:GetLine (i):SetColor (color)
-		end
-	end
-end
-
-function PANEL:ClearTokenization ()
-	for line in self.Document:GetEnumerator () do
-		line:SetColor (nil)
-	end
-	self.TokenApplicationQueue:Clear ()
-end
-
-function PANEL:GetTokenColor (token)
-	local tokenType = token.TokenType
-	if tokenType == GCompute.TokenType.String then
-		return GLib.Colors.Gray
-	elseif tokenType == GCompute.TokenType.Number then
-		return GLib.Colors.SandyBrown
-	elseif tokenType == GCompute.TokenType.Comment then
-		return GLib.Colors.ForestGreen
-	elseif tokenType == GCompute.TokenType.Keyword then
-		return GLib.Colors.RoyalBlue
-	elseif tokenType == GCompute.TokenType.Preprocessor then
-		return GLib.Colors.Yellow
-	elseif tokenType == GCompute.TokenType.Identifier then
-		return GLib.Colors.LightSkyBlue
-	elseif tokenType == GCompute.TokenType.Unknown then
-		return GLib.Colors.Tomato
-	end
-	return GLib.Colors.White
-end
-
-function PANEL:QueueTokenApplication (startToken, endToken)
-	self.TokenApplicationQueue:Enqueue ({ Start = startToken, End = endToken })
 end
 
 function PANEL:TokenFromLocation (lineColumnLocation)
@@ -1202,61 +1068,32 @@ function PANEL:SetHoveredToken (token)
 	self.ToolTipController:HideToolTip ()
 end
 
--- Internal, do not call
-function PANEL:HookCompilationUnit (compilationUnit)
-	if not compilationUnit then return end
-	
-	compilationUnit:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
-		function (_, language)
-			self:SetLanguage (language)
-		end
-	)
-	compilationUnit:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
-		function (_, lexer)
-			self:DispatchEvent ("LexerFinished", lexer)
-		end
-	)
-	compilationUnit:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
-		function (_, lexer, bytesProcessed, totalBytes)
-			self:DispatchEvent ("LexerProgress", lexer, bytesProcessed, totalBytes)
-		end
-	)
-	compilationUnit:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
-		function (_, lexer)
-			self:DispatchEvent ("LexerStarted", lexer)
-		end
-	)
-	compilationUnit:AddEventListener ("TokenRangeAdded", tostring (self:GetTable ()),
-		function (_, startToken, endToken)
-			self:QueueTokenApplication (startToken, endToken)
-			self:DispatchEvent ("LexerProgress", startToken, endToken)
-		end
-	)
-end
-
-function PANEL:UnhookCompilationUnit (compilationUnit)
-	if not compilationUnit then return end
-	
-	compilationUnit:RemoveEventListener ("LanguageChanged",   tostring (self:GetTable ()))
-	compilationUnit:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
-	compilationUnit:RemoveEventListener ("LexerProgress",     tostring (self:GetTable ()))
-	compilationUnit:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
-	compilationUnit:RemoveEventListener ("TokenRangeAdded",   tostring (self:GetTable ()))
-	compilationUnit:RemoveEventListener ("TokenRangeRemoved", tostring (self:GetTable ()))
-end
-
 function PANEL:HookDocument (document)
 	if not document then return end
 	
-	document:AddEventListener ("PathChanged", tostring (self:GetTable ()),
-		function (_, oldPath, path)
-			if path and self.SourceFile then
-				-- If our source file is not an unnamed one, create a new unnamed SourceFile
-				if self.SourceFile:HasPath () then
-					self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
-				end
+	document.SyntaxHighlighter:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+		function (_, _, language)
+			if language then
+				self.EditorHelper = language:GetEditorHelper ()
 			else
-				self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (self.Path))
+				self.EditorHelper = nil
+			end
+		end
+	)
+	document:AddEventListener ("LinesShifted", tostring (self:GetTable ()),
+		function (_, startLine, endLine, shift)
+			self.DocumentChangeUnhandled = true
+			
+			local startLine = math.min (startLine, startLine + shift)
+			local endLine   = math.max (endLine,   endLine   + shift)
+			
+			for i = startLine, endLine do
+				if self.DocumentLinesUnchecked [i] then
+					self.DocumentLinesUnchecked [i] = nil
+					if self.Document:GetLine (i) then
+						self:UpdateMaximumColumnCount (self.Document:GetLine (i):GetColumnCount (self.TextRenderer) + 1)
+					end
+				end
 			end
 		end
 	)
@@ -1267,7 +1104,10 @@ function PANEL:HookDocument (document)
 			self.DocumentChangeUnhandled = true
 			self.DocumentLinesUnchecked = {}
 			self:UpdateVerticalScrollBar ()
-			
+		end
+	)
+	document:AddEventListener ("TextChanged", tostring (self:GetTable ()),
+		function (_)
 			self:DispatchEvent ("TextChanged")
 		end
 	)
@@ -1297,24 +1137,16 @@ function PANEL:HookDocument (document)
 			self.DocumentLinesUnchecked [startLocation:GetLine ()] = true
 			self:UpdateMaximumColumnCount (self.Document:GetLine (startLocation:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
 			self:UpdateVerticalScrollBar ()
-			
-			self:DispatchEvent ("TextChanged")
 		end
 	)
 	document:AddEventListener ("TextInserted", tostring (self:GetTable ()),
 		function (_, location, text, newLocation)
 			self.DocumentChangeUnhandled = true
 			
-			local startTime = SysTime ()
 			for i = location:GetLine (), newLocation:GetLine () do
 				self.DocumentLinesUnchecked [i] = true
 			end
-			if SysTime () - startTime > 0 then
-				MsgC (GLib.Colors.Orange, string.format ("CodeEditor:UpdateMaximumColumnCount took %.5f ms.\n", (SysTime () - startTime) * 1000))
-			end
 			self:UpdateVerticalScrollBar ()
-			
-			self:DispatchEvent ("TextChanged")
 		end
 	)
 end
@@ -1322,24 +1154,12 @@ end
 function PANEL:UnhookDocument (document)
 	if not document then return end
 	
+	document.SyntaxHighlighter:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
+	document:RemoveEventListener ("LinesShifted", tostring (self:GetTable ()))
 	document:RemoveEventListener ("TextCleared",  tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextChanged",  tostring (self:GetTable ()))
 	document:RemoveEventListener ("TextDeleted",  tostring (self:GetTable ()))
 	document:RemoveEventListener ("TextInserted", tostring (self:GetTable ()))
-	document:RemoveEventListener ("PathChanged",  tostring (self:GetTable ()))
-end
-
-function PANEL:HookSourceFile (sourceFile)
-	if not sourceFile then return end
-	sourceFile:AddEventListener ("CompilationUnitCreated", tostring (self:GetTable ()),
-		function (_, compilationUnit)
-			self:SetCompilationUnit (compilationUnit)
-		end
-	)
-end
-
-function PANEL:UnhookSourceFile (sourceFile)
-	if not sourceFile then return end
-	sourceFile:RemoveEventListener ("CompilationUnitCreated", tostring (self:GetTable ()))
 end
 
 -- Event handlers
@@ -1419,8 +1239,11 @@ function PANEL:OnHScroll (viewOffset)
 end
 
 function PANEL:OnRemoved ()
-	self:SetSourceFile (nil)
-	self:SetCompilationUnit (nil)
+	if self:GetDocument () then
+		if self:GetDocument ():GetViewCount () == 1 then
+			self:GetSyntaxHighlighter ():dtor ()
+		end
+	end
 end
 
 function PANEL:OnVScroll (viewOffset)
@@ -1432,41 +1255,16 @@ function PANEL:OnVScroll (viewOffset)
 end
 
 function PANEL:Think ()
-	if self:IsCompilationEnabled () and self.SourceFileOutdated then
-		if not self:GetSourceFile () then
-			self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
-			self:SetCompilationUnit (self:GetSourceFile ():GetCompilationUnit ())
-		end
-		if SysTime () - self.LastSourceFileUpdateTime > 0.2 then
-			if self:GetCompilationUnit ():IsLexing () then return end
-			
-			self.SourceFileOutdated = false
-			self.LastSourceFileUpdateTime = SysTime ()
-			
-			self.SourceFile:SetCode (self:GetText ())
-			self:GetCompilationUnit ():Lex (
-				function ()
-				end
-			)
-			
-			if not self:GetCompilationUnit ():IsLexing () then
-				local tokens = self:GetCompilationUnit ():GetTokens ()
-				if tokens then
-					self.TokenApplicationQueue:Clear ()
-					self:QueueTokenApplication (tokens.First, tokens.Last)
-				end
-			end
-		end
+	if self:GetSyntaxHighlighter () then
+		self:GetSyntaxHighlighter ():Think ()
 	end
 	
 	self:DocumentUpdateThink ()
 	self:HoverThink ()
-	self:TokenApplicationThink ()
 end
 
 function PANEL:DocumentUpdateThink ()
 	if self.DocumentChangeUnhandled then
-		self:InvalidateSourceFile ()
 		self:UpdateLineNumberWidth ()
 		self:ResetCaretBlinkTime ()
 		self:UpdateScrollBars ()
@@ -1494,35 +1292,6 @@ function PANEL:HoverThink ()
 	
 	if SysTime () - self.HoverStartTime > 0.5 then
 		self.ToolTipController:ShowToolTip (self.HoveredToken:ToString ())
-	end
-end
-
-function PANEL:TokenApplicationThink ()
-	if self.TokenApplicationQueue:IsEmpty () then return end
-	
-	local startTime = SysTime ()
-	while SysTime () - startTime < 0.010 do
-		local front = self.TokenApplicationQueue.Front
-		if not front then break end
-		
-		local appliedTokenCount = 0
-		while appliedTokenCount < 10 do
-			self:ApplyToken (front.Start)
-			if not self.Document:GetLine (front.Start.Line) then
-				self.TokenApplicationQueue:Dequeue ()
-				break
-			end
-			appliedTokenCount = appliedTokenCount + 1
-			if front.Start == front.End then
-				self.TokenApplicationQueue:Dequeue ()
-				break
-			end
-			front.Start = front.Start.Next
-		end
-	end
-	
-	if SysTime () - startTime > 0 then
-		MsgC (GLib.Colors.Orange, string.format ("CodeEditor:TokenApplicationThink took %.5f ms.\n", (SysTime () - startTime) * 1000))
 	end
 end
 

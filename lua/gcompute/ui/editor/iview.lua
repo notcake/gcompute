@@ -37,6 +37,10 @@ function self:GetContainer ()
 	return self.Container
 end
 
+function self:GetDocumentManager ()
+	return self:GetContainer () and self:GetContainer ():GetDocumentManager ()
+end
+
 function self:GetIcon ()
 	return self.Icon
 end

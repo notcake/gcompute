@@ -18,7 +18,6 @@ GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReport
 	Events:
 		LanguageChanged (Language language)
 			Fired when this CompilationUnit's language has changed.
-		
 		LexerFinished (Lexer lexer)
 			Fired when the lexing process for this CompilationUnit has finished.
 		LexerProgress (Lexer lexer, bytesProcessed, totalBytes)
@@ -152,6 +151,10 @@ end
 
 function self:GetLanguage ()
 	return self.Language
+end
+
+function self:GetSourceFile ()
+	return self.SourceFile
 end
 
 function self:GetTokens ()

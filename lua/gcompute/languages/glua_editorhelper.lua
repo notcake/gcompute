@@ -62,15 +62,15 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:SetIcon ("icon16/user_go.png")
 		:AddEventListener ("Click",
 			function ()
-				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
-				RunStringEx (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId ())
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
+				RunStringEx (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId ())
 			end
 		)
 	menu:AddOption ("Run on server")
 		:SetIcon ("icon16/server_go.png")
 		:AddEventListener ("Click",
 			function ()
-				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnServer (codeEditor:GetText ())
 			end
 		)
@@ -81,7 +81,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:SetIcon ("icon16/group_go.png")
 		:AddEventListener ("Click",
 			function ()
-				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnClients (codeEditor:GetText ())
 			end
 		)
@@ -89,7 +89,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:SetIcon ("icon16/world_go.png")
 		:AddEventListener ("Click",
 			function ()
-				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
+				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnShared (codeEditor:GetText ())
 			end
 		)
@@ -111,7 +111,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			:SetIcon (v:IsAdmin () and "icon16/shield_go.png" or "icon16/user_go.png")
 			:AddEventListener ("Click",
 				function ()
-					if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
+					if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 					luadev.RunOnClient (codeEditor:GetText (), nil, v)
 				end
 			)

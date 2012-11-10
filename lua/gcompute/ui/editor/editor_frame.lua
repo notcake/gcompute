@@ -33,6 +33,7 @@ function self:Init ()
 				self:UnhookSelectedCodeEditor (oldSelectedTab, oldSelectedTab.View:GetEditor ())
 			end
 			if selectedTab and selectedTab.View:GetType () == "Code" then
+				selectedTab.View:GetEditor ():SetContextMenu (self.CodeEditorContextMenu)
 				self:HookSelectedCodeEditor (selectedTab, selectedTab.View:GetEditor ())
 			end
 			
@@ -102,14 +103,17 @@ function self:Init ()
 				end
 			)
 			
-			local currentLanguage = self:GetActiveCodeEditor () and self:GetActiveCodeEditor ():GetLanguage ()
+			local codeEditor = self:GetActiveCodeEditor ()
+			local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
+			local currentLanguage = syntaxHighlighter and syntaxHighlighter:GetLanguage ()
 			for _, language in ipairs (languages) do
 				local option = menu:AddOption (language:GetName ())
 				option:AddEventListener ("Click",
 					function ()
 						local codeEditor = self:GetActiveCodeEditor ()
-						if not codeEditor then return end
-						codeEditor:SetLanguage (language)
+						local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
+						if not syntaxHighlighter then return end
+						syntaxHighlighter:SetLanguage (language)
 						GCompute.LanguageDetector:SetDefaultLanguage (language)
 					end
 				)
@@ -272,6 +276,7 @@ end
 
 function self:CreateTab (className)
 	local container = vgui.Create ("GComputeViewContainer")
+	container:SetDocumentManager (self.DocumentManager)
 	
 	local view = GCompute.Editor.ViewTypes:Create (className, container)
 	if not view then return nil end
@@ -289,7 +294,6 @@ end
 function self:CreateCodeTab (title)
 	local view = self:CreateTab ("Code")
 	view:SetTitle (title)
-	view:GetContainer ():GetContents ():SetContextMenu (self.CodeEditorContextMenu)
 	return view
 end
 
@@ -348,6 +352,10 @@ end
 
 function self:LoadTabs (callback)
 	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_editor_tabs.txt", "GAME") or "")
+	inBuffer:String () -- Discard comment
+	self.DocumentManager:LoadSession (GLib.StringInBuffer (inBuffer:String ()))
+	inBuffer:Char ()   -- Discard newline
+	inBuffer:String () -- Discard comment
 	
 	local activeView = nil
 	local viewType = inBuffer:String ()
@@ -379,7 +387,14 @@ function self:SaveTabs ()
 	self.TabsUnsaved = false
 	
 	local outBuffer = GLib.StringOutBuffer ()
+	outBuffer:String ("\n=== Documents ===\n")
+	
 	local subOutBuffer = GLib.StringOutBuffer ()
+	self.DocumentManager:SaveSession (subOutBuffer)
+	outBuffer:String (subOutBuffer:GetString ())
+	outBuffer:Char ("\n")
+	outBuffer:String ("\n=== Workspace ===\n")
+	
 	for tab in self.TabControl:GetEnumerator () do
 		local viewType = tab.View:GetType ()
 		outBuffer:String (viewType)
@@ -532,8 +547,8 @@ end
 
 function self:UpdateLanguageText ()
 	local codeEditor = self:GetActiveCodeEditor ()
-	local compilationUnit = codeEditor and codeEditor:GetCompilationUnit ()
-	local language = compilationUnit and compilationUnit:GetLanguage ()
+	local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
+	local language = syntaxHighlighter and syntaxHighlighter:GetLanguage ()
 	if language then
 		self.LanguagePanel:SetText (language:GetName () .. " code")
 	elseif codeEditor then
@@ -545,7 +560,8 @@ end
 
 function self:UpdateProgressBar ()
 	local codeEditor = self:GetActiveCodeEditor ()
-	local compilationUnit = codeEditor and codeEditor:GetCompilationUnit ()
+	local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
+	local compilationUnit = syntaxHighlighter and syntaxHighlighter:GetCompilationUnit ()
 	if compilationUnit then
 		if compilationUnit:IsLexing () then
 			self.ProgressPanel:SetProgress (compilationUnit:GetLexer ():GetProgress () * 100)
@@ -561,22 +577,6 @@ function self:UpdateProgressBar ()
 end
 
 -- Event hooking
-function self:HookSelectedSourceFile (sourceFile)
-	if not sourceFile then return end
-	
-	sourceFile:GetCompilationUnit ():AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
-		function (_, language)
-			self:UpdateLanguageText ()
-		end
-	)
-end
-
-function self:UnhookSelectedSourceFile (sourceFile)
-	if not sourceFile then return end
-	
-	sourceFile:GetCompilationUnit ():RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
-end
-
 function self:HookSelectedCodeEditor (tab, codeEditor)
 	if not codeEditor then return end
 	
@@ -585,39 +585,55 @@ function self:HookSelectedCodeEditor (tab, codeEditor)
 			self:UpdateCaretPositionText ()
 		end
 	)
-	codeEditor:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
-		function (_, lexer)
-			self:UpdateProgressBar ()
-		end
-	)
-	codeEditor:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
-		function (_, lexer, bytesProcessed, totalBytes)
-			self:UpdateProgressBar ()
-		end
-	)
-	codeEditor:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
-		function (_, lexer)
-			self:UpdateProgressBar ()
-		end
-	)
-	codeEditor:AddEventListener ("SourceFileChanged", tostring (self:GetTable ()),
-		function (_, oldSourceFile, sourceFile)
-			self:UnhookSelectedSourceFile (oldSourceFile)
-			self:HookSelectedSourceFile (sourceFile)
-			self:UpdateLanguageText ()
+	
+	codeEditor:AddEventListener ("SyntaxHighligherChanged", tostring (self:GetTable ()),
+		function (_, oldSyntaxHighlighter, syntaxHighlighter)
+			self:UnhookSyntaxHighlighter (oldSyntaxHighlighter)
+			self:HookSyntaxHighlighter (syntaxHighlighter)
 		end
 	)
 	
-	self:HookSelectedSourceFile (codeEditor:GetSourceFile ())
+	self:HookSyntaxHighlighter (codeEditor:GetSyntaxHighlighter ())
 end
 
 function self:UnhookSelectedCodeEditor (tab, codeEditor)
 	if not codeEditor then return end
-	codeEditor:RemoveEventListener ("CaretMoved",        tostring (self:GetTable ()))
-	codeEditor:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
-	codeEditor:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
-	codeEditor:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
-	self:UnhookSelectedSourceFile (codeEditor:GetSourceFile ())
+	codeEditor:RemoveEventListener ("CaretMoved",               tostring (self:GetTable ()))
+	codeEditor:RemoveEventListener ("SyntaxHighlighterChanged", tostring (self:GetTable ()))
+	self:UnhookSyntaxHighlighter (codeEditor:GetSyntaxHighlighter ())
+end
+
+function self:HookSyntaxHighlighter (syntaxHighlighter)
+	if not syntaxHighlighter then return end
+	
+	syntaxHighlighter:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+		function (_, language)
+			self:UpdateLanguageText ()
+		end
+	)
+	syntaxHighlighter:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
+		function (_, lexer)
+			self:UpdateProgressBar ()
+		end
+	)
+	syntaxHighlighter:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
+		function (_, lexer, bytesProcessed, totalBytes)
+			self:UpdateProgressBar ()
+		end
+	)
+	syntaxHighlighter:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
+		function (_, lexer)
+			self:UpdateProgressBar ()
+		end
+	)
+end
+
+function self:UnhookSyntaxHighlighter (syntaxHighlighter)
+	if not syntaxHighlighter then return end
+	syntaxHighlighter:RemoveEventListener ("LanguageChanged",   tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
 end
 
 function self:HookTabContents (tab, contents)
@@ -688,6 +704,8 @@ function self:OnRemoved ()
 	self.TabControl:Clear ()
 	
 	self.ClipboardController:dtor ()
+	self.CodeEditorContextMenu:Remove ()
+	self.TabContextMenu:Remove ()
 	
 	GCompute.Editor.Plugins:Uninitialize ()
 end

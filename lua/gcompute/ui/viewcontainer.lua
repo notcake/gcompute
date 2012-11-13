@@ -1,18 +1,13 @@
 local PANEL = {}
 
 function PANEL:Init ()
+	self.DockContainer = nil
 	self.Frame = nil
 	self.Tab = nil
 	
-	self.DocumentManager = nil
+	self.View = nil
 	
-	self:AddEventListener ("Removed",
-		function ()
-			if self:GetContents () then
-				self:GetContents ():Remove ()
-			end
-		end
-	)
+	self:SetVisible (false)
 end
 
 function PANEL:GetContents ()
@@ -22,8 +17,16 @@ function PANEL:GetContents ()
 	return self.Contents
 end
 
-function PANEL:GetDocumentManager ()
-	return self.DocumentManager
+function PANEL:GetDockContainer ()
+	return self.DockContainer
+end
+
+function PANEL:GetTab ()
+	return self.Tab
+end
+
+function PANEL:GetView ()
+	return self.View
 end
 
 function PANEL:Paint (w, h)
@@ -47,12 +50,29 @@ function PANEL:Select ()
 	if self.Tab then self.Tab:Select () end
 end
 
-function PANEL:SetDocumentManager (documentManager)
-	self.DocumentManager = documentManager
+function PANEL:SetDockContainer (dockContainer)
+	self.DockContainer = dockContainer
 end
 
 function PANEL:SetTab (tab)
 	self.Tab = tab
+end
+
+function PANEL:SetView (view)
+	self.View = view
+end
+
+-- Event handlers	
+function PANEL:OnRemoved ()
+	if self:GetContents () then
+		self:GetContents ():Remove ()
+	end
+	
+	local tab = self:GetTab ()
+	if tab then
+		self:SetTab (nil)
+		tab:Remove ()
+	end
 end
 
 Gooey.Register ("GComputeViewContainer", PANEL, "GPanel")

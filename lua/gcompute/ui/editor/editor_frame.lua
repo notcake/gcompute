@@ -2,11 +2,12 @@ local self = {}
 
 --[[
 	Events
-		SelectedContentsChanged (Tab oldSelectedTab, Panel oldSelectedContents, Tab selectedTab, Panel selectedContents)
-			Fired when the active tab has changed or the active tab's contents have changed.
+		ActiveViewChanged (View oldView, View view)
+			Fired when the active view has changed.
 ]]
 
 function self:Init ()
+	xpcall (function ()
 	self:SetTitle ("Editor (WIP, not working)")
 
 	self:SetSize (ScrW () * 0.85, ScrH () * 0.85)
@@ -16,72 +17,70 @@ function self:Init ()
 	
 	self.Toolbar = GCompute.Editor.Toolbar (self)
 	
-	self.TabControl = vgui.Create ("GTabControl", self)
-	self.TabControl:AddEventListener ("SelectedContentsChanged",
-		function (_, oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
-			if selectedContents then selectedContents:RequestFocus () end
+	self.DockContainer = vgui.Create ("GComputeDockContainer", self)
+	self.DockContainer:SetContainerType (GCompute.DockContainerType.SplitContainer)
+	self.DockContainer:SetOrientation (Gooey.Orientation.Horizontal)
+	self.DockContainer:AddEventListener ("ActiveViewChanged",
+		function (_, oldView, view)
+			if view then view:Select () end
 			
-			self:InvalidateSavedTabs ()
+			self:InvalidateSavedWorkspace ()
 			
-			if selectedTab then
-				self.ClipboardController:SetClipboardTarget (selectedTab.View:GetClipboardTarget ())
-				self.SaveController:SetSavable (selectedTab.View:GetSavable ())
-				self.UndoRedoController:SetUndoRedoStack (selectedTab.View:GetUndoRedoStack ())
+			if view then
+				self.ClipboardController:SetClipboardTarget (view:GetClipboardTarget ())
+				self.SaveController:SetSavable (view:GetSavable ())
+				self.UndoRedoController:SetUndoRedoStack (view:GetUndoRedoStack ())
 			end
 			
-			if oldSelectedTab and oldSelectedTab.View:GetType () == "Code" then
-				self:UnhookSelectedCodeEditor (oldSelectedTab, oldSelectedTab.View:GetEditor ())
+			if oldView and oldView:GetType () == "Code" then
+				self:UnhookSelectedCodeEditor (oldView:GetEditor ())
 			end
-			if selectedTab and selectedTab.View:GetType () == "Code" then
-				selectedTab.View:GetEditor ():SetContextMenu (self.CodeEditorContextMenu)
-				self:HookSelectedCodeEditor (selectedTab, selectedTab.View:GetEditor ())
+			if view and view:GetType () == "Code" then
+				view:GetEditor ():SetContextMenu (self.CodeEditorContextMenu)
+				self:HookSelectedCodeEditor (view:GetEditor ())
 			end
 			
 			self:UpdateCaretPositionText ()
 			self:UpdateLanguageText ()
 			self:UpdateProgressBar ()
 			
-			self:DispatchEvent ("SelectedContentsChanged", oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
+			self.Toolbar:GetItemById ("Run Code"):SetEnabled (self:GetActiveCodeEditor () ~= nil)
+			
+			self:DispatchEvent ("ActiveViewChanged", oldView, view)
 		end
 	)
-	self.TabControl:AddEventListener ("TabAdded",
-		function (_, tab)
-			local contents = tab:GetContents ()
-			
-			tab:SetContextMenu (self.TabContextMenu)
-			
-			self:HookTabContents (tab, contents)
-			if tab.View and tab.View:GetDocument () then
-				self:RegisterTabDocument (tab, tab.View:GetDocument ())
+	self.DockContainer:AddEventListener ("ViewCloseRequested",
+		function (_, view)
+			self:CloseView (view)
+		end
+	)
+	self.DockContainer:AddEventListener ("ViewMoved",
+		function (_, view)
+			if view:GetContainer ():GetTab () then
+				view:GetContainer ():GetTab ():SetContextMenu (self.TabContextMenu)
 			end
+		end
+	)
+	self.DockContainer:AddEventListener ("ViewRegistered",
+		function (_, view)
+			self:HookView (view)
+			self:RegisterDocument (view:GetDocument ())
 			
-			self:InvalidateSavedTabs ()
+			self:InvalidateSavedWorkspace ()
 		end
 	)
-	self.TabControl:AddEventListener ("TabCloseRequested",
-		function (_, tab)
-			self:CloseTab (tab)
-		end
-	)
-	self.TabControl:AddEventListener ("TabContentsChanged",
-		function (_, tab, oldContents, contents)
-			if tab.View:GetDocument () then
-				self:RegisterTabDocument (tab, tab.View:GetDocument ())
+	self.DockContainer:AddEventListener ("ViewRemoved",
+		function (_, view, viewRemovalReason)
+			if viewRemovalReason == GCompute.ViewRemovalReason.Removal then
+				self.DockContainer:UnregisterView (view)
 			end
-			self:UnhookTabContents (tab, oldContents)
-			self:HookTabContents (tab, contents)
 		end
 	)
-	self.TabControl:AddEventListener ("TabRemoved",
-		function (_, tab)
-			local contents = tab:GetContents ()
-			self:UnhookTabContents (tab, contents)
+	self.DockContainer:AddEventListener ("ViewUnregistered",
+		function (_, view)
+			self:UnhookView (view)
 			
-			if tab.View:GetDocument () then
-				self:UnregisterTabDocument (tab, tab.View:GetDocument ())
-			end
-			
-			self:InvalidateSavedTabs ()
+			self:InvalidateSavedWorkspace ()
 		end
 	)
 	
@@ -147,18 +146,9 @@ function self:Init ()
 	self.UndoRedoController:AddRedoButton   (self.Toolbar:GetItemById ("Redo"))
 	self.UndoRedoController:AddRedoButton   (self.CodeEditorContextMenu:GetItemById ("Redo"))
 	
-	self.OutputPane = vgui.Create ("GComputeCodeEditor", self)
-	self.OutputPane:SetCompilationEnabled (false)
-	self.OutputPane:SetLineNumbersVisible (false)
-	self.OutputPane:SetReadOnly (true)
-	
-	self.SplitContainer = vgui.Create ("GSplitContainer", self)
-	self.SplitContainer:SetFixedPanel (2)
-	self.SplitContainer:SetOrientation (Gooey.Orientation.Horizontal)
-	self.SplitContainer:SetPanel1 (self.TabControl)
-	self.SplitContainer:SetPanel2 (self.OutputPane)
-	self:PerformLayout ()
-	self.SplitContainer:SetSplitterFraction (0.75)
+	self.OutputView = GCompute.Editor.ViewTypes:Create ("Output")
+	self.OutputView:SetId ("Output")
+	self.DockContainer:RegisterView (self.OutputView)
 	
 	self:SetKeyboardMap (GCompute.Editor.EditorKeyboardMap)
 	
@@ -174,20 +164,34 @@ function self:Init ()
 	-- Plugin loading
 	GCompute.Editor.Plugins:Initialize (self)
 	
-	-- Tab saving
-	self.LastTabSaveTime = SysTime ()
-	self.TabSavingEnabled = true
-	self.TabsUnsaved = false
+	-- Workspace saving
+	self.LastWorkspaceSaveTime = SysTime ()
+	self.WorkspaceSavingEnabled = true
+	self.WorkspaceUnsaved = false
 	
-	self:SetCanSaveTabs (false)
-	self:LoadTabs (
+	self:SetCanSaveWorkspace (false)
+	self:LoadWorkspace (
 		function ()
-			self:SetCanSaveTabs (true)
-			if self.TabControl:GetTabCount () == 0 then
-				self:CreateEmptyCodeTab ()
+			if not self.OutputView:GetContainer ():GetDockContainer () then
+				self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (self.OutputView)
+			end
+			for view in self.DockContainer:GetViewEnumerator () do
+				if not view:GetContainer ():GetDockContainer () then
+					if view:GetDocument () then
+						self.DockContainer:GetLargestContainer ():AddView (view)
+					else
+						self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (view)
+					end
+				end
+			end
+			
+			self:SetCanSaveWorkspace (true)
+			if self.DocumentManager:GetDocumentCount () == 0 then
+				self:CreateEmptyCodeView ()
 			end
 		end
 	)
+	end, GLib.Error)
 end
 
 function self:PerformLayout ()
@@ -199,64 +203,64 @@ function self:PerformLayout ()
 	if self.StatusBar then
 		self.StatusBar:PerformLayout ()
 	end
-	if self.SplitContainer then
-		self.SplitContainer:SetPos (2, 23 + self.Toolbar:GetTall ())
-		self.SplitContainer:SetSize (self:GetWide () - 4, self:GetTall () - 23 - self.Toolbar:GetTall () - 4 - self.StatusBar:GetTall ())
+	if self.DockContainer then
+		self.DockContainer:SetPos (2, 23 + self.Toolbar:GetTall ())
+		self.DockContainer:SetSize (self:GetWide () - 4, self:GetTall () - 23 - self.Toolbar:GetTall () - 4 - self.StatusBar:GetTall ())
 	end
 end
 
---- Returns false if the tab is the last remaining tab and contains the unchanged default text
-function self:CanCloseTab (tab)
-	if not tab      then return false end
-	if not tab.View then return true  end -- Broken tab
+--- Returns false if the view is the last remaining document view and contains the unchanged default text
+function self:CanCloseView (view)
+	if not view then return true end
 	
-	if tab.View:GetType () ~= "Code" then return true end -- Can always close non-editor tabs.
+	if view:GetType () ~= "Code" then return true end -- Can always close non-editor tabs.
 	
-	if self.TabControl:GetTabCount () == 1 and
-	   not tab.View:GetSavable ():HasPath () and
-	   not tab.View:GetSavable ():IsUnsaved () then
+	if self.DocumentManager:GetDocumentCount () == 1 and
+	   view:GetDocument ():GetViewCount () == 1 and
+	   not view:GetSavable ():HasPath () and
+	   not view:GetSavable ():IsUnsaved () then
 		return false
 	end
 	return true
 end
 
---- Closes a tab
+--- Closes a view
 -- @param callback function (success)
-function self:CloseTab (tab, callback)
+function self:CloseView (view, callback)
 	callback = callback or GCompute.NullCallback
 	
-	if not tab then callback (true) return end
-	local contents = tab:GetContents ()
+	if not view then callback (true) return end
+	if not view:CanClose () then callback (false) return end
 
 	-- Don't close the last tab if it contains the default text
-	if not self:CanCloseTab (tab) then
+	if not self:CanCloseView (view) then
 		callback (false)
 		return
 	end
 	
-	if tab.View:GetSavable () and tab.View:GetSavable ():IsUnsaved () then
+	if view:GetSavable () and view:GetSavable ():IsUnsaved () then
 		Gooey.YesNoDialog ()
 			:SetTitle ("Save")
-			:SetText ("Save \"" .. tab:GetText () .. "\"?")
+			:SetText ("Save \"" .. view:GetTitle () .. "\"?")
 			:SetCallback (
 				function (result)
 					if result == "Yes" then
-						self:SaveTab (tab,
+						self:SaveView (view,
 							function (saved)
 								if saved then
-									self:CloseTab (tab, callback)
+									self:CloseView (view, callback)
 								else
 									callback (false)
 								end
 							end
 						)
 					elseif result == "No" then
-						tab:Remove ()
+						view:dtor ()
 						callback (true)
 						
-						-- Avoid having no tabs open
-						if self.TabControl:GetTabCount () == 0 then
-							self:CreateEmptyCodeTab ()
+						-- Avoid having no views open
+						if self.DocumentManager:GetDocumentCount () == 0 then
+							self:CreateEmptyCodeView ()
 						end
 					else
 						callback (false)
@@ -264,47 +268,42 @@ function self:CloseTab (tab, callback)
 				end
 			)
 	else
-		tab:Remove ()
+		view:dtor ()
 		callback (true)
-						
-		-- Avoid having no tabs open
-		if self.TabControl:GetTabCount () == 0 then
-			self:CreateEmptyCodeTab ()
+		
+		-- Avoid having no views open
+		if self.DocumentManager:GetDocumentCount () == 0 then
+			self:CreateEmptyCodeView ()
 		end
 	end
 end
 
-function self:CreateTab (className)
-	local container = vgui.Create ("GComputeViewContainer")
-	container:SetDocumentManager (self.DocumentManager)
-	
-	local view = GCompute.Editor.ViewTypes:Create (className, container)
+function self:CreateView (className, id)
+	local view = GCompute.Editor.ViewTypes:Create (className)
 	if not view then return nil end
-	
-	local tab = self.TabControl:AddTab (className)
-	tab.View = view
-	tab:SetCloseButtonVisible (true)
-	tab:SetIcon (view:GetIcon ())
-	tab:SetContents (container)
-	container:SetTab (tab)
+	view:SetId (id)
+	view:SetDocumentManager (self.DocumentManager)
+	self.DockContainer:RegisterView (view)
 	
 	return view
 end
 
-function self:CreateCodeTab (title)
-	local view = self:CreateTab ("Code")
+function self:CreateCodeView (title)
+	local view = self:CreateView ("Code")
 	view:SetTitle (title)
+	self.DockContainer:GetPanel1 ():AddView (view)
 	return view
 end
 
-function self:CreateNamespaceBrowserTab (namespaceDefinition)
-	local view = self:CreateTab ("NamespaceBrowser")
+function self:CreateNamespaceBrowserView (namespaceDefinition)
+	local view = self:CreateView ("NamespaceBrowser")
 	view:SetNamespaceDefinition (namespaceDefinition or GCompute.GlobalNamespace)
+	self.DockContainer:GetPanel1 ():AddView (view)
 	return view
 end
 
-function self:CreateEmptyCodeTab ()
-	local view = self:CreateCodeTab ("new " .. tostring (self.NextNewId))
+function self:CreateEmptyCodeView ()
+	local view = self:CreateCodeView ("new " .. tostring (self.NextNewId))
 	self.NextNewId = self.NextNewId + 1
 	
 	view:SetCode ("")
@@ -317,74 +316,68 @@ function self:GetActiveClipboardTarget ()
 end
 
 function self:GetActiveCodeEditor ()
-	local selectedTab = self:GetSelectedTab ()
-	if not selectedTab then return nil end
-	if selectedTab.View:GetType () ~= "Code" then return nil end
-	return selectedTab.View:GetContainer ():GetContents ()
-end
-
-function self:GetActiveContents ()
-	local selectedTab = self:GetSelectedTab ()
-	if not selectedTab then return nil end
-	return selectedTab:GetContents ()
+	local view = self:GetActiveView ()
+	if not view then return nil end
+	if view:GetType () ~= "Code" then return nil end
+	return view:GetEditor ()
 end
 
 function self:GetActiveUndoRedoStack ()
 	return self.UndoRedoController:GetUndoRedoStack ()
 end
 
-function self:GetSelectedTab ()
-	return self.TabControl:GetSelectedTab ()
+function self:GetActiveView ()
+	return self.DockContainer:GetActiveView ()
 end
 
 -- Tab saving
-function self:AreTabsUnsaved ()
-	return self.TabsUnsaved
+function self:IsWorkspaceUnsaved ()
+	return self.WorkspaceUnsaved
 end
 
-function self:CanSaveTabs ()
-	return self.TabSavingEnabled
+function self:CanSaveWorkspace ()
+	return self.WorkspaceSavingEnabled
 end
 
-function self:InvalidateSavedTabs ()
-	self.TabsUnsaved = true
+function self:InvalidateSavedWorkspace ()
+	self.WorkspaceUnsaved = true
 end
 
-function self:LoadTabs (callback)
+function self:LoadWorkspace (callback)
 	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_editor_tabs.txt", "GAME") or "")
 	inBuffer:String () -- Discard comment
 	self.DocumentManager:LoadSession (GLib.StringInBuffer (inBuffer:String ()))
 	inBuffer:Char ()   -- Discard newline
 	inBuffer:String () -- Discard comment
 	
-	local activeView = nil
-	local viewType = inBuffer:String ()
-	while viewType ~= "" do
-		local active = inBuffer:Boolean ()
+	local id = inBuffer:String ()
+	while id ~= "" do
+		local viewType = inBuffer:String ()
 		local subInBuffer = GLib.StringInBuffer (inBuffer:String ())
-		local view = self:CreateTab (viewType)
+		local view = self.DockContainer:GetViewById (id)
+		if not view then
+			view = self:CreateView (viewType, id)
+		end
 		if view then
 			view:LoadSession (subInBuffer)
 		end
-		if active then
-			activeView = view
-		end
 		
 		inBuffer:Char () -- Discard newline
-		viewType = inBuffer:String ()
+		id = inBuffer:String ()
 	end
-	if activeView then
-		activeView:Select ()
-	end
+	
+	inBuffer:Char ()   -- Discard newline
+	inBuffer:String () -- Discard comment
+	self.DockContainer:LoadSession (GLib.StringInBuffer (inBuffer:String ()))
 	
 	callback ()
 end
 
-function self:SaveTabs ()
-	if not self:CanSaveTabs () then return end
-	if not self:AreTabsUnsaved () then return end
-	self.LastTabSaveTime = SysTime ()
-	self.TabsUnsaved = false
+function self:SaveWorkspace ()
+	if not self:CanSaveWorkspace () then return end
+	if not self:IsWorkspaceUnsaved () then return end
+	self.LastWorkspaceSaveTime = SysTime ()
+	self.WorkspaceUnsaved = false
 	
 	local outBuffer = GLib.StringOutBuffer ()
 	outBuffer:String ("\n=== Documents ===\n")
@@ -393,23 +386,28 @@ function self:SaveTabs ()
 	self.DocumentManager:SaveSession (subOutBuffer)
 	outBuffer:String (subOutBuffer:GetString ())
 	outBuffer:Char ("\n")
-	outBuffer:String ("\n=== Workspace ===\n")
+	outBuffer:String ("\n=== Views ===\n")
 	
-	for tab in self.TabControl:GetEnumerator () do
-		local viewType = tab.View:GetType ()
+	for view in self.DockContainer:GetViewEnumerator () do
+		local viewType = view:GetType ()
+		outBuffer:String (view:GetId ())
 		outBuffer:String (viewType)
-		outBuffer:Boolean (tab:IsSelected ())
 		subOutBuffer:Clear ()
-		tab.View:SaveSession (subOutBuffer)
+		view:SaveSession (subOutBuffer)
 		outBuffer:String (subOutBuffer:GetString ())
 		outBuffer:Char ("\n")
 	end
 	outBuffer:String ("")
+	outBuffer:Char ("\n")
+	outBuffer:String ("\n=== Workspace ===\n")
+	subOutBuffer:Clear ()
+	self.DockContainer:SaveSession (subOutBuffer)
+	outBuffer:String (subOutBuffer:GetString ())
 	file.Write ("gcompute_editor_tabs.txt", outBuffer:GetString ())
 end
 
-function self:SetCanSaveTabs (canSaveTabs)
-	self.TabSavingEnabled = canSaveTabs
+function self:SetCanSaveWorkspace (canSaveWorkspace)
+	self.WorkspaceSavingEnabled = canSaveWorkspace
 end
 
 --- Opens a new tab for the IFile. Use OpenPath instead if you have a path only.
@@ -432,7 +430,7 @@ function self:OpenFile (file, callback)
 						if returnCode == VFS.ReturnCode.Progress then return end
 						
 						local file = fileStream:GetFile ()
-						local view = self:CreateCodeTab ()
+						local view = self:CreateCodeView ()
 						view:SetTitle (file:GetDisplayName ())
 						view:SetCode (data)
 						view:GetSavable ():SetFile (file)
@@ -469,70 +467,72 @@ function self:OpenPath (path, callback)
 	)
 end
 
---- Prompts for a file to which to save, then saves a tab's contents.
--- @param tab The tab whose contents are to be saved
+--- Prompts for a file to which to save, then saves a view's contents.
+-- @param view The view whose contents are to be saved
 -- @pram callback A callback function (success, IFile file)
-function self:SaveAsTab (tab, callback)
+function self:SaveAsView (tab, callback)
 	callback = callback or GCompute.NullCallback
-	if not tab                    then callback (true) return end
-	if not tab.View               then callback (true) return end
-	if not tab.View:GetSavable () then callback (true) return end
+	if not view               then callback (true) return end
+	if not view:GetSavable () then callback (true) return end
 	
 	VFS.OpenSaveFileDialog ("GCompute.Editor",
 		function (path, file)
 			if not path then callback (false) return end
 			if not self or not self:IsValid () then callback (false) return end
 			
-			tab.View:GetSavable ():SetPath (path)
-			self:SaveTab (tab, path, callback)
+			view:GetSavable ():SetPath (path)
+			self:SaveView (view, path, callback)
 		end
 	)
 end
 
---- Saves a tab's contents.
--- @param tab The tab whose contents are to be saved
+--- Saves a view's contents.
+-- @param view The view whose contents are to be saved
 -- @param pathOrCallback Optional path to which to save
 -- @param callback A callback function (success, IFile file)
-function self:SaveTab (tab, pathOrCallback, callback)
+function self:SaveView (view, pathOrCallback, callback)
 	if type (pathOrCallback) == "function" then
 		callback = pathOrCallback
 		pathOrCallback = nil
 	end
 	callback = callback or GCompute.NullCallback
 	
-	if not tab                    then callback (true) return end
-	if not tab.View               then callback (true) return end
-	if not tab.View:GetSavable () then callback (true) return end
+	if not view               then callback (true) return end
+	if not view:GetSavable () then callback (true) return end
 	
 	-- Determine save path
 	local path = pathOrCallback
-	if not path and tab.View:GetSavable ():HasPath () then
-		path = tab.View:GetSavable ():GetPath ()
-		tab.View:GetSavable ():SetPath (path)
+	if not path and view:GetSavable ():HasPath () then
+		path = view:GetSavable ():GetPath ()
+		view:GetSavable ():SetPath (path)
 	end
 	
-	-- If the tab has no path, invoke the save as dialog.
+	-- If the view has no path, invoke the save as dialog.
 	if not path then
-		self:SaveAsTab (tab, callback)
+		self:SaveAsView (view, callback)
 		return
 	end
 	
-	tab.View:GetSavable ():Save (callback)
+	view:GetSavable ():Save (callback)
 end
 
 -- Internal, do not call
-function self:RegisterTabDocument (tab, document)
+function self:RegisterDocument (document)
 	if not document then return end
 	
 	self.DocumentManager:AddDocument (document)
-	self:InvalidateSavedTabs ()
+	self:HookDocument (document)
+	
+	self:InvalidateSavedWorkspace ()
 end
 
-function self:UnregisterTabDocument (tab, document)
+function self:UnregisterDocument (document)
 	if not document then return end
 	
 	self.DocumentManager:RemoveDocument (document)
-	self:InvalidateSavedTabs ()
+	self:UnhookDocument (document)
+	
+	self:InvalidateSavedWorkspace ()
 end
 
 function self:UpdateCaretPositionText ()
@@ -577,7 +577,25 @@ function self:UpdateProgressBar ()
 end
 
 -- Event hooking
-function self:HookSelectedCodeEditor (tab, codeEditor)
+function self:HookDocument (document)
+	if not document then return end
+	
+	document:AddEventListener ("ViewRemoved", tostring (self:GetTable ()),
+		function (_)
+			if document:GetViewCount () == 0 then
+				self:UnregisterDocument (document)
+			end
+		end
+	)
+end
+
+function self:UnhookDocument (document)
+	if not document then return end
+	
+	document:RemoveEventListener ("ViewRemoved", tostring (self:GetTable ()))
+end
+
+function self:HookSelectedCodeEditor (codeEditor)
 	if not codeEditor then return end
 	
 	codeEditor:AddEventListener ("CaretMoved", tostring (self:GetTable ()),
@@ -596,7 +614,7 @@ function self:HookSelectedCodeEditor (tab, codeEditor)
 	self:HookSyntaxHighlighter (codeEditor:GetSyntaxHighlighter ())
 end
 
-function self:UnhookSelectedCodeEditor (tab, codeEditor)
+function self:UnhookSelectedCodeEditor (codeEditor)
 	if not codeEditor then return end
 	codeEditor:RemoveEventListener ("CaretMoved",               tostring (self:GetTable ()))
 	codeEditor:RemoveEventListener ("SyntaxHighlighterChanged", tostring (self:GetTable ()))
@@ -638,12 +656,6 @@ end
 
 function self:HookTabContents (tab, contents)
 	if not tab.View then return end
-	tab.View:AddEventListener ("DocumentChanged", tostring (self:GetTable ()),
-		function (_, oldDocument, newDocument)
-			self:UnregisterTabDocument (tab, oldDocument)
-			self:RegisterTabDocument (tab, document)
-		end
-	)
 	tab.View:AddEventListener ("IconChanged", tostring (self:GetTable ()),
 		function (_, icon)
 			tab:SetIcon (icon)
@@ -662,16 +674,31 @@ function self:HookTabContents (tab, contents)
 	tab:SetIcon (tab.View:GetIcon ())
 	tab:SetText (tab.View:GetTitle ())
 	tab:SetToolTipText (tab.View:GetToolTipText ())
+end
+
+function self:UnhookTabContents (tab, contents)
+	if not tab.View then return end
+	tab.View:RemoveEventListener ("IconChanged",        tostring (self:GetTable ()))
+	tab.View:RemoveEventListener ("TitleChanged",       tostring (self:GetTable ()))
+	tab.View:RemoveEventListener ("ToolTipTextChanged", tostring (self:GetTable ()))
+end
+
+function self:HookView (view)
+	if not view then return end
+	view:AddEventListener ("DocumentChanged", tostring (self:GetTable ()),
+		function (_, oldDocument, newDocument)
+			self:UnregisterDocument (oldDocument)
+			self:RegisterDocument (document)
+		end
+	)
 	
-	self:RegisterTabDocument (tab.View:GetDocument ())
-	
-	if tab.View:GetSavable () then
-		local savable = tab.View:GetSavable ()
+	if view:GetSavable () then
+		local savable = view:GetSavable ()
 		savable:AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
 			function (_, canSave)
 				local canSaveAll = false
-				for tab in self.TabControl:GetEnumerator () do
-					if tab.View:GetSavable () and tab.View:GetSavable ():IsUnsaved () then
+				for view in self.DockContainer:GetViewEnumerator () do
+					if view:GetSavable () and view:GetSavable ():IsUnsaved () then
 						canSaveAll = true
 						break
 					end
@@ -683,25 +710,19 @@ function self:HookTabContents (tab, contents)
 	end
 end
 
-function self:UnhookTabContents (tab, contents)
-	if not tab.View then return end
-	tab.View:RemoveEventListener ("DocumentChanged",    tostring (self:GetTable ()))
-	tab.View:RemoveEventListener ("IconChanged",        tostring (self:GetTable ()))
-	tab.View:RemoveEventListener ("TitleChanged",       tostring (self:GetTable ()))
-	tab.View:RemoveEventListener ("ToolTipTextChanged", tostring (self:GetTable ()))
-	if tab.View:GetSavable () then
-		tab.View:GetSavable ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
-		tab.View:GetSavable ():RemoveEventListener ("PathChanged",    tostring (self:GetTable ()))
-		tab.View:GetSavable ():RemoveEventListener ("UnsavedChanged", tostring (self:GetTable ()))
+function self:UnhookView (view)
+	if not view then return end
+	view:RemoveEventListener ("DocumentChanged",    tostring (self:GetTable ()))
+	if view:GetSavable () then
+		view:GetSavable ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
 	end
 end
 
 -- Event handlers
 function self:OnRemoved ()
-	self:InvalidateSavedTabs ()
-	self:SaveTabs ()
-	self:SetCanSaveTabs (false)
-	self.TabControl:Clear ()
+	self:InvalidateSavedWorkspace ()
+	self:SaveWorkspace ()
+	self:SetCanSaveWorkspace (false)
 	
 	self.ClipboardController:dtor ()
 	self.CodeEditorContextMenu:Remove ()
@@ -715,9 +736,8 @@ function self:Think ()
 	DFrame.Think (self)
 	
 	if self:HasFocus () and not Gooey.IsMenuOpen () then
-		local selectedTab = self.TabControl:GetSelectedTab ()
-		if selectedTab and selectedTab:GetContents () then
-			selectedTab:GetContents ():RequestFocus ()
+		if self:GetActiveView () then
+			self:GetActiveView ():GetContainer ():RequestFocus ()
 		end
 	end
 	
@@ -739,14 +759,15 @@ function self:Think ()
 	end
 	
 	-- Tab saving
-	if self:AreTabsUnsaved () and self:CanSaveTabs () and SysTime () - self.LastTabSaveTime > 5 then
-		self:SaveTabs ()
+	if self:IsWorkspaceUnsaved () and self:CanSaveWorkspace () and SysTime () - self.LastWorkspaceSaveTime > 5 then
+		self:SaveWorkspace ()
 	end
 	
 	-- Profiler
-	local tabContents = self.TabControl:GetSelectedContents ()
-	tabContents = tabContents and tabContents:GetContents () or nil
-	local lastRenderTime = tabContents and tabContents.LastRenderTime or 0
+	local view = self:GetActiveView ()
+	local viewContainer = view and view:GetContainer () or nil
+	local viewControl = viewContainer and viewContainer:GetContents () or nil
+	local lastRenderTime = viewControl and viewControl.LastRenderTime or 0
 	self.ProfilerPanel:SetText (string.format ("%.3f ms, %.2f %%", lastRenderTime * 1000, lastRenderTime / FrameTime () * 100))
 end
 

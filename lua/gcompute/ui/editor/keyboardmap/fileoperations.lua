@@ -1,7 +1,7 @@
 GCompute.Editor.EditorKeyboardMap:Register ({ KEY_N, KEY_T },
 	function (self, key, ctrl, shift, alt)
 		if not ctrl then return end
-		self:CreateEmptyCodeTab ():Select ()
+		self:CreateEmptyCodeView ():Select ()
 	end
 )
 
@@ -15,13 +15,15 @@ GCompute.Editor.EditorKeyboardMap:Register (KEY_O,
 GCompute.Editor.EditorKeyboardMap:Register (KEY_S,
 	function (self, key, ctrl, shift, alt)
 		if not ctrl then return end
-		self:SaveTab (self:GetSelectedTab ())
+		self:SaveView (self:GetActiveView ())
 	end
 )
 
 GCompute.Editor.EditorKeyboardMap:Register (KEY_W,
 	function (self, key, ctrl, shift, alt)
 		if not ctrl then return end
-		self:CloseTab (self:GetSelectedTab ())
+		if not self:GetActiveView () then return end
+		if not self:GetActiveView ():GetDocument () then return end
+		self:CloseView (self:GetActiveView ())
 	end
 )

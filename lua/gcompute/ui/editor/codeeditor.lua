@@ -379,6 +379,8 @@ function PANEL:Paint (w, h)
 	self:DrawCaretLineHightlighting ()
 	self:DrawSelection ()
 	
+	if not self.Document then return end
+	
 	-- Draw ViewLineCount lines and then the one that's partially out of view.
 	for i = 0, self.ViewLineCount + 1 do
 		self:DrawLine (i)
@@ -446,7 +448,8 @@ function PANEL:SetDocument (document)
 	
 	self.DocumentChangeUnhandled = true
 	self.DocumentLinesUnchecked = {}
-	for i = 0, self.Document:GetLineCount () - 1 do
+	local lineCount = self.Document and self.Document:GetLineCount () or 0
+	for i = 0, lineCount - 1 do
 		self.DocumentLinesUnchecked [i] = true
 	end
 	
@@ -944,7 +947,7 @@ function PANEL:SetVerticalScrollPos (topLine)
 end
 
 function PANEL:UpdateLineNumberWidth ()
-	local maxDisplayedLineNumber = tostring (self.Document:GetLineCount ())
+	local maxDisplayedLineNumber = tostring (self.Document and self.Document:GetLineCount () or 0)
 	local lineNumberWidth = self.Settings.CharacterWidth * (string.len (maxDisplayedLineNumber) + 1) + 16
 	if self.Settings.LineNumberWidth == lineNumberWidth then return end
 	
@@ -1255,6 +1258,8 @@ function PANEL:OnVScroll (viewOffset)
 end
 
 function PANEL:Think ()
+	if not self.Document then return end
+	
 	if self:GetSyntaxHighlighter () then
 		self:GetSyntaxHighlighter ():Think ()
 	end

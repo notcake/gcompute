@@ -96,7 +96,7 @@ function self:Save (callback)
 		return
 	end
 	
-	self:GetFile ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write,
+	self:GetFile ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then callback (false) return end
 			self:SaveToStream (fileStream,

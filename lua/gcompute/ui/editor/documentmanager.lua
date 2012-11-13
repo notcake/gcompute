@@ -5,6 +5,7 @@ function self:ctor ()
 	self.Documents = {}
 	self.DocumentsById = {}
 	self.DocumentsByPath = {}
+	self.DocumentCount = 0
 	
 	self.NextDocumentId = 0
 end
@@ -20,6 +21,7 @@ function self:AddDocument (document)
 		document:SetId (self:GenerateDocumentId (document))
 	end
 	self.DocumentsById [document:GetId ()] = document
+	self.DocumentCount = self.DocumentCount + 1
 	
 	self:HookDocument (document)
 end
@@ -40,6 +42,10 @@ function self:GetDocumentByPath (path)
 	return self.DocumentsByPath [path]
 end
 
+function self:GetDocumentCount ()
+	return self.DocumentCount
+end
+
 function self:RemoveDocument (document)
 	if not self.Documents [document] then return end
 	self.Documents [document] = nil
@@ -47,6 +53,7 @@ function self:RemoveDocument (document)
 		self.DocumentsByPath [document:GetPath ()] = nil
 	end
 	self.DocumentsById [document:GetId ()] = nil
+	self.DocumentCount = self.DocumentCount - 1
 	
 	self:UnhookDocument (document)
 end

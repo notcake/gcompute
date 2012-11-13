@@ -38,6 +38,10 @@ function self:ctor (container)
 	self:SetIcon ("icon16/page.png")
 end
 
+function self:dtor ()
+	self:GetDocument ():RemoveView (self)
+end
+
 function self:GetCode ()
 	return self.CodeEditor:GetText ()
 end
@@ -71,8 +75,10 @@ end
 function self:LoadSession (inBuffer)
 	local title = inBuffer:String ()
 	
-	local documentId = inBuffer:String ()
-	self:GetEditor ():SetDocument (self:GetDocumentManager ():GetDocumentById (documentId))
+	local document = self:GetDocumentManager ():GetDocumentById (inBuffer:String ())
+	if document then
+		self:GetEditor ():SetDocument (document)
+	end
 	self:SetTitle (title)
 end
 

@@ -1,8 +1,8 @@
 GCompute.DockContainerType = GCompute.Enum (
 	{
-		None,
-		View,
-		TabControl,
-		SplitContainer
+		None           = 0,
+		SplitContainer = 1,
+		TabControl     = 2,
+		View           = 3
 	}
 )

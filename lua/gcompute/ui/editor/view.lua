@@ -1,5 +1,5 @@
 local self = {}
-GCompute.Editor.IView = GCompute.MakeConstructor (self)
+GCompute.Editor.View = GCompute.MakeConstructor (self)
 
 --[[
 	Events:
@@ -14,7 +14,13 @@ GCompute.Editor.IView = GCompute.MakeConstructor (self)
 ]]
 
 function self:ctor (container)
+	self.Id = nil
+	
 	self.Container = container
+	self.DocumentManager = nil
+	
+	self.Closable = true
+	
 	self.Icon = "icon16/cross.png"
 	self.Title = "View"
 	self.ToolTipText = nil
@@ -28,21 +34,24 @@ function self:ctor (container)
 	)
 end
 
-function self:GetType ()
-	return self.__Type
+function self:dtor ()
+	self.Container:Remove ()
 end
 
--- UI
-function self:GetContainer ()
-	return self.Container
+function self:CanClose ()
+	return self.Closable
 end
 
 function self:GetDocumentManager ()
-	return self:GetContainer () and self:GetContainer ():GetDocumentManager ()
+	return self.DocumentManager
 end
 
 function self:GetIcon ()
 	return self.Icon
+end
+
+function self:GetId ()
+	return self.Id
 end
 
 function self:GetTitle ()
@@ -53,9 +62,16 @@ function self:GetToolTipText ()
 	return self.ToolTipText
 end
 
-function self:Select ()
-	if not self.Container then return end
-	self.Container:Select ()
+function self:GetType ()
+	return self.__Type
+end
+
+function self:SetCanClose (closable)
+	self.Closable = closable
+end
+
+function self:SetDocumentManager (documentManager)
+	self.DocumentManager = documentManager
 end
 
 function self:SetIcon (icon)
@@ -63,6 +79,10 @@ function self:SetIcon (icon)
 	
 	self.Icon = icon
 	self:DispatchEvent ("IconChanged", self.Icon)
+end
+
+function self:SetId (id)
+	self.Id = id
 end
 
 function self:SetTitle (title)
@@ -77,6 +97,16 @@ function self:SetToolTipText (toolTipText)
 	
 	self.ToolTipText = toolTipText
 	self:DispatchEvent ("ToolTipTextChanged", self.ToolTipText)
+end
+
+-- UI
+function self:GetContainer ()
+	return self.Container
+end
+
+function self:Select ()
+	if not self.Container then return end
+	self.Container:Select ()
 end
 
 -- Components

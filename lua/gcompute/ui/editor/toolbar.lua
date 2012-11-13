@@ -4,7 +4,7 @@ function GCompute.Editor.Toolbar (self)
 		:SetIcon ("icon16/page_white_add.png")
 		:AddEventListener ("Click",
 			function ()
-				self:CreateEmptyCodeTab ():Select ()
+				self:CreateEmptyCodeView ():Select ()
 			end
 		)
 	toolbar:AddButton ("Open")
@@ -32,7 +32,7 @@ function GCompute.Editor.Toolbar (self)
 		:SetIcon ("icon16/disk.png")
 		:AddEventListener ("Click",
 			function ()
-				self:SaveTab (self:GetSelectedTab ())
+				self:SaveView (self:GetActiveView ())
 			end
 		)
 	toolbar:AddButton ("Save All")
@@ -44,7 +44,7 @@ function GCompute.Editor.Toolbar (self)
 					local tab = self.TabControl:GetTab (i)
 					local contents = tab:GetContents ()
 					if tab.View:GetSavable () and tab.View:GetSavable ():IsUnsaved () then
-						unsaved [#unsaved + 1] = self.TabControl:GetTab (i)
+						unsaved [#unsaved + 1] = tab.View
 					end
 				end
 				
@@ -57,7 +57,7 @@ function GCompute.Editor.Toolbar (self)
 					if not self or not self:IsValid () then return end
 					if not unsaved [i] then return end
 					if not success then return end
-					self:SaveTab (unsaved [i], saveIterator)
+					self:SaveView (unsaved [i], saveIterator)
 				end
 				saveIterator (true)
 			end
@@ -162,15 +162,11 @@ function GCompute.Editor.Toolbar (self)
 				pipe:AddEventListener ("Data",
 					function (_, data, color)
 						if not outputPaneCleared then
-							self.OutputPane:Clear ()
+							self.DockContainer:GetViewById ("Output"):Clear ()
 							outputPaneCleared = true
 						end
 						
-						local endPos = self.OutputPane:GetDocument ():GetEnd ()
-						self.OutputPane:Append (data)
-						if color then
-							self.OutputPane:GetDocument ():SetColor (color, endPos, self.OutputPane:GetDocument ():GetEnd ())
-						end
+						self.DockContainer:GetViewById ("Output"):Append (data, color)
 					end
 				)
 				
@@ -178,13 +174,11 @@ function GCompute.Editor.Toolbar (self)
 				errorPipe:AddEventListener ("Data",
 					function (_, data, color)
 						if not outputPaneCleared then
-							self.OutputPane:Clear ()
+							self.DockContainer:GetViewById ("Output"):Clear ()
 							outputPaneCleared = true
 						end
 						
-						local endPos = self.OutputPane:GetDocument ():GetEnd ()
-						self.OutputPane:Append (data)
-						self.OutputPane:GetDocument ():SetColor (color or GLib.Colors.IndianRed, endPos, self.OutputPane:GetDocument ():GetEnd ())
+						self.DockContainer:GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed)
 					end
 				)
 				
@@ -197,7 +191,7 @@ function GCompute.Editor.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				if not self.RootNamespaceBrowserView then
-					self.RootNamespaceBrowserView = self:CreateNamespaceBrowserTab (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
+					self.RootNamespaceBrowserView = self:CreateNamespaceBrowserView (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
 					self.RootNamespaceBrowserView:AddEventListener ("Removed",
 						function ()
 							self.RootNamespaceBrowserView = nil

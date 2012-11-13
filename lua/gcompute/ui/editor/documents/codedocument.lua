@@ -458,6 +458,7 @@ function self:LoadSession (inBuffer)
 		VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Read,
 			function (returnCode, fileStream)
 				if returnCode ~= VFS.ReturnCode.Success then
+					GCompute.Error (VFS.ReturnCode [returnCode])
 					self:SetPath (path)
 					return
 				end
@@ -467,6 +468,9 @@ function self:LoadSession (inBuffer)
 						if returnCode == VFS.ReturnCode.Progress then return end
 						fileStream:Close ()
 						
+						if returnCode ~= VFS.ReturnCode.Success then
+							GCompute.Error (VFS.ReturnCode [returnCode])
+						end
 						self:SetText (data)
 					end
 				)

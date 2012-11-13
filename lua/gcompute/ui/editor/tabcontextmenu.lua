@@ -63,7 +63,7 @@ function GCompute.Editor.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				self:SaveTab (tab)
+				self:SaveView (tab.View)
 			end
 		)
 	menu:AddOption ("Save as...")
@@ -71,7 +71,7 @@ function GCompute.Editor.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				self:SaveAsTab (tab)
+				self:SaveAsView (tab.View)
 			end
 		)
 	menu:AddOption ("Rename")

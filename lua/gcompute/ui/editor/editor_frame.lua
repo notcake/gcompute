@@ -49,9 +49,27 @@ function self:Init ()
 			self:DispatchEvent ("ActiveViewChanged", oldView, view)
 		end
 	)
+	self.DockContainer:AddEventListener ("ContainerSplit",
+		function (_, splitDockContainer, container, emptyContainer)
+			emptyContainer:SetContainerType (GCompute.DockContainerType.TabControl)
+		end
+	)
 	self.DockContainer:AddEventListener ("ViewCloseRequested",
 		function (_, view)
 			self:CloseView (view)
+		end
+	)
+	self.DockContainer:AddEventListener ("ViewDropped",
+		function (_, view, originalContainer, container)
+			if not originalContainer then return end
+			
+			if originalContainer:GetLocalViewCount () == 0 and not originalContainer:IsRootDockContainer () then
+				if originalContainer:IsPanel1 () then
+					originalContainer:GetParentDockContainer ():Merge (originalContainer:GetParentDockContainer ():GetPanel2 ())
+				else
+					originalContainer:GetParentDockContainer ():Merge (originalContainer:GetParentDockContainer ():GetPanel1 ())
+				end
+			end
 		end
 	)
 	self.DockContainer:AddEventListener ("ViewMoved",
@@ -70,15 +88,24 @@ function self:Init ()
 		end
 	)
 	self.DockContainer:AddEventListener ("ViewRemoved",
-		function (_, view, viewRemovalReason)
+		function (_, container, view, viewRemovalReason)
 			if viewRemovalReason == GCompute.ViewRemovalReason.Removal then
 				self.DockContainer:UnregisterView (view)
+				
+				if container:GetLocalViewCount () == 0 and not container:IsRootDockContainer () then
+					if container:IsPanel1 () then
+						container:GetParentDockContainer ():Merge (container:GetParentDockContainer ():GetPanel2 ())
+					else
+						container:GetParentDockContainer ():Merge (container:GetParentDockContainer ():GetPanel1 ())
+					end
+				end
 			end
 		end
 	)
 	self.DockContainer:AddEventListener ("ViewUnregistered",
 		function (_, view)
 			self:UnhookView (view)
+			view:dtor ()
 			
 			self:InvalidateSavedWorkspace ()
 		end
@@ -368,6 +395,15 @@ function self:LoadWorkspace (callback)
 	
 	inBuffer:Char ()   -- Discard newline
 	inBuffer:String () -- Discard comment
+	
+	-- Check for orphaned documents
+	for document in self.DocumentManager:GetEnumerator () do
+		if document:GetViewCount () == 0 then
+			local view = self:CreateView ("Code")
+			view:SetDocument (document)
+		end
+	end
+	
 	self.DockContainer:LoadSession (GLib.StringInBuffer (inBuffer:String ()))
 	
 	callback ()
@@ -469,8 +505,8 @@ end
 
 --- Prompts for a file to which to save, then saves a view's contents.
 -- @param view The view whose contents are to be saved
--- @pram callback A callback function (success, IFile file)
-function self:SaveAsView (tab, callback)
+-- @param callback A callback function (success, IFile file)
+function self:SaveAsView (view, callback)
 	callback = callback or GCompute.NullCallback
 	if not view               then callback (true) return end
 	if not view:GetSavable () then callback (true) return end
@@ -685,10 +721,11 @@ end
 
 function self:HookView (view)
 	if not view then return end
+	
 	view:AddEventListener ("DocumentChanged", tostring (self:GetTable ()),
 		function (_, oldDocument, newDocument)
 			self:UnregisterDocument (oldDocument)
-			self:RegisterDocument (document)
+			self:RegisterDocument (newDocument)
 		end
 	)
 	

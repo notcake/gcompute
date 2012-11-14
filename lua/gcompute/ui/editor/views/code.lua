@@ -54,6 +54,13 @@ function self:SetCode (code)
 	self.CodeEditor:SetText (code)
 end
 
+function self:SetDocument (document)
+	if not document then
+		GCompute.Error ("Code:SetDocument : document is nil!")
+	end
+	self.CodeEditor:SetDocument (document)
+end
+
 -- Components
 function self:GetClipboardTarget ()
 	return self.ClipboardTarget
@@ -83,6 +90,6 @@ function self:LoadSession (inBuffer)
 end
 
 function self:SaveSession (outBuffer)
-	outBuffer:String (self:GetTitle () or "")
+	outBuffer:String (self:GetTitle ())
 	outBuffer:String (self:GetDocument () and self:GetDocument ():GetId () or "")
 end

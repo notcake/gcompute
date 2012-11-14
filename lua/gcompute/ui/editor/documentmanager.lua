@@ -46,6 +46,14 @@ function self:GetDocumentCount ()
 	return self.DocumentCount
 end
 
+function self:GetEnumerator ()
+	local next, tbl, key = pairs (self.Documents)
+	return function ()
+		key = next (tbl, key)
+		return key
+	end
+end
+
 function self:RemoveDocument (document)
 	if not self.Documents [document] then return end
 	self.Documents [document] = nil

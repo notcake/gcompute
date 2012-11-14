@@ -2,7 +2,7 @@ local self = {}
 GCompute.Function = GCompute.MakeConstructor (self)
 
 function self:ctor (name, returnType)
-	self.Name = Name or "[anonymous function]"
+	self.Name = name or "[anonymous function]"
 	self.ParentScope = nil
 	self.ReturnType = GCompute.TypeReference (returnType or "void")
 	

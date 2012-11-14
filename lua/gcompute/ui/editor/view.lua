@@ -55,7 +55,7 @@ function self:GetId ()
 end
 
 function self:GetTitle ()
-	return self.Title
+	return self.Title or ""
 end
 
 function self:GetToolTipText ()

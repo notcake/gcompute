@@ -9,12 +9,12 @@ function self:ctor (editor)
 	
 	self.Editor:AddEventListener ("VisibleChanged", "Metastruct",
 		function (_)
-			self:UpdateHookedContents ()
+			self:UpdateHookedView ()
 		end
 	)
-	self.Editor:AddEventListener ("SelectedContentsChanged", "Metastruct",
+	self.Editor:AddEventListener ("ActiveViewChanged", "Metastruct",
 		function (_)
-			self:UpdateHookedContents ()
+			self:UpdateHookedView ()
 		end
 	)
 end
@@ -59,7 +59,7 @@ function self:UnhookCodeEditor (codeEditor)
 	codeEditor:RemoveEventListener ("TextChanged", "Metastruct")
 end
 
-function self:UpdateHookedContents ()
+function self:UpdateHookedView ()
 	local codeEditor = self.Editor:GetActiveCodeEditor ()
 	if not self.Editor:IsVisible () then
 		codeEditor = nil

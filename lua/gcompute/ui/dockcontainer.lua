@@ -3,14 +3,18 @@ local PANEL = {}
 --[[
 	Events:
 		ActiveViewChanged (View oldView, View view)
-			Fired when the selected view has changed.
+			Fired on the root container when the selected view has changed.
+		ContainerSplit (DockContainer splitDockContainer, DockContainer container, DockContainer emptyContainer)
+			Fired on the root container when a container has been split.
 		ViewCloseRequested (View view)
 			Fired on the root container when the user attempts to close a view.
+		ViewDropped (View view, DockContainer originalContainer, DockContainer container)
+			Fired on the root container when the user moves a view from one DockContainer to another.
 		ViewMoved (View view)
 			Fired on the root container when a view has been placed in a new tab or DockContainer.
 		ViewRegistered (View view)
 			Fired on the root container when a view has been registered.
-		ViewRemoved (View view, ViewRemovalReason viewRemovalReason)
+		ViewRemoved (DockContainer container, View view, ViewRemovalReason viewRemovalReason)
 			Fired on the root container when a view has been displaced from a tab or DockContainer.
 		ViewUnregistered (View view)
 			Fired on the root container when a view has been unregistered.
@@ -23,15 +27,16 @@ function PANEL:Init ()
 	self.Child = nil
 	
 	-- Root
-	self.ViewSet = {}
-	self.ViewsById = {}
+	self.ViewSet    = {}
+	self.ViewsById  = {}
 	self.NextViewId = 0
 	
 	self.ActiveView = nil
 	
 	-- TabControl
-	self.LocalViewSet = {}
+	self.LocalViewSet   = {}
 	self.LocalViewsById = {}
+	self.LocalViewCount = 0
 	
 	-- Drag and drop
 	self.DropButtons =
@@ -60,6 +65,8 @@ function PANEL:Init ()
 	self.DragDropController = Gooey.DragDropController (self)
 	self.DragDropController:SetDragRenderer (
 		function (dragDropController, x, y)
+			if not self:IsValid () then return end
+			
 			local viewContainer = self.DragDropController:GetObject ():GetContainer ()
 			if not viewContainer or not viewContainer:IsValid () then return end
 			
@@ -98,7 +105,7 @@ function PANEL:AddView (view)
 	end
 	
 	if view:GetContainer ():GetDockContainer () then
-		view:GetContainer ():GetDockContainer ():RemoveView (view, GCompute.ViewRemovalReason.Removal)
+		view:GetContainer ():GetDockContainer ():RemoveView (view, GCompute.ViewRemovalReason.Rearrangement)
 	end
 	
 	if self.DockContainerType == GCompute.DockContainerType.TabControl then
@@ -168,11 +175,16 @@ function PANEL:GetLargestView ()
 	if not largestContainer then return nil end
 	
 	if largestContainer:GetContainerType () == GCompute.DockContainerType.TabControl then
-		return self.Child:GetSelectedTab ().View
+		if not self.Child then return nil end
+		return self.Child:GetSelectedTab () and self.Child:GetSelectedTab ().View or nil
 	elseif largestContainer:GetContainerType () == GCompute.DockContainerType.View then
 		return self:GetView ()
 	end
 	return nil
+end
+
+function PANEL:GetLocalViewCount ()
+	return self.LocalViewCount
 end
 
 function PANEL:GetParentDockContainer ()
@@ -180,11 +192,11 @@ function PANEL:GetParentDockContainer ()
 end
 
 function PANEL:GetCreateSplit (dockingSide, fraction)
-	local dockingContainer = self:GetSplit (dockingSide)
-	if not dockingContainer then
-		dockingContainer = self:Split (dockingSide, fraction)
+	local dockContainer = self:GetSplit (dockingSide)
+	if not dockContainer then
+		dockContainer = self:Split (dockingSide, fraction)
 	end
-	return dockingContainer
+	return dockContainer
 end
 
 function PANEL:GetSplit (dockingSide)
@@ -236,8 +248,72 @@ function PANEL:GetViewEnumerator ()
 	end
 end
 
+function PANEL:IsPanel1 ()
+	if self:IsRootDockContainer () then return false end
+	return self:GetParentDockContainer ():GetPanel1 () == self
+end
+
+function PANEL:IsPanel2 ()
+	if self:IsRootDockContainer () then return false end
+	return self:GetParentDockContainer ():GetPanel2 () == self
+end
+
 function PANEL:IsRootDockContainer ()
 	return self.ParentDockContainer == nil
+end
+
+function PANEL:Merge (childDockContainer)
+	if not childDockContainer then return end
+	if self.DockContainerType ~= GCompute.DockContainerType.SplitContainer then
+		GCompute.Error ("DockContainer:Merge : This DockContainer is not in splitcontainer mode.")
+		return
+	end
+	if childDockContainer:GetParentDockContainer () ~= self then
+		GCompute.Error ("DockContainer:Merge : The specified DockContainer is not a direct child of this DockContainer.")
+		return
+	end
+	
+	local splitContainer = self.Child
+	local otherDockContainer = self:GetPanel1 ()
+	if otherDockContainer == childDockContainer then
+		otherDockContainer = self:GetPanel2 ()
+	end
+	
+	self.DockContainerType = childDockContainer.DockContainerType
+	self.DragDropController:SetDropTargetEnabled (self:IsRootDockContainer () or childDockContainer.DragDropController:IsDropTargetEnabled ())
+	self.Child          = childDockContainer.Child
+	self.LocalViewSet   = childDockContainer.LocalViewSet
+	self.LocalViewsById = childDockContainer.LocalViewsById
+	self.LocalViewCount = childDockContainer.LocalViewCount
+	
+	if self.Child then
+		self.Child:SetParent (self)
+		if self.DockContainerType == GCompute.DockContainerType.SplitContainer then
+			self:GetPanel1 ():SetParentDockContainer (self)
+			self:GetPanel2 ():SetParentDockContainer (self)
+		end
+	end
+	
+	self:HookTabControl ()
+	childDockContainer:UnhookTabControl ()
+	
+	for view, _ in pairs (self.LocalViewSet) do
+		self:HookView (view)
+		childDockContainer:UnhookView (view)
+		view:GetContainer ():SetDockContainer (self)
+	end
+	
+	childDockContainer.Child = nil
+	childDockContainer.LocalViewSet   = {}
+	childDockContainer.LocalViewsById = {}
+	childDockContainer.LocalViewCount = 0
+	
+	childDockContainerType = GCompute.DockContainerType.None
+	childDockContainer:Remove ()
+	otherDockContainer:Remove ()
+	splitContainer:Remove ()
+	
+	self:PerformLayoutRecursive ()
 end
 
 function PANEL:Paint (w, h)
@@ -250,6 +326,162 @@ function PANEL:PerformLayout ()
 	end
 end
 
+function PANEL:PerformLayoutRecursive ()
+	self:PerformLayout ()
+	if not self.Child then return end
+	
+	self.Child:PerformLayout ()
+	if self.DockContainerType == GCompute.DockContainerType.SplitContainer then
+		self:GetPanel1 ():PerformLayoutRecursive ()
+		self:GetPanel2 ():PerformLayoutRecursive ()
+	elseif self.DockContainerType == GCompute.DockContainerType.TabControl then
+		local selectedTab = self.Child:GetSelectedTab ()
+		local contents = selectedTab and selectedTab:GetContents () or nil
+		if contents and contents:IsValid () then
+			contents:PerformLayout ()
+			if contents.GetContents then
+				contents = contents:GetContents ()
+				contents = contents and contents:IsValid () and contents or nil
+			else
+				contents = nil
+			end
+			if contents and contents:IsValid () then
+				contents:PerformLayout ()
+			end
+		end
+	elseif self.DockContainerType == GCompute.DockContainerType.View then
+		local container = self:GetView () and self:GetView ():GetContainer ()
+		local contents = container and container:GetContents () or nil
+		if contents and contents:IsValid () then
+			contents:PerformLayout ()
+		end
+	end
+end
+
+function PANEL:RegisterLocalView (view)
+	if not view then return end
+	if self.LocalViewSet [view] then return end
+	self:RegisterView (view)
+	
+	self.LocalViewSet [view] = true
+	self.LocalViewsById [view:GetId ()] = view
+	self.LocalViewCount = self.LocalViewCount + 1
+end
+
+function PANEL:RegisterView (view)
+	if not view then return end
+	if not self:IsRootDockContainer () then
+		self:GetRootDockContainer ():RegisterView (view)
+		return
+	end
+	if self.ViewSet [view] then return end
+	
+	self.ViewSet [view] = true
+	if not view:GetId () then
+		view:SetId (self:GenerateViewId (view))
+	end
+	self.ViewsById [view:GetId ()] = view
+	
+	self:DispatchEvent ("ViewRegistered", view)
+end
+
+function PANEL:RemoveView (view, viewRemovalReason)
+	if not view then return end
+	if self.DockContainerType ~= GCompute.DockContainerType.TabControl and
+	   self.DockContainerType ~= GCompute.DockContainerType.View then
+		GCompute.Error ("DockContainer:RemoveView : This DockContainer is not in tabcontrol or view mode!")
+	end
+	
+	if not self.LocalViewSet [view] then return end
+	self:UnregisterLocalView (view)
+	
+	if self.DockContainerType == GCompute.DockContainerType.TabControl then
+		if view:GetContainer ():GetTab () then
+			view:GetContainer ():GetTab ().View = nil
+			view:GetContainer ():GetTab ():SetContents (nil)
+			view:GetContainer ():GetTab ():Remove ()
+			view:GetContainer ():SetTab (nil)
+		end
+	else
+		view:GetContainer ():SetParent (nil)
+		self.Child = nil
+	end
+	view:GetContainer ():SetDockContainer (nil)
+	view:GetContainer ():SetVisible (false)
+	self:UnhookView (view)
+	
+	if self:GetActiveView () == view then
+		self:SetActiveView (nil)
+	end
+	
+	self:GetRootDockContainer ():DispatchEvent ("ViewRemoved", self, view, viewRemovalReason or GCompute.ViewRemovalReason.Removal)
+end
+
+function PANEL:SetActiveView (view)
+	if not self:IsRootDockContainer () then
+		self:GetRootDockContainer ():SetActiveView (view)
+		return
+	end
+	
+	if view and not self.ViewSet [view] then return end
+	if self.ActiveView == view then return end
+	
+	local oldSelectedView = self.ActiveView
+	self.ActiveView = view
+	self:DispatchEvent ("ActiveViewChanged", oldActiveView, view)
+end
+
+function PANEL:SetContainerType (dockContainerType)
+	if not GCompute.DockContainerType [dockContainerType] then
+		GCompute.Error ("DockContainer:SetContainerType : Container type " .. dockContainerType .. " is not valid!")
+		return
+	end
+	if self.DockContainerType == dockContainerType then return end
+	
+	local firstView = next (self.LocalViewSet)
+	if dockContainerType ~= GCompute.DockContainerType.TabControl and
+	   dockContainerType ~= GCompute.DockContainerType.View then
+		firstView = nil
+	end
+	for view, _ in pairs (self.LocalViewSet) do
+		self:RemoveView (view, view == firstView and GCompute.ViewRemovalReason.Conversion or GCompute.ViewRemovalReason.Removal)
+	end
+	
+	if self.DockContainerType == GCompute.DockContainerType.TabControl then
+		self:UnhookTabControl ()
+	end
+	
+	if self.Child then
+		self.Child:Remove ()
+		self.Child = nil
+	end
+	
+	self.DockContainerType = dockContainerType
+	self.DragDropController:SetDropTargetEnabled (self:IsRootDockContainer ())
+	
+	if self.DockContainerType == GCompute.DockContainerType.None then
+		self.DragDropController:SetDropTargetEnabled (true)
+	elseif self.DockContainerType == GCompute.DockContainerType.View then
+		self:AddView (firstView)
+		self.DragDropController:SetDropTargetEnabled (true)
+	elseif self.DockContainerType == GCompute.DockContainerType.TabControl then
+		self.Child = vgui.Create ("GTabControl", self)
+		self:HookTabControl ()
+		self:AddView (firstView)
+		self.DragDropController:SetDropTargetEnabled (true)
+	elseif self.DockContainerType == GCompute.DockContainerType.SplitContainer then
+		self.Child = vgui.Create ("GSplitContainer", self)
+		self.Child:SetPanel1 (vgui.Create ("GComputeDockContainer"))
+		self.Child:SetPanel2 (vgui.Create ("GComputeDockContainer"))
+		self.Child:GetPanel1 ():SetParentDockContainer (self)
+		self.Child:GetPanel2 ():SetParentDockContainer (self)
+	end
+end
+
+function PANEL:SetParentDockContainer (parentDockContainer)
+	self.ParentDockContainer = parentDockContainer
+end
+
 function PANEL:Split (dockingSide, fraction)
 	local childDockContainer = vgui.Create ("GComputeDockContainer")
 	
@@ -258,6 +490,7 @@ function PANEL:Split (dockingSide, fraction)
 	childDockContainer.Child = self.Child
 	childDockContainer.LocalViewSet   = self.LocalViewSet
 	childDockContainer.LocalViewsById = self.LocalViewsById
+	childDockContainer.LocalViewCount = self.LocalViewCount
 	
 	if childDockContainer.Child then
 		childDockContainer.Child:SetParent (childDockContainer)
@@ -275,6 +508,7 @@ function PANEL:Split (dockingSide, fraction)
 	self.Child = nil
 	self.LocalViewSet   = {}
 	self.LocalViewsById = {}
+	self.LocalViewCount = 0
 	
 	self.DockContainerType = GCompute.DockContainerType.SplitContainer
 	self.DragDropController:SetDropTargetEnabled (self:IsRootDockContainer ())
@@ -315,129 +549,10 @@ function PANEL:Split (dockingSide, fraction)
 			end
 		)
 	end
+	self:PerformLayoutRecursive ()
 	
+	self:GetRootDockContainer ():DispatchEvent ("ContainerSplit", self, childDockContainer, otherDockContainer)
 	return otherDockContainer
-end
-
-function PANEL:RegisterLocalView (view)
-	if not view then return end
-	if self.LocalViewSet [view] then return end
-	self:RegisterView (view)
-	
-	self.LocalViewSet [view] = true
-	self.LocalViewsById [view:GetId ()] = view
-end
-
-function PANEL:RegisterView (view)
-	if not view then return end
-	if not self:IsRootDockContainer () then
-		self:GetRootDockContainer ():RegisterView (view)
-		return
-	end
-	if self.ViewSet [view] then return end
-	
-	self.ViewSet [view] = true
-	if not view:GetId () then
-		view:SetId (self:GenerateViewId (view))
-	end
-	self.ViewsById [view:GetId ()] = view
-	
-	self:DispatchEvent ("ViewRegistered", view)
-end
-
-function PANEL:RemoveView (view, viewRemovalReason)
-	if not view then return end
-	if self.DockContainerType ~= GCompute.DockContainerType.TabControl and
-	   self.DockContainerType ~= GCompute.DockContainerType.View then
-		GCompute.Error ("DockContainer:RemoveView : This DockContainer is not in tabcontrol or view mode!")
-	end
-	
-	if not self.LocalViewSet [view] then return end
-	self:UnregisterLocalView (view)
-	
-	if self.DockContainerType == GCompute.DockContainerType.TabControl then
-		if view:GetContainer ():GetTab () then
-			view:GetContainer ():GetTab ():SetContents (nil)
-			view:GetContainer ():GetTab ():Remove ()
-			view:GetContainer ():SetTab (nil)
-		end
-	else
-		view:GetContainer ():SetParent (nil)
-		self.Child = nil
-	end
-	view:GetContainer ():SetDockContainer (nil)
-	view:GetContainer ():SetVisible (false)
-	self:UnhookView (view)
-	
-	if self:GetActiveView () == view then
-		self:SetActiveView (nil)
-	end
-	
-	self:GetRootDockContainer ():DispatchEvent ("ViewRemoved", view, viewRemovalReason or GCompute.ViewRemovalReason.Removal)
-end
-
-function PANEL:SetContainerType (dockContainerType)
-	if not GCompute.DockContainerType [dockContainerType] then
-		GCompute.Error ("DockContainer:SetContainerType : Container type " .. dockContainerType .. " is not valid!")
-		return
-	end
-	if self.DockContainerType == dockContainerType then return end
-	
-	local firstView = next (self.LocalViewSet)
-	if dockContainerType ~= GCompute.DockContainerType.TabControl and
-	   dockContainerType ~= GCompute.DockContainerType.View then
-		firstView = nil
-	end
-	for view, _ in pairs (self.LocalViewSet) do
-		self:RemoveView (view, view == firstView and GCompute.ViewRemovalReason.Rearrangement or GCompute.ViewRemovalReason.Removal)
-	end
-	
-	if self.DockContainerType == GCompute.DockContainerType.TabControl then
-		self:UnhookTabControl ()
-	end
-	
-	if self.Child then
-		self.Child:Remove ()
-		self.Child = nil
-	end
-	
-	self.DockContainerType = dockContainerType
-	self.DragDropController:SetDropTargetEnabled (self:IsRootDockContainer ())
-	
-	if self.DockContainerType == GCompute.DockContainerType.None then
-	elseif self.DockContainerType == GCompute.DockContainerType.View then
-		self:AddView (firstView)
-		self.DragDropController:SetDropTargetEnabled (true)
-	elseif self.DockContainerType == GCompute.DockContainerType.TabControl then
-		self.Child = vgui.Create ("GTabControl", self)
-		self:HookTabControl ()
-		self:AddView (firstView)
-		self.DragDropController:SetDropTargetEnabled (true)
-	elseif self.DockContainerType == GCompute.DockContainerType.SplitContainer then
-		self.Child = vgui.Create ("GSplitContainer", self)
-		self.Child:SetPanel1 (vgui.Create ("GComputeDockContainer"))
-		self.Child:SetPanel2 (vgui.Create ("GComputeDockContainer"))
-		self.Child:GetPanel1 ():SetParentDockContainer (self)
-		self.Child:GetPanel2 ():SetParentDockContainer (self)
-	end
-end
-
-function PANEL:SetParentDockContainer (parentDockContainer)
-	self.ParentDockContainer = parentDockContainer
-end
-
-function PANEL:SetActiveView (view)
-	if not self:IsRootDockContainer () then
-		self:GetRootDockContainer ():SetActiveView (view)
-		return
-	end
-	
-	if view and not self.ViewSet [view] then return end
-	if self.ActiveView == view then return end
-	
-	local oldSelectedView = self.ActiveView
-	self.ActiveView = view
-	self:DispatchEvent ("ActiveViewChanged", oldActiveView, view)
 end
 
 function PANEL:UnregisterLocalView (view)
@@ -445,6 +560,7 @@ function PANEL:UnregisterLocalView (view)
 	
 	self.LocalViewSet [view] = nil
 	self.LocalViewsById [view:GetId ()] = nil
+	self.LocalViewCount = self.LocalViewCount - 1
 end
 
 function PANEL:UnregisterView (view)
@@ -628,6 +744,8 @@ function PANEL:DrawDropTargets (renderContext, alphaScale)
 	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.min (255, (SysTime () - self.ActiveDropTargetChangeTime) / 0.2 * 255), self.ActiveDropTarget, self.ActiveDropTargetFraction)
 	
 	-- Draw drop buttons
+	if self:IsRootDockContainer () and self.DockContainerType == GCompute.DockContainerType.SplitContainer then return end
+	
 	if self:GetWide () < 160 or self:GetTall () < 160 then return end
 	
 	local lastActiveButtonAlphaFraction = math.max (0, (1 - (SysTime () - self.ActiveDropButtonChangeTime) / 0.2))
@@ -697,11 +815,13 @@ function PANEL:SetActiveDropButton (dockContainerDropTarget)
 	self.ActiveDropButtonChangeTime = SysTime ()
 end
 
-function PANEL:SetActiveDropTarget (dockContainerDropTarget)
-	if self.ActiveDropTarget == dockContainerDropTarget then return end
+function PANEL:SetActiveDropTarget (dropTarget, dropTargetFraction)
+	if self.ActiveDropTarget == dropTarget then return end
 	
-	self.LastActiveDropTarget = self.ActiveDropTarget
-	self.ActiveDropTarget = dockContainerDropTarget
+	self.LastActiveDropTarget         = self.ActiveDropTarget
+	self.LastActiveDropTargetFraction = self.ActiveDropTargetFraction
+	self.ActiveDropTarget             = dropTarget
+	self.ActiveDropTargetFraction     = dropTargetFraction or 0.75
 	self.ActiveDropTargetChangeTime = SysTime ()
 end
 
@@ -794,9 +914,11 @@ end
 -- Event handlers
 function PANEL:OnDragDrop (dragDropController)
 	local view = dragDropController:GetObject ()
+	local originalDockContainer = view:GetContainer ():GetDockContainer ()
 	if self.ActiveDropTarget == GCompute.DockContainerDropTarget.None then
 	elseif self.ActiveDropTarget == GCompute.DockContainerDropTarget.Middle then
 		self:AddView (view)
+		self:GetRootDockContainer ():DispatchEvent ("ViewDropped", view, originalDockContainer, view:GetContainer ():GetDockContainer ())
 	else
 		local dockingSide = nil
 		if self.ActiveDropTarget == GCompute.DockContainerDropTarget.Top then
@@ -808,7 +930,18 @@ function PANEL:OnDragDrop (dragDropController)
 		elseif self.ActiveDropTarget == GCompute.DockContainerDropTarget.Right then
 			dockingSide = GCompute.DockingSide.Right
 		end
-		self:Split (dockingSide, self.ActiveDropTargetFraction):AddView (view)
+		if self == originalDockContainer then
+			local otherDockContainer = self:Split (dockingSide, self.ActiveDropTargetFraction)
+			if self:GetPanel1 () == otherDockContainer then
+				originalDockContainer = self:GetPanel2 ()
+			else
+				originalDockContainer = self:GetPanel1 ()
+			end
+			otherDockContainer:AddView (view)
+		else
+			self:Split (dockingSide, self.ActiveDropTargetFraction):AddView (view)
+		end
+		self:GetRootDockContainer ():DispatchEvent ("ViewDropped", view, originalDockContainer, view:GetContainer ():GetDockContainer ())
 	end
 	view:GetContainer ():Select ()
 	
@@ -830,6 +963,8 @@ function PANEL:OnDragLeave (dragDropController)
 	
 	Gooey.AddRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()),
 		function ()
+			if not self:IsValid () then return end
+			
 			self:DrawDropOverlay ()
 			if SysTime () - self.DragLeaveTime > 1 then
 				Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()))
@@ -839,34 +974,50 @@ function PANEL:OnDragLeave (dragDropController)
 end
 
 function PANEL:OnDragOver (dragDropController, x, y)
-	local normalizedX = x / self:GetWide ()
-	local normalizedY = y / self:GetTall ()
-	
 	local dropButton = nil
 	local dropTarget = nil
+	local dropTargetFraction = 0.75
 	
-	dropButton = self:DropButtonFromPoint (x, y)
-	if dropButton then
-		dropTarget = dropButton
-	end
-	
-	if not dropTarget then
-		if normalizedX < 0.25 then
-			dropTarget = GCompute.DockContainerDropTarget.Left
-		elseif normalizedX > 0.75 then
-			dropTarget = GCompute.DockContainerDropTarget.Right
+	if not self:IsRootDockContainer () or
+	   self.DockContainerType ~= GCompute.DockContainerType.SplitContainer then
+		dropButton = self:DropButtonFromPoint (x, y)
+		if dropButton then
+			dropTarget = dropButton
+			local hasDocument      = self:GetLargestView () and self:GetLargestView ():GetDocument () and true or false
+			local otherHasDocument = dragDropController:GetObject ():GetDocument () and true or false
+			
+			if hasDocument == otherHasDocument then
+				dropTargetFraction = 0.5
+			elseif hasDocument then
+				dropTargetFraction = 0.75
+			else
+				dropTargetFraction = 0.25
+			end
 		end
-		if normalizedY < 0.25 then
-			dropTarget = GCompute.DockContainerDropTarget.Top
-		elseif normalizedY > 0.75 then
-			dropTarget = GCompute.DockContainerDropTarget.Bottom
+		
+		local normalizedX = x / self:GetWide ()
+		local normalizedY = y / self:GetTall ()
+		if not dropTarget then
+			if normalizedX < 0.25 then
+				dropTarget = GCompute.DockContainerDropTarget.Left
+			elseif normalizedX > 0.75 then
+				dropTarget = GCompute.DockContainerDropTarget.Right
+			end
+			if normalizedY < 0.25 then
+				dropTarget = GCompute.DockContainerDropTarget.Top
+			elseif normalizedY > 0.75 then
+				dropTarget = GCompute.DockContainerDropTarget.Bottom
+			end
 		end
+		dropButton = dropButton or GCompute.DockContainerDropTarget.None
+		dropTarget = dropTarget or GCompute.DockContainerDropTarget.Middle
 	end
 	self:SetActiveDropButton (dropButton or GCompute.DockContainerDropTarget.None)
-	self:SetActiveDropTarget (dropTarget or GCompute.DockContainerDropTarget.Middle)
+	self:SetActiveDropTarget (dropTarget or GCompute.DockContainerDropTarget.None, dropTargetFraction)
 end
 
 function PANEL:OnRemoved ()
+	self.DragDropController:EndDrag ()
 	Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()))
 	
 	if self:IsRootDockContainer () then
@@ -878,6 +1029,7 @@ end
 
 function PANEL:Think ()
 	if not self:IsRootDockContainer () then return end
+	
 	local activePanel = vgui.GetKeyboardFocus ()
 	if not activePanel then return end
 	

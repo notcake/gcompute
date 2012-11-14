@@ -2,25 +2,27 @@ function GCompute.Editor.TabContextMenu (self)
 	local menu = vgui.Create ("GMenu")
 	menu:AddEventListener ("MenuOpening",
 		function (_, tab)
+			local tabControl = tab and tab:GetTabControl ()
 			local contents = tab and tab:GetContents ()
+			local view = tab.View
 			
-			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:CanCloseTab (tab))
-			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (self.TabControl:GetTabCount () > 1)
+			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:CanCloseView (view))
+			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (tabControl and tabControl:GetTabCount () > 1)
 			
-			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (tab.View:GetType () == "Code")
-			self.TabContextMenu:GetItemById ("Save")                  :SetVisible (tab.View:GetType () == "Code")
-			self.TabContextMenu:GetItemById ("Save as...")            :SetVisible (tab.View:GetType () == "Code")
-			self.TabContextMenu:GetItemById ("Rename")                :SetVisible (tab.View:GetType () == "Code")
-			self.TabContextMenu:GetItemById ("Delete")                :SetVisible (tab.View:GetType () == "Code")
-			self.TabContextMenu:GetItemById ("Separator2")            :SetVisible (tab.View:GetType () == "Code")
-			self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetVisible (tab.View:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (view:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Save")                  :SetVisible (view:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Save as...")            :SetVisible (view:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Rename")                :SetVisible (view:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Delete")                :SetVisible (view:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Separator2")            :SetVisible (view:GetType () == "Code")
+			self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetVisible (view:GetType () == "Code")
 			
-			if tab.View:GetType () == "Code" then
-				self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():CanSave ())
-				self.TabContextMenu:GetItemById ("Save as...")            :SetEnabled (tab.View:GetSavable () and true or false)
-				self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():HasPath ())
-				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():HasPath ())
-				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (tab.View:GetSavable () and tab.View:GetSavable ():HasPath ())
+			if view:GetType () == "Code" then
+				self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (view:GetSavable () and view:GetSavable ():CanSave ())
+				self.TabContextMenu:GetItemById ("Save as...")            :SetEnabled (view:GetSavable () and true or false)
+				self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (view:GetSavable () and view:GetSavable ():HasPath ())
+				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (view:GetSavable () and view:GetSavable ():HasPath ())
+				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (view:GetSavable () and view:GetSavable ():HasPath ())
 			end
 		end
 	)
@@ -30,7 +32,7 @@ function GCompute.Editor.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				self:CloseTab (tab)
+				self:CloseView (tab.View)
 			end
 		)
 	menu:AddOption ("Close all others")
@@ -38,10 +40,12 @@ function GCompute.Editor.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
+				local tabControl = tab:GetTabControl ()
+				
 				local tabs = {}
-				for i = 1, self.TabControl:GetTabCount () do
-					if self.TabControl:GetTab (i) ~= tab then
-						tabs [#tabs + 1] = self.TabControl:GetTab (i)
+				for i = 1, tabControl:GetTabCount () do
+					if tabControl:GetTab (i) ~= tab then
+						tabs [#tabs + 1] = tabControl:GetTab (i)
 					end
 				end
 				
@@ -52,7 +56,7 @@ function GCompute.Editor.TabContextMenu (self)
 					if not self or not self:IsValid () then return end
 					if not tabs [i] then return end
 					if not success then return end
-					self:CloseTab (tabs [i], closeIterator)
+					self:CloseView (tabs [i].View, closeIterator)
 				end
 				closeIterator (true)
 			end

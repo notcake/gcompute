@@ -318,14 +318,20 @@ end
 function self:CreateCodeView (title)
 	local view = self:CreateView ("Code")
 	view:SetTitle (title)
-	self.DockContainer:GetPanel1 ():AddView (view)
+	
+	local activeView = self:GetActiveView ()
+	local dockContainer = activeView and activeView:GetContainer ():GetDockContainer () or self.DockContainer:GetLargestContainer ()
+	dockContainer:AddView (view)
 	return view
 end
 
 function self:CreateNamespaceBrowserView (namespaceDefinition)
 	local view = self:CreateView ("NamespaceBrowser")
 	view:SetNamespaceDefinition (namespaceDefinition or GCompute.GlobalNamespace)
-	self.DockContainer:GetPanel1 ():AddView (view)
+	
+	local activeView = self:GetActiveView ()
+	local dockContainer = activeView and activeView:GetContainer ():GetDockContainer () or self.DockContainer:GetLargestContainer ()
+	dockContainer:AddView (view)
 	return view
 end
 

@@ -1,6 +1,41 @@
 GCompute.Editor = {}
 
-GCompute.IncludeDirectory ("gcompute/ui/editor")
+-- Documents
+include ("editor/document.lua")
+include ("editor/documenttypes.lua")
+include ("editor/documentmanager.lua")
+
+-- Views
+include ("editor/view.lua")
+include ("editor/viewtypes.lua")
+
+-- Code Document
+include ("editor/arraytextstorage.lua")
+include ("editor/line.lua")
+include ("editor/linecharacterlocation.lua")
+include ("editor/linecolumnlocation.lua")
+include ("editor/textsegment.lua")
+
+-- Code Editor
+include ("editor/codeeditor.lua")
+include ("editor/codeeditorcontextmenu.lua")
+include ("editor/editorclipboardtarget.lua")
+include ("editor/selectionmode.lua")
+include ("editor/selectionsnapshot.lua")
+include ("editor/syntaxhighlighter.lua")
+include ("editor/textrenderer.lua")
+include ("editor/textselection.lua")
+include ("editor/textselectioncontroller.lua")
+
+-- IDE
+include ("editor/editor.lua")
+include ("editor/editor_frame.lua")
+include ("editor/plugins.lua")
+include ("editor/savableproxy.lua")
+include ("editor/tabcontextmenu.lua")
+include ("editor/toolbar.lua")
+include ("editor/undoredostackproxy.lua")
+
 GCompute.IncludeDirectory ("gcompute/ui/editor/keyboardmap")
 GCompute.IncludeDirectory ("gcompute/ui/editor/plugins")
 

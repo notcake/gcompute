@@ -121,7 +121,7 @@ function self:Compile ()
 		local tokenType = symbolMatcher.TokenType
 		
 		if symbolMatchType == SymbolMatchType.Plain then
-			code = code .. "\tif string_sub (code, offset, offset + " .. tostring (string.len (symbolMactcher.String) - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
+			code = code .. "\tif string_sub (code, offset, offset + " .. tostring (string.len (symbolMatcher.String) - 1) .. ") == \"" .. GLib.String.Escape (symbolMatcher.String) .. "\" then\n"
 			code = code .. "\t\treturn \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", " .. string.len (symbolMatcher.String) .. "\n"
 			code = code .. "\tend\n"
 			code = code .. "\t\n"

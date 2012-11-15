@@ -19,14 +19,7 @@ function self:ctor (document)
 	
 	self.Document:AddEventListener ("PathChanged", tostring (self),
 		function (_, oldPath, path)
-			if path and self.SourceFile then
-				-- If our source file is not an unnamed one, create a new unnamed SourceFile
-				if self.SourceFile:HasPath () then
-					self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
-				end
-			else
-				self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (path))
-			end
+			self:HandlePathChange (path)
 		end
 	)
 	self.Document:AddEventListener ("TextChanged", tostring (self),
@@ -36,6 +29,7 @@ function self:ctor (document)
 	)
 	
 	GCompute.EventProvider (self)
+	self:HandlePathChange (self.Document:GetPath ())
 end
 
 function self:dtor ()
@@ -120,9 +114,7 @@ function self:SetSourceFile (sourceFile)
 	
 	if self.SourceFile then
 		self:HookSourceFile (self.SourceFile)
-		if self.SourceFile:HasCompilationUnit () then
-			self:SetCompilationUnit (self.SourceFile:GetCompilationUnit ())
-		end
+		self:SetCompilationUnit (self.SourceFile:HasCompilationUnit () and self.SourceFile:GetCompilationUnit () or nil)
 	end
 	
 	self:DispatchEvent ("SourceFileChanged", oldSourceFile, sourceFile)
@@ -190,6 +182,21 @@ function self:QueueTokenApplication (startToken, endToken)
 end
 
 -- Internal, do not call
+function self:HandlePathChange (path)
+	if path and self.SourceFile then
+		-- If our source file is not an unnamed one, create a new unnamed SourceFile
+		if self.SourceFile:HasPath () then
+			self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (path))
+		else
+			self.SourceFile:SetPath (path)
+		end
+	elseif path then
+		self:SetSourceFile (GCompute.SourceFileCache:CreateSourceFileFromPath (path))
+	else
+		self:SetSourceFile (GCompute.SourceFileCache:CreateAnonymousSourceFile ())
+	end
+end
+
 function self:HookCompilationUnit (compilationUnit)
 	if not compilationUnit then return end
 	

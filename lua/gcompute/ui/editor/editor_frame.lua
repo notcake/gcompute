@@ -164,7 +164,10 @@ function self:Init ()
 	
 	self.OutputView = GCompute.Editor.ViewTypes:Create ("Output")
 	self.OutputView:SetId ("Output")
+	self.HookProfilerView = GCompute.Editor.ViewTypes:Create ("HookProfiler")
+	self.HookProfilerView:SetId ("HookProfiler")
 	self.DockContainer:RegisterView (self.OutputView)
+	self.DockContainer:RegisterView (self.HookProfilerView)
 	
 	self:SetKeyboardMap (GCompute.Editor.EditorKeyboardMap)
 	
@@ -254,7 +257,7 @@ function self:CloseView (view, callback)
 		return
 	end
 	
-	if view:GetSavable () and view:GetSavable ():IsUnsaved () then
+	if view:GetSavable () and view:GetSavable ():IsUnsaved () and view:GetDocument ():GetViewCount () <= 1 then
 		Gooey.YesNoDialog ()
 			:SetTitle ("Save")
 			:SetText ("Save \"" .. view:GetTitle () .. "\"?")

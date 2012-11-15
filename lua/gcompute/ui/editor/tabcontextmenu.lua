@@ -171,6 +171,7 @@ function GCompute.Editor.TabContextMenu (self)
 				if not newView then
 					newView = self:CreateView (view:GetType ())
 					newView:SetDocument (view:GetDocument ())
+					newView:SetTitle (view:GetTitle ())
 					destinationDockContainer:AddView (newView)
 				end
 				if viewActive then

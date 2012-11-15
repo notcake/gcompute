@@ -54,7 +54,6 @@ end
 function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	self.LastStdOut = stdOut
 	self.LastStdErr = stdErr
-	PrintTable (EPOE)
 	
 	local menu = vgui.Create ("GMenu")
 	local playerMenu = vgui.Create ("GMenu")
@@ -63,7 +62,12 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:AddEventListener ("Click",
 			function ()
 				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
-				RunStringEx (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId ())
+				local f = CompileString (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId ())
+				xpcall (f,
+					function (message)
+						stdErr:WriteLine (message)
+					end
+				)
 			end
 		)
 	menu:AddOption ("Run on server")

@@ -39,28 +39,38 @@ function PANEL:Init ()
 	self.LocalViewCount = 0
 	
 	-- Drag and drop
-	self.DropButtons =
+	self.DropData =
 	{
-		{ X =   0, Y =   0, Glyph = "DockContainer.DockMiddle", Type = GCompute.DockContainerDropTarget.Middle },
-		{ X =   0, Y = -56, Glyph = "DockContainer.DockTop",    Type = GCompute.DockContainerDropTarget.Top    },
-		{ X =   0, Y =  56, Glyph = "DockContainer.DockBottom", Type = GCompute.DockContainerDropTarget.Bottom },
-		{ X = -56, Y =   0, Glyph = "DockContainer.DockLeft",   Type = GCompute.DockContainerDropTarget.Left   },
-		{ X =  56, Y =   0, Glyph = "DockContainer.DockRight",  Type = GCompute.DockContainerDropTarget.Right  }
+		EnterTime = 0,
+		LeaveTime = 0,
+		
+		LastActiveDropTarget         = GCompute.DockContainerDropTarget.None,
+		LastActiveDropTargetFraction = 0.75,
+		
+		ActiveDropTarget             = GCompute.DockContainerDropTarget.None,
+		ActiveDropTargetFraction     = 0.75,
+		ActiveDropTargetChangeTime   = 0,
+		
+		LastActiveDropButton         = GCompute.DockContainerDropTarget.None,
+		ActiveDropButton             = GCompute.DockContainerDropTarget.None,
+		ActiveDropButtonChangeTime   = 0
 	}
-	
-	self.DragEnterTime = 0
-	self.DragLeaveTime = 0
-	
-	self.LastActiveDropTarget         = GCompute.DockContainerDropTarget.None
-	self.LastActiveDropTargetFraction = 0.75
-	
-	self.ActiveDropTarget             = GCompute.DockContainerDropTarget.None
-	self.ActiveDropTargetFraction     = 0.75
-	self.ActiveDropTargetChangeTime   = 0
-	
-	self.LastActiveDropButton         = GCompute.DockContainerDropTarget.None
-	self.ActiveDropButton             = GCompute.DockContainerDropTarget.None
-	self.ActiveDropButtonChangeTime   = 0
+	self.RootDropData = table.Copy (self.DropData)
+	self.DropData.Buttons =
+	{
+		{ FractionX = 0.5, FractionY = 0.5, OffsetX =   0, OffsetY =   0, Glyph = "DockContainer.DockMiddle", Type = GCompute.DockContainerDropTarget.Middle },
+		{ FractionX = 0.5, FractionY = 0.5, OffsetX =   0, OffsetY = -56, Glyph = "DockContainer.DockTop",    Type = GCompute.DockContainerDropTarget.Top    },
+		{ FractionX = 0.5, FractionY = 0.5, OffsetX =   0, OffsetY =  56, Glyph = "DockContainer.DockBottom", Type = GCompute.DockContainerDropTarget.Bottom },
+		{ FractionX = 0.5, FractionY = 0.5, OffsetX = -56, OffsetY =   0, Glyph = "DockContainer.DockLeft",   Type = GCompute.DockContainerDropTarget.Left   },
+		{ FractionX = 0.5, FractionY = 0.5, OffsetX =  56, OffsetY =   0, Glyph = "DockContainer.DockRight",  Type = GCompute.DockContainerDropTarget.Right  }
+	}
+	self.RootDropData.Buttons =
+	{
+		{ FractionX = 0.5, FractionY = 0,   OffsetX =   0, OffsetY =  48, Glyph = "DockContainer.DockTop",    Type = GCompute.DockContainerDropTarget.Top    },
+		{ FractionX = 0.5, FractionY = 1,   OffsetX =   0, OffsetY = -48, Glyph = "DockContainer.DockBottom", Type = GCompute.DockContainerDropTarget.Bottom },
+		{ FractionX = 0,   FractionY = 0.5, OffsetX =  48, OffsetY =   0, Glyph = "DockContainer.DockLeft",   Type = GCompute.DockContainerDropTarget.Left   },
+		{ FractionX = 1,   FractionY = 0.5, OffsetX = -48, OffsetY =   0, Glyph = "DockContainer.DockRight",  Type = GCompute.DockContainerDropTarget.Right  }
+	}
 	
 	self.DragDropController = Gooey.DragDropController (self)
 	self.DragDropController:SetDragRenderer (
@@ -83,7 +93,7 @@ function PANEL:Init ()
 	)
 	self.DragDropController:SetDropRenderer (
 		function (dragDropController, x, y)
-			self:DrawDropOverlay ()
+			self:DrawDropOverlay (Gooey.RenderContext)
 		end
 	)
 end
@@ -104,8 +114,9 @@ function PANEL:AddView (view)
 		return
 	end
 	
-	if view:GetContainer ():GetDockContainer () then
-		view:GetContainer ():GetDockContainer ():RemoveView (view, GCompute.ViewRemovalReason.Rearrangement)
+	local originalDockContainer = view:GetContainer ():GetDockContainer ()
+	if originalDockContainer then
+		originalDockContainer:RemoveView (view, GCompute.ViewRemovalReason.Rearrangement)
 	end
 	
 	if self.DockContainerType == GCompute.DockContainerType.TabControl then
@@ -134,7 +145,11 @@ function PANEL:AddView (view)
 	view:GetContainer ():SetVisible (true)
 	self:HookView (view)
 	
-	self:GetRootDockContainer ():DispatchEvent ("ViewMoved", view)
+	local rootDockContainer = self:GetRootDockContainer ()
+	if originalDockContainer then
+		rootDockContainer:DispatchEvent ("ViewRemoved", originalDockContainer, view, GCompute.ViewRemovalReason.Rearrangement)
+	end
+	rootDockContainer:DispatchEvent ("ViewMoved", view)
 end
 
 function PANEL:GenerateViewId ()
@@ -175,16 +190,24 @@ function PANEL:GetLargestView ()
 	if not largestContainer then return nil end
 	
 	if largestContainer:GetContainerType () == GCompute.DockContainerType.TabControl then
-		if not self.Child then return nil end
-		return self.Child:GetSelectedTab () and self.Child:GetSelectedTab ().View or nil
+		if not largestContainer.Child then return nil end
+		return largestContainer.Child:GetSelectedTab () and largestContainer.Child:GetSelectedTab ().View or nil
 	elseif largestContainer:GetContainerType () == GCompute.DockContainerType.View then
-		return self:GetView ()
+		return largestContainer:GetView ()
 	end
 	return nil
 end
 
 function PANEL:GetLocalViewCount ()
 	return self.LocalViewCount
+end
+
+function PANEL:GetLocalViewEnumerator ()
+	local next, tbl, key = pairs (self.LocalViewSet)
+	return function ()
+		key = next (tbl, key)
+		return key
+	end
 end
 
 function PANEL:GetParentDockContainer ()
@@ -197,6 +220,21 @@ function PANEL:GetCreateSplit (dockingSide, fraction)
 		dockContainer = self:Split (dockingSide, fraction)
 	end
 	return dockContainer
+end
+
+function PANEL:GetPath ()
+	if self:IsRootDockContainer () then return "root" end
+	local path = self:GetParentDockContainer ():GetPath () .. "/"
+	if self:GetParentDockContainer ():GetOrientation () == Gooey.Orientation.Vertical then
+		if self:IsPanel1 () then path = path .. "Left"
+		elseif self:IsPanel2 () then path = path .. "Right"
+		else path = path .. "Error" end
+	else
+		if self:IsPanel1 () then path = path .. "Top"
+		elseif self:IsPanel2 () then path = path .. "Bottom"
+		else path = path .. "Error" end
+	end
+	return path
 end
 
 function PANEL:GetSplit (dockingSide)
@@ -414,6 +452,11 @@ function PANEL:RemoveView (view, viewRemovalReason)
 		self:SetActiveView (nil)
 	end
 	
+	if viewRemovalReason == GCompute.ViewRemovalReason.Rearrangement then
+		-- Called from AddView, AddView will fire the ViewRemoved event when
+		-- it has finished.
+		return
+	end
 	self:GetRootDockContainer ():DispatchEvent ("ViewRemoved", self, view, viewRemovalReason or GCompute.ViewRemovalReason.Removal)
 end
 
@@ -494,6 +537,10 @@ function PANEL:Split (dockingSide, fraction)
 	
 	if childDockContainer.Child then
 		childDockContainer.Child:SetParent (childDockContainer)
+		if childDockContainer.DockContainerType == GCompute.DockContainerType.SplitContainer then
+			childDockContainer:GetPanel1 ():SetParentDockContainer (childDockContainer)
+			childDockContainer:GetPanel2 ():SetParentDockContainer (childDockContainer)
+		end
 	end
 	
 	childDockContainer:HookTabControl ()
@@ -537,6 +584,7 @@ function PANEL:Split (dockingSide, fraction)
 	self.Child:GetPanel1 ():SetParentDockContainer (self)
 	self.Child:GetPanel2 ():SetParentDockContainer (self)
 	
+	self:PerformLayoutRecursive ()
 	if childDockContainer.Child and childDockContainer.DockContainerType == GCompute.DockContainerType.TabControl then
 		timer.Simple (0.050,
 			function ()
@@ -549,10 +597,13 @@ function PANEL:Split (dockingSide, fraction)
 			end
 		)
 	end
-	self:PerformLayoutRecursive ()
 	
 	self:GetRootDockContainer ():DispatchEvent ("ContainerSplit", self, childDockContainer, otherDockContainer)
 	return otherDockContainer
+end
+
+function PANEL:ToString ()
+	return self:GetPath () .. " [" .. tostring (self:GetTable ()) .. ": " .. GCompute.DockContainerType [self.DockContainerType] .. "]"
 end
 
 function PANEL:UnregisterLocalView (view)
@@ -625,6 +676,13 @@ function PANEL:SaveSession (outBuffer)
 end
 
 -- SplitContainer
+function PANEL:GetOtherPanel (dockContainer)
+	if self:GetPanel1 () == dockContainer then
+		return self:GetPanel2 ()
+	end
+	return self:GetPanel1 ()
+end
+
 function PANEL:GetPanel1 ()
 	if self.DockContainerType ~= GCompute.DockContainerType.SplitContainer then
 		GCompute.Error ("DockContainer:GetPanel1 : This DockContainer is not in SplitContainer mode!")
@@ -680,21 +738,64 @@ function PANEL:SetView (view)
 end
 
 -- Internal, do not call
-function PANEL:DrawDropOverlay ()
-	local renderContext = Gooey.RenderContext
-	
-	local alphaScale
-	if self.DragEnterTime > self.DragLeaveTime then
-		alphaScale = math.min (1, (SysTime () - self.DragEnterTime) / 0.2)
+function PANEL:DoDragDrop (dragDropController, dropData)
+	local view = dragDropController:GetObject ()
+	local originalDockContainer = view:GetContainer ():GetDockContainer ()
+	if dropData.ActiveDropTarget == GCompute.DockContainerDropTarget.None then
+		return
+	elseif dropData.ActiveDropTarget == GCompute.DockContainerDropTarget.Middle then
+		self:AddView (view)
+		self:GetRootDockContainer ():DispatchEvent ("ViewDropped", view, originalDockContainer, view:GetContainer ():GetDockContainer ())
 	else
-		alphaScale = math.max (0, 1 - (SysTime () - self.DragLeaveTime) / 0.2)
+		local dockingSide = nil
+		if dropData.ActiveDropTarget == GCompute.DockContainerDropTarget.Top then
+			dockingSide = GCompute.DockingSide.Top
+		elseif dropData.ActiveDropTarget == GCompute.DockContainerDropTarget.Bottom then
+			dockingSide = GCompute.DockingSide.Bottom
+		elseif dropData.ActiveDropTarget == GCompute.DockContainerDropTarget.Left then
+			dockingSide = GCompute.DockingSide.Left
+		elseif dropData.ActiveDropTarget == GCompute.DockContainerDropTarget.Right then
+			dockingSide = GCompute.DockingSide.Right
+		end
+		
+		-- Check if originalDockContainer needs to be fixed up
+		if self == originalDockContainer then
+			local otherDockContainer = self:Split (dockingSide, dropData.ActiveDropTargetFraction)
+			if self:GetPanel1 () == otherDockContainer then
+				originalDockContainer = self:GetPanel2 ()
+			else
+				originalDockContainer = self:GetPanel1 ()
+			end
+			otherDockContainer:AddView (view)
+		else
+			self:Split (dockingSide, dropData.ActiveDropTargetFraction):AddView (view)
+		end
+		self:GetRootDockContainer ():DispatchEvent ("ViewDropped", view, originalDockContainer, view:GetContainer ():GetDockContainer ())
+	end
+	view:GetContainer ():Select ()
+end
+
+function PANEL:DrawDropOverlay (renderContext)
+	local alphaScale
+	if self.DropData.EnterTime > self.DropData.LeaveTime then
+		alphaScale = math.min (1, (SysTime () - self.DropData.EnterTime) / 0.2)
+	else
+		alphaScale = math.max (0, 1 - (SysTime () - self.DropData.LeaveTime) / 0.2)
 	end
 	
+	-- Draw rectangles
 	renderContext:PushViewPort (self:LocalToScreen (0, 0))
-	
-	self:DrawDropTargets (renderContext, alphaScale)
-	
+	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.max (  0, (1 - (SysTime () - self.DropData.ActiveDropTargetChangeTime) / 0.2) * 255), self.DropData.LastActiveDropTarget, self.DropData.LastActiveDropTargetFraction)
+	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.min (255,      (SysTime () - self.DropData.ActiveDropTargetChangeTime) / 0.2  * 255), self.DropData.ActiveDropTarget,     self.DropData.ActiveDropTargetFraction)
 	renderContext:PopViewPort ()
+	
+	self:DrawRootDropOverlay (renderContext)
+	
+	if not self:IsRootDockContainer () or self.DockContainerType ~= GCompute.DockContainerType.SplitContainer then
+		renderContext:PushViewPort (self:LocalToScreen (0, 0))
+		self:DrawDropTargets (renderContext, alphaScale, self.DropData)
+		renderContext:PopViewPort ()
+	end
 end
 
 local dropRectangleColor = Color (255, 255, 255, 255)
@@ -734,48 +835,65 @@ function PANEL:DrawDropRectangle (renderContext, alpha, dropTarget, dropFraction
 	dropRectangleColor.g = GLib.Colors.CornflowerBlue.g
 	dropRectangleColor.b = GLib.Colors.CornflowerBlue.b
 	dropRectangleColor.a = alpha
-	draw.RoundedBox (math.min (16, w / 2, h / 2), x, y, w, h, dropRectangleColor)
+	draw.RoundedBox (math.min (16, math.floor (w / 4) * 2, math.floor (h / 4) * 2), x, y, w, h, dropRectangleColor)
 end
 
-local dropButtonColor = Color (255, 255, 255, 255)
-function PANEL:DrawDropTargets (renderContext, alphaScale)
-	-- Draw rectangles
-	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.max (0, (1 - (SysTime () - self.ActiveDropTargetChangeTime) / 0.2) * 255), self.LastActiveDropTarget, self.LastActiveDropTargetFraction)
-	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.min (255, (SysTime () - self.ActiveDropTargetChangeTime) / 0.2 * 255), self.ActiveDropTarget, self.ActiveDropTargetFraction)
-	
+local dropButtonColor = Color (216, 216, 216, 255)
+function PANEL:DrawDropTargets (renderContext, alphaScale, dropData)
 	-- Draw drop buttons
-	if self:IsRootDockContainer () and self.DockContainerType == GCompute.DockContainerType.SplitContainer then return end
-	
 	if self:GetWide () < 160 or self:GetTall () < 160 then return end
 	
-	local lastActiveButtonAlphaFraction = math.max (0, (1 - (SysTime () - self.ActiveDropButtonChangeTime) / 0.2))
-	local activeButtonAlphaFraction     = math.min (1, (SysTime () - self.ActiveDropButtonChangeTime) / 0.2)
-	local lastActiveButtonAlpha = alphaScale * (0.7 + 0.3 * lastActiveButtonAlphaFraction)
-	local activeButtonAlpha     = alphaScale * (0.7 + 0.3 * activeButtonAlphaFraction)
+	local baseAlpha = 0.75
+	local lastActiveButtonAlphaFraction = math.max (0, (1 - (SysTime () - dropData.ActiveDropButtonChangeTime) / 0.2))
+	local activeButtonAlphaFraction     = math.min (1,      (SysTime () - dropData.ActiveDropButtonChangeTime) / 0.2)
+	local lastActiveButtonAlpha = alphaScale * (baseAlpha + (1 - baseAlpha) * lastActiveButtonAlphaFraction)
+	local activeButtonAlpha     = alphaScale * (baseAlpha + (1 - baseAlpha) * activeButtonAlphaFraction)
 	
-	dropButtonColor.r = GLib.Colors.Silver.r
-	dropButtonColor.g = GLib.Colors.Silver.g
-	dropButtonColor.b = GLib.Colors.Silver.b
-	local centreX = self:GetWide () * 0.5
-	local centreY = self:GetTall () * 0.5
 	local w = 48
 	local h = 48
-	for _, buttonData in ipairs (self.DropButtons) do
-		local x = centreX + buttonData.X
-		local y = centreY + buttonData.Y
-		if buttonData.Type == self.LastActiveDropButton then
+	for _, buttonData in ipairs (dropData.Buttons) do
+		local x = buttonData.FractionX * self:GetWide () + buttonData.OffsetX
+		local y = buttonData.FractionY * self:GetTall () + buttonData.OffsetY
+		if buttonData.Type == dropData.LastActiveDropButton then
 			surface.SetAlphaMultiplier (lastActiveButtonAlpha)
 			dropButtonColor.a = 255 * lastActiveButtonAlpha
-		elseif buttonData.Type == self.ActiveDropButton then
+		elseif buttonData.Type == dropData.ActiveDropButton then
 			surface.SetAlphaMultiplier (activeButtonAlpha)
 			dropButtonColor.a = 255 * activeButtonAlpha
 		else
-			surface.SetAlphaMultiplier (0.7 * alphaScale)
-			dropButtonColor.a = 255 * 0.7 * alphaScale
+			surface.SetAlphaMultiplier (baseAlpha * alphaScale)
+			dropButtonColor.a = 255 * baseAlpha * alphaScale
 		end
 		Gooey.Glyphs.Draw (buttonData.Glyph, renderContext, dropButtonColor, x, y, w, h)
 	end
 	surface.SetAlphaMultiplier (1)
+end
+
+function PANEL:DrawRootDropOverlay (renderContext)
+	if not self:IsRootDockContainer () then
+		self:GetRootDockContainer ():DrawRootDropOverlay (renderContext)
+		return
+	end
+	
+	if CurTime () == self.LastRootDropOverlayRenderTime then return end
+	self.LastRootDropOverlayRenderTime = CurTime ()
+	
+	local alphaScale
+	if self.RootDropData.EnterTime > self.RootDropData.LeaveTime then
+		alphaScale = math.min (1, (SysTime () - self.RootDropData.EnterTime) / 0.2)
+	else
+		alphaScale = math.max (0, 1 - (SysTime () - self.RootDropData.LeaveTime) / 0.2)
+	end
+	
+	-- Draw rectangles
+	renderContext:PushViewPort (self:LocalToScreen (0, 0))
+	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.max (  0, (1 - (SysTime () - self.RootDropData.ActiveDropTargetChangeTime) / 0.2) * 255), self.RootDropData.LastActiveDropTarget, self.RootDropData.LastActiveDropTargetFraction)
+	self:DrawDropRectangle (renderContext, alphaScale * 0.5 * math.min (255,      (SysTime () - self.RootDropData.ActiveDropTargetChangeTime) / 0.2  * 255), self.RootDropData.ActiveDropTarget,     self.RootDropData.ActiveDropTargetFraction)
+	renderContext:PopViewPort ()
+	
+	renderContext:PushViewPort (self:LocalToScreen (0, 0))
+	self:DrawDropTargets (renderContext, alphaScale, self.RootDropData)
+	renderContext:PopViewPort ()
 end
 
 local function IsPointInButton (buttonX, buttonY, x, y)
@@ -783,15 +901,15 @@ local function IsPointInButton (buttonX, buttonY, x, y)
 	       y > buttonY - 24 and y < buttonY + 24
 end
 
-function PANEL:DropButtonFromPoint (x, y)
+function PANEL:DropButtonFromPoint (x, y, dropData)
 	if self:GetWide () < 160 or self:GetTall () < 160 then return end
 	
 	local centreX = self:GetWide () * 0.5
 	local centreY = self:GetTall () * 0.5
 	
 	local dropButton = nil
-	for _, buttonData in ipairs (self.DropButtons) do
-		if IsPointInButton (centreX + buttonData.X, centreY + buttonData.Y, x, y) then
+	for _, buttonData in ipairs (dropData.Buttons) do
+		if IsPointInButton (buttonData.FractionX * self:GetWide () + buttonData.OffsetX, buttonData.FractionY * self:GetTall () + buttonData.OffsetY, x, y) then
 			dropButton = buttonData.Type
 			break
 		end
@@ -800,29 +918,61 @@ function PANEL:DropButtonFromPoint (x, y)
 end
 
 function PANEL:GetActiveDropButton ()
-	return self.ActiveDropButton
+	return self.DropData.ActiveDropButton
 end
 
 function PANEL:GetActiveDropTarget ()
-	return self.ActiveDropTarget
+	return self.DropData.ActiveDropTarget
+end
+
+function PANEL:GetActiveRootDropButton ()
+	return self.RootDropData.ActiveDropButton
+end
+
+function PANEL:GetActiveRootDropTarget ()
+	return self.RootDropData.ActiveDropTarget
 end
 
 function PANEL:SetActiveDropButton (dockContainerDropTarget)
-	if self.ActiveDropButton == dockContainerDropTarget then return end
+	if self.DropData.ActiveDropButton == dockContainerDropTarget then return end
 	
-	self.LastActiveDropButton = self.ActiveDropButton
-	self.ActiveDropButton = dockContainerDropTarget
-	self.ActiveDropButtonChangeTime = SysTime ()
+	self.DropData.LastActiveDropButton       = self.ActiveDropButton
+	self.DropData.ActiveDropButton           = dockContainerDropTarget
+	self.DropData.ActiveDropButtonChangeTime = SysTime ()
 end
 
 function PANEL:SetActiveDropTarget (dropTarget, dropTargetFraction)
-	if self.ActiveDropTarget == dropTarget then return end
+	if self.DropData.ActiveDropTarget == dropTarget and
+	   self.DropData.ActiveDropTargetFraction == dropTargetFraction then
+		return
+	end
 	
-	self.LastActiveDropTarget         = self.ActiveDropTarget
-	self.LastActiveDropTargetFraction = self.ActiveDropTargetFraction
-	self.ActiveDropTarget             = dropTarget
-	self.ActiveDropTargetFraction     = dropTargetFraction or 0.75
-	self.ActiveDropTargetChangeTime = SysTime ()
+	self.DropData.LastActiveDropTarget         = self.DropData.ActiveDropTarget
+	self.DropData.LastActiveDropTargetFraction = self.DropData.ActiveDropTargetFraction
+	self.DropData.ActiveDropTarget             = dropTarget
+	self.DropData.ActiveDropTargetFraction     = dropTargetFraction or 0.75
+	self.DropData.ActiveDropTargetChangeTime   = SysTime ()
+end
+
+function PANEL:SetActiveRootDropButton (dockContainerRootDropTarget)
+	if self.RootDropData.ActiveDropButton == dockContainerRootDropTarget then return end
+	
+	self.RootDropData.LastActiveDropButton       = self.RootDropData.ActiveDropButton
+	self.RootDropData.ActiveDropButton           = dockContainerRootDropTarget
+	self.RootDropData.ActiveDropButtonChangeTime = SysTime ()
+end
+
+function PANEL:SetActiveRootDropTarget (rootDropTarget, rootDropTargetFraction)
+	if self.RootDropData.ActiveDropTarget == rootDropTarget and
+	   self.RootDropData.ActiveDropTargetFraction == rootDropTargetFraction then
+		return
+	end
+	
+	self.RootDropData.LastActiveDropTarget         = self.RootDropData.ActiveDropTarget
+	self.RootDropData.LastActiveDropTargetFraction = self.RootDropData.ActiveDropTargetFraction
+	self.RootDropData.ActiveDropTarget             = rootDropTarget
+	self.RootDropData.ActiveDropTargetFraction     = rootDropTargetFraction or 0.75
+	self.RootDropData.ActiveDropTargetChangeTime   = SysTime ()
 end
 
 function PANEL:HookTabControl ()
@@ -913,60 +1063,38 @@ end
 
 -- Event handlers
 function PANEL:OnDragDrop (dragDropController)
-	local view = dragDropController:GetObject ()
-	local originalDockContainer = view:GetContainer ():GetDockContainer ()
-	if self.ActiveDropTarget == GCompute.DockContainerDropTarget.None then
-	elseif self.ActiveDropTarget == GCompute.DockContainerDropTarget.Middle then
-		self:AddView (view)
-		self:GetRootDockContainer ():DispatchEvent ("ViewDropped", view, originalDockContainer, view:GetContainer ():GetDockContainer ())
-	else
-		local dockingSide = nil
-		if self.ActiveDropTarget == GCompute.DockContainerDropTarget.Top then
-			dockingSide = GCompute.DockingSide.Top
-		elseif self.ActiveDropTarget == GCompute.DockContainerDropTarget.Bottom then
-			dockingSide = GCompute.DockingSide.Bottom
-		elseif self.ActiveDropTarget == GCompute.DockContainerDropTarget.Left then
-			dockingSide = GCompute.DockingSide.Left
-		elseif self.ActiveDropTarget == GCompute.DockContainerDropTarget.Right then
-			dockingSide = GCompute.DockingSide.Right
-		end
-		if self == originalDockContainer then
-			local otherDockContainer = self:Split (dockingSide, self.ActiveDropTargetFraction)
-			if self:GetPanel1 () == otherDockContainer then
-				originalDockContainer = self:GetPanel2 ()
-			else
-				originalDockContainer = self:GetPanel1 ()
-			end
-			otherDockContainer:AddView (view)
-		else
-			self:Split (dockingSide, self.ActiveDropTargetFraction):AddView (view)
-		end
-		self:GetRootDockContainer ():DispatchEvent ("ViewDropped", view, originalDockContainer, view:GetContainer ():GetDockContainer ())
-	end
-	view:GetContainer ():Select ()
+	self:GetRootDockContainer ():OnRootDragDrop (dragDropController)
+	
+	self:DoDragDrop (dragDropController, self.DropData)
 	
 	self:SetActiveDropButton (GCompute.DockContainerDropTarget.None)
 	self:SetActiveDropTarget (GCompute.DockContainerDropTarget.None)
 end
 
-function PANEL:OnDragEnter (dragDropController)
-	self.DragEnterTime = SysTime ()
+function PANEL:OnDragEnter (dragDropController, oldDropPanel)
+	if not oldDropPanel or oldDropPanel.ClassName ~= self.ClassName or oldDropPanel:GetRootDockContainer () ~= self:GetRootDockContainer () then
+		self:GetRootDockContainer ():OnRootDragEnter (dragDropController)
+	end
+	self.DropData.EnterTime = SysTime ()
 	
 	Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()))
 end
 
-function PANEL:OnDragLeave (dragDropController)
+function PANEL:OnDragLeave (dragDropController, newDropPanel)
+	if not newDropPanel or newDropPanel.ClassName ~= self.ClassName or newDropPanel:GetRootDockContainer () ~= self:GetRootDockContainer () then
+		self:GetRootDockContainer ():OnRootDragLeave (dragDropController)
+	end
 	self:SetActiveDropButton (GCompute.DockContainerDropTarget.None)
 	self:SetActiveDropTarget (GCompute.DockContainerDropTarget.None)
 	
-	self.DragLeaveTime = SysTime ()
+	self.DropData.LeaveTime = SysTime ()
 	
 	Gooey.AddRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()),
 		function ()
 			if not self:IsValid () then return end
 			
-			self:DrawDropOverlay ()
-			if SysTime () - self.DragLeaveTime > 1 then
+			self:DrawDropOverlay (Gooey.RenderContext)
+			if SysTime () - self.DropData.LeaveTime > 1 then
 				Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()))
 			end
 		end
@@ -974,13 +1102,21 @@ function PANEL:OnDragLeave (dragDropController)
 end
 
 function PANEL:OnDragOver (dragDropController, x, y)
+	self:GetRootDockContainer ():OnRootDragOver (dragDropController)
+	if self:GetRootDockContainer ():GetActiveRootDropButton () ~= GCompute.DockContainerDropTarget.None then
+		self:SetActiveDropButton (GCompute.DockContainerDropTarget.None)
+		self:SetActiveDropTarget (GCompute.DockContainerDropTarget.None)
+		return
+	end
+	
 	local dropButton = nil
 	local dropTarget = nil
 	local dropTargetFraction = 0.75
 	
+	-- Our drop targets
 	if not self:IsRootDockContainer () or
 	   self.DockContainerType ~= GCompute.DockContainerType.SplitContainer then
-		dropButton = self:DropButtonFromPoint (x, y)
+		dropButton = self:DropButtonFromPoint (x, y, self.DropData)
 		if dropButton then
 			dropTarget = dropButton
 			local hasDocument      = self:GetLargestView () and self:GetLargestView ():GetDocument () and true or false
@@ -1014,6 +1150,49 @@ function PANEL:OnDragOver (dragDropController, x, y)
 	end
 	self:SetActiveDropButton (dropButton or GCompute.DockContainerDropTarget.None)
 	self:SetActiveDropTarget (dropTarget or GCompute.DockContainerDropTarget.None, dropTargetFraction)
+end
+
+function PANEL:OnRootDragDrop (dragDropController)
+	self:DoDragDrop (dragDropController, self.RootDropData)
+	
+	self:SetActiveRootDropButton (GCompute.DockContainerDropTarget.None)
+	self:SetActiveRootDropTarget (GCompute.DockContainerDropTarget.None)
+end
+
+function PANEL:OnRootDragEnter (dragDropController)
+	self.RootDropData.EnterTime = SysTime ()
+end
+
+function PANEL:OnRootDragLeave (dragDropController)
+	self:SetActiveRootDropButton (GCompute.DockContainerDropTarget.None)
+	self:SetActiveRootDropTarget (GCompute.DockContainerDropTarget.None)
+	
+	self.RootDropData.LeaveTime = SysTime ()
+end
+
+function PANEL:OnRootDragOver (dragDropController)
+	local x, y = self:CursorPos ()
+	local dropButton = nil
+	local dropTarget = nil
+	local dropTargetFraction = 0.75
+	
+	-- Our drop targets
+	dropButton = self:DropButtonFromPoint (x, y, self.RootDropData)
+	if dropButton then
+		dropTarget = dropButton
+		local hasDocument      = self:GetLargestView () and self:GetLargestView ():GetDocument () and true or false
+		local otherHasDocument = dragDropController:GetObject ():GetDocument () and true or false
+		
+		if hasDocument == otherHasDocument then
+			dropTargetFraction = 0.5
+		elseif hasDocument then
+			dropTargetFraction = 0.75
+		else
+			dropTargetFraction = 0.25
+		end
+	end
+	self:SetActiveRootDropButton (dropButton or GCompute.DockContainerDropTarget.None)
+	self:SetActiveRootDropTarget (dropTarget or GCompute.DockContainerDropTarget.None, dropTargetFraction)
 end
 
 function PANEL:OnRemoved ()

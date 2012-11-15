@@ -4,6 +4,7 @@ function self:Init ()
 	self:SetTitle ("Go To...")
 	self:SetDeleteOnClose (false)
 	self:MakePopup ()
+	self:SetSizable (false)
 	
 	self:SetSize (256, 64)
 	self:Center ()

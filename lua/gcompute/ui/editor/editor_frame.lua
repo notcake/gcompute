@@ -59,19 +59,6 @@ function self:Init ()
 			self:CloseView (view)
 		end
 	)
-	self.DockContainer:AddEventListener ("ViewDropped",
-		function (_, view, originalContainer, container)
-			if not originalContainer then return end
-			
-			if originalContainer:GetLocalViewCount () == 0 and not originalContainer:IsRootDockContainer () then
-				if originalContainer:IsPanel1 () then
-					originalContainer:GetParentDockContainer ():Merge (originalContainer:GetParentDockContainer ():GetPanel2 ())
-				else
-					originalContainer:GetParentDockContainer ():Merge (originalContainer:GetParentDockContainer ():GetPanel1 ())
-				end
-			end
-		end
-	)
 	self.DockContainer:AddEventListener ("ViewMoved",
 		function (_, view)
 			if view:GetContainer ():GetTab () then
@@ -91,7 +78,9 @@ function self:Init ()
 		function (_, container, view, viewRemovalReason)
 			if viewRemovalReason == GCompute.ViewRemovalReason.Removal then
 				self.DockContainer:UnregisterView (view)
-				
+			end
+			if viewRemovalReason == GCompute.ViewRemovalReason.Removal or
+			   viewRemovalReason == GCompute.ViewRemovalReason.Rearrangement then
 				if container:GetLocalViewCount () == 0 and not container:IsRootDockContainer () then
 					if container:IsPanel1 () then
 						container:GetParentDockContainer ():Merge (container:GetParentDockContainer ():GetPanel2 ())

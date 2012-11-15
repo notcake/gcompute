@@ -1242,6 +1242,7 @@ function PANEL:OnHScroll (viewOffset)
 end
 
 function PANEL:OnRemoved ()
+	self:UnhookDocument (self.Document)
 	if self:GetDocument () then
 		if self:GetDocument ():GetViewCount () == 1 then
 			self:GetSyntaxHighlighter ():dtor ()

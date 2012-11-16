@@ -81,8 +81,8 @@ function self:UpdateChatStatus ()
 			self.TypingCode = true
 		end
 		local code = self.ActiveCodeEditor:GetText ()
-		if code:len () > 1024 then
-			code = code:sub (1, GLib.UTF8.GetSequenceStart (code, 1025) - 1) .. "..."
+		if code:len () > 4096 then
+			code = code:sub (1, GLib.UTF8.GetSequenceStart (code, 4097) - 1) .. "..."
 		end
 		COH2:ChatUpdate (code)
 	else

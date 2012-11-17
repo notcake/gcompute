@@ -139,10 +139,13 @@ function self:Init ()
 		end
 	)
 	
-	self.ProfilerPanel      = self.StatusBar:AddTextPanel ("0.000 ms, 0 %")
-	self.ProgressPanel      = self.StatusBar:AddProgressPanel ()
+	self.ProgressPanel       = self.StatusBar:AddProgressPanel ()
 	self.ProgressPanel:SetFixedWidth (128)
-	self.CaretPositionPanel = self.StatusBar:AddTextPanel ("Line 1, col 1")
+	self.MemoryProfilerPanel = self.StatusBar:AddTextPanel ("0.00 MiB")
+	self.MemoryProfilerPanel:SetFixedWidth (128)
+	self.ProfilerPanel       = self.StatusBar:AddTextPanel ("0.000 ms, 0 %")
+	self.ProfilerPanel:SetFixedWidth (128)
+	self.CaretPositionPanel  = self.StatusBar:AddTextPanel ("Line 1, col 1")
 	self.CaretPositionPanel:SetFixedWidth (96)
 	
 	self.ClipboardController = Gooey.ClipboardController ()
@@ -799,6 +802,8 @@ function self:Think ()
 	end
 	
 	-- Profiler
+	self.MemoryProfilerPanel:SetText (GLib.FormatFileSize (collectgarbage ("count") * 1024))
+	
 	local view = self:GetActiveView ()
 	local viewContainer = view and view:GetContainer () or nil
 	local viewControl = viewContainer and viewContainer:GetContents () or nil

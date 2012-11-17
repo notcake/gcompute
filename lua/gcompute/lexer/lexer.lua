@@ -197,7 +197,7 @@ function self:ProcessSome ()
 	self:DispatchEvent ("RangeAdded", startToken, endToken)
 	
 	if self:GetBytesProcessed () >= self:GetTotalBytes () then
-		ErrorNoHalt ("Lexer took " .. ((SysTime () - self.StartTime) * 1000) .. " ms\n")
+		self.CompilationUnit:Debug ("Lexer took " .. ((SysTime () - self.StartTime) * 1000) .. " ms")
 		self.Callback (self.Tokens)
 	end
 end

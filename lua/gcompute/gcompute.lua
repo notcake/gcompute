@@ -1,15 +1,17 @@
+if GCompute then return end
 GCompute = GCompute or {}
+
+include ("glib/glib.lua")
+include ("vfs/vfs.lua")
+
+GLib.Initialize ("GCompute", GCompute)
+GCompute.AddCSLuaFolderRecursive ("gcompute")
+
 GCompute.Reflection = GCompute.Reflection or {}
 
 GCompute.Types = GCompute.Types or {}
 GCompute.Types.Top = nil
 GCompute.Types.Bottom = nil
-
-include ("glib/glib.lua")
-include ("vfs/vfs.lua")
-GLib.Import (GCompute)
-GCompute.EventProvider (GCompute)
-GCompute.AddCSLuaFolderRecursive ("gcompute")
 
 GCompute.GlobalNamespace = nil
 
@@ -20,8 +22,6 @@ function GCompute.PrintDebug (message)
 	if message == nil then return end
 	Msg (message .. "\n")
 end
-
-function GCompute.NullCallback () return end
 
 include ("callbackchain.lua")
 include ("ierrorreporter.lua")

@@ -52,6 +52,17 @@ function self:GetArgumentCount ()
 	return #self.Arguments
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.LeftExpression
+		end
+		return self.Arguments [i - 1]
+	end
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end
@@ -78,4 +89,13 @@ function self:ToString ()
 	end
 	
 	return leftExpression .. " [" .. arguments .. "]"
+end
+
+function self:Visit (astVisitor, ...)
+	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	for i = 1, self:GetArgumentCount () do
+		self:SetArgument (i, self:GetArgument (i):Visit (astVisitor, ...) or self:GetArgument (i))
+	end
+	
+	return astVisitor:VisitExpression (self, ...)
 end

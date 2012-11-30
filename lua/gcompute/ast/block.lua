@@ -122,6 +122,10 @@ function self:GetBlockType ()
 	return self.BlockType
 end
 
+function self:GetChildEnumerator ()
+	return self:GetEnumerator ()
+end
+
 function self:GetEnumerator ()
 	local i = 0
 	return function ()

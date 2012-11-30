@@ -43,8 +43,10 @@ function self:GetSourceFileCount ()
 end
 
 -- Compilation
+--- Starts compilation of this CompilationGroup.
+-- @param callback A callback function (success)
 function self:Compile (callback)
-	callback = callback or GCompute.NullCallback
+	local rootCallback = callback or GCompute.NullCallback
 
 	local callbackChain = GCompute.CallbackChain ()
 	for sourceFile in self:GetEnumerator () do
@@ -52,16 +54,17 @@ function self:Compile (callback)
 		callbackChain:Then (
 			function (callback, errorCallback)
 				local callbackChain = GCompute.CallbackChain ()
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:Lex (callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:Preprocess (callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:GenerateParserJobs (callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:Parse (callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:PostParse (callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("BlockStatementInserter", GCompute.BlockStatementInserter, callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:BuildNamespace (callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:PostBuildNamespace (callback) end)
-				callbackChain:ThenUnwrap (callback)
-				callbackChain:Execute ()
+					:Then (function (callback, errorCallback) compilationUnit:Lex (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:Preprocess (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:GenerateParserJobs (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:Parse (callback) end)
+					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
+					:Then (function (callback, errorCallback) compilationUnit:PostParse (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:RunPass ("BlockStatementInserter", GCompute.BlockStatementInserter, callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:BuildNamespace (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:PostBuildNamespace (callback) end)
+					:ThenUnwrap (callback)
+					:Execute ()
 			end
 		)
 	end
@@ -81,16 +84,21 @@ function self:Compile (callback)
 		callbackChain:Then (
 			function (callback, errorCallback)
 				local callbackChain = GCompute.CallbackChain ()
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
-				callbackChain:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
-				callbackChain:ThenUnwrap (callback)
-				callbackChain:Execute ()
+					:Then (function (callback, errorCallback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
+					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
+					:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
+					:ThenUnwrap (callback)
+					:Execute ()
 			end
 		)
 	end
 	
-	callbackChain:ThenUnwrap (callback)
+	callbackChain:ThenUnwrap (
+		function ()
+			rootCallback (true)
+		end
+	)
 	callbackChain:Execute ()
 end
 
@@ -126,4 +134,31 @@ function self:ToString ()
 	
 	compilationGroup = compilationGroup .. "\n}"
 	return compilationGroup
+end
+
+-- Internal, do not call
+function self:ASTErrorChecker (compilationUnit)
+	return function (callback, errorCallback)
+		local compilerMessageCollection = compilationUnit:GetAbstractSyntaxTree ():GetMessages ()
+		if compilerMessageCollection and compilerMessageCollection:GetErrorCount () > 0 then
+			errorCallback (compilerMessageCollection)
+			return
+		end
+		callback ()
+	end
+end
+
+function self:ASTErrorHandler (compilationUnit, rootCallback)
+	return function (_, compilerMessageCollection)
+		for message in compilerMessageCollection:GetEnumerator () do
+			if message:GetMessageType () == GCompute.CompilerMessageType.Warning then
+				compilationUnit:Warning (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+			elseif message:GetMessageType () == GCompute.CompilerMessageType.Error then
+				compilationUnit:Error (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+			else
+				compilationUnit:Information (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+			end
+		end
+		rootCallback (false)
+	end
 end

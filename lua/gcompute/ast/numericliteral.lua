@@ -29,6 +29,10 @@ function self:ExecuteAsAST (astRunner, state)
 	astRunner:PushValue (self.Number)
 end
 
+function self:GetChildEnumerator ()
+	return GCompute.NullCallback
+end
+
 function self:GetNumber ()
 	return self.Number
 end

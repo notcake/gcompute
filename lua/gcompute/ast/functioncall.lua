@@ -156,6 +156,17 @@ function self:GetArgumentTypes ()
 	return argumentTypes
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.LeftExpression
+		end
+		return self.Arguments [i - 1]
+	end
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end

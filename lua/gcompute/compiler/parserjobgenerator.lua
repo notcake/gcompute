@@ -48,10 +48,16 @@ function self:Process (callback)
 			end
 		end
 	end
+	
 	while not self.Stack:IsEmpty () do
+		-- Mismatched symbols, but add jobs to the queue anyway.
+		-- The last token is a special <eof> token, which we shouldn't include in the parsing span.
+		self:AddJob (self.Stack.Top.Next, self.Tokens.Last.Previous)
 		local token = self.Stack:Pop ()
 		self.CompilationUnit:Error ("'" .. token.Value .. "' without matching '" .. self.OpeningSymbols [token.Value] .. "'.", token.Line, token.Character)
 	end
+	
+	-- The final parsing span spans all tokens.
 	self:AddJob (self.Tokens.First, self.Tokens.Last)
 	
 	callback (self.JobQueue)

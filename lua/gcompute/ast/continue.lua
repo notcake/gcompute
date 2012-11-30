@@ -23,6 +23,10 @@ function self:ExecuteAsAST (astRunner)
 	executionContext:Continue ()
 end
 
+function self:GetChildEnumerator ()
+	return GCompute.NullCallback
+end
+
 function self:ToString ()
 	return "continue"
 end

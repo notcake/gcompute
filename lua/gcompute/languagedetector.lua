@@ -4,7 +4,7 @@ GCompute.LanguageDetector = GCompute.MakeConstructor (self)
 function self:ctor ()
 	self.Extensions   = {}
 	self.PathPatterns = {}
-	self.DefaultLanguage = "GLua"
+	self.DefaultLanguage = "Expression 2"
 end
 
 function self:AddExtension (language, extension)

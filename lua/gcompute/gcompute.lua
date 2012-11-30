@@ -59,6 +59,10 @@ include ("lexer/token.lua")
 include ("lexer/tokenizer.lua")
 include ("lexer/lexer.lua")
 
+include ("compiler/compilermessage.lua")
+include ("compiler/compilermessagecollection.lua")
+include ("compiler/compilermessagetype.lua")
+
 include ("compiler/preprocessor.lua")
 include ("compiler/parserjobgenerator.lua")
 include ("compiler/parser.lua")

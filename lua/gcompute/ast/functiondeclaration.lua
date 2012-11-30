@@ -57,6 +57,31 @@ function self:GetBody ()
 	return self.Body
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			if not self.TypeExpression then i = 2 end
+			return self.ReturnTypeExpression
+		elseif i == 2 then
+			return self.TypeExpression
+		elseif i == 3 then
+			return self.Body
+		else
+			local parameterType = self.ParameterList:GetParameterType (i - 3)
+			if not parameterType then return nil end
+			
+			if parameterType:IsDeferredNameResolution () then
+				return parameterType:GetParsedName ()
+			else
+				return parameterType
+			end
+		end
+		return nil
+	end
+end
+
 function self:GetFunctionDefinition ()
 	return self.FunctionDefinition
 end

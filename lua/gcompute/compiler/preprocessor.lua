@@ -82,7 +82,7 @@ function self:ProcessDirective (compilationUnit, token)
 	end
 	local directive = token.Next.Value
 	compilationUnit:ProcessDirective (directive, initialToken, finalToken)
-	compilationUnit:Debug ("Found preprocessor directive \"" .. directive .. "\".", initialToken.Line, initialToken.Character)
+	-- compilationUnit:Debug ("Found preprocessor directive \"" .. directive .. "\".", initialToken.Line, initialToken.Character)
 	return length
 end
 

@@ -189,6 +189,29 @@ function self:GetBody ()
 	return self.Body
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	local rangeIndex = 1
+	local rangeSubIndex = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.LoopVariable
+		elseif i == 2 then
+			return self.Body
+		else
+			rangeSubIndex = rangeSubIndex + 1
+			if not self.Range [rangeIndex] [rangeSubIndex] then
+				rangeIndex = rangeIndex + 1
+				rangeSubIndex = 1
+				if not self.Range [rangeIndex] then return nil end
+			end
+			return self.Range [rangeIndex] [rangeSubIndex]
+		end
+		return nil
+	end
+end
+
 function self:GetLoopVariable ()
 	return self.LoopVariable
 end

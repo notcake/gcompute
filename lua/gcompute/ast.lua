@@ -42,6 +42,8 @@ function GCompute.AST.MakeConstructor (metatable, base)
 	end
 end
 
+include ("ast/error.lua")
+
 -- expressions
 include ("ast/expression.lua")
 include ("ast/anonymousfunction.lua")

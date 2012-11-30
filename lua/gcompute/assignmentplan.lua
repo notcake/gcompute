@@ -33,7 +33,7 @@ function self:ExecuteAsAST (astRunner, node, state)
 	elseif state == 1 then
 		-- Return to state 2
 		astRunner:PushState (2)
-	
+		
 		-- Expression, state 0
 		astRunner:PushNode (node:GetRightExpression ())
 		astRunner:PushState (0)
@@ -42,6 +42,9 @@ function self:ExecuteAsAST (astRunner, node, state)
 		astRunner:PopNode ()
 		
 		local right = astRunner:PopValue ()
+		if not right then
+			executionContext:GetProcess ():GetStdErr ():WriteLine ("AssignmentPlan:ExecuteAsAST : right expression evaluated to nil! (" .. node:GetRightExpression ():ToString () .. ")")
+		end
 		
 		if self.AssignmentType == GCompute.AssignmentType.NamespaceMember then
 			if not self.CachedLeft then

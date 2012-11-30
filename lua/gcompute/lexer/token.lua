@@ -8,7 +8,7 @@ function GCompute.Token ()
 		Next         = nil,
 		Previous     = nil,
 		Value        = nil,
-	
+		
 		TokenType    = GCompute.TokenType.Unknown,
 		
 		Line         = 0,

@@ -106,12 +106,12 @@ function self:GetMemberResultCount ()
 end
 
 function self:GetResult (index)
-	if index <= self:GetGlobalResultCount () then
-		return self:GetGlobalResult (index)
-	elseif index <= self:GetGlobalResultCount () + self:GetLocalResultCount () then
-		return self:GetLocalResult (index - self:GetGlobalResultCount ())
+	if index <= self:GetLocalResultCount () then
+		return self:GetLocalResult (index)
+	elseif index <= self:GetLocalResultCount () + self:GetGlobalResultCount () then
+		return self:GetGlobalResult (index - self:GetLocalResultCount ())
 	else
-		return self:GetMemberResult (index - self:GetGlobalResultCount () - self:GetLocalResultCount ())
+		return self:GetMemberResult (index - self:GetLocalResultCount () - self:GetGlobalResultCount ())
 	end
 end
 

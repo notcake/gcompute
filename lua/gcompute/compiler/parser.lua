@@ -158,43 +158,33 @@ function self:DiscardParseItem ()
 end
 
 function self:ExpectedItem (item)
-	local currentToken      = self.CurrentToken
+	local currentToken      = self:GetCurrentToken ()
 	local currentTokenValue = "<eof>"
-	local line      = 0
-	local character = 0
 	if currentToken then
 		currentTokenValue = "\"" .. GCompute.String.Escape (currentToken.Value) .. "\""
-		line      = currentToken.Line
-		character = currentToken.Character
 	else
-		line      = self.Tokens.Last.Line
-		character = self.Tokens.Last.Character
+		currentToken = self.Tokens.Last
 	end
-	if self.CompilationUnit then
-		self.CompilationUnit:Error ("Expected <" .. item .. ">, got " .. currentTokenValue .. ".", line, character)
-	else
-		GCompute.Error ("Expected <" .. item .. ">, got " .. currentTokenValue .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
-	end
+	return GCompute.AST.Error ("Expected <" .. item .. ">, got " .. currentTokenValue .. ".")
+		:SetStartToken (currentToken)
+		:SetEndToken   (currentToken)
 end
 
 function self:ExpectedToken (token)
-	local currentToken      = self.CurrentToken
+	local currentToken      = self:GetCurrentToken ()
 	local currentTokenValue = "<eof>"
-	local line      = 0
-	local character = 0
 	if currentToken then
 		currentTokenValue = "\"" .. GCompute.String.Escape (currentToken.Value) .. "\""
-		line      = currentToken.Line
-		character = currentToken.Character
 	else
-		line      = self.Tokens.Last.Line
-		character = self.Tokens.Last.Character
+		currentToken = self.Tokens.Last
 	end
-	if self.CompilationUnit then
-		self.CompilationUnit:Error ("Expected \"" .. token .. "\", got " .. currentTokenValue .. ".", line, character)
-	else
-		GCompute.Error ("Expected \"" .. token .. "\", got " .. currentTokenValue .. " at line " .. tostring (line) .. ", char " .. tostring (character) .. ".")
-	end
+	return GCompute.AST.Error ("Expected \"" .. token .. "\", got " .. currentTokenValue .. ".")
+		:SetStartToken (currentToken)
+		:SetEndToken   (currentToken)
+end
+
+function self:GetCurrentToken ()
+	return self.CurrentToken
 end
 
 function self:GetLastToken ()
@@ -231,7 +221,7 @@ end
 function self:Process (tokens, startToken, endToken)
 	self:Initialize (tokens, startToken, endToken)
 	
-	self.CompilationUnit:Debug ("Parsing from line " .. startToken.Line .. ", char " .. startToken.Character .. " to line " .. endToken.Line .. ", char " .. endToken.Character .. ".")
+	self.CompilationUnit:Debug ("Parsing from line " .. (startToken.Line + 1) .. ", char " .. (startToken.Character + 1) .. " to line " .. (endToken.EndLine + 1) .. ", char " .. (endToken.EndCharacter + 1) .. ".")
 	
 	return self:Root ()
 end
@@ -256,11 +246,13 @@ function self:RecurseLeft (subParseFunction, tokens)
 		if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 			gotExpression = true
 			local nextLeftExpression = GCompute.AST.BinaryOperator ()
+			nextLeftExpression:SetStartToken (leftExpression:GetStartToken ())
 			nextLeftExpression:SetOperator (self.CurrentTokenValue)
 			self:AdvanceToken ()
 			self:AcceptWhitespaceAndNewlines ()
 			nextLeftExpression:SetLeftExpression (leftExpression)
 			nextLeftExpression:SetRightExpression (subParseFunction (self))
+			nextLeftExpression:SetEndToken (self:GetLastToken ())
 			leftExpression = nextLeftExpression
 		end
 	end
@@ -275,6 +267,7 @@ function self:RecurseRight (subParseFunction, tokens)
 	self:AcceptWhitespaceAndNewlines ()
 	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		local binaryOperatorExpression = GCompute.AST.BinaryOperator ()
+		binaryOperatorExpression:SetStartToken (leftExpression:GetStartToken ())
 		binaryOperatorExpression:SetOperator (self.CurrentTokenValue)
 		self:AdvanceToken ()
 		self:AcceptWhitespaceAndNewlines ()
@@ -282,6 +275,7 @@ function self:RecurseRight (subParseFunction, tokens)
 		local rightExpression = self:RecurseRight (subParseFunction, tokens)
 		if not rightExpression then return nil end
 		binaryOperatorExpression:SetRightExpression (rightExpression)
+		binaryOperatorExpression:SetEndToken (rightExpression:GetEndToken ())
 		return binaryOperatorExpression
 	end
 	
@@ -291,12 +285,14 @@ end
 function self:RecurseRightUnary (subParseFunction, tokens, subItemName)
 	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		local unaryExpression = GCompute.AST.LeftUnaryOperator ()
+		unaryExpression:SetStartToken (self:GetCurrentToken ())
 		unaryExpression:SetOperator (self.CurrentTokenValue)
 		self:AdvanceToken ()
 		unaryExpression:SetRightExpression (self:RecurseRightUnary (subParseFunction, tokens))
 		if not unaryExpression:GetRightExpression () then
 			self:ExpectedItem (subItemName)
 		end
+		unaryExpression:SetEndToken (self:GetLastToken ())
 		return unaryExpression
 	end
 	return subParseFunction (self)

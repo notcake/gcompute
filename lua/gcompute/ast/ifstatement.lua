@@ -104,6 +104,23 @@ function self:ExecuteAsAST (astRunner, state)
 	end
 end
 
+function self:GetChildEnumerator ()
+	local i = self.Else and 0 or 1
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.Else
+		else
+			if i % 2 == 0 then -- 2, 4, 6, 8...
+				return self.Conditions [math.floor (i / 2)]
+			else -- 3, 5, 7, 9...
+				return self.ConditionBodies [math.floor (i / 2)]
+			end
+		end
+		return nil
+	end
+end
+
 function self:GetCondition (index)
 	return self.Conditions [index]
 end

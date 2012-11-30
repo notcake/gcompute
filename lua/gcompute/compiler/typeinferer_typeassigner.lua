@@ -55,7 +55,7 @@ function self:VisitExpression (expression)
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
 				variableReadPlan:SetVariableReadType (GCompute.VariableReadType.NamespaceMember)
-				variableReadPlan:SetRuntimeName (resultNamespace:GetRuntimeName (result))
+				variableReadPlan:SetRuntimeName (resultNamespace:GetMemberRuntimeName (result))
 			elseif namespaceType == GCompute.NamespaceType.Local or
 			       namespaceType == GCompute.NamespaceType.FunctionRoot then
 				local mergedLocalScope = self:GetMergedLocalScope (result)

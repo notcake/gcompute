@@ -30,6 +30,10 @@ function self:ExecuteAsAST (astRunner, state)
 	astRunner:PushValue (self.String)
 end
 
+function self:GetChildEnumerator ()
+	return GCompute.NullCallback
+end
+
 function self:ToString ()
 	return "\"" .. GCompute.String.Escape (self.String) .. "\""
 end

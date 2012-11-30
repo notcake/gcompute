@@ -21,7 +21,7 @@ function self:VisitExpression (expression)
 		   expression:GetName () ~= "string" then
 			return
 		end
-	
+		
 		local parentNode = expression:GetParent ()
 		if parentNode:Is ("VariableDeclaration") or
 		   parentNode:Is ("FunctionDeclaration") or

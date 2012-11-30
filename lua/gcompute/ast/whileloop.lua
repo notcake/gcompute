@@ -75,6 +75,19 @@ function self:GetBody ()
 	return self.Body
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.Condition
+		elseif i == 2 then
+			return self.Body
+		end
+		return nil
+	end
+end
+
 function self:GetCondition ()
 	return self.Condition
 end

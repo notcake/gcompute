@@ -120,11 +120,20 @@ function self:GetMemberMetadata (name)
 	return self.MemberMetadata [name]
 end
 
+function self:GetMemberRuntimeName (memberDefinition)
+	if not self.UniqueNameMap then return memberDefinition:GetName () end
+	return self.UniqueNameMap:GetObjectName (memberDefinition)
+end
+
 function self:GetNamespaceType ()
 	return self.NamespaceType
 end
 
-function self:GetRuntimeName ()
+function self:GetRuntimeName (invalidParameter)
+	if invalidParameter then
+		GCompute.Error ("MergedNamespaceDefinition:GetRuntimeName : This function does not do what you think it does.")
+	end
+	
 	local containingNamespace = self:GetContainingNamespace ()
 	if not containingNamespace then return self:GetShortName () end
 	

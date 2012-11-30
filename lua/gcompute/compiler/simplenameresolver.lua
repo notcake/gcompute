@@ -50,6 +50,10 @@ function self:VisitExpression (expression, referenceNamespace)
 		local resolutionResults = self.NameResolver:LookupUnqualifiedIdentifier (expression:GetName (), self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
 		resolutionResults:FilterLocalResults ()
 		expression.ResolutionResults = resolutionResults
+		
+		if resolutionResults:GetResultCount () == 0 then
+			expression:AddErrorMessage ("Cannot resolve identifier " .. expression:GetName () .. ".")
+		end
 	elseif expression:Is ("NameIndex") then
 		local resolutionResults = GCompute.NameResolutionResults ()
 		expression.ResolutionResults = resolutionResults
@@ -63,6 +67,10 @@ function self:VisitExpression (expression, referenceNamespace)
 		for i = 1, leftResults:GetGlobalResultCount () do
 			local result = leftResults:GetGlobalResult (i).Result
 			self.NameResolver:LookupQualifiedIdentifier (result, name, resolutionResults)
+		end
+		
+		if resolutionResults:GetResultCount () == 0 then
+			expression:AddErrorMessage ("Cannot resolve " .. expression:GetName () .. ".")
 		end
 	elseif expression:Is ("AnonymousFunction") then
 		self:VisitFunction (expression)

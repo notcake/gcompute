@@ -36,6 +36,10 @@ function self:ExecuteAsAST (astRunner, state)
 	self.VariableReadPlan:ExecuteAsAST (astRunner, self, state)
 end
 
+function self:GetChildEnumerator ()
+	return GCompute.NullCallback
+end
+
 function self:GetName ()
 	return self.Name
 end

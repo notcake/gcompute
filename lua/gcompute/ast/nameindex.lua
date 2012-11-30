@@ -41,6 +41,19 @@ function self:Evaluate (executionContext)
 	end
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.LeftExpression
+		elseif i == 2 then
+			return self.Identifier
+		end
+		return nil
+	end
+end
+
 function self:GetIndexType ()
 	return self.IndexType
 end

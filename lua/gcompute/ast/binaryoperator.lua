@@ -117,6 +117,16 @@ function self:ExecuteAsAST (astRunner, state)
 	end
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then return self.LeftExpression
+		elseif i == 2 then return self.RightExpression end
+		return nil
+	end
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end

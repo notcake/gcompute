@@ -103,6 +103,10 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 -- Messages
+function self:ClearMessages ()
+	self.Messages = {}
+end
+
 function self:Message (messageType, message, line, character)
 	local messageEntry =
 	{
@@ -203,6 +207,12 @@ function self:AddPassDuration (passName, duration)
 		self.PassDurations [passName] = 0
 	end
 	self.PassDurations [passName] = self.PassDurations [passName] + duration
+end
+
+function self:ClearPassDurations ()
+	for k, _ in pairs (self.PassDurations) do
+		self.PassDurations [k] = 0
+	end
 end
 
 function self:GetPassDuration (passName)
@@ -311,7 +321,6 @@ function self:Parse (callback)
 	for _, v in ipairs (self.ParserJobQueue) do
 		callbackChain:Then (
 			function (callback, errorCallback)
-				self:Debug ("Parsing from line " .. v.Start.Line .. ", char " .. v.Start.Character .. " to line " .. v.End.Line .. ", char " .. v.End.Character .. ".")
 				local parseTree = parser:Process (self.Tokens, v.Start, v.End)
 				v.Start.BlockEnd = v.End
 				v.Start.AST = parseTree

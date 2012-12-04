@@ -63,30 +63,8 @@ function self:Resume ()
 		-- print (("    "):rep (self.NodeStack.Count) .. (topNode and topNode:GetNodeType () or "nil") .. ":" .. (state or 0))
 		if topNode.ExecuteAsAST then
 			topNode:ExecuteAsAST (self, state)
-		elseif topNode:Is ("WhileLoop") then
-			-- state 0: evaluate condition
-			-- state 1: check condition value, evaluate block
-			if state == 0 then
-				self.StateStack:Push (1)
-				
-				-- expression, state 0
-				self.NodeStack:Push (topNode:GetCondition ())
-				self.StateStack:Push (0)
-			else
-				local value = self.ValueStack:Pop ()
-				if value then
-					self.StateStack:Push (0)
-					
-					-- block, state 0
-					self.NodeStack:Push (topNode:GetBody ())
-					self.StateStack:Push (0)
-				else
-					-- while loop done
-					self.NodeStack:Pop ()
-				end
-			end
 		else
-			ErrorNoHalt ("Unknown node type " .. topNode:GetNodeType () .. "\n")
+			ErrorNoHalt ("ASTRunner: Unhandled node type " .. topNode:GetNodeType () .. "\n")
 			self.NodeStack:Pop ()
 		end
 	end

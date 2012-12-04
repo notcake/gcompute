@@ -176,6 +176,9 @@ function self:GetMessages (compilerMessageCollection)
 		end
 	end
 	for childNode in self:GetChildEnumerator () do
+		if not childNode:IsASTNode () then
+			print (self:GetNodeType () .. ":GetChildEnumerator : Enumerator returned non-AST node (" .. childNode:ToString () .. ")")
+		end
 		compilerMessageCollection = childNode:GetMessages (compilerMessageCollection) or compilerMessageCollection
 	end
 	return compilerMessageCollection

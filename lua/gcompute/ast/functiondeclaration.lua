@@ -10,18 +10,12 @@ function self:ctor ()
 	self.MemberFunction = false
 	self.TypeExpression = nil
 	
-	self.ParameterList = GCompute.ParameterList ()
+	self.ParameterList = GCompute.AST.ParameterList ()
 	
 	self.Body = nil
 	
 	self.FunctionDefinition = nil
-	
 	self.NamespaceDefinition = nil
-end
-
-function self:AddParameter (parameterType, parameterName)
-	self.ParameterList:AddParameter (GCompute.DeferredNameResolution (parameterType), parameterName or "[Unknown Identifier]")
-	if parameterType then parameterType:SetParent (self) end
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -30,10 +24,12 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	
 	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
 	memoryUsageReport:CreditString ("Syntax Trees", self.Name)
-	self.ParameterList:ComputeMemoryUsage (memoryUsageReport, "Syntax Trees")
 	
 	if self.ReturnTypeExpression then
 		self.ReturnTypeExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.ParameterList then
+		self.ParameterList:ComputeMemoryUsage (memoryUsageReport)
 	end
 	if self.TypeExpression then
 		self.TypeExpression:ComputeMemoryUsage (memoryUsageReport)
@@ -50,7 +46,9 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
-function self:Evaluate ()
+function self:ExecuteAsAST (astRunner, state)
+	-- Discard FunctionDeclaration
+	astRunner:PopNode ()
 end
 
 function self:GetBody ()
@@ -67,16 +65,9 @@ function self:GetChildEnumerator ()
 		elseif i == 2 then
 			return self.TypeExpression
 		elseif i == 3 then
+			return self.ParameterList
+		elseif i == 4 then
 			return self.Body
-		else
-			local parameterType = self.ParameterList:GetParameterType (i - 3)
-			if not parameterType then return nil end
-			
-			if parameterType:IsDeferredNameResolution () then
-				return parameterType:GetParsedName ()
-			else
-				return parameterType
-			end
 		end
 		return nil
 	end
@@ -94,20 +85,8 @@ function self:GetNamespace ()
 	return self.NamespaceDefinition
 end
 
-function self:GetParameterCount ()
-	return self.ParameterList:GetParameterCount ()
-end
-
 function self:GetParameterList ()
 	return self.ParameterList
-end
-
-function self:GetParameterName (parameterId)
-	return self.ParameterList:GetParameterName (parameterId)
-end
-
-function self:GetParameterType (parameterId)
-	return self.ParameterList:GetParameterType (parameterId)
 end
 
 function self:GetReturnTypeExpression ()
@@ -146,13 +125,9 @@ function self:SetNamespace (namespaceDefinition)
 	self.NamespaceDefinition = namespaceDefinition
 end
 
-function self:SetParameterName (parameterId, parameterName)
-	self.ParameterList:SetParameterName (parameterId, parameterName)
-end
-
-function self:SetParameterType (parameterId, parameterType)
-	self.ParameterList:SetParameterType (parameterId, GCompute.DeferredNameResolution (parameterType))
-	if parameterType then parameterType:SetParent (self) end
+function self:SetParameterList (parameterList)
+	self.ParameterList = parameterList
+	if parameterList then parameterList:SetParent (self) end
 end
 
 function self:SetReturnTypeExpression (returnTypeExpression)
@@ -184,19 +159,16 @@ function self:ToString ()
 end
 
 function self:Visit (astVisitor, ...)
-	for i = 1, self:GetParameterCount () do
-		local parameterType = self:GetParameterType (i)
-		local newParameterType = nil
-		if parameterType:IsDeferredNameResolution () then
-			newParameterType = parameterType:GetParsedName ():Visit (astVisitor, ...)
-		end
-		if newParameterType and newParameterType ~= parameterType then
-			self:SetParameterType (i, newParameterType)
-		end
-	end
-	
 	if self:GetReturnTypeExpression () then
 		self:SetReturnTypeExpression (self:GetReturnTypeExpression ():Visit (astVisitor, ...) or self:GetReturnTypeExpression ())
+	end
+	
+	if self:GetTypeExpression () then
+		self:SetTypeExpression (self:GetTypeExpression ():Visit (astVisitor, ...) or self:GetTypeExpression ())
+	end
+	
+	if self:GetParameterList () then
+		self:SetParameterList (self:GetParameterList ():Visit (astVisitor, ...) or self:GetParameterList ())
 	end
 	
 	local astOverride = astVisitor:VisitStatement (self, ...)

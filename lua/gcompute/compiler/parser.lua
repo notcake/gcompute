@@ -313,21 +313,3 @@ end
 function self:SavePosition ()
 	self.TokenStack:Push (self.CurrentToken)
 end
-
-function self:SyntaxError (syntaxError)
-	local currentToken = self.CurrentToken
-	local line      = 0
-	local character = 0
-	if currentToken then
-		line      = currentToken.Line
-		character = currentToken.Character
-	else
-		line      = self.Tokens.Last.Line
-		character = self.Tokens.Last.Character
-	end
-	if self.CompilationUnit then
-		self.CompilationUnit:Error (syntaxError, line, character)
-	else
-		GCompute.Error (syntaxError)
-	end
-end

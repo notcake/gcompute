@@ -90,10 +90,13 @@ include ("sourcefile.lua")
 include ("type/typeconversionmethod.lua")
 include ("type/typeparser.lua")
 include ("type/type.lua")
+
+include ("type/nulltype.lua")
+include ("type/placeholdertype.lua")
+
 include ("type/arraytype.lua")
 include ("type/functiontype.lua")
 include ("type/instancedtype.lua")
-include ("type/nulltype.lua")
 include ("type/parametrictype.lua")
 include ("type/referencetype.lua")
 

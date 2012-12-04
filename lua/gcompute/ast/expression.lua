@@ -3,8 +3,8 @@ self.__Type = "Expression"
 GCompute.AST.Expression = GCompute.AST.MakeConstructor (self)
 
 function self:ctor ()
-	self.Type = nil
-	self.Value = nil
+	self.Type           = nil
+	self.Value          = nil
 end
 
 function self:Evaluate (executionContext)

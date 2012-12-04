@@ -28,14 +28,14 @@ end
 
 function self:Resolve (simpleNameResolver)
 	simpleNameResolver = simpleNameResolver or GCompute.SimpleNameResolver ()
-	simpleNameResolver:ProcessStatement (self.ParsedQualifiedName)
+	self.ParsedQualifiedName:Visit (simpleNameResolver)
 	
 	-- Should only have 1 match
 	local matches = {}
 	for i = 1, self.ParsedQualifiedName.ResolutionResults:GetResultCount () do
 		local result = self.ParsedQualifiedName.ResolutionResults:GetResult (i)
-		if result.Metadata:GetMemberType () == GCompute.MemberTypes.Namespace then
-			matches [#matches + 1] = result.Result
+		if result:IsNamespace () then
+			matches [#matches + 1] = result
 		end
 	end
 	

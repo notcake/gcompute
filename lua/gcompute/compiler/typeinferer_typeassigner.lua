@@ -49,8 +49,8 @@ function self:VisitExpression (expression)
 		expression.VariableReadPlan = variableReadPlan
 	
 		if expression.ResolutionResults:GetResult (1) then
-			local result = expression.ResolutionResults:GetResult (1).Result
-			local metadata = expression.ResolutionResults:GetResult (1).Metadata
+			local result = expression.ResolutionResults:GetResult (1)
+			local metadata = result:GetMetadata ()
 			local resultNamespace = result:GetContainingNamespace ()
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
@@ -88,14 +88,19 @@ function self:VisitExpression (expression)
 		expression:SetType (GCompute.InferredType ())
 		
 		local leftExpression = expression:GetLeftExpression ()
-		local leftType = leftExpression:GetType ()
+		local leftType = leftExpression:GetType ():UnwrapReference ()
 		if leftType:IsInferredType () then
 		elseif leftType:IsFunctionType () then
-			local overloadedFunctionDefinition = expression:GetLeftExpression ().ResolutionResults:GetResult (1).Result
+			local leftValue = expression:GetLeftExpression ().ResolutionResults:GetResult (1)
+			-- leftValue could be an OverloadedFunctionDefinition or a VariableDefinition
 			
 			local functionResolutionResult = GCompute.FunctionResolutionResult ()
 			expression.FunctionResolutionResult = functionResolutionResult
-			functionResolutionResult:AddOverloads (overloadedFunctionDefinition)
+			if leftValue:IsOverloadedFunctionDefinition () then
+				functionResolutionResult:AddOverloads (leftValue)
+			else
+				functionResolutionResult:AddOverload (leftValue)
+			end
 			functionResolutionResult:FilterByArgumentTypes (expression:GetArgumentTypes ())
 			
 			if functionResolutionResult:IsEmpty () then
@@ -105,20 +110,22 @@ function self:VisitExpression (expression)
 				self.CompilationUnit:Error ("Failed to resolve " .. expression:ToString () .. ": " .. functionResolutionResult:ToString ())
 				expression:SetType (GCompute.NullType ())
 			else
-				local functionDefinition = functionResolutionResult:GetFilteredOverload (1)
+				local objectDefinition = functionResolutionResult:GetFilteredOverload (1)
 				self.CompilationUnit:Debug ("Resolving " .. expression:ToString () .. ": " .. functionResolutionResult:ToString ())
-				expression:SetType (functionDefinition:GetReturnType ())
+				expression:SetType (objectDefinition:GetType ():GetReturnType ())
 				
 				local functionCallPlan = GCompute.FunctionCallPlan ()
 				expression.FunctionCallPlan = functionCallPlan
 				
 				expression.FunctionCallPlan:SetFunctionName (functionName)
-				expression.FunctionCallPlan:SetFunctionDefinition (functionDefinition)
+				if objectDefinition:IsFunction () then
+					expression.FunctionCallPlan:SetFunctionDefinition (objectDefinition)
+				end
 				expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentCount ())
 			end
 		else
 			expression:SetType (GCompute.NullType ())
-			self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function.", expression:GetLocation ())
+			self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function (type was " .. leftType:ToString () .. ").", expression:GetLocation ())
 		end
 	elseif expression:Is ("MemberFunctionCall") then
 		expression:SetType (GCompute.InferredType ())
@@ -255,7 +262,7 @@ function self:ResolveAssignment (astNode)
 	
 	if leftNodeType == "Identifier" then
 		-- Either local, member or global
-		leftDefinition = left.ResolutionResults:GetResult (1).Result
+		leftDefinition = left.ResolutionResults:GetResult (1)
 	elseif leftNodeType == "VariableDeclaration" then
 		-- Either namespace member or local variable
 		leftDefinition = left:GetVariableDefinition ()

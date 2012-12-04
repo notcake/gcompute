@@ -106,7 +106,7 @@ end
 function self:CanConstructFrom (sourceType)
 	local argumentTypeArray = { sourceType }
 	for _, constructorDefinition in ipairs (self.Constructors) do
-		if constructorDefinition:CanAcceptArgumentTypes (argumentTypeArray) then
+		if constructorDefinition:GetType ():CanAcceptArgumentTypes (argumentTypeArray) then
 			return true
 		end
 	end

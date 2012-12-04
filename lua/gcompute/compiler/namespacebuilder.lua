@@ -38,8 +38,7 @@ function self:VisitStatement (statement)
 		statement:GetNamespace ():SetContainingNamespace (statement:GetParentNamespace ())
 	end
 	
-	if statement:Is ("FunctionDeclaration") or
-	   statement:Is ("AnonymousFunction") then
+	if statement:Is ("FunctionDeclaration") then
 		self:VisitFunction (statement)
 	end
 	
@@ -57,13 +56,19 @@ function self:VisitStatement (statement)
 	end
 end
 
+function self:VisitExpression (expression)
+	if expression:Is ("AnonymousFunction") then
+		self:VisitFunction (expression)
+	end
+end
+
 function self:VisitFunction (func)
 	local functionDefinition = nil
 	
 	if func:Is ("FunctionDeclaration") then
-		functionDefinition = func:GetParentNamespace ():AddFunction (func:GetName (), func:GetParameterList ())
+		functionDefinition = func:GetParentNamespace ():AddFunction (func:GetName (), func:GetParameterList ():ToParameterList ())
 	else
-		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", func:GetParameterList ())
+		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", func:GetParameterList ():ToParameterList ())
 	end
 	
 	functionDefinition:SetReturnType (GCompute.DeferredNameResolution (func:GetReturnTypeExpression ()))

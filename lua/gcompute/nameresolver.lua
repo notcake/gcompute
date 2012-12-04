@@ -2,15 +2,15 @@ local self = {}
 GCompute.NameResolver = GCompute.MakeConstructor (self)
 
 --[[
-	First identifier:
-		All local scopes first
-		Class, then base classes
-		Global scope, all usings
+	<identifier>:
+		<local>
+		<member>
+		Global Namespace.<member>
 		
-	Second identifier:
-		Namespace -> obvious
-		Type -> obvious
-		Type instance -> type members?
+	<x>.<identifier>:
+		Namespace.<member>
+		Type.<member>
+		Type Instance.<member>
 ]]
 
 function self:ctor ()
@@ -28,13 +28,7 @@ function self:LookupQualifiedIdentifier (leftNamespace, name, resolutionResults)
 	resolutionResults = resolutionResults or GCompute.NameResolutionResults ()
 	
 	if leftNamespace:MemberExists (name) then
-		if not leftNamespace:GetMember (name) then
-			A = leftNamespace
-			B = name
-			C = resolutionResults
-			error ("")
-		end
-		resolutionResults:AddGlobalResult (leftNamespace:GetMember (name), leftNamespace:GetMemberMetadata (name))
+		resolutionResults:AddGlobalResult (leftNamespace:GetMember (name))
 	end
 	
 	return resolutionResults
@@ -57,7 +51,7 @@ function self:LookupGlobal (name, globalNamespace, localNamespace, resolutionRes
 		for i = 1, currentUsingSource:GetUsingCount () do
 			local usingDirective = currentUsingSource:GetUsing (i)
 			if usingDirective:GetNamespace () and usingDirective:GetNamespace ():MemberExists (name) then
-				resolutionResults:AddGlobalResult (usingDirective:GetNamespace ():GetMember (name), usingDirective:GetNamespace ():GetMemberMetadata (name))
+				resolutionResults:AddGlobalResult (usingDirective:GetNamespace ():GetMember (name))
 			end
 		end
 	
@@ -65,7 +59,7 @@ function self:LookupGlobal (name, globalNamespace, localNamespace, resolutionRes
 	end
 	
 	if globalNamespace:MemberExists (name) then
-		resolutionResults:AddGlobalResult (globalNamespace:GetMember (name), globalNamespace:GetMemberMetadata (name))
+		resolutionResults:AddGlobalResult (globalNamespace:GetMember (name))
 	end
 	
 	return resolutionResults
@@ -77,7 +71,7 @@ function self:LookupLocal (name, globalNamespace, localNamespace, resolutionResu
 	local containingNamespace = localNamespace
 	while containingNamespace do
 		if containingNamespace:MemberExists (name) then
-			resolutionResults:AddLocalResult (containingNamespace:GetMember (name), containingNamespace:GetMemberMetadata (name))
+			resolutionResults:AddLocalResult (containingNamespace:GetMember (name))
 		end
 		
 		containingNamespace = containingNamespace:GetContainingNamespace ()
@@ -91,13 +85,14 @@ function self:ResolveASTNode (astNode, errorReporter, globalNamespace, localName
 
 	local resolutionResults = nil
 	if astNode:Is ("NameIndex") then
+		-- TODO: Merge with SimpleNameResolver's NameIndex processing
 		local leftResults = self:ResolveASTNode (astNode:GetLeftExpression (), errorReporter, globalNamespace, localNamespace)
 		local identifier = astNode:GetIdentifier ()
 		if not identifier then
 			errorReporter:Error ("NameIndex is missing an Identifier (" .. astNode:ToString () .. ").")
 		elseif identifier:Is ("Identifier") then
 			if leftResults and leftResults:GetResult (1) then
-				resolutionResults = self:LookupQualifiedIdentifier (leftResults:GetResult (1).Result, identifier:GetName ())
+				resolutionResults = self:LookupQualifiedIdentifier (leftResults:GetResult (1), identifier:GetName ())
 			else
 				errorReporter:Error ("Failed to resolve left hand side of NameIndex (" .. astNode:ToString () .. ")")
 			end
@@ -106,6 +101,26 @@ function self:ResolveASTNode (astNode, errorReporter, globalNamespace, localName
 		end
 	elseif astNode:Is ("Identifier") then
 		resolutionResults = self:LookupUnqualifiedIdentifier (astNode:GetName (), globalNamespace, localNamespace)
+	elseif astNode:Is ("FunctionType") then
+		-- TODO: Make this class set ResolvedObjects, or merge with SimpleNameResolver
+		resolutionResults = GCompute.NameResolutionResults ()
+		
+		local returnResults = self:ResolveASTNode (astNode:GetReturnTypeExpression (), errorReporter, globalNamespace, localNamespace)
+		for i = 1, astNode:GetParameterList ():GetParameterCount () do
+			local parameterType = astNode:GetParameterList ():GetParameterType (i)
+			if parameterType then
+				self:ResolveASTNode (parameterType, errorReporter, globalNamespace, localNamespace)
+			end
+		end
+		
+		-- TODO: This is WRONG, fix it.
+		local returnType = returnResults:GetResult (1)
+		if returnType:IsOverloadedTypeDefinition () then
+			returnType = returnType:GetType (1)
+		end
+		
+		local functionType = GCompute.FunctionType (returnType, astNode:GetParameterList ():ToParameterList ())
+		resolutionResults:AddGlobalResult (functionType)
 	else
 		errorReporter:Error ("NameResolver cannot handle " .. astNode:GetNodeType () .. " AST node.")
 	end

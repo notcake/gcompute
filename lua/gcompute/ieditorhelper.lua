@@ -53,8 +53,8 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			-- compilerStdOut:WriteLine (compilationGroup:ComputeMemoryUsage ():ToString ())
 			
 			if success then
-				compilerStdOut:WriteLine ("Abstract Syntax Tree (serialized):")
-				compilerStdOut:WriteLine (AST:ToString ())
+				-- compilerStdOut:WriteLine ("Abstract Syntax Tree (serialized):")
+				-- compilerStdOut:WriteLine (AST:ToString ())
 				
 				compilerStdOut:WriteLine ("Namespace:")
 				compilerStdOut:WriteLine (compilationGroup:GetNamespaceDefinition ():ToString ())

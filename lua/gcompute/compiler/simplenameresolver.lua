@@ -55,6 +55,7 @@ function self:VisitExpression (expression, referenceNamespace)
 			expression:AddErrorMessage ("Cannot resolve identifier " .. expression:GetName () .. ".")
 		end
 	elseif expression:Is ("NameIndex") then
+		-- TODO: Merge with NameResolver's NameIndex processing
 		local resolutionResults = GCompute.NameResolutionResults ()
 		expression.ResolutionResults = resolutionResults
 		local leftResults = expression:GetLeftExpression ().ResolutionResults
@@ -65,7 +66,7 @@ function self:VisitExpression (expression, referenceNamespace)
 		end
 		local name = identifier:GetName ()
 		for i = 1, leftResults:GetGlobalResultCount () do
-			local result = leftResults:GetGlobalResult (i).Result
+			local result = leftResults:GetGlobalResult (i)
 			self.NameResolver:LookupQualifiedIdentifier (result, name, resolutionResults)
 		end
 		
@@ -77,6 +78,7 @@ function self:VisitExpression (expression, referenceNamespace)
 	end
 end
 
+-- AnonymousFunction or FunctionDeclaration
 function self:VisitFunction (func)
 	local resolutionResults = func:GetReturnTypeExpression ().ResolutionResults
 	
@@ -87,9 +89,19 @@ function self:VisitFunction (func)
 	functionDefinition:ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition ())
 	
 	local parameterList = func:GetParameterList ()
-	for parameterType, parameterName in parameterList:GetEnumerator () do
+	local parameterType
+	for i = 1, parameterList:GetParameterCount () do
+		parameterType = parameterList:GetParameterType (i)
 		if parameterType then
-			namespace:GetMember (parameterName):SetType (parameterType)
+			-- TODO: This is WRONG, fix it.
+			
+			-- resolvedObject should always be a Type or TypeDefinition (which is a Type) or OverloadedTypeDefinition here.
+			local resolvedObject = parameterType.ResolutionResults:GetResult (1)
+			if resolvedObject:UnwrapAlias ():IsOverloadedTypeDefinition () then
+				resolvedObject = resolvedObject:GetType (1):UnwrapAlias ()
+			end
+			functionDefinition:GetParameterList ():SetParameterType (i, resolvedObject)
+			namespace:GetMember (parameterList:GetParameterName (i)):SetType (resolvedObject)
 		end
 	end
 end

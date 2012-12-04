@@ -341,7 +341,7 @@ function self:StatementSwitch ()
 		switchStatement:AddErrorMessage ("Expected '(' after 'switch'.", self:GetCurrentToken ())
 	end
 
-	local switchExpression = self:Expression () or GCompute.AST.Error ("Expected <expression> after '(' in switch statement.", self.CurrentToken.Line, self.CurrentToken.Character)
+	local switchExpression = self:Expression () or GCompute.AST.Error ("Expected <expression> after '(' in switch statement.", self:GetCurrentToken ())
 	switchStatement:SetSwitchExpression (switchExpression)
 	
 	if not self:Accept (")") then
@@ -420,12 +420,12 @@ function Parser:StatementTypeDeclaration ()
 	self.DebugOutput:WriteLine ("Trying type declaration...")
 	self:SavePosition ()
 	self:ChompModifiers ()
-	if self.Language:GetKeywordType (self.CurrentToken) ~= GCompute.KeywordType.DataType then
+	if self.Language:GetKeywordType (self:Peek ()) ~= GCompute.KeywordType.DataType then
 		self:ClearModifiers ()
 		self:RestorePosition ()
 		return false
 	end
-	local DataType = self.CurrentToken
+	local DataType = self:Peek ()
 	local Type = self:Type ()
 	if not Type then
 		self:ClearModifiers ()
@@ -584,7 +584,7 @@ function self:StatementFunctionDeclaration ()
 				parameterType = GCompute.TypeParser:Root ("Expression2.number")
 			end
 			
-			functionDeclaration:AddParameter (parameterType, parameterName)
+			functionDeclaration:GetParameterList ():AddParameter (parameterType, parameterName)
 		until not self:Accept (",")
 	end
 	if not self:Accept (")") then
@@ -1026,12 +1026,7 @@ end
 function self:ExpressionAnonymousFunction ()
 	self:SavePosition ()
 	local returnType = self:Type ()
-	if not returnType then
-		self:RestorePosition ()
-		return self:ExpressionVariable ()
-	end
-	
-	if not self:Accept ("(") then
+	if not returnType or not returnType:Is ("FunctionType") then
 		self:RestorePosition ()
 		return self:ExpressionVariable ()
 	end
@@ -1039,26 +1034,11 @@ function self:ExpressionAnonymousFunction ()
 	local anonymousFunctionExpression = GCompute.AST.AnonymousFunction ()
 	anonymousFunctionExpression:SetStartToken (returnType:GetStartToken ())
 	
-	anonymousFunctionExpression:SetReturnTypeExpression (returnType)
+	anonymousFunctionExpression:SetReturnTypeExpression (returnType:GetReturnTypeExpression ())
+	anonymousFunctionExpression:SetParameterList (returnType:GetParameterList ())
 	
-	if self:Peek () ~= ")" then
-		repeat
-			local parameterName = self:AcceptType (GCompute.TokenType.Identifier)
-			local parameterType = nil
-			if self:Accept (":") then
-				parameterType = self:Type () or GCompute.AST.Error ("Expected <type> after ':' in argument list of anonymous function.", self:GetCurrentToken ())
-			else
-				parameterType = GCompute.TypeParser:Root ("Expression2.number")
-			end
-			
-			anonymousFunctionExpression:AddParameter (parameterType, parameterName)
-		until not self:Accept (",")
-	end
-	if not self:Accept (")") then
-		self:RestorePosition ()
-		return self:ExpressionVariable ()
-	end
-	if self.CurrentToken ~= "{" then
+	self:AcceptWhitespaceAndNewlines ()
+	if self:Peek () ~= "{" then
 		self:RestorePosition ()
 		return self:ExpressionVariable ()
 	end
@@ -1069,7 +1049,7 @@ function self:ExpressionAnonymousFunction ()
 	end
 	
 	self:CommitPosition ()
-	anonymousFunctionExpression:SetStatement (blockStatement)
+	anonymousFunctionExpression:SetBody (blockStatement)
 	anonymousFunctionExpression:SetEndToken (blockStatement:GetEndToken ())
 	return anonymousFunctionExpression
 end
@@ -1178,7 +1158,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 						functionType:AddErrorMessage ("Parameter name cannot be a qualified identifier.", self:GetCurrentToken ())
 					end
 					
-					functionType:AddParameter (parameterType, parameterName)
+					functionType:GetParameterList ():AddParameter (parameterType, parameterName and parameterName:ToString () or nil)
 				until not self:Accept (",")
 			end
 			if not self:Accept (")") then

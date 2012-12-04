@@ -10,6 +10,39 @@ function self:ctor (returnType, parameterList)
 	end
 end
 
+--- Returns the compatibility rating of the given number and types of arguments with this FunctionDefinition
+-- @param argumentTypeArray An array of argument Types
+-- @return A boolean indicating whether this FunctionDefinition can accept the given argument type list
+-- @return A number indicating how compatible this FunctionDefinition is with the given argument type list
+function self:CanAcceptArgumentTypes (argumentTypeArray)
+	-- Bail out if we cannot accept the given number of arguments
+	if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray) then return false, -math.huge end
+
+	-- Check first argument
+	local argumentTypeArrayIndex = 1
+	
+	local parameterList = self:GetParameterList ()
+	local parameterCount = parameterList:GetParameterCount ()
+	local compatibility = 0
+	
+	local i = 1
+	while argumentTypeArrayIndex <= #argumentTypeArray do
+		local argumentType = argumentTypeArray [argumentTypeArrayIndex]:UnwrapAlias ()
+		if not argumentType:CanConvertTo (parameterList:GetParameterType (i), GCompute.TypeConversionMethod.ImplicitConversion) then
+			print ("Argument " .. argumentTypeArrayIndex .. ", " .. i .. ": " .. argumentTypeArray [argumentTypeArrayIndex]:GetFullName () .. " and " .. parameterList:GetParameterType (i):GetFullName ())
+			return false, -math.huge
+		end
+		if i == parameterCount then
+			-- vararg function, match remaining given parameter types against final defined parameter type
+		else
+			i = i + 1
+		end
+		argumentTypeArrayIndex = argumentTypeArrayIndex + 1
+	end
+	
+	return true, compatibility
+end
+
 function self:GetFullName ()
 	local returnType = self.ReturnType and self.ReturnType:GetFullName () or "[Unknown Type]"
 	

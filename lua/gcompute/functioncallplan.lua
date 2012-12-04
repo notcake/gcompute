@@ -1,6 +1,13 @@
 local self = {}
 GCompute.FunctionCallPlan = GCompute.MakeConstructor (self)
 
+--[[
+	This class has to deal with:
+		Function calls
+		Member function calls
+		Calls on variables containing functions
+]]
+
 function self:ctor ()
 	self.FunctionName = nil
 	self.FunctionDefinition = nil

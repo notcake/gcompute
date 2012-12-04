@@ -97,7 +97,6 @@ function self:Resolve ()
 	
 	-- Should only have 1 match
 	local matches = {}
-	local metadata = {}
 	local resolutionResults = self.ParsedName.ResolutionResults
 	
 	if not resolutionResults then
@@ -113,27 +112,20 @@ function self:Resolve ()
 	end
 	
 	for i = 1, resolutionResults:GetResultCount () do
-		local result = resolutionResults:GetResult (i)
-		if result.Result:IsAlias () then
-			matches [#matches + 1] = result.Result
-			metadata [#metadata + 1] = result.Result:GetMetadata ()
-		else
-			matches [#matches + 1] = result.Result
-			metadata [#metadata + 1] = result.Metadata
-		end
+		matches [#matches + 1] = resolutionResults:GetResult (i)
 	end
 	
 	if #matches == 0 then
-		self.ErrorReporter:Error ("Cannot resolve " .. self.Name .. ": no matches found.")
+		self.ErrorReporter:Error ("Cannot resolve " .. self.ParsedName:GetFormattedLocation () .. ": " .. self.Name .. ": no matches found.")
 		self:SetResolvedObject (nil)
 		
 	elseif #matches == 1 then
-		if matches [1]:IsOverloadedTypeDefinition () then
+		if matches [1]:IsObjectDefinition () and matches [1]:IsOverloadedTypeDefinition () then
 			matches [1] = matches [1]:GetType (1)
 		end
 		self:SetResolvedObject (matches [1])
 	else
-		self.ErrorReporter:Error ("Cannot resolve " .. self.Name .. ": too many matches.")
+		self.ErrorReporter:Error ("Cannot resolve " .. self.ParsedName:GetFormattedLocation () .. ": " .. self.Name .. ": too many matches.")
 		self.ErrorReporter:Error (self.ParsedName.ResolutionResults:ToString ())
 		self:SetResolvedObject (nil)
 	end

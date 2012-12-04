@@ -44,6 +44,8 @@ end
 
 include ("ast/error.lua")
 
+include ("ast/parameterlist.lua")
+
 -- expressions
 include ("ast/expression.lua")
 include ("ast/anonymousfunction.lua")
@@ -58,7 +60,7 @@ include ("ast/typecast.lua")
 include ("ast/leftunaryoperator.lua")
 include ("ast/rightunaryoperator.lua")
 
--- types
+-- types (these are also expressions)
 include ("ast/functiontype.lua")
 
 -- indexing and name lookups

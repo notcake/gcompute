@@ -36,6 +36,19 @@ function self:ExecuteAsAST (astRunner, state)
 	self.AssignmentPlan:ExecuteAsAST (astRunner, self, state)
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.TypeExpression
+		elseif i == 2 then
+			return self.RightExpression
+		end
+		return nil
+	end
+end
+
 function self:GetName ()
 	return self.Name
 end

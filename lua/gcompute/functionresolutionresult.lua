@@ -7,11 +7,11 @@ function self:ctor ()
 	self.OverloadCompatibilities = {}
 end
 
---- Adds a FunctionDefinition to this FunctionResolutionResult
--- @param functionDefinition The FunctionDefinition to be added
-function self:AddOverload (functionDefinition)
-	self.Overloads [#self.Overloads + 1] = functionDefinition
-	self.FilteredOverloads [#self.FilteredOverloads + 1] = functionDefinition
+--- Adds an ObjectDefinition whose type is a FunctionType to this FunctionResolutionResult
+-- @param objectDefinition The ObjectDefinition to be added
+function self:AddOverload (objectDefinition)
+	self.Overloads [#self.Overloads + 1] = objectDefinition
+	self.FilteredOverloads [#self.FilteredOverloads + 1] = objectDefinition
 end
 
 --- Adds the FunctionDefinitions in an OverloadedFunctionDefinition to this FunctionResolutionResult
@@ -59,10 +59,10 @@ function self:Filter (filter)
 	local sourceIndex = 1
 	local destIndex = 1
 	while sourceIndex <= overloadCount do
-		local functionDefinition = self.FilteredOverloads [sourceIndex]
+		local objectDefinition = self.FilteredOverloads [sourceIndex]
 		self.FilteredOverloads [sourceIndex] = nil
-		if filter (functionDefinition) then
-			self.FilteredOverloads [destIndex] = functionDefinition
+		if filter (objectDefinition) then
+			self.FilteredOverloads [destIndex] = objectDefinition
 			destIndex = destIndex + 1
 		end
 		sourceIndex = sourceIndex + 1
@@ -71,14 +71,14 @@ function self:Filter (filter)
 	self:SortByCompatibility ()
 end
 
---- Filters the FunctionDefinitions in this FunctionResolutionResult using an argument type list
+--- Filters the ObjectDefinitions in this FunctionResolutionResult using an argument type list
 -- @param argumentTypeArray The array of argument types to filter against
 function self:FilterByArgumentTypes (argumentTypeArray)
 	self:Filter (
-		function (functionDefinition)
-			local _, compatibility = functionDefinition:CanAcceptArgumentTypes (argumentTypeArray)
+		function (objectDefinition)
+			local _, compatibility = objectDefinition:GetType ():CanAcceptArgumentTypes (argumentTypeArray)
 			if compatibility ~= -math.huge then
-				self.OverloadCompatibilities [functionDefinition] = compatibility
+				self.OverloadCompatibilities [objectDefinition] = compatibility
 			end
 			return compatibility ~= -math.huge
 		end
@@ -89,36 +89,36 @@ function self:GetFilteredOverload (index)
 	return self.FilteredOverloads [index]
 end
 
---- Gets the number of FunctionDefinitions remaining after filtering
--- @return The number of FunctionDefinitions remaining after filtering
+--- Gets the number of ObjectDefinitions remaining after filtering
+-- @return The number of ObjectDefinitions remaining after filtering
 function self:GetFilteredOverloadCount ()
 	return #self.FilteredOverloads
 end
 
-function self:GetOverloadCompatibility (functionDefinition)
-	return self.OverloadCompatibilities [functionDefinition] or -math.huge
+function self:GetOverloadCompatibility (objectDefinition)
+	return self.OverloadCompatibilities [objectDefinition] or -math.huge
 end
 
---- Gets the number of FunctionDefinitions before filtering
--- @return The number of FunctionDefinitions before filtering
+--- Gets the number of ObjectDefinitions before filtering
+-- @return The number of ObjectDefinitions before filtering
 function self:GetOverloadCount ()
 	return #self.Overloads
 end
 
---- Returns true if the top two FunctionDefinitions have the same compatibility
--- @return A boolean indicating whether the top two FunctionDefinitions have the same compatibility
+--- Returns true if the top two ObjectDefinitions have the same compatibility
+-- @return A boolean indicating whether the top two ObjectDefinitions have the same compatibility
 function self:IsAmbiguous ()
 	if self:IsEmpty () then return false end
 	return self.OverloadCompatibilities [self.FilteredOverloads [1]] == self.OverloadCompatibilities [self.FilteredOverloads [2]]
 end
 
---- Returns true if no FunctionDefinitions were found
--- @return A boolean indicating whether no FunctionDefinitions remained after filtering
+--- Returns true if no ObjectDefinitions were found
+-- @return A boolean indicating whether no ObjectDefinitions remained after filtering
 function self:IsEmpty ()
 	return #self.FilteredOverloads == 0
 end
 
---- Sorts the FunctionDefinitions by compatibility
+--- Sorts the ObjectDefinitions by compatibility
 -- @param argumentTypeArray The array of argument types to sort for
 function self:SortByCompatibility (argumentTypeArray)
 	table.sort (self.FilteredOverloads,
@@ -135,14 +135,14 @@ function self:ToString ()
 	functionResolutionResult = functionResolutionResult .. "{\n"
 	
 	local filteredOverloads = {}
-	for _, functionDefinition in ipairs (self.FilteredOverloads) do
-		filteredOverloads [functionDefinition] = true
-		functionResolutionResult = functionResolutionResult .. "    [Accepted] [" .. string.format ("%3d", self.OverloadCompatibilities [functionDefinition]) .."] " .. functionDefinition:ToString () .. "\n"
+	for _, objectDefinition in ipairs (self.FilteredOverloads) do
+		filteredOverloads [objectDefinition] = true
+		functionResolutionResult = functionResolutionResult .. "    [Accepted] [" .. string.format ("%3d", self.OverloadCompatibilities [objectDefinition]) .."] " .. objectDefinition:ToString () .. "\n"
 	end
 	
-	for _, functionDefinition in ipairs (self.Overloads) do
-		if not filteredOverloads [functionDefinition] then
-			functionResolutionResult = functionResolutionResult .. "    [Rejected] [---] " .. functionDefinition:ToString () .. "\n"
+	for _, objectDefinition in ipairs (self.Overloads) do
+		if not filteredOverloads [objectDefinition] then
+			functionResolutionResult = functionResolutionResult .. "    [Rejected] [---] " .. objectDefinition:ToString () .. "\n"
 		end
 	end
 	

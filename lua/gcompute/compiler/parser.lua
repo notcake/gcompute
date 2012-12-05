@@ -211,6 +211,8 @@ function self:List (subParseFunction, delimiter)
 	end
 	list [#list + 1] = item
 	while self:Accept (delimiter) do
+		self:AcceptWhitespaceAndNewlines ()
+		
 		local item = subParseFunction (self)
 		if not item then return list end
 		list [#list + 1] = item

@@ -1,3 +1,10 @@
+--[[
+	Expression 2
+	
+	Credit goes to Syranide, Divran, Colonel Thirty Two / initrd.gz,
+	TomyLobo, Rusketh &c
+]]
+
 local LANGUAGE = GCompute.Languages.Create ("Expression 2")
 GCompute.LanguageDetector:AddPathPattern (LANGUAGE, "/expression2/.*")
 

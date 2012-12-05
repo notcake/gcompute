@@ -41,16 +41,18 @@ include ("pipe.lua")
 
 include ("epoe.lua")
 
--- compiler
+-- syntax trees
 include ("astnode.lua")
 include ("ast.lua")
 include ("astvisitor.lua")
 include ("namespacevisitor.lua")
 
+-- compilation
 include ("compiler/compilationgroup.lua")
 include ("compiler/compilationunit.lua")
 include ("compiler/compilerpasstype.lua")
 
+-- lexing
 include ("lexer/keywordtype.lua")
 include ("lexer/tokentype.lua")
 include ("lexer/symbolmatchtype.lua")
@@ -59,10 +61,12 @@ include ("lexer/token.lua")
 include ("lexer/tokenizer.lua")
 include ("lexer/lexer.lua")
 
+-- compiler output
 include ("compiler/compilermessage.lua")
 include ("compiler/compilermessagecollection.lua")
 include ("compiler/compilermessagetype.lua")
 
+-- compiler
 include ("compiler/preprocessor.lua")
 include ("compiler/parserjobgenerator.lua")
 include ("compiler/parser.lua")
@@ -104,12 +108,19 @@ include ("type/referencetype.lua")
 include ("type/inferredtype.lua")
 
 -- name resolution
-include ("functionresolutionresult.lua")
+-- TODO: Remove this
 include ("nameresolver.lua")
 include ("nameresolutionresult.lua")
 include ("nameresolutionresults.lua")
 
--- output
+-- object resolution
+include ("functionresolutionresult.lua")
+include ("objectresolution/resolutionresulttype.lua")
+include ("objectresolution/resolutionresult.lua")
+include ("objectresolution/resolutionresults.lua")
+include ("objectresolution/deferredobjectresolution.lua")
+
+-- text output
 include ("textoutputbuffer.lua")
 include ("nulloutputbuffer.lua")
 
@@ -155,6 +166,7 @@ include ("reference.lua")
 include ("compilercontext.lua")
 include ("executioncontext.lua")
 
+-- languages
 include ("languagedetector.lua")
 include ("languages.lua")
 include ("language.lua")

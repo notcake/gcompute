@@ -305,7 +305,7 @@ function self:TokenApplicationThink ()
 				break
 			end
 			appliedTokenCount = appliedTokenCount + 1
-			if front.Start == front.End then
+			if front.Start == front.End or not front.Start.Next then
 				self.TokenApplicationQueue:Dequeue ()
 				break
 			end

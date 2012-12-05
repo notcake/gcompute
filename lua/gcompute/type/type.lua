@@ -105,6 +105,10 @@ function self:IsNullable ()
 	return self.Nullable
 end
 
+function self:IsOverloadedTypeDefinition ()
+	return false
+end
+
 function self:IsReference ()
 	return false
 end

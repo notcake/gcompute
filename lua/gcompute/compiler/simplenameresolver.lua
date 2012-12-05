@@ -7,6 +7,10 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 	1. Resolves using directives
 	2. Resolves names
 	3. Updates the type of function parameters in FunctionRoot NamespaceDefinitions
+	
+	This class should be generating ObjectResolutionResults
+	using the ObjectResolver class and filtering them.
+	Only the ObjectResolver class should be populating ObjectResolutionResults.
 ]]
 
 function self:ctor (compilationUnit)
@@ -73,6 +77,10 @@ function self:VisitExpression (expression, referenceNamespace)
 		if resolutionResults:GetResultCount () == 0 then
 			expression:AddErrorMessage ("Cannot resolve " .. expression:GetName () .. ".")
 		end
+	elseif expression:Is ("FunctionType") then
+		local resolutionResults = GCompute.NameResolutionResults ()
+		expression.ResolutionResults = resolutionResults
+		resolutionResults:AddLocalResult (GCompute.FunctionType (expression:GetReturnTypeExpression ().ResolutionResults:GetResult (1), expression:GetParameterList ():ToParameterList ()))
 	elseif expression:Is ("AnonymousFunction") then
 		self:VisitFunction (expression)
 	end

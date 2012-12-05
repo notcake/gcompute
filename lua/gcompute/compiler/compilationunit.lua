@@ -318,6 +318,8 @@ function self:Parse (callback)
 	local parser = self.Language:Parser (self)
 	parser.DebugOutput = GCompute.TextOutputBuffer ()
 	local callbackChain = GCompute.CallbackChain ()
+	
+	local chunkStartTime = SysTime ()
 	for _, v in ipairs (self.ParserJobQueue) do
 		callbackChain:Then (
 			function (callback, errorCallback)
@@ -325,7 +327,16 @@ function self:Parse (callback)
 				v.Start.BlockEnd = v.End
 				v.Start.AST = parseTree
 				v.End.BlockStart = v.Start
-				timer.Simple (0.001, callback)
+				if SysTime () - chunkStartTime < 0.010 then
+					callback ()
+				else
+					timer.Simple (0.001,
+						function ()
+							chunkStartTime = SysTime ()
+							callback ()
+						end
+					)
+				end
 			end
 		)
 	end

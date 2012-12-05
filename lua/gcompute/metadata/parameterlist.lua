@@ -104,6 +104,10 @@ function self:IsEmpty ()
 	return self.ParameterCount == 0
 end
 
+function self:IsVarArgs ()
+	return self.VarArgs
+end
+
 --- Returns a boolean indicating whether this parameter list can match the given argument count
 -- @param argumentCount The argument count to be matched against
 -- @return A boolean indicating whether this parameter list can match the given argument count
@@ -172,4 +176,15 @@ function self:ToString ()
 		end
 	end
 	return "(" .. parameterList .. ")"
+end
+
+--- Checks for ParameterList type equality. Both ParameterLists must have all their parameter types pre-resolved.
+function self:TypeEquals (otherParameterList)
+	if self:GetParameterCount () ~= otherParameterList:GetParameterCount () then return false end
+	if self:IsVarArgs () ~= otherParameterList:IsVarArgs () then return false end
+	for i = 1, self:GetParameterCount () do
+		if not self:GetParameterType (i):UnwrapAlias ():Equals (otherParameterList:GetParameterType (i)) then return false end
+	end
+	
+	return true
 end

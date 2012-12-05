@@ -10,7 +10,6 @@ function self:ctor ()
 	self.IndexType = GCompute.AST.NameIndexType.Namespace
 	self.LookupType = GCompute.AST.NameLookupType.Reference
 	self.ResolutionResults = GCompute.NameResolutionResults ()
-	self.ResultsPopulated = false
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -68,6 +67,10 @@ end
 
 function self:GetLookupType ()
 	return self.LookupType
+end
+
+function self:GetResolutionResults ()
+	return self.ResolutionResults
 end
 
 function self:SetIndexType (indexType)

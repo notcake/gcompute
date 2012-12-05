@@ -51,11 +51,11 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
-function self:Equals (other)
-	if self == other then return true end
-	other = other:UnwrapAlias ()
-	if not other:IsReference () then return false end
-	return self:UnwrapReference ():Equals (other:UnwrapReference ())
+function self:Equals (otherType)
+	otherType = otherType:UnwrapAlias ()
+	if self == otherType then return true end
+	if not otherType:IsReference () then return false end
+	return self:UnwrapReference ():Equals (otherType:UnwrapReference ())
 end
 
 function self:GetFullName ()

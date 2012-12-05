@@ -1,6 +1,8 @@
 local self = Parser
 --[[
-	Based off lua/entities/gmod_wire_expression2/base/parser.lua
+	Based off Wiremod's lua/entities/gmod_wire_expression2/base/parser.lua
+		Credit goes to Syranide, Divran, Colonel Thirty Two / initrd.gz,
+		TomyLobo, Rusketh &c
 	
 	Root
 	 1 : q1
@@ -918,9 +920,14 @@ function self:ExpressionFunctionCall (leftExpression)
 	local functionCallExpression = GCompute.AST.FunctionCall ()
 	functionCallExpression:SetStartToken (leftExpression:GetStartToken ())
 	
+	self:AcceptWhitespaceAndNewlines ()
+	
 	functionCallExpression:SetLeftExpression (leftExpression)
 	if not self:Accept (")") then
 		functionCallExpression:AddArguments (self:List (self.Expression))
+		
+		self:AcceptWhitespaceAndNewlines ()
+		
 		if not self:Accept (")") then
 			functionCallExpression:AddErrorMessage ("Expected ')' to close function call argument list.", self:GetCurrentToken ())
 		end
@@ -1015,7 +1022,7 @@ function self:ExpressionParentheses ()
 	
 	local leftParenthesisToken = self:GetLastToken ()
 	
-	local innerExpression = self:Expression ()
+	local innerExpression = self:Expression () or self:ExpectedItem ("expression")
 	if not self:Accept (")") then
 		innerExpression:AddErrorMessage ("Expected ')' to close '(' at line " .. (leftParenthesisToken.Line + 1) .. ", char " .. (leftParenthesisToken.Character + 1) .. ".", self:GetCurrentToken ())
 	end

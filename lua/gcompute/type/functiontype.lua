@@ -43,6 +43,14 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 	return true, compatibility
 end
 
+function self:Equals (otherType)
+	otherType = otherType:UnwrapAlias ()
+	if self == otherType then return true end
+	if not otherType:IsFunctionType () then return false end
+	if not self:GetReturnType ():UnwrapAlias ():Equals (otherType:GetReturnType ()) then return false end
+	return self:GetParameterList ():TypeEquals (otherType:GetParameterList ())
+end
+
 function self:GetFullName ()
 	local returnType = self.ReturnType and self.ReturnType:GetFullName () or "[Unknown Type]"
 	

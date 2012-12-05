@@ -76,7 +76,7 @@ function self:VisitExpression (expression)
 					inferredType:ImportFunctionTypes (result)
 				end
 			elseif metadata:GetMemberType () == GCompute.MemberTypes.Type then
-				expression:SetType (GCompute.DeferredNameResolution ("Type"):Resolve ())
+				expression:SetType (GCompute.Types.Type)
 			else
 				expression:SetType (GCompute.ReferenceType (result:GetType ()))
 			end
@@ -190,6 +190,10 @@ function self:VisitExpression (expression)
 		expression:SetType (expression:GetType () or GCompute.DeferredNameResolution ("Number"):Resolve ())
 	elseif expression:Is ("StringLiteral") then
 		expression:SetType (expression:GetType () or GCompute.DeferredNameResolution ("String"):Resolve ())
+	elseif expression:Is ("FunctionType") then
+		expression:SetType (GCompute.Types.Type)
+	elseif expression:Is ("AnonymousFunction") then
+		expression:SetType (expression:GetFunctionDefinition ():GetType ())
 	else
 		expression:SetType (GCompute.InferredType ())
 	end

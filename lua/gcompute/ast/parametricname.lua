@@ -9,7 +9,6 @@ function self:ctor ()
 	
 	self.LookupType = GCompute.AST.NameLookupType.Reference
 	self.ResolutionResults = GCompute.NameResolutionResults ()
-	self.ResultsPopulated = false
 end
 
 function self:AddArgument (argument)

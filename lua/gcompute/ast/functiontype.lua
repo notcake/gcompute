@@ -7,6 +7,8 @@ function self:ctor ()
 	
 	self.ReturnTypeExpression = nil	
 	self.ParameterList = GCompute.AST.ParameterList ()
+	
+	self.ResolutionResults = GCompute.NameResolutionResults ()
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -49,6 +51,10 @@ end
 function self:SetParameterList (parameterList)
 	self.ParameterList = parameterList
 	if parameterList then parameterList:SetParent (self) end
+end
+
+function self:GetResolutionResults ()
+	return self.ResolutionResults
 end
 
 function self:SetReturnTypeExpression (returnTypeExpression)

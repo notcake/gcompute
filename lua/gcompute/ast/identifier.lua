@@ -7,7 +7,6 @@ function self:ctor (name)
 	self.NameTable = nil
 	
 	self.ResolutionResults = GCompute.NameResolutionResults ()
-	self.ResultsPopulated = false
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -42,6 +41,10 @@ end
 
 function self:GetName ()
 	return self.Name
+end
+
+function self:GetResolutionResults ()
+	return self.ResolutionResults
 end
 
 function self:SetName (name)

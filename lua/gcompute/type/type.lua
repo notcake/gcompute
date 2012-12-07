@@ -81,6 +81,10 @@ function self:GetTypeDefinition ()
 	GCompute.Error ("Type:GetTypeDefinition : Not implemented for " .. self:ToString ())
 end
 
+function self:GetTypeParameterList ()
+	return GCompute.EmptyTypeParameterList
+end
+
 function self:IsArrayType ()
 	return false
 end

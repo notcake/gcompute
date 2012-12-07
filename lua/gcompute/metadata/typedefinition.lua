@@ -17,17 +17,17 @@ function self:ctor (name, typeParameterList)
 	end
 	
 	for name in self.TypeParameterList:GetEnumerator () do
-		self:AddMemberVariable (name, "Type")
+		self:AddAlias (name, "Object")
 	end
 	
 	self:SetNullable (true)
 end
 
 --- Adds a base type to this type definition
--- @param baseType The base type to be added, as a string, DeferredNameResolution or Type
+-- @param baseType The base type to be added, as a string, DeferredObjectResolution or Type
 function self:AddBaseType (baseType)
 	if type (baseType) == "string" then
-		baseType = GCompute.DeferredNameResolution (baseType, nil, nil, self)
+		baseType = GCompute.DeferredObjectResolution (baseType, GCompute.ResolutionObjectType.Type, nil, self)
 	end
 	
 	-- Check for cycles, duplicate base types
@@ -48,15 +48,15 @@ function self:AddBaseType (baseType)
 end
 
 --- Adds a type cast operator to this type definition
--- @param destinationType The destination type, as a string, DeferredNameResolution or Type
+-- @param destinationType The destination type, as a string, DeferredObjectResolution or Type
 -- @param implicit A boolean indicating whether the cast is implicit (true) or explicit (false)
 -- @param nativeFunction (Optional) A function that performs the cast
 function self:AddCast (destinationType, implicit, nativeFunction)
 	if type (destinationType) == "string" then
-		destinationType = GCompute.DeferredNameResolution (destinationType, nil, nil, self)
+		destinationType = GCompute.DeferredObjectResolution (destinationType, GCompute.ResolutionObjectType.Type, nil, self)
 	end
 
-	local fullName = destinationType:IsDeferredNameResolution () and destinationType:GetName () or destinationType:GetFullName ()
+	local fullName = destinationType:IsDeferredObjectResolution () and destinationType:GetName () or destinationType:GetFullName ()
 	local cast = GCompute.FunctionDefinition ((implicit and "implicit" or "explicit") .. " operator " .. fullName)
 	cast:SetContainingNamespace (self)
 	cast:SetReturnType (destinationType)
@@ -83,14 +83,14 @@ function self:AddConstructor (parameterList)
 end
 
 --- Adds an implicit type cast operator to this type definition
--- @param destinationTypeName The destination type, as a string, DeferredNameResolution or Type
+-- @param destinationTypeName The destination type, as a string, DeferredObjectResolution or Type
 -- @param nativeFunction (Optional) A function that performs the cast
 function self:AddImplicitCast (destinationTypeName, nativeFunction)
 	return self:AddCast (destinationTypeName, true, nativeFunction)
 end
 
 --- Adds an explicit type cast operator to this type definition
--- @param destinationTypeName The destination type, as a string, DeferredNameResolution or Type
+-- @param destinationTypeName The destination type, as a string, DeferredObjectResolution or Type
 -- @param nativeFunction (Optional) A function that performs the cast
 function self:AddExplicitCast (destinationTypeName, nativeFunction)
 	return self:AddCast (destinationTypeName, false, nativeFunction)
@@ -220,13 +220,16 @@ function self:IsTypeDefinition ()
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	-- Resolve base types
 	for k, baseType in ipairs (self.BaseTypes) do
-		if baseType:IsDeferredNameResolution () then
+		if baseType:IsDeferredObjectResolution () then
 			baseType:Resolve ()
 			if baseType:IsFailedResolution () then
 				GCompute.Error ("TypeDefinition:ResolveTypes : Failed to resolve base type of " .. self:GetFullName () .. " : " .. baseType:GetFullName ())
+				baseType:GetAST ():GetMessages ():PipeToErrorReporter (GCompute.DefaultErrorReporter)
 			elseif baseType:GetObject ():Equals (self) then
 				GCompute.Error ("TypeDefinition:ResolveTypes : Cannot add base type " .. baseType:GetFullName () .. " to " .. self:GetFullName () .. " because they are the same type.")
 			elseif baseType:GetObject ():IsBaseType (self) then
@@ -241,22 +244,22 @@ function self:ResolveTypes (globalNamespace)
 	
 	-- Resolve constructor types
 	for _, constructorDefinition in ipairs (self.Constructors) do
-		constructorDefinition:ResolveTypes (globalNamespace)
+		constructorDefinition:ResolveTypes (globalNamespace, errorReporter)
 	end
 	
 	-- Resolve members
 	for name, memberDefinition in pairs (self.Members) do
-		memberDefinition:ResolveTypes (globalNamespace)
+		memberDefinition:ResolveTypes (globalNamespace, errorReporter)
 	end
 	
 	-- Resolve implicit cast destination types
 	for _, implicitCastDefinition in ipairs (self.ImplicitCasts) do
-		implicitCastDefinition:ResolveTypes (globalNamespace)
+		implicitCastDefinition:ResolveTypes (globalNamespace, errorReporter)
 	end
 	
 	-- Resolve explicit cast destination types
 	for _, explicitCastDefinition in ipairs (self.ExplicitCasts) do
-		explicitCastDefinition:ResolveTypes (globalNamespace)
+		explicitCastDefinition:ResolveTypes (globalNamespace, errorReporter)
 	end
 end
 

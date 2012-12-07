@@ -40,6 +40,16 @@ function self:GetWarningCount ()
 	return self.WarningCount
 end
 
+function self:PipeToErrorReporter (errorReporter)
+	for message in self:GetEnumerator () do
+		if message:GetMessageType () == GCompute.CompilerMessageType.Warning then
+			errorReporter:Warning (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+		elseif message:GetMessageType () == GCompute.CompilerMessageType.Error then
+			errorReporter:Error (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+		end
+	end
+end
+
 function self:ToString ()
 	local messages = {}
 	for message in self:GetEnumerator () do

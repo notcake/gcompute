@@ -10,7 +10,6 @@ Pass = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
-	self.NameResolver = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNameResolver () or GCompute.NameResolver ()
 
 	self.Root = nil
 	self.RootNamespace = nil
@@ -20,7 +19,7 @@ function self:VisitRoot (blockStatement)
 	self.Root = blockStatement
 	self.RootNamespace = self.Root:GetNamespace () or GCompute.NamespaceDefinition ()
 	self.Root:SetNamespace (self.RootNamespace)
-	self.Root:GetNamespace ():AddUsing ("Expression2")
+	self.Root:GetNamespace ():AddUsing ("Expression2"):Resolve ()
 end
 
 function self:VisitBlock (blockStatement)
@@ -59,8 +58,9 @@ end
 
 function self:ProcessIdentifier (identifier, type)
 	local namespace = identifier:GetParentNamespace ()
-	local resolutionResults = self.NameResolver:LookupUnqualifiedIdentifier (identifier:GetName (), GCompute.GlobalNamespace, namespace)
-	if resolutionResults:GetResultCount () == 0 then
+	local resolutionResults = GCompute.ResolutionResults ()
+	GCompute.ObjectResolver:ResolveUnqualifiedIdentifier (resolutionResults, identifier:GetName (), GCompute.GlobalNamespace, namespace)
+	if resolutionResults:GetFilteredResultCount () == 0 then
 		self.CompilationUnit:Debug ("Adding variable declaration for " .. identifier:GetName ())
 		self.RootNamespace:AddMemberVariable (identifier:GetName (), type or GCompute.InferredType ())
 			:SetFileStatic (true)

@@ -18,6 +18,7 @@ function self:AddType (typeParameterList)
 
 	self.Types [#self.Types + 1] = GCompute.TypeDefinition (self:GetName (), typeParameterList)
 	self.Types [#self.Types]:SetContainingNamespace (self:GetContainingNamespace ())
+	self.Types [#self.Types]:SetMetadata (GCompute.MemberInfo (self:GetName (), GCompute.MemberTypes.Type))
 	return self.Types [#self.Types]
 end
 
@@ -51,9 +52,11 @@ function self:IsOverloadedTypeDefinition ()
 end
 
 --- Resolves the types of all types in this type group
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	for i = 1, self:GetTypeCount () do
-		self:GetType (i):ResolveTypes (globalNamespace)
+		self:GetType (i):ResolveTypes (globalNamespace, errorReporter)
 	end
 end
 

@@ -4,9 +4,9 @@ GCompute.ReferenceType = GCompute.MakeConstructor (self, GCompute.Type)
 function self:ctor (innerType)
 	self.InnerType = innerType
 	
-	if self.InnerType and self.InnerType:IsDeferredNameResolution () then
+	if self.InnerType and self.InnerType:IsDeferredObjectResolution () then
 		if not self.InnerType:GetObject () then
-			GCompute.Error ("ReferenceType constructor was passed a failed or unresolved DeferredNameResolution (" .. self.InnerType:ToString () .. ").")
+			GCompute.Error ("ReferenceType constructor was passed a failed or unresolved DeferredObjectResolution (" .. self.InnerType:ToString () .. ").")
 		end
 		self.InnerType = self.InnerType:GetObject ()
 	end

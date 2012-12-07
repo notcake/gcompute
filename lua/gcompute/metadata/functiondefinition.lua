@@ -7,7 +7,7 @@ GCompute.FunctionDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDef
 function self:ctor (name, parameterList, typeParameterList)
 	self.ParameterList = parameterList or GCompute.EmptyParameterList
 	self.TypeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
-	self.ReturnType = GCompute.DeferredNameResolution ("void")
+	self.ReturnType = GCompute.DeferredObjectResolution ("void", GCompute.ResolutionObjectType.Type)
 	
 	if #self.ParameterList > 0 then
 		self.ParameterList = GCompute.ParameterList (self.ParameterList)
@@ -57,8 +57,8 @@ function self:GetParameterName (index)
 	return self.ParameterList:GetParameterName (index)
 end
 
---- Gets the return type of this function as a DeferredNameResolution or Type
--- @return A DeferredNameResolution or Type representing the return type of this function
+--- Gets the return type of this function as a DeferredObjectResolution or Type
+-- @return A DeferredObjectResolution or Type representing the return type of this function
 function self:GetReturnType ()
 	return self.ReturnType
 end
@@ -105,15 +105,19 @@ function self:IsMemberFunction ()
 end
 
 --- Resolves the return type and paremeter types of this function
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	local returnType = self:GetReturnType ()
-	if returnType and returnType:IsDeferredNameResolution () then
-		self:GetReturnType ():Resolve ()
-		if not self:GetReturnType ():IsFailedResolution () then
-			self:SetReturnType (self:GetReturnType ():GetObject ())
+	if returnType and returnType:IsDeferredObjectResolution () then
+		returnType:Resolve ()
+		if returnType:IsFailedResolution () then
+			returnType:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+		else
+			self:SetReturnType (returnType:GetObject ())
 		end
 	end
-	self:GetParameterList ():ResolveTypes (globalNamespace, self:GetContainingNamespace ())
+	self:GetParameterList ():ResolveTypes (globalNamespace, self:GetContainingNamespace (), errorReporter)
 end
 
 --- Sets the FunctionDeclaration syntax tree node corresponding to this function
@@ -137,19 +141,19 @@ function self:SetNativeString (nativeString)
 end
 
 --- Sets the return type of this function
--- @param returnType The return type as a string or DeferredNameResolution or Type
+-- @param returnType The return type as a string or DeferredObjectResolution or Type
 function self:SetReturnType (returnType)
 	if type (returnType) == "string" then
-		self.ReturnType = GCompute.DeferredNameResolution (returnType, nil, nil, self:GetContainingNamespace ())
+		self.ReturnType = GCompute.DeferredObjectResolution (returnType, GCompute.ResolutionObjectType.Type, nil, self:GetContainingNamespace ())
 	else
 		if returnType:IsAlias () then
 			self.ReturnType = returnType
-		elseif returnType:IsDeferredNameResolution () then
+		elseif returnType:IsDeferredObjectResolution () then
 			self.ReturnType = returnType
 		elseif returnType:IsType () then
 			self.ReturnType = returnType
 		else
-			GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredNameResolution or Type (" .. returnType:ToString () .. ")")
+			GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredObjectResolution or Type (" .. returnType:ToString () .. ")")
 		end
 	end
 	return self

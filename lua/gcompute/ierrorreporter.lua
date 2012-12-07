@@ -30,9 +30,9 @@ end
 
 function self:Message (messageType, message, line, char)
 	if char then
-		ErrorNoHalt ("Line " .. line .. ", char " .. char .. ": " .. message .. "\n")
+		ErrorNoHalt ("Line " .. (line + 1) .. ", char " .. (char + 1) .. ": " .. message .. "\n")
 	elseif line then
-		ErrorNoHalt ("Line " .. line .. ": " .. message .. "\n")
+		ErrorNoHalt ("Line " .. (line + 1) .. ": " .. message .. "\n")
 	else
 		ErrorNoHalt (message .. "\n")
 	end

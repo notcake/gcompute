@@ -115,7 +115,7 @@ function self:SetTypeExpression (typeExpression)
 	if self.TypeExpression then
 		self.TypeExpression:SetParent (self)
 	end
-	self.Type = self.TypeExpression and GCompute.DeferredNameResolution (self.TypeExpression) or nil
+	self.Type = self.TypeExpression and GCompute.DeferredObjectResolution (self.TypeExpression, GCompute.ResolutionObjectType.Type) or nil
 end
 
 function self:SetVariableDefinition (variableDefinition)

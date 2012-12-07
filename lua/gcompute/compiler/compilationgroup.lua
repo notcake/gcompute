@@ -7,8 +7,6 @@ function self:ctor ()
 	
 	self.NamespaceDefinition = GCompute.MergedNamespaceDefinition ()
 	self.NamespaceDefinition:SetNamespaceType (GCompute.NamespaceType.Global)
-	
-	self.NameResolver = GCompute.NameResolver ()
 end
 
 -- Source Files
@@ -106,10 +104,6 @@ function self:GetNamespaceDefinition ()
 	return self.NamespaceDefinition
 end
 
-function self:GetNameResolver ()
-	return self.NameResolver
-end
-
 function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
 	if memoryUsageReport:IsCounted (self) then return end
@@ -120,7 +114,6 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 		sourceFile:ComputeMemoryUsage (memoryUsageReport)
 	end
 	self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
-	self.NameResolver:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 

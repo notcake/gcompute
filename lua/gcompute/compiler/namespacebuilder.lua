@@ -71,7 +71,7 @@ function self:VisitFunction (func)
 		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", func:GetParameterList ():ToParameterList ())
 	end
 	
-	functionDefinition:SetReturnType (GCompute.DeferredNameResolution (func:GetReturnTypeExpression ()))
+	functionDefinition:SetReturnType (GCompute.DeferredObjectResolution (func:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
 	functionDefinition:SetFunctionDeclaration (func)
 	func:SetFunctionDefinition (functionDefinition)
 	

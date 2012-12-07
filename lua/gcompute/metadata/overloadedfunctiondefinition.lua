@@ -15,6 +15,7 @@ function self:AddFunction (parameterList, typeParameterList)
 	functionDefinition:SetContainingNamespace (self:GetContainingNamespace ())
 	
 	self.Functions [#self.Functions + 1] = functionDefinition
+	self.Functions [#self.Functions]:SetMetadata (GCompute.MemberInfo (self:GetName (), GCompute.MemberTypes.Method))
 	
 	return functionDefinition
 end
@@ -49,9 +50,11 @@ function self:IsOverloadedFunctionDefinition ()
 end
 
 --- Resolves the types of all functions in this function group
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	for i = 1, self:GetFunctionCount () do
-		self:GetFunction (i):ResolveTypes (globalNamespace)
+		self:GetFunction (i):ResolveTypes (globalNamespace, errorReporter)
 	end
 end
 

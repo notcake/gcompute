@@ -8,7 +8,7 @@ function self:ctor ()
 	self.ReturnTypeExpression = nil	
 	self.ParameterList = GCompute.AST.ParameterList ()
 	
-	self.ResolutionResults = GCompute.NameResolutionResults ()
+	self.ResolutionResults = GCompute.ResolutionResults ()
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)

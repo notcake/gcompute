@@ -144,7 +144,7 @@ function self:IsVariable ()
 end
 
 --- Resolves all types
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
 	ErrorNoHalt (self:GetLocation () .. ":ResolveTypes : Not implemented.\n")
 end
 

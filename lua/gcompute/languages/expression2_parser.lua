@@ -1077,7 +1077,7 @@ function self:ExpressionBooleanLiteral ()
 		local booleanLiteral = GCompute.AST.BooleanLiteral (self:GetLastToken ().Value)
 		booleanLiteral:SetStartToken (self:GetLastToken ())
 		booleanLiteral:SetEndToken (self:GetLastToken ())
-		booleanLiteral:SetType (GCompute.DeferredNameResolution ("bool"))
+		booleanLiteral:SetType (GCompute.DeferredObjectResolution ("bool", GCompute.ResolutionObjectType.Type))
 		return booleanLiteral
 	end
 	return nil
@@ -1088,7 +1088,7 @@ function self:ExpressionNumericLiteral ()
 		local numericLiteral = GCompute.AST.NumericLiteral (self:GetLastToken ().Value)
 		numericLiteral:SetStartToken (self:GetLastToken ())
 		numericLiteral:SetEndToken (self:GetLastToken ())
-		numericLiteral:SetType (GCompute.DeferredNameResolution ("Expression2.number"):Resolve ())
+		numericLiteral:SetType (GCompute.DeferredObjectResolution ("Expression2.number", GCompute.ResolutionObjectType.Type):Resolve ())
 		return numericLiteral
 	end
 	return nil
@@ -1100,7 +1100,7 @@ function self:ExpressionStringLiteral ()
 		local stringLiteral = GCompute.AST.StringLiteral (stringToken)
 		stringLiteral:SetStartToken (self:GetLastToken ())
 		stringLiteral:SetEndToken (self:GetLastToken ())
-		stringLiteral:SetType (GCompute.DeferredNameResolution ("Expression2.string"):Resolve ())
+		stringLiteral:SetType (GCompute.DeferredObjectResolution ("Expression2.string", GCompute.ResolutionObjectType.Type):Resolve ())
 		return stringLiteral
 	end
 	return nil

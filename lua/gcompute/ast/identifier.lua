@@ -6,7 +6,7 @@ function self:ctor (name)
 	self.Name = name
 	self.NameTable = nil
 	
-	self.ResolutionResults = GCompute.NameResolutionResults ()
+	self.ResolutionResults = GCompute.ResolutionResults ()
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)

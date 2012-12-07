@@ -86,12 +86,21 @@ local function parseVariables (compilationUnit, directive, directiveParser)
 			end
 		end
 		
+		if typeExpression and typeExpression:Is ("Identifier") then
+			if typeExpression:GetName () == "number" or
+			   typeExpression:GetName () == "string" then
+				local nameIndex = GCompute.AST.NameIndex ()
+				nameIndex:SetLeftExpression (GCompute.AST.Identifier ("Expression2"))
+				nameIndex:SetIdentifier (typeExpression)
+				typeExpression = nameIndex
+			end
+		end
+		
 		variables [#variables + 1] =
 		{
 			Name = variable,
-			Type = GCompute.DeferredNameResolution (typeExpression or "Expression2.number")
+			Type = GCompute.DeferredObjectResolution (typeExpression or "Expression2.number", GCompute.ResolutionObjectType.Type)
 		}
-		variables [#variables].Type:SetErrorReporter (compilationUnit)
 		
 		directiveParser:AcceptWhitespace ()
 	end

@@ -93,7 +93,7 @@ end
 
 --- Gets the type of the given parameter
 -- @param parameterId The id of the parameter
--- @return The type of the parameter as a DeferredNameResolution or Type or nil if unknown
+-- @return The type of the parameter as a DeferredObjectResolution or Type or nil if unknown
 function self:GetParameterType (parameterId)
 	return self.ParameterTypes [parameterId]
 end
@@ -118,13 +118,17 @@ function self:MatchesArgumentCount (argumentCount)
 end
 
 --- Resolves the types of all parameters in this parameter list
-function self:ResolveTypes (globalNamespace, localNamespace)
+function self:ResolveTypes (globalNamespace, localNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	for i = 1, #self.ParameterTypes do
-		if self.ParameterTypes [i]:IsDeferredNameResolution () then
+		if self.ParameterTypes [i]:IsDeferredObjectResolution () then
 			self.ParameterTypes [i]:SetGlobalNamespace (globalNamespace)
 			self.ParameterTypes [i]:SetLocalNamespace (localNamespace)
 			self.ParameterTypes [i]:Resolve ()
-			if not self.ParameterTypes [i]:IsFailedResolution () then
+			if self.ParameterTypes [i]:IsFailedResolution () then
+				self.ParameterTypes [i]:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+			else
 				self.ParameterTypes [i] = self.ParameterTypes [i]:GetObject ()
 			end
 		end
@@ -147,14 +151,14 @@ end
 
 --- Sets the type of the given parameter
 -- @param parameterId The id of the parameter
--- @param parameterType The new type of the parameter as a string, DeferredNameResolution or Type
+-- @param parameterType The new type of the parameter as a string, DeferredObjectResolution or Type
 function self:SetParameterType (parameterId, parameterType)
 	if type (parameterType) == "string" then
-		parameterType = GCompute.DeferredNameResolution (parameterType)
+		parameterType = GCompute.DeferredObjectResolution (parameterType, GCompute.ResolutionObjectType.Type)
 	elseif parameterType and
-	       not parameterType:IsDeferredNameResolution () and
-	       not parameterType:IsType () then
-		GCompute.Error ("ParameterList:SetParameterType : parameterType must be a string, DeferredNameResolution or Type")
+	       not parameterType:IsDeferredObjectResolution () and
+	       not parameterType:UnwrapAlias ():IsType () then
+		GCompute.Error ("ParameterList:SetParameterType : parameterType must be a string, DeferredObjectResolution or Type")
 	end
 	self.ParameterTypes [parameterId] = parameterType
 end

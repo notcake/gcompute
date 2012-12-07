@@ -23,12 +23,20 @@ function GCompute.PrintDebug (message)
 	Msg (message .. "\n")
 end
 
+function GCompute.ToFunction (f)
+	if type (f) == "string" then
+		return function (self, ...)
+			return self [f] (self, ...)
+		end
+	end
+	return f
+end
+
 include ("callbackchain.lua")
 include ("ierrorreporter.lua")
 include ("ieditorhelper.lua")
 include ("iobject.lua")
 include ("isavable.lua")
-include ("deferrednameresolution.lua")
 
 -- memory usage
 include ("memoryusagereport.lua")
@@ -107,18 +115,14 @@ include ("type/referencetype.lua")
 -- type inference
 include ("type/inferredtype.lua")
 
--- name resolution
--- TODO: Remove this
-include ("nameresolver.lua")
-include ("nameresolutionresult.lua")
-include ("nameresolutionresults.lua")
-
 -- object resolution
 include ("functionresolutionresult.lua")
+include ("objectresolution/resolutionobjecttype.lua")
 include ("objectresolution/resolutionresulttype.lua")
 include ("objectresolution/resolutionresult.lua")
 include ("objectresolution/resolutionresults.lua")
 include ("objectresolution/deferredobjectresolution.lua")
+include ("objectresolution/objectresolver.lua")
 
 -- text output
 include ("textoutputbuffer.lua")
@@ -191,6 +195,8 @@ include ("runtime/localprocesslist.lua")
 include ("nativegen/icodeemitter.lua")
 include ("nativegen/luaemitter.lua")
 
+GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
+
 GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
 GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 
@@ -202,5 +208,3 @@ if CLIENT then
 	include ("gooey/gooey.lua")
 	GCompute.IncludeDirectory ("gcompute/ui")
 end
-
-GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")

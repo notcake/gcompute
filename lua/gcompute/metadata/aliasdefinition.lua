@@ -4,31 +4,41 @@ GCompute.AliasDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefini
 --- @param name The name of this alias
 -- @param objectName The object this alias points to, as a string
 function self:ctor (name, objectName)
-	self.ObjectName = objectName
+	self.DeferredObjectResolution = nil
+	self.ObjectName = nil
 	self.Object = nil
-	self.Metadata = nil
 	
-	if type (self.ObjectName) == "string" then
-		self.Object = GCompute.DeferredNameResolution (self.ObjectName)
-	elseif self.ObjectName:IsDeferredNameResolution () then
-		self.Object = self.ObjectName
-		self.ObjectName = self.Object:GetFullName ()
+	if type (objectName) == "string" then
+		self.DeferredObjectResolution = GCompute.DeferredObjectResolution (objectName)
+		self.ObjectName = objectName
+	elseif objectName:IsDeferredObjectResolution () then
+		self.DeferredObjectResolution = objectName
+		self.ObjectName = objectName:GetName ()
+		self.Object = objectName:IsResolved () and objectName:GetObject () or nil
 	else
 		GCompute.Error ("AliasDefinition constructed with unknown object.")
 	end
 end
 
 function self:GetMetadata ()
-	return self.Metadata
+	return self.Object and self.Object:GetMetadata () or nil
 end
 
 function self:GetObject ()
+	if not self:IsResolved () then
+		GCompute.Error ("AliasDefinition:GetObject : " .. self:ToString () .. " has not been resolved yet.")
+	end
+	if self.Object and
+	   self.Object:IsOverloadedTypeDefinition () and
+	   self.Object:GetTypeCount () == 1 then
+		return self.Object:GetType (1)
+	end
 	return self.Object
 end
 
 function self:GetType ()
-	if self:GetObject () then
-		return self:GetObject ():GetType ()
+	if self.Object then
+		return self.Object:GetType ()
 	end
 	GCompute.Error ("AliasDefinition:GetType : This AliasDefinition is unresolved (" .. self:GetFullName () .. ", " .. self:ToString () .. ").")
 end
@@ -40,26 +50,24 @@ function self:IsAlias ()
 end
 
 function self:IsResolved ()
-	return not self.Object:IsDeferredNameResolution ()
+	return self.Object and true or false
 end
 
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	if self:IsResolved () then return end
 	
-	local deferredNameResolution = self.Object
-	if deferredNameResolution:IsResolved () then return end
+	local deferredObjectResolution = self.DeferredObjectResolution
+	if deferredObjectResolution:IsResolved () then return end
 	
-	deferredNameResolution:Resolve ()
-	if deferredNameResolution:IsResolved () then
-		local resolvedObject = deferredNameResolution:GetObject ()
-		if resolvedObject:IsObjectDefinition () then
-			resolvedObject = resolvedObject:UnwrapAlias ()
-			
-			self.Object = resolvedObject
-			self.Metadata = resolvedObject:GetMetadata ()
-		else
-			self.Object = resolvedObject
-			self.Metadata = nil
+	deferredObjectResolution:Resolve ()
+	if deferredObjectResolution:IsFailedResolution () then
+		deferredObjectResolution:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+	else
+		self.Object = deferredObjectResolution:GetObject ()
+		if self.Object:IsObjectDefinition () then
+			self.Object = self.Object:UnwrapAlias ()
 		end
 	end
 end
@@ -67,7 +75,12 @@ end
 function self:ToString ()
 	local aliasDefinition = "[Alias] "
 	aliasDefinition = aliasDefinition .. (self:GetName () or "[Unnamed]")
-	aliasDefinition = aliasDefinition .. " = " .. self.ObjectName
+	aliasDefinition = aliasDefinition .. " = "
+	if self.Object then
+		aliasDefinition = aliasDefinition .. self.ObjectName
+	else
+		aliasDefinition = aliasDefinition .. self.DeferredObjectResolution:ToString ()
+	end
 	return aliasDefinition
 end
 

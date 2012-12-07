@@ -31,20 +31,19 @@ function self:AddAlias (name, objectName)
 	return self.Members [name]
 end
 
---- Adds a child namespace to this namespace definition
--- @param name The name of the child namespace
--- @return The new NamespaceDefinition
-function self:AddNamespace (name)
+--- Adds a function to this namespace definition
+-- @param name The name of the function
+-- @param parameters A ParameterList describing the parameters the function takes or nil
+-- @param typeParameters A TypeParameterList describing the type parameters the function takes or nil
+-- @return The new FunctionDefinition
+function self:AddFunction (name, parameterList, typeParameterList)
 	if not self.Members [name] then
-		self.Members [name] = GCompute.NamespaceDefinition (name)
+		self.Members [name] = GCompute.OverloadedFunctionDefinition (name)
 		self.Members [name]:SetContainingNamespace (self)
-		if self:GetNamespaceType () == GCompute.NamespaceType.Global then
-			self.Members [name]:SetNamespaceType (self:GetNamespaceType ())
-		end
-		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Namespace)
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Method)
 		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
-	return self.Members [name]
+	return self.Members [name]:AddFunction (parameterList, typeParameterList)
 end
 
 --- Adds a member variable to this namespace definition
@@ -56,6 +55,22 @@ function self:AddMemberVariable (name, typeName)
 		self.Members [name] = GCompute.VariableDefinition (name, typeName)
 		self.Members [name]:SetContainingNamespace (self)
 		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Field)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
+	end
+	return self.Members [name]
+end
+
+--- Adds a child namespace to this namespace definition
+-- @param name The name of the child namespace
+-- @return The new NamespaceDefinition
+function self:AddNamespace (name)
+	if not self.Members [name] then
+		self.Members [name] = GCompute.NamespaceDefinition (name)
+		self.Members [name]:SetContainingNamespace (self)
+		if self:GetNamespaceType () == GCompute.NamespaceType.Global then
+			self.Members [name]:SetNamespaceType (self:GetNamespaceType ())
+		end
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Namespace)
 		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 	return self.Members [name]
@@ -75,25 +90,12 @@ function self:AddType (name, typeParameterList)
 	return self.Members [name]:AddType (typeParameterList)
 end
 
---- Adds a function to this namespace definition
--- @param name The name of the function
--- @param parameters A ParameterList describing the parameters the function takes or nil
--- @param typeParameters A TypeParameterList describing the type parameters the function takes or nil
--- @return The new FunctionDefinition
-function self:AddFunction (name, parameterList, typeParameterList)
-	if not self.Members [name] then
-		self.Members [name] = GCompute.OverloadedFunctionDefinition (name)
-		self.Members [name]:SetContainingNamespace (self)
-		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Method)
-		self.Members [name]:SetMetadata (self.MemberMetadata [name])
-	end
-	return self.Members [name]:AddFunction (parameterList, typeParameterList)
-end
-
 --- Adds a using directive to this namespace definition
 -- @param qualifiedName The name of the namespace to be used
 function self:AddUsing (qualifiedName)
-	self.Usings [#self.Usings + 1] = GCompute.UsingDirective (qualifiedName)
+	local usingDirective = GCompute.UsingDirective (qualifiedName)
+	self.Usings [#self.Usings + 1] = usingDirective
+	return usingDirective
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -200,9 +202,17 @@ function self:MemberExists (name)
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	for name, memberDefinition in pairs (self.Members) do
-		memberDefinition:ResolveTypes (globalNamespace)
+		memberDefinition:ResolveTypes (globalNamespace, errorReporter)
+	end
+end
+
+function self:ResolveUsings ()
+	for i = 1, self:GetUsingCount () do
+		self:GetUsing (i):Resolve ()
 	end
 end
 

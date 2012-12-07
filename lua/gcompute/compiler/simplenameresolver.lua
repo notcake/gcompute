@@ -2,7 +2,7 @@ local self = {}
 GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 
 --[[
-	SimpleNameResolver
+	SimpleObjectResolver
 	
 	1. Resolves using directives
 	2. Resolves names
@@ -15,18 +15,13 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
-	self.NameResolver = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNameResolver () or GCompute.NameResolver ()
 	self.GlobalNamespace = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition () or GCompute.GlobalNamespace
-end
-
-function self:GetNameResolver ()
-	return self.NameResolver
 end
 
 function self:Process (blockStatement, callback)
 	self:ProcessRoot (blockStatement,
 		function ()
-			self.CompilationUnit:GetNamespaceDefinition ():ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition ())
+			self.CompilationUnit:GetNamespaceDefinition ():ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition (), self.CompilationUnit)
 			callback ()
 		end
 	)
@@ -46,41 +41,32 @@ function self:VisitStatement (statement)
 	
 	if statement:Is ("FunctionDeclaration") then
 		self:VisitFunction (statement)
+	elseif statement:Is ("VariableDeclaration") then
+		local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
+		typeResults:FilterToConcreteTypes ()
+		typeResults:FilterByLocality ()
+		statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
 	end
 end
 
 function self:VisitExpression (expression, referenceNamespace)
 	if expression:Is ("Identifier") then
-		local resolutionResults = self.NameResolver:LookupUnqualifiedIdentifier (expression:GetName (), self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
-		resolutionResults:FilterLocalResults ()
-		expression.ResolutionResults = resolutionResults
+		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
+		local resolutionResults = expression:GetResolutionResults ()
+		resolutionResults:FilterByLocality ()
 		
-		if resolutionResults:GetResultCount () == 0 then
+		if resolutionResults:GetFilteredResultCount () == 0 then
 			expression:AddErrorMessage ("Cannot resolve identifier " .. expression:GetName () .. ".")
 		end
 	elseif expression:Is ("NameIndex") then
-		-- TODO: Merge with NameResolver's NameIndex processing
-		local resolutionResults = GCompute.NameResolutionResults ()
-		expression.ResolutionResults = resolutionResults
-		local leftResults = expression:GetLeftExpression ().ResolutionResults
-		local identifier = expression:GetIdentifier () -- either an Identifier or ParametricIdentifier
-		if not identifier then
-			self.CompilationUnit:Error ("NameIndex has no Identifier (" .. expression:ToString () .. ")", expression:GetLocation ())
-			return
-		end
-		local name = identifier:GetName ()
-		for i = 1, leftResults:GetGlobalResultCount () do
-			local result = leftResults:GetGlobalResult (i)
-			self.NameResolver:LookupQualifiedIdentifier (result, name, resolutionResults)
-		end
+		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
+		local resolutionResults = expression:GetResolutionResults ()
 		
-		if resolutionResults:GetResultCount () == 0 then
-			expression:AddErrorMessage ("Cannot resolve " .. expression:GetName () .. ".")
+		if resolutionResults:GetFilteredResultCount () == 0 then
+			expression:AddErrorMessage ("Cannot resolve " .. expression:ToString () .. ".")
 		end
 	elseif expression:Is ("FunctionType") then
-		local resolutionResults = GCompute.NameResolutionResults ()
-		expression.ResolutionResults = resolutionResults
-		resolutionResults:AddLocalResult (GCompute.FunctionType (expression:GetReturnTypeExpression ().ResolutionResults:GetResult (1), expression:GetParameterList ():ToParameterList ()))
+		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
 	elseif expression:Is ("AnonymousFunction") then
 		self:VisitFunction (expression)
 	end
@@ -88,36 +74,27 @@ end
 
 -- AnonymousFunction or FunctionDeclaration
 function self:VisitFunction (func)
-	local resolutionResults = func:GetReturnTypeExpression ().ResolutionResults
-	
 	local functionDefinition = func:GetFunctionDefinition ()
 	local namespace = func:GetNamespace ()
-
-	-- Force early resolution of the parameter types, since we'll need them
-	functionDefinition:ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetNamespaceDefinition ())
+	
+	local returnTypeResults = func:GetReturnTypeExpression ():GetResolutionResults ()
+	returnTypeResults:FilterToConcreteTypes ()
+	functionDefinition:SetReturnType (returnTypeResults:GetFilteredResultObject (1))
 	
 	local parameterList = func:GetParameterList ()
 	local parameterType
+	local parameterTypeResults
 	for i = 1, parameterList:GetParameterCount () do
 		parameterType = parameterList:GetParameterType (i)
 		if parameterType then
-			-- TODO: This is WRONG, fix it.
-			
-			-- resolvedObject should always be a Type or TypeDefinition (which is a Type) or OverloadedTypeDefinition here.
-			local resolvedObject = parameterType.ResolutionResults:GetResult (1)
-			if resolvedObject:UnwrapAlias ():IsOverloadedTypeDefinition () then
-				resolvedObject = resolvedObject:GetType (1):UnwrapAlias ()
-			end
-			functionDefinition:GetParameterList ():SetParameterType (i, resolvedObject)
-			namespace:GetMember (parameterList:GetParameterName (i)):SetType (resolvedObject)
+			parameterTypeResults = parameterType:GetResolutionResults ()
+			parameterTypeResults:FilterToConcreteTypes ()
+			functionDefinition:GetParameterList ():SetParameterType (i, parameterTypeResults:GetFilteredResultObject (1))
+			namespace:GetMember (parameterList:GetParameterName (i)):SetType (parameterTypeResults:GetFilteredResultObject (1))
 		end
 	end
 end
 
 function self:ResolveUsings (statement)
-	local namespace = statement:GetNamespace ()
-	for i = 1, namespace:GetUsingCount () do
-		local usingDirective = namespace:GetUsing (i)
-		namespace:GetUsing (i):Resolve (self)
-	end
+	statement:GetNamespace ():ResolveUsings ()
 end

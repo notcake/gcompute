@@ -2,7 +2,7 @@ local self = {}
 GCompute.VariableDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
 
 --- @param The name of this variable
--- @param typeName The type of this variable as a string or DeferredNameResolution or Type
+-- @param typeName The type of this variable as a string or DeferredObjectResolution or Type
 function self:ctor (name, typeName)
 	self.TypeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
 	
@@ -14,11 +14,15 @@ function self:CreateRuntimeObject ()
 end
 
 --- Resolves the type of this variable
-function self:ResolveTypes (globalNamespace)
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
 	self.Type:Resolve (globalNamespace, self:GetContainingNamespace ())
 	
-	if self.Type:IsDeferredNameResolution () then
-		if not self.Type:IsFailedResolution () then
+	if self.Type:IsDeferredObjectResolution () then
+		if self.Type:IsFailedResolution () then
+			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+		else
 			self.Type = self.Type:GetObject ()
 		end
 	end
@@ -39,13 +43,13 @@ end
 function self:SetType (typeName)
 	if typeName == nil then
 	elseif type (typeName) == "string" then
-		self.Type = GCompute.DeferredNameResolution (typeName)
-	elseif typeName:IsDeferredNameResolution () then
+		self.Type = GCompute.DeferredObjectResolution (typeName, GCompute.ResolutionObjectType.Type)
+	elseif typeName:IsDeferredObjectResolution () then
 		self.Type = typeName
 	elseif typeName:IsType () then
 		self.Type = typeName
 	else
-		GCompute.Error ("VariableDefinition:SetType : typeName must be a string, DeferredNameResolution or Type")
+		GCompute.Error ("VariableDefinition:SetType : typeName must be a string, DeferredObjectResolution or Type")
 	end
 end
 

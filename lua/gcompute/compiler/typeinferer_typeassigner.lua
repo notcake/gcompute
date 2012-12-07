@@ -33,9 +33,9 @@ function self:VisitExpression (expression)
 	local overrideExpression = nil
 
 	if expression:GetType () then
-		if expression:GetType ():IsDeferredNameResolution () then
-			-- There shouldn't be any DeferredNameResolutions here!
-			self.CompilationUnit:Error ("Pre-assigned type of " .. expression:ToString () .. " should not be a DeferredNameResolution! (" .. expression:GetType ():ToString () .. ")")
+		if expression:GetType ():IsDeferredObjectResolution () then
+			-- There shouldn't be any DeferredObjectResolutions here!
+			self.CompilationUnit:Error ("Pre-assigned type of " .. expression:ToString () .. " should not be a DeferredObjectResolution! (" .. expression:GetType ():ToString () .. ")")
 		elseif expression:GetType ():IsTypeDefinition () then
 			self.CompilationUnit:Debug ("Pre-assigned type of " .. expression:ToString () .. " is " .. expression:GetType ():GetFullName ())
 		else
@@ -48,9 +48,12 @@ function self:VisitExpression (expression)
 		local variableReadPlan = GCompute.VariableReadPlan ()
 		expression.VariableReadPlan = variableReadPlan
 	
-		if expression.ResolutionResults:GetResult (1) then
-			local result = expression.ResolutionResults:GetResult (1)
+		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
+			local result = expression.ResolutionResults:GetFilteredResultObject (1)
 			local metadata = result:GetMetadata ()
+			if not metadata then
+				A = result
+			end
 			local resultNamespace = result:GetContainingNamespace ()
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
@@ -91,7 +94,7 @@ function self:VisitExpression (expression)
 		local leftType = leftExpression:GetType ():UnwrapReference ()
 		if leftType:IsInferredType () then
 		elseif leftType:IsFunctionType () then
-			local leftValue = expression:GetLeftExpression ().ResolutionResults:GetResult (1)
+			local leftValue = expression:GetLeftExpression ().ResolutionResults:GetFilteredResultObject (1)
 			-- leftValue could be an OverloadedFunctionDefinition or a VariableDefinition
 			
 			local functionResolutionResult = GCompute.FunctionResolutionResult ()
@@ -185,11 +188,11 @@ function self:VisitExpression (expression)
 			overrideExpression = self:ResolveAssignment (expression)
 		end
 	elseif expression:Is ("BooleanLiteral") then
-		expression:SetType (expression:GetType () or GCompute.DeferredNameResolution ("Boolean"):Resolve ())
+		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Boolean", GCompute.ResolutionObjectType.Type):Resolve ())
 	elseif expression:Is ("NumericLiteral") then
-		expression:SetType (expression:GetType () or GCompute.DeferredNameResolution ("Number"):Resolve ())
+		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Number",  GCompute.ResolutionObjectType.Type):Resolve ())
 	elseif expression:Is ("StringLiteral") then
-		expression:SetType (expression:GetType () or GCompute.DeferredNameResolution ("String"):Resolve ())
+		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("String",  GCompute.ResolutionObjectType.Type):Resolve ())
 	elseif expression:Is ("FunctionType") then
 		expression:SetType (GCompute.Types.Type)
 	elseif expression:Is ("AnonymousFunction") then
@@ -266,7 +269,7 @@ function self:ResolveAssignment (astNode)
 	
 	if leftNodeType == "Identifier" then
 		-- Either local, member or global
-		leftDefinition = left.ResolutionResults:GetResult (1)
+		leftDefinition = left.ResolutionResults:GetFilteredResultObject (1)
 	elseif leftNodeType == "VariableDeclaration" then
 		-- Either namespace member or local variable
 		leftDefinition = left:GetVariableDefinition ()

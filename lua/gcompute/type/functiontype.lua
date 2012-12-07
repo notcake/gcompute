@@ -71,15 +71,15 @@ end
 
 function self:SetReturnType (returnType)
 	if type (returnType) == "string" then
-		self.ReturnType = GCompute.DeferredNameResolution (returnType)
+		self.ReturnType = GCompute.DeferredObjectResolution (returnType, GCompute.ResolutionObjectType.Type)
 	elseif returnType:IsAlias () then
 		self.ReturnType = returnType
-	elseif returnType:IsDeferredNameResolution () then
+	elseif returnType:IsDeferredObjectResolution () then
 		self.ReturnType = returnType
 	elseif returnType:IsType () then
 		self.ReturnType = returnType
 	else
-		GCompute.Error ("FunctionType:SetReturnType : returnType must be a string, DeferredNameResolution or Type")
+		GCompute.Error ("FunctionType:SetReturnType : returnType must be a string, DeferredObjectResolution or Type")
 	end
 end
 

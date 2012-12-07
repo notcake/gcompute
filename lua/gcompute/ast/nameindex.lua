@@ -9,7 +9,7 @@ function self:ctor ()
 	-- TODO: Remove this below
 	self.IndexType = GCompute.AST.NameIndexType.Namespace
 	self.LookupType = GCompute.AST.NameLookupType.Reference
-	self.ResolutionResults = GCompute.NameResolutionResults ()
+	self.ResolutionResults = GCompute.ResolutionResults ()
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)

@@ -22,11 +22,15 @@ function self:IsType ()
 	return false
 end
 
-function self:IsDeferredNameResolution ()
+function self:IsDeferredObjectResolution ()
 	return false
 end
 
 function self:IsObjectDefinition ()
+	return false
+end
+
+function self:IsNamespace ()
 	return false
 end
 

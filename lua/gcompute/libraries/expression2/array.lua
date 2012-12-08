@@ -1,7 +1,7 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
-local Number = Expression2:AddType ("array")
+local Array = Expression2:AddType ("array")
 
-Number:AddFunction ("count")
+Array:AddFunction ("count")
 	:SetReturnType ("number")
 	:SetNativeFunction (
 		function (self)
@@ -9,9 +9,27 @@ Number:AddFunction ("count")
 		end
 	)
 
-Number:AddFunction ("pushNumber", { { "number", "val" } })
+Array:AddFunction ("pushNumber", { { "number", "val" } })
 	:SetNativeFunction (
 		function (self, val)
 			self [#self + 1] = val
+		end
+	)
+
+Array:AddFunction ("operator[]", { { "number", "index" } }, { "T" })
+	:SetReturnType ("T")
+	:SetNativeString ("%self% [%arg:index%]")
+	:SetNativeFunction (
+		function (self, index)
+			return self [index]
+		end
+	)
+
+Array:AddFunction ("operator[]", { { "number", "index" }, { "T", "val" } }, { "T" })
+	:SetReturnType ("T")
+	:SetNativeString ("%self% [%arg:index%] = %arg:val%")
+	:SetNativeFunction (
+		function (self, index, value)
+			self [index] = value
 		end
 	)

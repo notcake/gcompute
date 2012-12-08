@@ -45,6 +45,7 @@ function self:VisitStatement (statement)
 		local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
 		typeResults:FilterToConcreteTypes ()
 		typeResults:FilterByLocality ()
+		statement:SetType (typeResults:GetFilteredResultObject (1))
 		statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
 	end
 end

@@ -111,6 +111,8 @@ function self:SetType (type)
 end
 
 function self:SetTypeExpression (typeExpression)
+	if self.TypeExpression == typeExpression then return end
+	
 	self.TypeExpression = typeExpression
 	if self.TypeExpression then
 		self.TypeExpression:SetParent (self)
@@ -124,7 +126,7 @@ end
 
 function self:ToString ()
 	local typeExpression = self.TypeExpression and self.TypeExpression:ToString () or nil
-	typeExpression = self.Type and "[" .. self.Type:GetFullName () .. "]" or "[Unknown Type]"
+	typeExpression = self.Type and self.Type:GetFullName () or "[Unknown Type]"
 	local variableDeclaration = "[VariableDeclaration]\n"
 	if self.Local then
 		variableDeclaration = variableDeclaration .. "local "

@@ -10,7 +10,7 @@ function self:ctor (name, typeName)
 end
 
 function self:CreateRuntimeObject ()
-	return self.Type:CreateDefaultValue ()
+	return self.Type:UnwrapAlias ():CreateDefaultValue ()
 end
 
 --- Resolves the type of this variable
@@ -39,18 +39,20 @@ function self:IsVariable ()
 end
 
 --- Sets the type of this object
--- @param type The Type of this object
+-- @param type The Type of this object as a string or DeferredObjectResolution or Type
 function self:SetType (typeName)
 	if typeName == nil then
+		self.Type = nil
 	elseif type (typeName) == "string" then
 		self.Type = GCompute.DeferredObjectResolution (typeName, GCompute.ResolutionObjectType.Type)
 	elseif typeName:IsDeferredObjectResolution () then
 		self.Type = typeName
-	elseif typeName:IsType () then
+	elseif typeName:UnwrapAlias ():IsType () then
 		self.Type = typeName
 	else
 		GCompute.Error ("VariableDefinition:SetType : typeName must be a string, DeferredObjectResolution or Type")
 	end
+	return self
 end
 
 --- Returns a string representing this VariableDefinition

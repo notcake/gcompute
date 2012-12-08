@@ -19,14 +19,14 @@ Number:AddFunction ("toHex")
 local function addOperator (symbol, f)
 	Number:AddFunction ("operator" .. symbol, { { "number", "b" } })
 		:SetReturnType ("number")
-		:SetNativeString ("(%self% " .. symbol .. "%arb:b%)")
+		:SetNativeString ("(%self% " .. symbol .. "%arg:b%)")
 		:SetNativeFunction (f)
 end
 
 local function addComparisonOperator (symbol, f)
 	Number:AddFunction ("operator" .. symbol, { { "number", "b" } })
 		:SetReturnType ("bool")
-		:SetNativeString ("(%self% " .. symbol .. "%arb:b%)")
+		:SetNativeString ("(%self% " .. symbol .. "%arg:b%)")
 		:SetNativeFunction (f)
 end
 

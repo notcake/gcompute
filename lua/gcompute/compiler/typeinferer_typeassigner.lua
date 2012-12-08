@@ -51,9 +51,6 @@ function self:VisitExpression (expression)
 		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
 			local result = expression.ResolutionResults:GetFilteredResultObject (1)
 			local metadata = result:GetMetadata ()
-			if not metadata then
-				A = result
-			end
 			local resultNamespace = result:GetContainingNamespace ()
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then

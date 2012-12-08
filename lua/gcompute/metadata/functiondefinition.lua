@@ -17,6 +17,8 @@ function self:ctor (name, parameterList, typeParameterList)
 	end
 	
 	self.FunctionDeclaration = nil
+	self.ParameterNamespace  = GCompute.NamespaceDefinition ()
+	
 	self.NativeString = nil
 	self.NativeFunction = nil
 end
@@ -143,18 +145,16 @@ end
 --- Sets the return type of this function
 -- @param returnType The return type as a string or DeferredObjectResolution or Type
 function self:SetReturnType (returnType)
-	if type (returnType) == "string" then
+	if returnType == nil then
+		self.ReturnType = nil
+	elseif type (returnType) == "string" then
 		self.ReturnType = GCompute.DeferredObjectResolution (returnType, GCompute.ResolutionObjectType.Type, nil, self:GetContainingNamespace ())
+	elseif returnType:IsDeferredObjectResolution () then
+		self.ReturnType = returnType
+	elseif returnType:UnwrapAlias ():IsType () then
+		self.ReturnType = returnType
 	else
-		if returnType:IsAlias () then
-			self.ReturnType = returnType
-		elseif returnType:IsDeferredObjectResolution () then
-			self.ReturnType = returnType
-		elseif returnType:IsType () then
-			self.ReturnType = returnType
-		else
-			GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredObjectResolution or Type (" .. returnType:ToString () .. ")")
-		end
+		GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredObjectResolution or Type (" .. returnType:ToString () .. ")")
 	end
 	return self
 end

@@ -6,20 +6,7 @@ function self:ctor ()
 	self.LeftExpression = nil
 	self.Identifier = nil
 	
-	self.Arguments = {}
-	self.ArgumentCount = 0
-end
-
-function self:AddArgument (argument)
-	self.ArgumentCount = self.ArgumentCount + 1
-	self.Arguments [self.ArgumentCount] = argument
-	if argument then argument:SetParent (self) end
-end
-
-function self:AddArguments (arguments)
-	for _, argument in ipairs (arguments) do
-		self:AddArgument (argument)
-	end
+	self.ArgumentList = GCompute.AST.ArgumentList ()
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -27,8 +14,7 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if memoryUsageReport:IsCounted (self) then return end
 	
 	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
-	memoryUsageReport:CreditTableStructure ("Syntax Trees", self.Arguments)
-	memoryUsageReport:CreditString ("Syntax Trees", self.MemberName)
+	memoryUsageReport:CreditString ("Syntax Trees", self.Identifier)
 	
 	if self.Identifier then
 		self.Identifier:ComputeMemoryUsage (memoryUsageReport)
@@ -36,11 +22,8 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if self.LeftExpression then
 		self.LeftExpression:ComputeMemoryUsage (memoryUsageReport)
 	end
-	
-	for i = 1, self:GetArgumentCount () do
-		if self:GetArgument (i) then
-			self:GetArgument (i):ComputeMemoryUsage (memoryUsageReport)
-		end
+	if self.ArgumentList then
+		self.ArgumentList:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
 	return memoryUsageReport
@@ -52,8 +35,8 @@ end
 function self:ExecuteAsAST (astRunner, state)
 	-- State 0: Evaluate left
 	-- State 1: Lookup function
-	-- State 3+: Evaluate arguments
-	-- State 2: Call
+	-- State 2: Evaluate arguments
+	-- State 3: Call
 	if state == 0 then
 		-- Return to state 1
 		astRunner:PushState (1)
@@ -62,8 +45,8 @@ function self:ExecuteAsAST (astRunner, state)
 		astRunner:PushNode (self:GetLeftExpression ())
 		astRunner:PushState (0)
 	elseif state == 1 then
-		-- Return to state 3
-		astRunner:PushState (3)
+		-- Return to state 2
+		astRunner:PushState (2)
 		
 		local functionCallPlan = self.FunctionCallPlan
 		if functionCallPlan:GetFunctionDefinition () then
@@ -74,11 +57,18 @@ function self:ExecuteAsAST (astRunner, state)
 			GCompute.Error ("FAIL")
 		end
 	elseif state == 2 then
+		-- Return to state 3
+		astRunner:PushState (3)
+		
+		-- ArgumentList, state 0
+		astRunner:PushNode (self:GetArgumentList ())
+		astRunner:PushState (0)
+	elseif state == 3 then
 		-- Discard FunctionCall
 		astRunner:PopNode ()
 		
 		local arguments = {}
-		for i = self:GetArgumentCount (), 1, -1 do
+		for i = self:GetArgumentList ():GetArgumentCount (), 1, -1 do
 			arguments [i] = astRunner:PopValue ()
 		end
 		local functionDefinition = astRunner:PopValue ()
@@ -105,37 +95,15 @@ function self:ExecuteAsAST (astRunner, state)
 		else
 			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
 		end
-	else
-		if state - 2 <= self:GetArgumentCount () then
-			astRunner:PushState (state + 1)
-			
-			-- Expression, state 0
-			astRunner:PushNode (self:GetArgument (state - 2))
-			astRunner:PushState (0)
-		else
-			-- No more arguments
-			astRunner:PushState (2)
-		end
 	end
-end
-
-function self:GetArgument (index)
-	return self.Arguments [index]
-end
-
-function self:GetArgumentCount ()
-	return self.ArgumentCount
 end
 
 function self:GetArgumentTypes (includeLeft)
 	if includeLeft == nil then includeLeft = true end
+	local argumentTypes = self.ArgumentList:GetArgumentTypes ()
 	
-	local argumentTypes = {}
 	if includeLeft then
-		argumentTypes [#argumentTypes + 1] = self.LeftExpression:GetType ()
-	end
-	for i = 1, self.ArgumentCount do
-		argumentTypes [#argumentTypes + 1] = self.Arguments [i]:GetType ()
+		table.insert (argumentTypes, 1, self.LeftExpression:GetType ())
 	end
 	return argumentTypes
 end
@@ -146,8 +114,10 @@ function self:GetChildEnumerator ()
 		i = i + 1
 		if i == 1 then
 			return self.LeftExpression
+		elseif i == 2 then
+			return self.ArgumentList
 		end
-		return self.Arguments [i - 1]
+		return nil
 	end
 end
 
@@ -159,9 +129,9 @@ function self:GetIdentifier ()
 	return self.Identifier
 end
 
-function self:SetArgument (index, expression)
-	self.Arguments [index] = expression
-	if expression then expression:SetParent (self) end
+function self:SetArgumentList (argumentList)
+	self.ArgumentList = argumentList
+	if self.ArgumentList then self.ArgumentList:SetParent (self) end
 end
 
 function self:SetLeftExpression (leftExpression)
@@ -174,25 +144,16 @@ function self:SetIdentifier (identifier)
 end
 
 function self:ToString ()
-	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Unknown Expression]"
-	local identifier = self.Identifier and self.Identifier:ToString () or "[Unknown Identifier]"
-	local arguments = ""
-	for i = 1, self.ArgumentCount do
-		if arguments ~= "" then
-			arguments = arguments .. ", "
-		end
-		local argument = self.Arguments [i] and self.Arguments [i]:ToString () or "[Unknown Expression]"
-		arguments = arguments .. argument
-	end
+	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Nothing]"
+	local identifier = self.Identifier and self.Identifier:ToString () or "[Nothing]"
+	local argumentList = self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])"
 	
-	return leftExpression .. ":" .. identifier .. " (" .. arguments .. ")"
+	return leftExpression .. ":" .. identifier .. " " .. argumentList
 end
 
 function self:Visit (astVisitor, ...)
 	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
-	for i = 1, self:GetArgumentCount () do
-		self:SetArgument (i, self:GetArgument (i):Visit (astVisitor, ...) or self:GetArgument (i))
-	end
+	self:SetArgumentList (self:GetArgumentList ():Visit (astVisitor, ...) or self:GetArgumentList ())
 	
 	return astVisitor:VisitExpression (self, ...)
 end

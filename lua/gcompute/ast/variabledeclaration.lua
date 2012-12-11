@@ -137,7 +137,7 @@ function self:ToString ()
 	if self.Auto then
 		variableDeclaration = variableDeclaration .. "auto "
 	end
-	variableDeclaration = variableDeclaration .. typeExpression .. " " .. self.Name
+	variableDeclaration = variableDeclaration .. typeExpression .. " " .. (self.Name or "[Unnamed]")
 	if self.RightExpression then
 		variableDeclaration = variableDeclaration .. " = " .. self.RightExpression:ToString ()
 	end

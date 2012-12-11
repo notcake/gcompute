@@ -74,15 +74,15 @@ function self:VisitExpression (expression, referenceNamespace)
 end
 
 -- AnonymousFunction or FunctionDeclaration
-function self:VisitFunction (func)
-	local functionDefinition = func:GetFunctionDefinition ()
-	local namespace = func:GetNamespace ()
+function self:VisitFunction (functionNode)
+	local functionDefinition = functionNode:GetFunctionDefinition ()
+	local parameterNamespace = functionDefinition:GetParameterNamespace ()
 	
-	local returnTypeResults = func:GetReturnTypeExpression ():GetResolutionResults ()
+	local returnTypeResults = functionNode:GetReturnTypeExpression ():GetResolutionResults ()
 	returnTypeResults:FilterToConcreteTypes ()
 	functionDefinition:SetReturnType (returnTypeResults:GetFilteredResultObject (1))
 	
-	local parameterList = func:GetParameterList ()
+	local parameterList = functionNode:GetParameterList ()
 	local parameterType
 	local parameterTypeResults
 	for i = 1, parameterList:GetParameterCount () do
@@ -91,7 +91,7 @@ function self:VisitFunction (func)
 			parameterTypeResults = parameterType:GetResolutionResults ()
 			parameterTypeResults:FilterToConcreteTypes ()
 			functionDefinition:GetParameterList ():SetParameterType (i, parameterTypeResults:GetFilteredResultObject (1))
-			namespace:GetMember (parameterList:GetParameterName (i)):SetType (parameterTypeResults:GetFilteredResultObject (1))
+			parameterNamespace:GetMember (parameterList:GetParameterName (i)):SetType (parameterTypeResults:GetFilteredResultObject (1))
 		end
 	end
 end

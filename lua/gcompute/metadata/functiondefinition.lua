@@ -17,10 +17,39 @@ function self:ctor (name, parameterList, typeParameterList)
 	end
 	
 	self.FunctionDeclaration = nil
-	self.ParameterNamespace  = GCompute.NamespaceDefinition ()
+	
+	self.ParameterNamespace = GCompute.NamespaceDefinition (self:GetName ())
+	self.ParameterNamespace:SetNamespaceType (GCompute.NamespaceType.FunctionRoot)
+	self.ParameterNamespaceValid = false
 	
 	self.NativeString = nil
 	self.NativeFunction = nil
+end
+
+function self:BuildParameterNamespace ()
+	if self.ParameterNamespaceValid then return end
+	self.ParameterNamespaceValid = true
+	
+	self.ParameterNamespace:Clear ()
+	self.ParameterNamespace:SetContainingNamespace (self:GetContainingNamespace ())
+	
+	for parameterType, parameterName, isVarArgs in self:GetParameterList ():GetEnumerator () do
+		self.ParameterNamespace:AddMemberVariable (parameterName)
+			:SetType (parameterType)
+	end
+	for parameterName in self:GetTypeParameterList ():GetEnumerator () do
+		self.ParameterNamespace:AddTypeParameter (parameterName)
+	end
+end
+
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Object Definitions", self)
+	self.ParameterNamespace:ComputeMemoryUsage (memoryUsageReport)
+	
+	return memoryUsageReport
 end
 
 function self:CreateRuntimeObject ()
@@ -59,6 +88,10 @@ function self:GetParameterName (index)
 	return self.ParameterList:GetParameterName (index)
 end
 
+function self:GetParameterNamespace ()
+	return self.ParameterNamespace
+end
+
 --- Gets the return type of this function as a DeferredObjectResolution or Type
 -- @return A DeferredObjectResolution or Type representing the return type of this function
 function self:GetReturnType ()
@@ -94,6 +127,10 @@ function self:GetTypeParameterList ()
 	return self.TypeParameterList
 end
 
+function self:InvalidateParameterNamespace ()
+	self.ParameterNamespaceValid = false
+end
+
 function self:IsFunction ()
 	return true
 end
@@ -110,6 +147,8 @@ end
 function self:ResolveTypes (globalNamespace, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
+	self:BuildParameterNamespace ()
+	
 	local returnType = self:GetReturnType ()
 	if returnType and returnType:IsDeferredObjectResolution () then
 		returnType:Resolve ()
@@ -119,7 +158,8 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 			self:SetReturnType (returnType:GetObject ())
 		end
 	end
-	self:GetParameterList ():ResolveTypes (globalNamespace, self:GetContainingNamespace (), errorReporter)
+	self:GetParameterList ():ResolveTypes (globalNamespace, self:GetParameterNamespace (), errorReporter)
+	self:GetParameterNamespace ():ResolveTypes (globalNamespace, errorReporter)
 end
 
 --- Sets the FunctionDeclaration syntax tree node corresponding to this function
@@ -148,9 +188,10 @@ function self:SetReturnType (returnType)
 	if returnType == nil then
 		self.ReturnType = nil
 	elseif type (returnType) == "string" then
-		self.ReturnType = GCompute.DeferredObjectResolution (returnType, GCompute.ResolutionObjectType.Type, nil, self:GetContainingNamespace ())
+		self.ReturnType = GCompute.DeferredObjectResolution (returnType, GCompute.ResolutionObjectType.Type, nil, self:GetParameterNamespace ())
 	elseif returnType:IsDeferredObjectResolution () then
 		self.ReturnType = returnType
+		self.ReturnType:SetLocalNamespace (self.ReturnType:GetLocalNamespace () or self:GetParameterNamespace ())
 	elseif returnType:UnwrapAlias ():IsType () then
 		self.ReturnType = returnType
 	else

@@ -145,8 +145,14 @@ include ("metadata/variabledefinition.lua")
 include ("metadata/mergednamespacedefinition.lua")
 include ("metadata/mergedoverloadedtypedefinition.lua")
 include ("metadata/mergedoverloadedfunctiondefinition.lua")
+include ("metadata/typeparameterdefinition.lua")
+
 include ("metadata/typeparameterlist.lua")
 include ("metadata/parameterlist.lua")
+
+include ("metadata/typeargumentlist.lua")
+include ("metadata/typeargumentlistlist.lua")
+
 include ("metadata/usingdirective.lua")
 
 include ("metadata/mergedlocalscope.lua")

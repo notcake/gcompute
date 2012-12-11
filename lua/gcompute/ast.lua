@@ -45,14 +45,14 @@ end
 include ("ast/error.lua")
 
 include ("ast/parameterlist.lua")
+include ("ast/argumentlist.lua")
+include ("ast/typeargumentlist.lua")
 
 -- expressions
 include ("ast/expression.lua")
 include ("ast/anonymousfunction.lua")
 include ("ast/binaryoperator.lua")
 include ("ast/binaryassignmentoperator.lua")
-include ("ast/functioncall.lua")
-include ("ast/memberfunctioncall.lua")
 include ("ast/booleanliteral.lua")
 include ("ast/numericliteral.lua")
 include ("ast/stringliteral.lua")
@@ -60,16 +60,22 @@ include ("ast/typecast.lua")
 include ("ast/leftunaryoperator.lua")
 include ("ast/rightunaryoperator.lua")
 
+include ("ast/functioncall.lua")
+include ("ast/memberfunctioncall.lua")
+include ("ast/new.lua")
+
 -- types (these are also expressions)
 include ("ast/functiontype.lua")
 
 -- indexing and name lookups
 include ("ast/arrayindex.lua")
-include ("ast/nameindextype.lua")
-include ("ast/namelookuptype.lua")
 include ("ast/identifier.lua")
 include ("ast/nameindex.lua")
 include ("ast/parametricname.lua")
+
+include ("ast/staticmemberaccess.lua")
+-- include ("ast/instancememberaccess.lua") -- TODO
+-- include ("ast/localaccess.lua")          -- TODO
 
 include ("ast/block.lua")
 include ("ast/functiondeclaration.lua")

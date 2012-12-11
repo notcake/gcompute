@@ -480,7 +480,7 @@ function self:LoadSession (inBuffer)
 		if inBuffer:Boolean () then
 			self:MarkUnsaved ()
 		end
-		self:SetText (inBuffer:String ())
+		self:SetText (inBuffer:LongString ())
 	end
 end
 
@@ -490,6 +490,6 @@ function self:SaveSession (outBuffer)
 		outBuffer:String (self:GetPath ())
 	else
 		outBuffer:Boolean (self:IsUnsaved ())
-		outBuffer:String (self:GetText ())
+		outBuffer:LongString (self:GetText ())
 	end
 end

@@ -374,7 +374,7 @@ end
 function self:LoadWorkspace (callback)
 	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_editor_tabs.txt", "GAME") or "")
 	inBuffer:String () -- Discard comment
-	self.DocumentManager:LoadSession (GLib.StringInBuffer (inBuffer:String ()))
+	self.DocumentManager:LoadSession (GLib.StringInBuffer (inBuffer:LongString ()))
 	inBuffer:Char ()   -- Discard newline
 	inBuffer:String () -- Discard comment
 	
@@ -421,7 +421,7 @@ function self:SaveWorkspace ()
 	
 	local subOutBuffer = GLib.StringOutBuffer ()
 	self.DocumentManager:SaveSession (subOutBuffer)
-	outBuffer:String (subOutBuffer:GetString ())
+	outBuffer:LongString (subOutBuffer:GetString ())
 	outBuffer:Char ("\n")
 	outBuffer:String ("\n=== Views ===\n")
 	

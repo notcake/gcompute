@@ -71,7 +71,7 @@ function self:LoadSession (inBuffer)
 	local id = inBuffer:String ()
 	while id ~= "" do
 		local documentType = inBuffer:String ()
-		local subInBuffer = GLib.StringInBuffer (inBuffer:String ())
+		local subInBuffer = GLib.StringInBuffer (inBuffer:LongString ())
 		local document = GCompute.Editor.DocumentTypes:Create (documentType)
 		if document then
 			document:SetId (id)
@@ -91,7 +91,7 @@ function self:SaveSession (outBuffer)
 		outBuffer:String (document:GetType ())
 		subOutBuffer:Clear ()
 		document:SaveSession (subOutBuffer)
-		outBuffer:String (subOutBuffer:GetString ())
+		outBuffer:LongString (subOutBuffer:GetString ())
 		outBuffer:Char ("\n")
 	end
 	outBuffer:String ("")

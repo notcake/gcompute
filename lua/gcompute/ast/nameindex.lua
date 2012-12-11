@@ -6,9 +6,6 @@ function self:ctor ()
 	self.LeftExpression = nil
 	self.Identifier = nil
 	
-	-- TODO: Remove this below
-	self.IndexType = GCompute.AST.NameIndexType.Namespace
-	self.LookupType = GCompute.AST.NameLookupType.Reference
 	self.ResolutionResults = GCompute.ResolutionResults ()
 end
 
@@ -53,10 +50,6 @@ function self:GetChildEnumerator ()
 	end
 end
 
-function self:GetIndexType ()
-	return self.IndexType
-end
-
 function self:GetIdentifier ()
 	return self.Identifier
 end
@@ -65,16 +58,8 @@ function self:GetLeftExpression ()
 	return self.LeftExpression
 end
 
-function self:GetLookupType ()
-	return self.LookupType
-end
-
 function self:GetResolutionResults ()
 	return self.ResolutionResults
-end
-
-function self:SetIndexType (indexType)
-	self.IndexType = indexType
 end
 
 function self:SetIdentifier (identifier)

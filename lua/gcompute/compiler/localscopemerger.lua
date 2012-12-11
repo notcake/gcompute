@@ -18,11 +18,6 @@ function self:VisitBlock (blockStatement)
 end
 
 function self:VisitStatement (statement)
-	if statement:HasNamespace () then
-		statement:SetNamespace (statement:GetNamespace () or GCompute.NamespaceDefinition ())
-		statement:GetNamespace ():SetContainingNamespace (statement:GetParentNamespace ())
-	end
-	
 	local parentNamespace = nil
 	local parentMergedScope = nil
 	if statement:Is ("FunctionDeclaration") or

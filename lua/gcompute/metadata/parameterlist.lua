@@ -67,7 +67,7 @@ function self:GetEnumerator ()
 	local i = 0
 	return function ()
 		i = i + 1
-		return self.ParameterTypes [i], self.ParameterNames [i]
+		return self.ParameterTypes [i], self.ParameterNames [i], self.VarArgs and i == self.ParameterCount or false
 	end
 end
 

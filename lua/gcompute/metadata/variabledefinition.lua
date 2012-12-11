@@ -17,9 +17,8 @@ end
 function self:ResolveTypes (globalNamespace, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
-	self.Type:Resolve (globalNamespace, self:GetContainingNamespace ())
-	
 	if self.Type:IsDeferredObjectResolution () then
+		self.Type:Resolve (globalNamespace, self:GetContainingNamespace ())
 		if self.Type:IsFailedResolution () then
 			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 		else

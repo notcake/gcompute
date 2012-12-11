@@ -22,6 +22,12 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
+--- Returns true if this ObjectDefinition has unbound type parameters
+-- @return A boolean indicating whether this ObjectDefinition has unbound type parameters
+function self:ContainsUnboundTypeParameters ()
+	GCompute.Error ("ObjectDefinition:ContainsTypeParameterUsage : Not implemented (" .. self:GetFullName () .. ")")
+end
+
 function self:CreateRuntimeObject ()
 	GCompute.Error ("ObjectDefinition:CreateRuntimeObject : Not implemented (" .. self:GetFullName () .. ")")
 end

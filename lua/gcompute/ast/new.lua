@@ -1,6 +1,6 @@
 local self = {}
-self.__Type = "ArrayIndex"
-GCompute.AST.ArrayIndex = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
+self.__Type = "New"
+GCompute.AST.New = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
 function self:ctor ()
 	self.LeftExpression = nil
@@ -22,9 +22,6 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
 	return memoryUsageReport
-end
-
-function self:Evaluate (executionContext)
 end
 
 function self:GetArgumentList ()
@@ -59,10 +56,10 @@ function self:SetLeftExpression (leftExpression)
 end
 
 function self:ToString ()
-	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Unknown Expression]"
+	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Nothing]"
 	local argumentList = self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])"
 	
-	return leftExpression .. " [" .. string.sub (argumentList, 2, -2) .. "]"
+	return "new " .. leftExpression .. " " .. argumentList
 end
 
 function self:Visit (astVisitor, ...)

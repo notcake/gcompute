@@ -68,6 +68,11 @@ function self:CreateRuntimeObject ()
 	return runtimeNamespace
 end
 
+function self:CreateStaticMemberAccessNode ()
+	if self:IsRoot () then return nil end
+	return GCompute.AST.StaticMemberAccess (self:GetContainingNamespace ():CreateStaticMemberAccessNode (), self:GetName ())
+end
+
 --- Returns a function which handles runtime namespace initialization
 -- @return A function which handles runtime namespace initialization
 function self:GetConstructor (name)

@@ -51,6 +51,9 @@ function self:ctor (sourceFile)
 	self.LexingRevision = 0
 	self.Tokens = nil
 	
+	-- Preprocessing
+	self.PreprocessingRevision = 0
+	
 	self.ParserJobQueue = nil
 	self.AST = nil
 	self.NamespaceDefinition = nil
@@ -240,6 +243,8 @@ function self:Lex (callback)
 	if self.LexingInProgress then
 		self:AddEventListener ("LexerFinished", tostring (callback),
 			function ()
+				self.PreprocessingRevision = 0
+				
 				self:RemoveEventListener ("LexerFinished", tostring (callback))
 				callback ()
 			end
@@ -286,9 +291,9 @@ end
 function self:Preprocess (callback)
 	callback = callback or GCompute.NullCallback
 	
-	if self.PreprocessingRevision == self.SourceFile:GetCodeHash () then callback () return end
+	if self.PreprocessingRevision == self.LexingRevision then callback () return end
 	
-	self.PreprocessingRevision = self.SourceFile:GetCodeHash ()
+	self.PreprocessingRevision = self.LexingRevision
 	
 	local startTime = SysTime ()
 	GCompute.Preprocessor:Process (self, self.Tokens)

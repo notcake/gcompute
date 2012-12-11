@@ -1,5 +1,18 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 local Array = Expression2:AddType ("array")
+Array:SetNativeAllocated (true)
+
+Array:AddConstructor ({ { "object", "..." } })
+	:SetNativeFunction (
+		function (...)
+			local array = {}
+			for _, object in ipairs ({...}) do
+				local typeName = type (object)
+				
+			end
+			return array
+		end
+	)
 
 Array:AddFunction ("count")
 	:SetReturnType ("number")

@@ -863,14 +863,14 @@ function self:ExpressionNew ()
 	newExpression:SetStartToken (self:GetLastToken ())
 	
 	local typeExpression = self:Type () or GCompute.AST.Error ("Expected <type> after 'new'.", self:GetCurrentToken ())
-	newExpression:SetTypeExpression (typeExpression)
+	newExpression:SetLeftExpression (typeExpression)
 	
 	if not self:Accept ("(") then
 		newExpression:AddMessage (self:ExpectedToken ("("):GetMessage ())
 	end
 	
 	local arguments = self:List (self.Expression)
-	newExpression:AddArguments (arguments)
+	newExpression:GetArgumentList ():AddArguments (arguments)
 	if not self:Accept (")") then
 		newExpression:AddMessage (self:ExpectedToken (")"):GetMessage ())
 	end
@@ -924,7 +924,7 @@ function self:ExpressionFunctionCall (leftExpression)
 	
 	functionCallExpression:SetLeftExpression (leftExpression)
 	if not self:Accept (")") then
-		functionCallExpression:AddArguments (self:List (self.Expression))
+		functionCallExpression:GetArgumentList ():AddArguments (self:List (self.Expression))
 		
 		self:AcceptWhitespaceAndNewlines ()
 		
@@ -952,7 +952,7 @@ function self:ExpressionMemberFunctionCall (leftExpression)
 	
 	local noRightParenthesis = false
 	if not self:Accept (")") then
-		memberFunctionCallExpression:AddArguments (self:List (self.Expression))
+		memberFunctionCallExpression:GetArgumentList ():AddArguments (self:List (self.Expression))
 		noRightParenthesis = not self:Accept (")")
 	end
 	
@@ -991,7 +991,7 @@ function self:ExpressionArrayIndex (leftExpression)
 	
 	arrayIndexExpression:SetLeftExpression (leftExpression)
 	if not self:Accept ("]") then
-		arrayIndexExpression:AddArguments (self:List (self.Expression))
+		arrayIndexExpression:GetArgumentList ():AddArguments (self:List (self.Expression))
 		if not self:Accept ("]") then
 			arrayIndexExpression:AddErrorMessage ("Expected ']' to close index argument list.", self:GetCurrentToken ())
 		end

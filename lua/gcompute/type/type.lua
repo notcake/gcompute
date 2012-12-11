@@ -63,6 +63,12 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
+--- Returns true if this Type has unbound type parameters
+-- @return A boolean indicating whether this Type has unbound type parameters
+function self:ContainsUnboundTypeParameters ()
+	GCompute.Error ("Type:ContainsTypeParameterUsage : Not implemented (" .. self:GetFullName () .. ")")
+end
+
 function self:CreateDefaultValue ()
 	return nil
 end
@@ -95,6 +101,10 @@ end
 
 function self:IsBaseTypeOf (subtype)
 	return subtype:IsBaseType (self)
+end
+
+function self:IsConcreteType ()
+	return true
 end
 
 function self:IsFunctionType ()
@@ -137,7 +147,8 @@ function self:IsTypeDefinition ()
 	return false
 end
 
-function self:Resolve (globalNamespace, localNamespace)
+function self:IsTypeParameter ()
+	return false
 end
 
 function self:SetNullable (nullable)

@@ -34,8 +34,12 @@ end
 
 function self:VisitStatement (statement)
 	if statement:HasNamespace () then
-		statement:SetNamespace (statement:GetNamespace () or GCompute.NamespaceDefinition ())
-		statement:GetNamespace ():SetContainingNamespace (statement:GetParentNamespace ())
+		if not statement:GetNamespace () and statement.SetNamespace then
+			statement:SetNamespace (GCompute.NamespaceDefinition ())
+		end
+		if statement:GetNamespace () then
+			statement:GetNamespace ():SetContainingNamespace (statement:GetParentNamespace ())
+		end
 	end
 	
 	if statement:Is ("FunctionDeclaration") then
@@ -62,27 +66,20 @@ function self:VisitExpression (expression)
 	end
 end
 
-function self:VisitFunction (func)
+function self:VisitFunction (functionNode)
 	local functionDefinition = nil
 	
-	if func:Is ("FunctionDeclaration") then
-		functionDefinition = func:GetParentNamespace ():AddFunction (func:GetName (), func:GetParameterList ():ToParameterList ())
+	if functionNode:Is ("FunctionDeclaration") then
+		functionDefinition = functionNode:GetParentNamespace ():AddFunction (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
 	else
-		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", func:GetParameterList ():ToParameterList ())
+		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", functionNode:GetParameterList ():ToParameterList ())
 	end
 	
-	functionDefinition:SetReturnType (GCompute.DeferredObjectResolution (func:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
-	functionDefinition:SetFunctionDeclaration (func)
-	func:SetFunctionDefinition (functionDefinition)
+	functionDefinition:SetReturnType (GCompute.DeferredObjectResolution (functionNode:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
+	functionDefinition:SetFunctionDeclaration (functionNode)
+	functionNode:SetFunctionDefinition (functionDefinition)
 	
-	-- Set up function namespace with function parameters as members
-	local namespace = func:GetNamespace () or GCompute.NamespaceDefinition ()
-	func:SetNamespace (namespace)
-	namespace:SetNamespaceType (GCompute.NamespaceType.FunctionRoot)
-	namespace:SetContainingNamespace (func:GetParentNamespace ())
-	
-	local parameterList = func:GetParameterList ()
-	for parameterType, parameterName in parameterList:GetEnumerator () do
-		namespace:AddMemberVariable (parameterName)
-	end
+	-- Set up function parameter namespace
+	functionDefinition:BuildParameterNamespace ()
+	functionDefinition:GetParameterNamespace ():SetContainingNamespace (functionNode:GetParentNamespace ())
 end

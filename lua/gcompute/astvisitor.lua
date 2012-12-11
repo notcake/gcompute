@@ -31,3 +31,9 @@ end
 
 function self:VisitParameterList (parameterList, ...)
 end
+
+function self:VisitArgumentList (argumentList, ...)
+end
+
+function self:VisitTypeArgumentList (typeArgumentList, ...)
+end

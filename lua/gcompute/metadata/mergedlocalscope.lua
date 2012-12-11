@@ -21,6 +21,15 @@ function self:AddMember (memberDefinition)
 	self.UniqueNameMap:AddObject (memberDefinition)
 end
 
+function self:Clear ()
+	self.MemberSet = GCompute.WeakKeyTable ()
+	self.Members = GCompute.WeakValueTable ()
+	
+	if self.UniqueNameMap then
+		self.UniqueNameMap:Clear ()
+	end
+end
+
 function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
 	if memoryUsageReport:IsCounted (self) then return end

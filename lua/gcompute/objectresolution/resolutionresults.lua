@@ -70,17 +70,17 @@ function self:FilterToConcreteTypes ()
 		local isAlias = self.FilteredResults [i]:GetObject ():IsAlias ()
 		local filteredObject = self.FilteredResults [i]:GetObject ():UnwrapAlias ()
 		if filteredObject:IsType () then
-			if filteredObject:GetTypeParameterList ():GetParameterCount () == 0 then
+			if filteredObject:IsConcreteType () then
 				filteredResults [#filteredResults + 1] = self.FilteredResults [i]
 			end
 		elseif filteredObject:IsOverloadedTypeDefinition () then
 			if isAlias and filteredObject:GetTypeCount () == 1 then
-				if filteredObject:GetType (1):GetTypeParameterList ():GetParameterCount () == 0 then
+				if filteredObject:GetType (1):IsConcreteType () then
 					filteredResults [#filteredResults + 1] = self.FilteredResults [i]
 				end
 			else
 				for j = 1, filteredObject:GetTypeCount () do
-					if filteredObject:GetType (j):GetTypeParameterList ():GetParameterCount () == 0 then
+					if filteredObject:GetType (j):IsConcreteType () then
 						local resolutionResult = GCompute.ResolutionResult (filteredObject:GetType (j), self.FilteredResults [i]:GetResultType ())
 						resolutionResult:SetLocalDistance (self.FilteredResults [i]:GetLocalDistance ())
 						filteredResults [#filteredResults + 1] = resolutionResult

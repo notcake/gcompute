@@ -197,6 +197,11 @@ function self:IsBaseType (baseType)
 	return false
 end
 
+function self:IsConcreteType ()
+	-- TODO: Fix this for nested types
+	return self.TypeParameterList:IsEmpty ()
+end
+
 --- Returns whether this namespace definition has no members
 -- @return A boolean indicating whether this namespace definition has no members
 function self:IsEmpty ()

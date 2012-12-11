@@ -24,6 +24,11 @@ function self:AddObject (object)
 	end
 end
 
+function self:Clear ()
+	self.NameMap = GCompute.WeakKeyTable ()
+	self.UsedNames = {}
+end
+
 function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
 	if memoryUsageReport:IsCounted (self) then return end

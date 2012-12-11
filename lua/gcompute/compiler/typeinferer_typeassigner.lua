@@ -12,7 +12,14 @@ function self:VisitStatement (statement)
 		if statement:GetRightExpression () then
 			self:ResolveAssignment (statement)
 		end
-	
+		
+		-- Replacing Identifiers and NameIndexes with *Accesses causes the
+		-- type of VariableDefinitions to be reset, so we have to set them
+		-- again here.
+		local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
+		statement:SetType (typeResults:GetFilteredResultObject (1))
+		statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
+		
 		if statement:GetType () then
 			self.CompilationUnit:Debug ("Type of " .. statement:ToString () .. " is " .. statement:GetType ():GetFullName ())
 		else
@@ -50,12 +57,22 @@ function self:VisitExpression (expression)
 	
 		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
 			local result = expression.ResolutionResults:GetFilteredResultObject (1)
-			local metadata = result:GetMetadata ()
 			local resultNamespace = result:GetContainingNamespace ()
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
-				variableReadPlan:SetVariableReadType (GCompute.VariableReadType.NamespaceMember)
-				variableReadPlan:SetRuntimeName (resultNamespace:GetMemberRuntimeName (result))
+				local staticMemberAccess = GCompute.AST.StaticMemberAccess ()
+				
+				staticMemberAccess:SetLeftExpression (resultNamespace:CreateStaticMemberAccessNode ())
+				staticMemberAccess:SetName (expression:GetName ())
+				staticMemberAccess:SetRuntimeName (resultNamespace:GetMemberRuntimeName (result))
+				
+				staticMemberAccess:SetResolutionResults (expression:GetResolutionResults ())
+				
+				staticMemberAccess:SetStartToken (expression:GetStartToken ())
+				staticMemberAccess:SetEndToken (expression:GetEndToken ())
+				
+				self:ResolveAccessType (staticMemberAccess)
+				return staticMemberAccess
 			elseif namespaceType == GCompute.NamespaceType.Local or
 			       namespaceType == GCompute.NamespaceType.FunctionRoot then
 				local mergedLocalScope = self:GetMergedLocalScope (result)
@@ -66,20 +83,41 @@ function self:VisitExpression (expression)
 				self.CompilationUnit:Error ("TypeInfererTypeAssigner:VisitExpression : Identifier : Cannot handle namespace type of " .. expression:ToString () .." (" .. GCompute.NamespaceType [namespaceType] .. ").")
 			end
 			
-			if metadata:GetMemberType () == GCompute.MemberTypes.Method then
-				if result:GetFunctionCount () == 1 then
-					expression:SetType (result:GetFunction (1):GetType ())
-				else
-					-- overload resolution
-					local inferredType = GCompute.InferredType ()
-					expression:SetType (inferredType)
-					inferredType:ImportFunctionTypes (result)
-				end
-			elseif metadata:GetMemberType () == GCompute.MemberTypes.Type then
-				expression:SetType (GCompute.Types.Type)
+			self:ResolveAccessType (expression)
+		else
+			expression:SetType (GCompute.NullType ())
+			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
+		end
+	elseif expression:Is ("NameIndex") then
+		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
+			local result = expression.ResolutionResults:GetFilteredResultObject (1)
+			local resultNamespace = result:GetContainingNamespace ()
+			local namespaceType = resultNamespace:GetNamespaceType ()
+			if namespaceType == GCompute.NamespaceType.Global then
+				local staticMemberAccess = GCompute.AST.StaticMemberAccess ()
+				
+				staticMemberAccess:SetLeftExpression (expression:GetLeftExpression ())
+				staticMemberAccess:SetName (expression:GetIdentifier ():GetName ())
+				staticMemberAccess:SetRuntimeName (resultNamespace:GetMemberRuntimeName (result))
+				
+				staticMemberAccess:SetResolutionResults (expression:GetResolutionResults ())
+				
+				staticMemberAccess:SetStartToken (expression:GetStartToken ())
+				staticMemberAccess:SetEndToken (expression:GetEndToken ())
+				
+				self:ResolveAccessType (staticMemberAccess)
+				return staticMemberAccess
+			elseif namespaceType == GCompute.NamespaceType.Local or
+			       namespaceType == GCompute.NamespaceType.FunctionRoot then
+				local mergedLocalScope = self:GetMergedLocalScope (result)
+				variableReadPlan:SetVariableReadType (GCompute.VariableReadType.Local)
+				variableReadPlan:SetRuntimeName (mergedLocalScope:GetRuntimeName (result))
 			else
-				expression:SetType (GCompute.ReferenceType (result:GetType ()))
+				variableReadPlan:SetVariableReadType (GCompute.VariableReadType.Local)
+				self.CompilationUnit:Error ("TypeInfererTypeAssigner:VisitExpression : Identifier : Cannot handle namespace type of " .. expression:ToString () .." (" .. GCompute.NamespaceType [namespaceType] .. ").")
 			end
+			
+			self:ResolveAccessType (expression)
 		else
 			expression:SetType (GCompute.NullType ())
 			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
@@ -121,8 +159,10 @@ function self:VisitExpression (expression)
 				if objectDefinition:IsFunction () then
 					expression.FunctionCallPlan:SetFunctionDefinition (objectDefinition)
 				end
-				expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentCount ())
+				expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentList ():GetArgumentCount ())
 			end
+		elseif leftType:IsType () then
+			return self:ConvertFunctionCallToConstructor (expression)
 		else
 			expression:SetType (GCompute.NullType ())
 			self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function (type was " .. leftType:ToString () .. ").", expression:GetLocation ())
@@ -154,7 +194,7 @@ function self:VisitExpression (expression)
 			
 			expression.FunctionCallPlan:SetFunctionName (functionName)
 			expression.FunctionCallPlan:SetFunctionDefinition (functionDefinition)
-			expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentCount ())
+			expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentList ():GetArgumentCount ())
 		end
 	elseif expression:Is ("BinaryOperator") then
 		--[[
@@ -206,6 +246,38 @@ function self:VisitExpression (expression)
 	end
 	
 	return overrideExpression
+end
+
+function self:ConvertFunctionCallToConstructor (functionCall)
+	local new = GCompute.AST.New ()
+	new:SetLeftExpression (functionCall:GetLeftExpression ())
+	
+	new:SetStartToken (functionCall:GetStartToken ())
+	new:SetEndToken (functionCall:GetEndToken ())
+	
+	new:SetType (functionCall:GetLeftExpression ():GetResolutionResults ():GetFilteredResultObject (1))
+	return new
+end
+
+function self:ResolveAccessType (astNode)
+	local resolutionResults = astNode:GetResolutionResults ()
+	local result = resolutionResults:GetFilteredResultObject (1):UnwrapAlias ()
+	local metadata = result:GetMetadata ()
+	
+	if metadata:GetMemberType () == GCompute.MemberTypes.Method then
+		if result:GetFunctionCount () == 1 then
+			astNode:SetType (result:GetFunction (1):GetType ())
+		else
+			-- overload resolution
+			local inferredType = GCompute.InferredType ()
+			astNode:SetType (inferredType)
+			inferredType:ImportFunctionTypes (result)
+		end
+	elseif metadata:GetMemberType () == GCompute.MemberTypes.Type then
+		astNode:SetType (GCompute.Types.Type)
+	else
+		astNode:SetType (GCompute.ReferenceType (result:GetType ()))
+	end
 end
 
 function self:ResolveOperatorCall (astNode, functionName, arguments)
@@ -265,7 +337,7 @@ function self:ResolveAssignment (astNode)
 	local rightType = right:GetType ()
 	
 	if leftNodeType == "Identifier" then
-		-- Either local, member or global
+		-- Either local, member
 		leftDefinition = left.ResolutionResults:GetFilteredResultObject (1)
 	elseif leftNodeType == "VariableDeclaration" then
 		-- Either namespace member or local variable
@@ -274,9 +346,12 @@ function self:ResolveAssignment (astNode)
 		if left:IsAuto () then
 			left:SetType (rightType:UnwrapReference ())
 		end
+	elseif leftNodeType == "StaticMemberAccess" then
+		-- Global static variable
+		leftDefinition = left.ResolutionResults:GetFilteredResultObject (1)
 	else
 		-- Either namespace member or member variable
-		GCompute.Error ("ResolveAssignment : I don't even.")
+		GCompute.Error ("ResolveAssignment : Unhandled node type on left (" .. leftNodeType .. ", " .. left:ToString () .. ").")
 	end
 	
 	local leftNamespace = leftDefinition:GetContainingNamespace ()

@@ -90,6 +90,29 @@ function self:AddType (name, typeParameterList)
 	return self.Members [name]:AddType (typeParameterList)
 end
 
+function self:AddTypeParameter (name)
+	if not self.Members [name] then
+		self.Members [name] = GCompute.TypeParameterDefinition (name)
+		self.Members [name]:SetContainingNamespace (self)
+		self.MemberMetadata [name] = GCompute.MemberInfo (name, GCompute.MemberTypes.Type)
+		self.Members [name]:SetMetadata (self.MemberMetadata [name])
+	end
+	return self.Members [name]
+end
+
+function self:Clear ()
+	self.Members = {}
+	self.MemberMetadata = {}
+	
+	if self.UniqueNameMap then
+		self.UniqueNameMap:Clear ()
+	end
+	
+	if self.MergedLocalScope then
+		self.MergedLocalScope:Clear ()
+	end
+end
+
 --- Adds a using directive to this namespace definition
 -- @param qualifiedName The name of the namespace to be used
 function self:AddUsing (qualifiedName)
@@ -109,6 +132,11 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
 	return memoryUsageReport
+end
+
+function self:CreateStaticMemberAccessNode ()
+	if self:IsRoot () then return nil end
+	return GCompute.AST.StaticMemberAccess (self:GetContainingNamespace ():CreateStaticMemberAccessNode (), self:GetName ())
 end
 
 --- Returns a function which handles runtime namespace initialization

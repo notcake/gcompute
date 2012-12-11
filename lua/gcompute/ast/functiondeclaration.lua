@@ -15,7 +15,6 @@ function self:ctor ()
 	self.Body = nil
 	
 	self.FunctionDefinition = nil
-	self.NamespaceDefinition = nil
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -39,9 +38,6 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	end
 	if self.FunctionDefinition then
 		self.FunctionDefinition:ComputeMemoryUsage (memoryUsageReport)
-	end
-	if self.NamespaceDefinition then
-		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
 	end
 	return memoryUsageReport
 end
@@ -82,7 +78,8 @@ function self:GetName ()
 end
 
 function self:GetNamespace ()
-	return self.NamespaceDefinition
+	if not self.FunctionDefinition then return nil end
+	return self.FunctionDefinition:GetParameterNamespace ()
 end
 
 function self:GetParameterList ()
@@ -119,10 +116,6 @@ end
 
 function self:SetName (name)
 	self.Name = name
-end
-
-function self:SetNamespace (namespaceDefinition)
-	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:SetParameterList (parameterList)

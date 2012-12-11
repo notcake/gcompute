@@ -86,7 +86,7 @@ function self:ToParameterList ()
 		if resolvedObject and resolvedObject:UnwrapAlias ():IsOverloadedTypeDefinition () then
 			resolvedObject = resolvedObject:GetType (1):UnwrapAlias ()
 		end
-		parameterList:AddParameter (resolvedObject, parameterName)
+		parameterList:AddParameter (resolvedObject or GCompute.PlaceholderType (), parameterName)
 	end
 	return parameterList
 end

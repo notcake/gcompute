@@ -1,5 +1,6 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 local String = Expression2:AddType ("string")
+String:SetPrimitive (true)
 	
 Expression2:AddFunction ("format", { { "string", "formatString" }, { "object", "..." } })
 	:SetReturnType ("string")

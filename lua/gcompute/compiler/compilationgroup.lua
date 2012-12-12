@@ -86,6 +86,9 @@ function self:Compile (callback)
 					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
+					
+					-- Runtime preparation
+					:Then (function (callback, errorCallback) compilationUnit:RunPass ("StaticMemberToucher", GCompute.StaticMemberToucher, callback) end)
 					:ThenUnwrap (callback)
 					:Execute ()
 			end

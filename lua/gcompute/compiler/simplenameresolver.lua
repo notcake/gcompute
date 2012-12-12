@@ -97,5 +97,5 @@ function self:VisitFunction (functionNode)
 end
 
 function self:ResolveUsings (statement)
-	statement:GetNamespace ():ResolveUsings ()
+	statement:GetNamespace ():ResolveUsings (self.GlobalNamespace)
 end

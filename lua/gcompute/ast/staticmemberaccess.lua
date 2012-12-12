@@ -7,6 +7,7 @@ function self:ctor (leftExpression, name, typeArgumentList)
 	self.Name = name
 	self.TypeArgumentList = nil
 	
+	self.MemberDefinition = nil
 	self.RuntimeName = nil
 	
 	self:SetLeftExpression (leftExpression)
@@ -41,6 +42,10 @@ function self:GetLeftExpression ()
 	return self.LeftExpression
 end
 
+function self:GetMemberDefinition ()
+	return self.MemberDefinition
+end
+
 function self:GetName ()
 	return self.Name
 end
@@ -60,6 +65,10 @@ end
 function self:SetLeftExpression (leftExpression)
 	self.LeftExpression = leftExpression
 	if self.LeftExpression then self.LeftExpression:SetParent (self) end
+end
+
+function self:SetMemberDefinition (memberDefinition)
+	self.MemberDefinition = memberDefinition
 end
 
 function self:SetName (name)
@@ -84,4 +93,12 @@ function self:ToString ()
 		return (self.LeftExpression and (self.LeftExpression:ToString () .. ".") or "") .. (self.Name or "[Nothing]") .. " " .. self.TypeArgumentList:ToString ()
 	end
 	return (self.LeftExpression and (self.LeftExpression:ToString () .. ".") or "")  .. (self.Name or "[Nothing]")
+end
+
+function self:Visit (astVisitor, ...)
+	if self:GetLeftExpression () then
+		self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	end
+
+	return astVisitor:VisitExpression (self, ...)
 end

@@ -85,6 +85,7 @@ include ("compiler/simplenameresolver.lua")
 include ("compiler/typeinferer.lua")
 include ("compiler/typeinferer_typeassigner.lua")
 include ("compiler/localscopemerger.lua")
+include ("compiler/staticmembertoucher.lua")
 
 include ("uniquenamemap.lua")
 
@@ -169,10 +170,12 @@ include ("reflection/membertypes.lua")
 GCompute.EmptyTypeParameterList = GCompute.TypeParameterList ()
 GCompute.EmptyParameterList = GCompute.ParameterList ()
 
+-- runtime function calls
+include ("functioncalls/functioncall.lua")
+include ("functioncalls/memberfunctioncall.lua")
+include ("functioncalls/constructorcall.lua")
+
 -- runtime
-include ("function.lua")
-include ("functionlist.lua")
-include ("reference.lua")
 include ("compilercontext.lua")
 include ("executioncontext.lua")
 

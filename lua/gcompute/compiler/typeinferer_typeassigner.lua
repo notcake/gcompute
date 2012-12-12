@@ -123,50 +123,7 @@ function self:VisitExpression (expression)
 			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
 		end
 	elseif expression:Is ("FunctionCall") then
-		expression:SetType (GCompute.InferredType ())
-		
-		local leftExpression = expression:GetLeftExpression ()
-		local leftType = leftExpression:GetType ():UnwrapReference ()
-		if leftType:IsInferredType () then
-		elseif leftType:IsFunctionType () then
-			local leftValue = expression:GetLeftExpression ().ResolutionResults:GetFilteredResultObject (1)
-			-- leftValue could be an OverloadedFunctionDefinition or a VariableDefinition
-			
-			local functionResolutionResult = GCompute.FunctionResolutionResult ()
-			expression.FunctionResolutionResult = functionResolutionResult
-			if leftValue:IsOverloadedFunctionDefinition () then
-				functionResolutionResult:AddOverloads (leftValue)
-			else
-				functionResolutionResult:AddOverload (leftValue)
-			end
-			functionResolutionResult:FilterByArgumentTypes (expression:GetArgumentTypes ())
-			
-			if functionResolutionResult:IsEmpty () then
-				self.CompilationUnit:Error ("Failed to resolve " .. expression:ToString () .. ": " .. functionResolutionResult:ToString ())
-				expression:SetType (GCompute.NullType ())
-			elseif functionResolutionResult:IsAmbiguous () then
-				self.CompilationUnit:Error ("Failed to resolve " .. expression:ToString () .. ": " .. functionResolutionResult:ToString ())
-				expression:SetType (GCompute.NullType ())
-			else
-				local objectDefinition = functionResolutionResult:GetFilteredOverload (1)
-				self.CompilationUnit:Debug ("Resolving " .. expression:ToString () .. ": " .. functionResolutionResult:ToString ())
-				expression:SetType (objectDefinition:GetType ():GetReturnType ())
-				
-				local functionCallPlan = GCompute.FunctionCallPlan ()
-				expression.FunctionCallPlan = functionCallPlan
-				
-				expression.FunctionCallPlan:SetFunctionName (functionName)
-				if objectDefinition:IsFunction () then
-					expression.FunctionCallPlan:SetFunctionDefinition (objectDefinition)
-				end
-				expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentList ():GetArgumentCount ())
-			end
-		elseif leftType:IsType () then
-			return self:ConvertFunctionCallToConstructor (expression)
-		else
-			expression:SetType (GCompute.NullType ())
-			self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function (type was " .. leftType:ToString () .. ").", expression:GetLocation ())
-		end
+		overrideExpression = self:VisitFunctionCall (expression)
 	elseif expression:Is ("MemberFunctionCall") then
 		expression:SetType (GCompute.InferredType ())
 		
@@ -196,6 +153,8 @@ function self:VisitExpression (expression)
 			expression.FunctionCallPlan:SetFunctionDefinition (functionDefinition)
 			expression.FunctionCallPlan:SetArgumentCount (expression:GetArgumentList ():GetArgumentCount ())
 		end
+	elseif expression:Is ("New") then
+		overrideExpression = self:VisitNew (expression)
 	elseif expression:Is ("BinaryOperator") then
 		--[[
 			Assignment
@@ -248,6 +207,81 @@ function self:VisitExpression (expression)
 	return overrideExpression
 end
 
+function self:VisitFunctionCall (functionCall)
+	functionCall:SetType (GCompute.InferredType ())
+	
+	local leftExpression = functionCall:GetLeftExpression ()
+	local leftDefinition = leftExpression:GetResolutionResults ():GetFilteredResultObject (1)
+	local leftType = leftExpression:GetType ():UnwrapReference ()
+	if leftType:IsInferredType () then
+	elseif leftType:IsFunctionType () then
+		local leftValue = functionCall:GetLeftExpression ().ResolutionResults:GetFilteredResultObject (1)
+		-- leftValue could be an OverloadedFunctionDefinition or a VariableDefinition
+		
+		local functionResolutionResult = GCompute.FunctionResolutionResult ()
+		functionCall.FunctionResolutionResult = functionResolutionResult
+		
+		-- Populate FunctionResolutionResult
+		if leftValue:IsOverloadedFunctionDefinition () then
+			functionResolutionResult:AddOverloads (leftValue)
+		elseif leftValue:IsFunction () or
+		       leftValue:GetType ():IsFunctionType () then
+			functionResolutionResult:AddOverload (leftValue)
+		else
+			self.CompilationUnit:Error ("Left hand side of function call is not a function! (" .. expression:GetLeftExpression ():ToString () .. ")")
+		end
+		
+		-- Resolve FunctionResolutionResult
+		self:ResolveFunctionCall (functionCall, functionResolutionResult, functionCall:GetArgumentTypes ())
+	elseif leftDefinition:UnwrapAlias ():IsType () or leftDefinition:UnwrapAlias ():IsOverloadedTypeDefinition () then
+		return self:ConvertFunctionCallToConstructor (functionCall)
+	else
+		functionCall:SetType (GCompute.NullType ())
+		self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function (type was " .. leftType:ToString () .. ").", functionCall:GetLocation ())
+	end
+end
+
+function self:VisitNew (new)
+	new:SetType (new:GetLeftExpression ():GetResolutionResults ():GetFilteredResultObject (1))
+	
+	local leftExpression = new:GetLeftExpression ()
+	local leftResolutionResults = leftExpression:GetResolutionResults ()
+	
+	-- Need to resolve leftExpression as a type
+	leftResolutionResults:FilterToConcreteTypes ()
+	
+	if leftResolutionResults:GetFilteredResultCount () == 0 then
+		leftExpression:AddErrorMessage (leftExpression:ToString () .. " is not a type.")
+		return
+	elseif leftResolutionResults:GetFilteredResultCount () > 1 then
+		leftExpression:AddErrorMessage (leftExpression:ToString () .. " is ambiguous as a type name.")
+		return
+	end
+	
+	local leftDefinition = leftExpression:GetResolutionResults ():GetFilteredResultObject (1)
+	
+	if not leftDefinition:UnwrapAlias ():IsType () then
+		self.CompilationUnit:Error ("Left hand side of <new-expression> must be a type! (" .. leftExpression:ToString () .. " is not a type).", leftExpression:GetLocation ())
+		return
+	end
+	
+	local functionResolutionResult = GCompute.FunctionResolutionResult ()
+	new.FunctionResolutionResult = functionResolutionResult
+	
+	-- Populate FunctionResolutionResult
+	for constructor in leftDefinition:UnwrapAlias ():GetConstructorEnumerator () do
+		functionResolutionResult:AddOverload (constructor)
+	end
+	
+	-- Resolve FunctionResolutionResult
+	self:ResolveFunctionCall (new, functionResolutionResult, new:GetArgumentList ():GetArgumentTypes ())
+	
+	new:SetNativelyAllocated (leftDefinition:UnwrapAlias ():IsNativelyAllocated ())
+	if not new:IsNativelyAllocated () then
+		self.CompilationUnit:Error ("<new-expression> type is not natively allocated! (non-natively allocated objects are unsupported right now).", leftExpression:GetLocation ())
+	end
+end
+
 function self:ConvertFunctionCallToConstructor (functionCall)
 	local new = GCompute.AST.New ()
 	new:SetLeftExpression (functionCall:GetLeftExpression ())
@@ -255,7 +289,7 @@ function self:ConvertFunctionCallToConstructor (functionCall)
 	new:SetStartToken (functionCall:GetStartToken ())
 	new:SetEndToken (functionCall:GetEndToken ())
 	
-	new:SetType (functionCall:GetLeftExpression ():GetResolutionResults ():GetFilteredResultObject (1))
+	self:VisitExpression (new)
 	return new
 end
 
@@ -280,27 +314,7 @@ function self:ResolveAccessType (astNode)
 	end
 end
 
-function self:ResolveOperatorCall (astNode, functionName, arguments)
-	local functionResolutionResult = GCompute.FunctionResolutionResult ()
-	astNode.FunctionResolutionResult = functionResolutionResult
-	
-	-- Populate overloads list
-	if self.GlobalNamespace:MemberExists (functionName) and
-	   self.GlobalNamespace:GetMemberMetadata (functionName):GetMemberType () == GCompute.MemberTypes.Method then
-		functionResolutionResult:AddOverloads (self.GlobalNamespace:GetMember (functionName))
-	end
-	
-	functionResolutionResult:AddOverloadsFromType (arguments [1]:GetType (), functionName)
-	
-	-- Filter overloads list
-	local argumentTypes = {}
-	for k, argumentExpression in ipairs (arguments) do
-		if not argumentExpression:GetType () then
-			GCompute.Error ("Argument expression node (" .. argumentExpression:ToString () .. ") has not been assigned a type!")
-		end
-		argumentTypes [k] = argumentExpression:GetType () or GCompute.NullType ()
-	end
-	
+function self:ResolveFunctionCall (astNode, functionResolutionResult, argumentTypes)
 	functionResolutionResult:FilterByArgumentTypes (argumentTypes)
 	if functionResolutionResult:IsEmpty () then
 		self.CompilationUnit:Error ("Failed to resolve " .. astNode:ToString () .. ": " .. functionResolutionResult:ToString ())
@@ -309,17 +323,44 @@ function self:ResolveOperatorCall (astNode, functionName, arguments)
 		self.CompilationUnit:Error ("Failed to resolve " .. astNode:ToString () .. ": " .. functionResolutionResult:ToString ())
 		astNode:SetType (GCompute.NullType ())
 	else
-		local functionDefinition = functionResolutionResult:GetFilteredOverload (1)
+		local objectDefinition = functionResolutionResult:GetFilteredOverload (1)
 		self.CompilationUnit:Debug ("Resolving " .. astNode:ToString () .. ": " .. functionResolutionResult:ToString ())
-		astNode:SetType (functionDefinition:GetReturnType ())
+		astNode:SetType (objectDefinition:GetType ():GetReturnType ())
 		
 		local functionCallPlan = GCompute.FunctionCallPlan ()
 		astNode.FunctionCallPlan = functionCallPlan
 		
 		astNode.FunctionCallPlan:SetFunctionName (functionName)
-		astNode.FunctionCallPlan:SetFunctionDefinition (functionDefinition)
-		astNode.FunctionCallPlan:SetArgumentCount (#arguments)
+		if objectDefinition:IsFunction () then
+			astNode.FunctionCallPlan:SetFunctionDefinition (objectDefinition)
+		end
+		astNode.FunctionCallPlan:SetArgumentCount (#argumentTypes)
 	end
+end
+
+function self:ResolveOperatorCall (astNode, functionName, arguments)
+	local functionResolutionResult = GCompute.FunctionResolutionResult ()
+	astNode.FunctionResolutionResult = functionResolutionResult
+	
+	-- Populate FunctionResolutionResult
+	if self.GlobalNamespace:MemberExists (functionName) and
+	   self.GlobalNamespace:GetMemberMetadata (functionName):GetMemberType () == GCompute.MemberTypes.Method then
+		functionResolutionResult:AddOverloads (self.GlobalNamespace:GetMember (functionName))
+	end
+	
+	functionResolutionResult:AddOverloadsFromType (arguments [1]:GetType (), functionName)
+	
+	-- Generate argument types array
+	local argumentTypes = {}
+	for k, argumentExpression in ipairs (arguments) do
+		if not argumentExpression:GetType () then
+			GCompute.Error ("Argument expression node (" .. argumentExpression:ToString () .. ") has not been assigned a type!")
+		end
+		argumentTypes [k] = argumentExpression:GetType () or GCompute.NullType ()
+	end
+	
+	-- Resolve FunctionResolutionResult
+	self:ResolveFunctionCall (astNode, functionResolutionResult, argumentTypes)
 end
 
 function self:ResolveAssignment (astNode)			

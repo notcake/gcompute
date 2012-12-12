@@ -1,5 +1,6 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 local Number = Expression2:AddType ("number")
+Number:SetPrimitive (true)
 
 Number:AddConstructor ({ { "int", "n" } })
 	:SetNativeFunction (

@@ -238,9 +238,9 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	end
 end
 
-function self:ResolveUsings ()
+function self:ResolveUsings (globalNamespace)
 	for i = 1, self:GetUsingCount () do
-		self:GetUsing (i):Resolve ()
+		self:GetUsing (i):Resolve (globalNamespace)
 	end
 end
 

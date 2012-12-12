@@ -576,6 +576,8 @@ function self:StatementFunctionDeclaration ()
 		functionDeclaration:SetMemberFunction (true)
 	end
 	
+	functionDeclaration:GetParameterList ():SetStartToken (self:GetLastToken ())
+	
 	if self:Peek () ~= ")" then
 		repeat
 			local parameterName = self:AcceptType (GCompute.TokenType.Identifier)
@@ -592,6 +594,7 @@ function self:StatementFunctionDeclaration ()
 	if not self:Accept (")") then
 		functionDeclaration:AddErrorMessage ("Expected ')' to close argument list in function declaration.", self:GetCurrentToken ())
 	end
+	functionDeclaration:GetParameterList ():SetEndToken (self:GetLastToken ())
 	
 	self:AcceptWhitespaceAndNewlines ()
 	local blockStatement = self:StatementBlock ()
@@ -863,16 +866,24 @@ function self:ExpressionNew ()
 	newExpression:SetStartToken (self:GetLastToken ())
 	
 	local typeExpression = self:Type () or GCompute.AST.Error ("Expected <type> after 'new'.", self:GetCurrentToken ())
-	newExpression:SetLeftExpression (typeExpression)
+	
+	if typeExpression:Is ("FunctionType") then
+		newExpression:SetLeftExpression (typeExpression:GetReturnTypeExpression ())
+		self:SetCurrentToken (typeExpression:GetParameterList ():GetStartToken ())
+	else
+		newExpression:SetLeftExpression (typeExpression)
+		newExpression:AddErrorMessage ("<new-expression> is missing parentheses or is too complicated to parse (try adding parentheses).", typeExpression:GetStartToken ())
+		return newExpression
+	end
 	
 	if not self:Accept ("(") then
-		newExpression:AddMessage (self:ExpectedToken ("("):GetMessage ())
+		newExpression:AddErrorMessage ("Expected '(' after " .. self:GetLastPretty () .. ", got " .. self:GetCurrentPretty () .. " in <new-expression>.", self:GetCurrentToken ())
 	end
 	
 	local arguments = self:List (self.Expression)
 	newExpression:GetArgumentList ():AddArguments (arguments)
 	if not self:Accept (")") then
-		newExpression:AddMessage (self:ExpectedToken (")"):GetMessage ())
+		newExpression:AddErrorMessage ("Expected ')' after " .. self:GetLastPretty () .. ", got " .. self:GetCurrentPretty () .. " in <new-expression>.", self:GetCurrentToken ())
 	end
 	
 	newExpression:SetEndToken (self:GetLastToken ())
@@ -1139,6 +1150,8 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			functionType:SetStartToken (leftExpression:GetStartToken ())
 			functionType:SetReturnTypeExpression (leftExpression)
 			
+			functionType:GetParameterList ():SetStartToken (self:GetLastToken ())
+			
 			if self:Peek () ~= ")" then
 				repeat
 					local parameterName = nil
@@ -1171,6 +1184,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			if not self:Accept (")") then
 				functionType:AddErrorMessage ("Expected ')' to close argument list in function type.", self:GetCurrentToken ())
 			end
+			functionType:GetParameterList ():SetEndToken (self:GetLastToken ())
 			leftExpression = functionType
 		else
 			leftExpression:AddErrorMessage ("Unhandled operator in type (" .. nextOperator .. ")", self:GetCurrentToken ())

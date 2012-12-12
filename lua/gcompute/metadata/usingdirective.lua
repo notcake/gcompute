@@ -33,11 +33,15 @@ function self:IsResolved ()
 	return self.Namespace and true or false
 end
 
-function self:Resolve ()
+function self:Resolve (globalNamespace)
 	if self:IsResolved () then return end
 	
 	local deferredObjectResolution = self.DeferredObjectResolution
 	if deferredObjectResolution:IsResolved () then return end
+	
+	if globalNamespace then
+		deferredObjectResolution:SetGlobalNamespace (globalNamespace)
+	end
 	
 	deferredObjectResolution:Resolve ()
 	if deferredObjectResolution:IsFailedResolution () then

@@ -3,6 +3,9 @@ GCompute.Type = GCompute.MakeConstructor (self, GCompute.IObject)
 
 function self:ctor ()
 	self.Nullable = false
+	
+	self.Primitive = false
+	self.NativelyAllocated = false
 end
 
 --- Returns a boolean indicating whether this type can be converted to destinationType
@@ -115,12 +118,20 @@ function self:IsInferredType ()
 	return false
 end
 
+function self:IsNativelyAllocated ()
+	return self.NativelyAllocated
+end
+
 function self:IsNullable ()
 	return self.Nullable
 end
 
 function self:IsOverloadedTypeDefinition ()
 	return false
+end
+
+function self:IsPrimitive ()
+	return self.Primitive
 end
 
 function self:IsReference ()
@@ -151,8 +162,22 @@ function self:IsTypeParameter ()
 	return false
 end
 
+function self:SetNativelyAllocated (nativelyAllocated)
+	self.NativelyAllocated = nativelyAllocated
+	if not self.NativelyAllocated and self:IsPrimitive () then
+		self:SetPrimitive (false)
+	end
+end
+
 function self:SetNullable (nullable)
 	self.Nullable = nullable
+end
+
+function self:SetPrimitive (primitive)
+	self.Primitive = primitive
+	if self.Primitive and not self:IsNativelyAllocated () then
+		self:SetNativelyAllocated (true)
+	end
 end
 
 --- Unwraps a ReferenceType

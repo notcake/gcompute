@@ -187,8 +187,18 @@ function self:GetCurrentToken ()
 	return self.CurrentToken
 end
 
+function self:GetCurrentPretty ()
+	local currentToken = self:GetCurrentToken ()
+	return currentToken and ("\"" .. GCompute.String.Escape (currentToken.Value) .. "\"") or "<eof>"
+end
+
 function self:GetLastToken ()
 	return self.LastAcceptedToken
+end
+
+function self:GetLastPretty ()
+	local lastToken = self:GetLastToken ()
+	return lastToken and ("\"" .. GCompute.String.Escape (lastToken.Value) .. "\"") or "<eof>"
 end
 
 function self:Initialize (tokens, startToken, endToken)
@@ -314,4 +324,15 @@ end
 
 function self:SavePosition ()
 	self.TokenStack:Push (self.CurrentToken)
+end
+
+function self:SetCurrentToken (token)
+	self.CurrentToken = token
+	if not self.CurrentToken then
+		self.CurrentTokenValue = nil
+		self.CurrentTokenType  = nil
+		return
+	end
+	self.CurrentTokenValue = self.CurrentToken.Value
+	self.CurrentTokenType  = self.CurrentToken.TokenType
 end

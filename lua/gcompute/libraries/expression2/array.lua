@@ -1,14 +1,18 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 local Array = Expression2:AddType ("array")
-Array:SetNativeAllocated (true)
+Array:SetNativelyAllocated (true)
 
 Array:AddConstructor ({ { "object", "..." } })
 	:SetNativeFunction (
 		function (...)
-			local array = {}
+			local array =
+			{
+				Values = {},
+				Types  = {}
+			}
 			for _, object in ipairs ({...}) do
-				local typeName = type (object)
-				
+				array.Values [#array.Values + 1] = object:Unbox ()
+				array.Types  [#array.Types  + 1] = object:GetType ()
 			end
 			return array
 		end
@@ -18,14 +22,15 @@ Array:AddFunction ("count")
 	:SetReturnType ("number")
 	:SetNativeFunction (
 		function (self)
-			return #self
+			return #self.Values
 		end
 	)
 
 Array:AddFunction ("pushNumber", { { "number", "val" } })
 	:SetNativeFunction (
 		function (self, val)
-			self [#self + 1] = val
+			self.Values [#self.Values + 1] = val
+			self.Types  [#self.Types  + 1] = executionContext:GetRuntimeNamespace ().Expression2.number
 		end
 	)
 
@@ -34,7 +39,7 @@ Array:AddFunction ("operator[]", { { "number", "index" } }, { "T" })
 	:SetNativeString ("%self% [%arg:index%]")
 	:SetNativeFunction (
 		function (self, index)
-			return self [index]
+			return self.Values [index]
 		end
 	)
 
@@ -43,6 +48,6 @@ Array:AddFunction ("operator[]", { { "number", "index" }, { "T", "val" } }, { "T
 	:SetNativeString ("%self% [%arg:index%] = %arg:val%")
 	:SetNativeFunction (
 		function (self, index, value)
-			self [index] = value
+			self.Values [index] = value
 		end
 	)

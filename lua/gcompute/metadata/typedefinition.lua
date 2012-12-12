@@ -154,6 +154,22 @@ function self:GetBaseTypes ()
 	return self.BaseTypes
 end
 
+function self:GetConstructor (index)
+	return self.Constructors [index]
+end
+
+function self:GetConstructorCount ()
+	return #self.Constructors
+end
+
+function self:GetConstructorEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Constructors [i]
+	end
+end
+
 --- Gets the short name of this type
 -- @return The short name of this type
 function self:GetShortName ()

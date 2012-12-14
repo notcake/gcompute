@@ -8,6 +8,8 @@ function self:ctor ()
 	self.ArgumentList = GCompute.AST.ArgumentList ()
 	
 	self.NativelyAllocated = false
+	
+	self.FunctionCall = nil
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -27,73 +29,10 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 function self:ExecuteAsAST (astRunner, state)
-	-- State 0: Evaluate left
-	-- State 1: Nothing
-	-- State 2: Evaluate arguments
-	-- State 3: Call
-	if state == 0 then
-		-- Return to state 2
-		astRunner:PushState (2)
-		
-		local functionCallPlan = self.FunctionCallPlan
-		if functionCallPlan:GetFunctionDefinition () then
-			astRunner:PushValue (functionCallPlan:GetFunctionDefinition ())
-		elseif functionCallPlan:GetFunction () then
-			astRunner:PushValue (functionCallPlan:GetFunction ())
-		else
-			-- Expression, state 0
-			astRunner:PushNode (self:GetLeftExpression ())
-			astRunner:PushState (0)
-		end
-	elseif state == 2 then
-		-- Return to state 3
-		astRunner:PushState (3)
-		
-		-- ArgumentList, state 0
-		astRunner:PushNode (self:GetArgumentList ())
-		astRunner:PushState (0)
-	elseif state == 3 then
-		-- Discard FunctionCall
-		astRunner:PopNode ()
-		
-		local arguments = {}
-		for i = self:GetArgumentList ():GetArgumentCount (), 1, -1 do
-			arguments [i] = astRunner:PopValue ()
-		end
-		local functionDefinition = astRunner:PopValue ()
-		local func = functionDefinition
-		if type (functionDefinition) == "table" then
-			func = functionDefinition:GetNativeFunction ()
-		else
-			functionDefinition = nil
-		end
-		
-		if func then
-			astRunner:PushValue (func (unpack (arguments)))
-		elseif functionDefinition then
-			local functionDeclaration = functionDefinition:GetFunctionDeclaration ()
-			local namespace = functionDeclaration:GetNamespace ()
-			local mergedLocalScope = namespace:GetMergedLocalScope ()
-			local block = functionDeclaration:GetBody ()
-			if block then
-				if mergedLocalScope then
-					local stackFrame = mergedLocalScope:CreateStackFrame ()
-					executionContext:PushStackFrame (stackFrame)
-					
-					for i = 1, functionDefinition:GetParameterCount () do
-						stackFrame [mergedLocalScope:GetRuntimeName (namespace:GetMember (functionDefinition:GetParameterName (i)))] = arguments [i]
-					end
-				end
-			
-				astRunner:PushNode (block)
-				astRunner:PushState (0)
-			else
-				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
-			end
-		else
-			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
-		end
+	if state == 0 and not self.NativelyAllocated then
+		astRunner:PushValue (GCompute.RuntimeObject (self:GetType ()))
 	end
+	self.FunctionCall:ExecuteAsAST (astRunner, state)
 end
 
 function self:GetArgumentList ()

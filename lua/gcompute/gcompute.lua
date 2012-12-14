@@ -9,10 +9,6 @@ GCompute.AddCSLuaFolderRecursive ("gcompute")
 
 GCompute.Reflection = GCompute.Reflection or {}
 
-GCompute.Types = GCompute.Types or {}
-GCompute.Types.Top = nil
-GCompute.Types.Bottom = nil
-
 GCompute.GlobalNamespace = nil
 
 function GCompute.ClearDebug ()
@@ -37,6 +33,8 @@ include ("ierrorreporter.lua")
 include ("ieditorhelper.lua")
 include ("iobject.lua")
 include ("isavable.lua")
+
+include ("substitutionmap.lua")
 
 -- memory usage
 include ("memoryusagereport.lua")
@@ -91,7 +89,6 @@ include ("uniquenamemap.lua")
 
 include ("assignmenttype.lua")
 include ("assignmentplan.lua")
-include ("functioncallplan.lua")
 include ("variablereadtype.lua")
 include ("variablereadplan.lua")
 
@@ -100,6 +97,8 @@ include ("sourcefilecache.lua")
 include ("sourcefile.lua")
 
 -- type system
+include ("type/typesystem.lua")
+
 include ("type/typeconversionmethod.lua")
 include ("type/typeparser.lua")
 include ("type/type.lua")
@@ -117,7 +116,6 @@ include ("type/referencetype.lua")
 include ("type/inferredtype.lua")
 
 -- object resolution
-include ("functionresolutionresult.lua")
 include ("objectresolution/resolutionobjecttype.lua")
 include ("objectresolution/resolutionresulttype.lua")
 include ("objectresolution/resolutionresult.lua")
@@ -143,16 +141,22 @@ include ("metadata/constructordefinition.lua")
 include ("metadata/overloadedtypedefinition.lua")
 include ("metadata/overloadedfunctiondefinition.lua")
 include ("metadata/variabledefinition.lua")
+include ("metadata/typeparameterdefinition.lua")
+
+include ("metadata/typecurriedfunctiondefinition.lua")
+
 include ("metadata/mergednamespacedefinition.lua")
+include ("metadata/mergedtypedefinition.lua")
 include ("metadata/mergedoverloadedtypedefinition.lua")
 include ("metadata/mergedoverloadedfunctiondefinition.lua")
-include ("metadata/typeparameterdefinition.lua")
 
 include ("metadata/typeparameterlist.lua")
 include ("metadata/parameterlist.lua")
 
 include ("metadata/typeargumentlist.lua")
 include ("metadata/typeargumentlistlist.lua")
+
+include ("metadata/emptytypeargumentlist.lua")
 
 include ("metadata/usingdirective.lua")
 
@@ -171,9 +175,10 @@ GCompute.EmptyTypeParameterList = GCompute.TypeParameterList ()
 GCompute.EmptyParameterList = GCompute.ParameterList ()
 
 -- runtime function calls
+include ("functioncalls/functionresolutiontype.lua")
+include ("functioncalls/overloadedfunctionresolver.lua")
 include ("functioncalls/functioncall.lua")
 include ("functioncalls/memberfunctioncall.lua")
-include ("functioncalls/constructorcall.lua")
 
 -- runtime
 include ("compilercontext.lua")
@@ -193,6 +198,9 @@ include ("languages/lua.lua")
 
 -- runtime
 include ("astrunner.lua")
+
+include ("runtime/runtimeobject.lua")
+
 include ("runtime/processlist.lua")
 include ("runtime/process.lua")
 include ("runtime/thread.lua")
@@ -207,6 +215,7 @@ include ("nativegen/luaemitter.lua")
 GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 
 GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
+GCompute.GlobalNamespace:SetTypeSystem (GCompute.TypeSystem ())
 GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 
 include ("corelibrary.lua")

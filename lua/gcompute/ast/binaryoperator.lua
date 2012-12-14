@@ -2,21 +2,6 @@ local self = {}
 self.__Type = "BinaryOperator"
 GCompute.AST.BinaryOperator = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
-local EvaluationFunctions = 
-{
-	["default"] = function (self, executionContext, left) executionContext:Error ("Unknown binary operator " .. self.Operator .. " in " .. self:ToString () .. ".") return left end,
-	["+"] = function (self, executionContext, left, right) if type (left) == "string" then return left .. tostring (right) end return left + right end,
-	["-"] = function (self, executionContext, left, right) return left - right end,
-	["*"] = function (self, executionContext, left, right) return left * right end,
-	["/"] = function (self, executionContext, left, right) return left / right end,
-	["="] = function (self, executionContext, left, right) return right end,
-	["<"] = function (self, executionContext, left, right) return left < right end,
-	[">"] = function (self, executionContext, left, right) return left > right end,
-	["<="] = function (self, executionContext, left, right) return left <= right end,
-	[">="] = function (self, executionContext, left, right) return left >= right end,
-	["=="] = function (self, executionContext, left, right) return left == right end
-}
-
 function self:ctor ()
 	self.LeftExpression = nil
 	self.RightExpression = nil
@@ -24,7 +9,7 @@ function self:ctor ()
 	self.Operator = "[Unknown Operator]"
 	self.Precedence = 0
 	
-	self.EvaluationFunction = EvaluationFunctions.default
+	self.FunctionCall = nil
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -42,79 +27,11 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
-function self:Evaluate (executionContext)
-	local left, leftReference = self.LeftExpression:Evaluate (executionContext)
-	local right, rightReference = self.RightExpression:Evaluate (executionContext)
-	
-	if left == nil then
-		if not leftReference then
-			executionContext:Error ("Failed to evaluate " .. self.LeftExpression:ToString () .. " in " .. self:ToString () .. ".")
-		else
-			executionContext:Error (self.LeftExpression:ToString () .. " is nil in " .. self:ToString () .. ".")
-		end
-	end
-	if right == nil then
-		if not rightReference then
-			executionContext:Error ("Failed to evaluate " .. self.RightExpression:ToString () .. " in " .. self:ToString () .. ".")
-		else
-			executionContext:Error (self.RightExpression:ToString () .. " is nil in " .. self:ToString () .. ".")
-		end
-	end
-	
-	if left == nil or right == nil then
-		return "[error]"
-	end
-	
-	return self:EvaluationFunction (executionContext, left, right, leftReference, rightReference)
-end
-
 function self:ExecuteAsAST (astRunner, state)
-	-- State 0: Evaluate left
-	-- State 1: Evaluate right
-	-- State 2: Call
-	if state == 0 then
-		-- Return to state 1
-		astRunner:PushState (1)
-	
-		-- Expression, state 0
-		astRunner:PushNode (self:GetLeftExpression ())
-		astRunner:PushState (0)
-	elseif state == 1 then
-		-- Return to state 2
-		astRunner:PushState (2)
-	
-		-- Expression, state 0
-		astRunner:PushNode (self:GetRightExpression ())
-		astRunner:PushState (0)
-	elseif state == 2 then
-		-- Discard BinaryOperator
-		astRunner:PopNode ()
-		
-		local arguments = {}
-		local right = astRunner:PopValue ()
-		local left = astRunner:PopValue ()
-		
-		local functionCallPlan = self.FunctionCallPlan
-		local functionDefinition = functionCallPlan:GetFunctionDefinition ()
-		local func = functionCallPlan:GetFunction ()
-		if not func and functionDefinition then
-			func = functionDefinition:GetNativeFunction ()
-		end
-		
-		if func then
-			astRunner:PushValue (func (left, right))
-		elseif functionDefinition then
-			local block = functionDefinition:GetBlock ()
-			if block then
-				astRunner:PushNode (functionDefinition:GetBlock ())
-				astRunner:PushState (0)
-			else
-				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
-			end
-		else
-			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
-		end
+	if not self.FunctionCall then
+		ErrorNoHalt (self:ToString () .. "\n")
 	end
+	self.FunctionCall:ExecuteAsAST (astRunner, state)
 end
 
 function self:GetChildEnumerator ()
@@ -151,8 +68,6 @@ end
 
 function self:SetOperator (operator)
 	self.Operator = operator
-	
-	self.EvaluationFunction = EvaluationFunctions [operator] or EvaluationFunctions.default
 end
 
 function self:ToString ()

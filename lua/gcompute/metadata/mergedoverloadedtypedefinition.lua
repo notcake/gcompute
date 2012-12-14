@@ -14,6 +14,21 @@ function self:AddSourceOverloadedType (overloadedTypeDefinition)
 	self.SourceOverloadedTypes [#self.SourceOverloadedTypes + 1] = overloadedTypeDefinition
 	
 	for i = 1, overloadedTypeDefinition:GetTypeCount () do
-		self.Types [#self.Types + 1] = overloadedTypeDefinition:GetType (i)
+		local typeDefinition = overloadedTypeDefinition:GetType (i)
+		local typeParameterCount = typeDefinition:GetTypeParameterList ():GetParameterCount ()
+		
+		local mergedTypeDefinition = nil
+		for _, existingTypeDefinition in ipairs (self.Types) do
+			if existingTypeDefinition:GetTypeParameterList ():GetParameterCount () == typeParameterCount then
+				mergedTypeDefinition = existingTypeDefinition
+			end
+		end
+		if not mergedTypeDefinition then
+			mergedTypeDefinition = GCompute.MergedTypeDefinition (self:GetName (), typeDefinition:GetTypeParameterList ())
+			mergedTypeDefinition:SetContainingNamespace (self:GetContainingNamespace ())
+			self.Types [#self.Types + 1] = mergedTypeDefinition
+		end
+		
+		mergedTypeDefinition:AddSourceType (typeDefinition)
 	end
 end

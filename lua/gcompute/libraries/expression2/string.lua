@@ -1,6 +1,12 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 local String = Expression2:AddType ("string")
+String:SetNullable (false)
 String:SetPrimitive (true)
+String:SetDefaultValueCreator (
+	function ()
+		return ""
+	end
+)
 	
 Expression2:AddFunction ("format", { { "string", "formatString" }, { "object", "..." } })
 	:SetReturnType ("string")
@@ -11,11 +17,17 @@ Expression2:AddFunction ("print", { { "object", "..." } })
 		function (...)
 			local t = {...}
 			for k, v in ipairs (t) do
-				t [k] = tostring (v)
+				t [k] = v:ToString ()
 			end
 			executionContext:GetProcess ():GetStdOut ():WriteLine (table.concat (t, "\t"))
 		end
 	)
+
+String:AddFunction ("ToString")
+	:SetNativeFunction (tostring)
+	
+String:AddFunction ("toString")
+	:SetNativeFunction (tostring)
 
 String:AddFunction ("upper")
 	:SetReturnType ("string")

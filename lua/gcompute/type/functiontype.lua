@@ -28,10 +28,19 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 	local i = 1
 	while argumentTypeArrayIndex <= #argumentTypeArray do
 		local argumentType = argumentTypeArray [argumentTypeArrayIndex]:UnwrapAlias ()
-		if not argumentType:CanConvertTo (parameterList:GetParameterType (i), GCompute.TypeConversionMethod.ImplicitConversion) then
+		local canConvert, conversionType = argumentType:CanConvertTo (parameterList:GetParameterType (i), GCompute.TypeConversionMethod.ImplicitConversion)
+		if not canConvert then
 			print ("Argument " .. argumentTypeArrayIndex .. ", " .. i .. ": " .. argumentTypeArray [argumentTypeArrayIndex]:GetFullName () .. " and " .. parameterList:GetParameterType (i):GetFullName ())
 			return false, -math.huge
 		end
+		
+		if conversionType == GCompute.TypeConversionMethod.Identity then
+		elseif conversionType == GCompute.TypeConversionMethod.Downcast then
+			compatibility = compatibility - 1
+		else
+			compatibility = compatibility - 1000
+		end
+		
 		if i == parameterCount then
 			-- vararg function, match remaining given parameter types against final defined parameter type
 		else

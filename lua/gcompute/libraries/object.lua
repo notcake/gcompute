@@ -1,13 +1,8 @@
 local Global = GCompute.GlobalNamespace
 local Object = Global:AddType ("Object")
+Object:SetIsTop (true)
 
-GCompute.Types.Top = Object
-GCompute.Types.Object = Object
-GCompute.Types.Namespace = Object
-
-function Object:IsTop ()
-	return true
-end
+Global:GetTypeSystem ():SetObject (Object)
 
 Object:AddFunction ("GetHashCode")
 	:SetReturnType ("int")
@@ -21,21 +16,18 @@ Object:AddFunction ("GetType")
 	:SetReturnType ("Type")
 	:SetNativeFunction (
 		function (self)
-			return Object
+			return self:GetType ()
 		end
 	)
-	
+
 Object:AddFunction ("ToString")
 	:SetReturnType ("string")
 	:SetNativeFunction (
 		function (self)
-			if type (self) == "table" and type (self.ToString) == "function" then
-				return self:ToString ()
-			end
-			return tostring (self)
+			return "{Object}"
 		end
 	)
-	
+
 Object:AddFunction ("operator==", { { "Object", "other" } })
 	:SetReturnType ("bool")
 	:SetNativeFunction (

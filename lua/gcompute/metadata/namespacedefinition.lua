@@ -189,7 +189,7 @@ function self:GetRuntimeName (invalidParameter)
 end
 
 function self:GetType ()
-	return GCompute.Types.Namespace
+	return self:GetTypeSystem ():GetObject ()
 end
 
 function self:GetUniqueNameMap ()

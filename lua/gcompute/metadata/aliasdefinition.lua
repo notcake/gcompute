@@ -15,6 +15,10 @@ function self:ctor (name, objectName)
 		self.DeferredObjectResolution = objectName
 		self.ObjectName = objectName:GetName ()
 		self.Object = objectName:IsResolved () and objectName:GetObject () or nil
+	elseif objectName:IsObjectDefinition () or
+	       objectName:IsType () then
+		self.ObjectName = objectName:GetFullName ()
+		self.Object = objectName
 	else
 		GCompute.Error ("AliasDefinition constructed with unknown object.")
 	end

@@ -5,8 +5,10 @@ GCompute.FunctionDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDef
 -- @param parameterList A ParameterList describing the parameters the function takes or nil if the function takes no parameters
 -- @param typeParameterList A TypeParameterList describing the type parameters the function takes or nil if the function is non-type-parametric
 function self:ctor (name, parameterList, typeParameterList)
-	self.ParameterList = parameterList or GCompute.EmptyParameterList
 	self.TypeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
+	self.TypeArgumentList = GCompute.EmptyTypeArgumentList
+	
+	self.ParameterList = parameterList or GCompute.EmptyParameterList
 	self.ReturnType = GCompute.DeferredObjectResolution ("void", GCompute.ResolutionObjectType.Type)
 	
 	if #self.ParameterList > 0 then
@@ -24,6 +26,11 @@ function self:ctor (name, parameterList, typeParameterList)
 	
 	self.NativeString = nil
 	self.NativeFunction = nil
+	
+	-- Type parameters
+	self.TypeParametricFunctionDefinition = self
+	self.TypeCurriedDefinitions = GCompute.WeakValueTable ()
+	self.TypeCurryerFunction = GCompute.NullCallback
 end
 
 function self:BuildParameterNamespace ()
@@ -32,13 +39,21 @@ function self:BuildParameterNamespace ()
 	
 	self.ParameterNamespace:Clear ()
 	self.ParameterNamespace:SetContainingNamespace (self:GetContainingNamespace ())
+	self.ParameterNamespace:SetContainingFunction (self)
 	
 	for parameterType, parameterName, isVarArgs in self:GetParameterList ():GetEnumerator () do
 		self.ParameterNamespace:AddMemberVariable (parameterName)
 			:SetType (parameterType)
 	end
-	for parameterName in self:GetTypeParameterList ():GetEnumerator () do
-		self.ParameterNamespace:AddTypeParameter (parameterName)
+	for i = 1, self:GetTypeParameterList ():GetParameterCount () do
+		local argument = self:GetTypeArgumentList () and self:GetTypeArgumentList ():GetArgument (i) or nil
+		if argument then
+			self.ParameterNamespace:AddAlias (self:GetTypeParameterList ():GetParameterName (i), argument)
+		else
+			self.ParameterNamespace:AddTypeParameter (self:GetTypeParameterList ():GetParameterName (i))
+				:SetDeclaringFunction (self)
+				:SetTypeParameterPosition (i)
+		end
 	end
 end
 
@@ -54,6 +69,38 @@ end
 
 function self:CreateRuntimeObject ()
 	return self
+end
+
+function self:CreateTypeCurriedDefinition (typeArgumentList)
+	if not self:HasUnboundLocalTypeParameters () then return self end
+	
+	if self.TypeArgumentList:GetArgumentCount () ~= 0 then
+		-- This is not the root type parametric FunctionDefinition
+		-- Append the given TypeArgumentList to our TypeArgumentList
+		-- and ask the root type parametric FunctionDefinition to
+		-- create the type curried FunctionDefinition for us
+		local fullTypeArgumentList = self.TypeArgumentList:Clone ()
+		for i = 1, typeArgumentList:GetArgumentCount () do
+			fullTypeArgumentList:AddArgument (typeArgumentList:GetArgument (i))
+		end
+		fullTypeArgumentList:Truncate (self.TypeParameterList:GetParameterCount ())
+		
+		return self:GetTypeParametricFunctionDefinition ():CreateTypeCurriedDefinition (fullTypeArgumentList)
+	end
+	
+	-- Check for it in the cache of type curried definitions
+	local typeArgumentListId = typeArgumentList:ToString ()
+	if self.TypeCurriedDefinitions [typeArgumentListId] and
+	   self.TypeCurriedDefinitions [typeArgumentListId]:GetTypeArgumentList ():Equals (typeArgumentList) then
+		return self.TypeCurriedDefinitions [typeArgumentListId]
+	end
+	
+	local typeCurriedFunctionDefinition = GCompute.TypeCurriedFunctionDefinition (self:GetName (), self:GetParameterList (), self:GetTypeParameterList ())
+	self.TypeCurriedDefinitions [typeArgumentListId] = typeCurriedFunctionDefinition
+	typeCurriedFunctionDefinition:SetTypeArgumentList (typeArgumentList)
+	typeCurriedFunctionDefinition:SetTypeParametricFunctionDefinition (self)
+	typeCurriedFunctionDefinition:InitializeTypeCurriedFunctionDefinition ()
+	return typeCurriedFunctionDefinition
 end
 
 --- Gets the FunctionDeclaration syntax tree node corresponding to this function
@@ -121,10 +168,39 @@ function self:GetType ()
 	end
 end
 
+--- Gets the type argument list of this function
+-- @return The type argument list of this function
+function self:GetTypeArgumentList ()
+	return self.TypeArgumentList
+end
+
+function self:GetTypeCurryerFunction ()
+	return self.TypeCurryerFunction
+end
+
 --- Gets the type parameter list of this function
 -- @return The type parameter list of this function
 function self:GetTypeParameterList ()
 	return self.TypeParameterList
+end
+
+function self:GetTypeParametricFunctionDefinition ()
+	return self.TypeParametricFunctionDefinition
+end
+
+--- Gets the number of unbound local type parameters of this FunctionDefinition
+-- @return The number of unbound local type parameters of this FunctionDefinition
+function self:GetUnboundLocalTypeParameterCount ()
+	if self.TypeParameterList:IsEmpty () then return 0 end
+	if self.TypeParameterList:GetParameterCount () <= self.TypeArgumentList:GetArgumentCount () then return 0 end
+	return self.TypeParameterList:GetParameterCount () - self.TypeArgumentList:GetArgumentCount ()
+end
+
+--- Returns true if this FunctionDefinition has unbound local type parameters
+-- @return A boolean indicating whether this FunctionDefinition has unbound local type parameters
+function self:HasUnboundLocalTypeParameters ()
+	if self.TypeParameterList:IsEmpty () then return false end
+	return self.TypeParameterList:GetParameterCount () > self.TypeArgumentList:GetArgumentCount ()
 end
 
 function self:InvalidateParameterNamespace ()
@@ -198,6 +274,18 @@ function self:SetReturnType (returnType)
 		GCompute.Error ("FunctionDefinition:SetReturnType : returnType was not a string, DeferredObjectResolution or Type (" .. returnType:ToString () .. ")")
 	end
 	return self
+end
+
+function self:SetTypeArgumentList (typeArgumentList)
+	self.TypeArgumentList = typeArgumentList
+end
+
+function self:SetTypeCurryerFunction (typeCurryerFunction)
+	self.TypeCurryerFunction = typeCurryerFunction
+end
+
+function self:SetTypeParametricFunctionDefinition (typeParametricFunctionDefinition)
+	self.TypeParametricFunctionDefinition = typeParametricFunctionDefinition
 end
 
 --- Returns a string representation of this function

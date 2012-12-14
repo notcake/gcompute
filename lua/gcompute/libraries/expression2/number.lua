@@ -1,6 +1,12 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 local Number = Expression2:AddType ("number")
+Number:SetNullable (false)
 Number:SetPrimitive (true)
+Number:SetDefaultValueCreator (
+	function ()
+		return 0
+	end
+)
 
 Number:AddConstructor ({ { "int", "n" } })
 	:SetNativeFunction (
@@ -8,6 +14,12 @@ Number:AddConstructor ({ { "int", "n" } })
 			return n
 		end
 	)
+
+Number:AddFunction ("ToString")
+	:SetNativeFunction (tostring)
+	
+Number:AddFunction ("toString")
+	:SetNativeFunction (tostring)
 
 Number:AddFunction ("toHex")
 	:SetReturnType ("string")

@@ -4,7 +4,10 @@ GCompute.ObjectDefinition = GCompute.MakeConstructor (self, GCompute.IObject)
 --- @param name The name of this object
 function self:ctor (name)
 	self.Name = name
+	
+	-- Hierarchy
 	self.ContainingNamespace = nil
+	self.DeclaringType = nil
 	
 	self.Metadata = nil
 	
@@ -38,6 +41,14 @@ function self:GetContainingNamespace ()
 	return self.ContainingNamespace
 end
 
+function self:GetCorrespondingDefinition (globalNamespace)
+	GCompute.Error ("ObjectDefinition:GetCorrespondingDefinition : Not implemented (" .. self:GetFullName () .. ")")
+end
+
+function self:GetDeclaringType ()
+	return self.DeclaringType
+end
+
 function self:GetDisplayText ()
 	return self:GetName ()
 end
@@ -46,6 +57,17 @@ end
 -- @return The location of this object
 function self:GetFullName ()
 	return self:GetLocation ()
+end
+
+function self:GetFullRuntimeName ()
+	local containingNamespace = self:GetContainingNamespace ()
+	if not containingNamespace then return self:GetRuntimeName () end
+	
+	if containingNamespace:GetContainingNamespace () then
+		return containingNamespace:GetFullRuntimeName () .. "." .. self:GetRuntimeName ()
+	end
+	
+	return self:GetRuntimeName ()
 end
 
 --- Gets the location of this object
@@ -74,6 +96,24 @@ function self:GetName ()
 	return self.Name
 end
 
+function self:GetRootNamespace ()
+	if not self:GetContainingNamespace () and self:IsNamespace () then
+		return self
+	end
+	return self:GetContainingNamespace ():GetRootNamespace ()
+end
+
+function self:GetRuntimeName (invalidParameter)
+	if invalidParameter then
+		GCompute.Error ("MergedNamespaceDefinition:GetRuntimeName : This function does not do what you think it does.")
+	end
+	
+	local containingNamespace = self:GetContainingNamespace ()
+	if not containingNamespace then return self:GetShortName () end
+	
+	return containingNamespace:GetUniqueNameMap ():GetObjectName (self, self:GetShortName ())
+end
+
 --- Gets the short name of this object
 -- @return The short name of this object
 function self:GetShortName ()
@@ -85,6 +125,11 @@ end
 function self:GetType ()
 	GCompute.Error (self.Name .. ":GetType : Not implemented.")
 	return nil
+end
+
+function self:GetTypeSystem ()
+	if not self:GetContainingNamespace () then return nil end
+	return self:GetContainingNamespace ():GetTypeSystem ()
 end
 
 --- Gets whether this object is inaccessible from code in other files
@@ -158,6 +203,12 @@ end
 -- @param containingNamespaceDefinition The NamespaceDefinition containing this object
 function self:SetContainingNamespace (containingNamespaceDefinition)
 	self.ContainingNamespace = containingNamespaceDefinition
+	return self
+end
+
+function self:SetDeclaringType (declaringType)
+	self.DeclaringType = declaringType
+	return self
 end
 
 --- Sets whether this object is inaccessible from code in other files

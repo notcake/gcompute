@@ -72,6 +72,7 @@ function self:Compile (callback)
 			for sourceFile in self:GetEnumerator () do
 				self.NamespaceDefinition:AddSourceNamespace (sourceFile:GetCompilationUnit ():GetNamespaceDefinition ())
 			end
+			self.NamespaceDefinition:SetTypeSystem (GCompute.GlobalNamespace:GetTypeSystem ():Clone (self.NamespaceDefinition))
 			GCompute.UniqueNameAssigner ():Process (self.NamespaceDefinition)
 			callback ()
 		end
@@ -85,7 +86,9 @@ function self:Compile (callback)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
 					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:PreInferTypes (callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
+					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
 					
 					-- Runtime preparation
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("StaticMemberToucher", GCompute.StaticMemberToucher, callback) end)

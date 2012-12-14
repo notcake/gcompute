@@ -63,11 +63,53 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			function ()
 				if not self:ValidateCode (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId (), compilerStdOut, compilerStdErr) then return end
 				local f = CompileString (codeEditor:GetText (), codeEditor:GetSyntaxHighlighter ():GetSourceFile ():GetId ())
+				
+				local _ErrorNoHalt = ErrorNoHalt
+				local _Msg         = Msg
+				local _MsgN        = MsgN
+				local _print       = print
+				
+				local function makeOutputter (outputFunction)
+					return function (...)
+						local args = {...}
+						for i = 1, table.maxn (args) do
+							args [i] = tostring (args [i])
+						end
+						outputFunction (table.concat (args, "\t"))
+					end
+				end
+				ErrorNoHalt = makeOutputter (
+					function (text)
+						stdErr:WriteLine (text)
+						_ErrorNoHalt (text)
+					end
+				)
+				Msg = makeOutputter (
+					function (text)
+						stdOut:WriteColor (text, GLib.Colors.SandyBrown)
+					end
+				)
+				MsgN = makeOutputter (
+					function (text)
+						stdOut:WriteColor (text .. "\n", GLib.Colors.SandyBrown)
+					end
+				)
+				print = makeOutputter (
+					function (text)
+						stdOut:WriteLine (text)
+					end
+				)
+				
 				xpcall (f,
 					function (message)
 						stdErr:WriteLine (message)
 					end
 				)
+				
+				ErrorNoHalt = _ErrorNoHalt
+				print       = _print
+				Msg         = _Msg
+				MsgN        = _MsgN
 			end
 		)
 	menu:AddOption ("Run on server")

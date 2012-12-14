@@ -98,17 +98,6 @@ function self:GetEnumerator ()
 	end
 end
 
-function self:GetFullRuntimeName ()
-	local containingNamespace = self:GetContainingNamespace ()
-	if not containingNamespace then return self:GetRuntimeName () end
-	
-	if containingNamespace:GetContainingNamespace () then
-		return containingNamespace:GetFullRuntimeName () .. "." .. self:GetRuntimeName ()
-	end
-	
-	return self:GetRuntimeName ()
-end
-
 --- Returns the definition object of a member object
 -- @param name The name of the member object
 -- @return The definition object for the given member object
@@ -134,19 +123,8 @@ function self:GetNamespaceType ()
 	return self.NamespaceType
 end
 
-function self:GetRuntimeName (invalidParameter)
-	if invalidParameter then
-		GCompute.Error ("MergedNamespaceDefinition:GetRuntimeName : This function does not do what you think it does.")
-	end
-	
-	local containingNamespace = self:GetContainingNamespace ()
-	if not containingNamespace then return self:GetShortName () end
-	
-	return containingNamespace:GetUniqueNameMap ():GetObjectName (self)
-end
-
 function self:GetType ()
-	return GCompute.Types.Namespace
+	return self:GetTypeSystem ():GetObject ()
 end
 
 function self:GetUniqueNameMap ()
@@ -194,16 +172,19 @@ function self:ResolveMember (name)
 		self.Members [name] = matchObjects [1]
 	elseif memberType == GCompute.MemberTypes.Method then
 		self.Members [name] = GCompute.MergedOverloadedFunctionDefinition (name)
+		self.Members [name]:SetContainingNamespace (self)
 		for _, overloadedFunctionDefinition in ipairs (matchObjects) do
 			self.Members [name]:AddSourceOverloadedFunction (overloadedFunctionDefinition)
 		end
 	elseif memberType == GCompute.MemberTypes.Type then
 		self.Members [name] = GCompute.MergedOverloadedTypeDefinition (name)
+		self.Members [name]:SetContainingNamespace (self)
 		for _, overloadedTypeDefinition in ipairs (matchObjects) do
 			self.Members [name]:AddSourceOverloadedType (overloadedTypeDefinition)
 		end
 	elseif memberType == GCompute.MemberTypes.Namespace then
 		self.Members [name] = GCompute.MergedNamespaceDefinition (name)
+		self.Members [name]:SetContainingNamespace (self)
 		self.Members [name]:SetNamespaceType (matchObjects [1]:GetNamespaceType ())
 		for _, namespaceDefinition in ipairs (matchObjects) do
 			self.Members [name]:AddSourceNamespace (namespaceDefinition)
@@ -215,7 +196,6 @@ function self:ResolveMember (name)
 	end
 	
 	if self.Members [name] then
-		self.Members [name]:SetContainingNamespace (self)
 		self.Members [name]:SetMetadata (self.MemberMetadata [name])
 	end
 end

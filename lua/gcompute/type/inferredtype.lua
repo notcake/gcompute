@@ -84,7 +84,7 @@ function self:Equals (other)
 end
 
 function self:GetBaseTypes ()
-	return { GCompute.Types.Object }
+	return { self:GetTypeSystem ():GetObject () }
 end
 
 function self:GetFullName ()
@@ -92,7 +92,7 @@ function self:GetFullName ()
 end
 
 function self:GetTypeDefinition ()
-	return GCompute.Types.Object:GetTypeDefinition ()
+	return self:GetTypeSystem ():GetObject ():GetTypeDefinition ()
 end
 
 function self:IsInferredType ()

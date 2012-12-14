@@ -3,20 +3,26 @@ GCompute.UniqueNameMap = GCompute.MakeConstructor (self)
 
 function self:ctor ()
 	self.NameMap = GCompute.WeakKeyTable ()
+	
+	self.ChainedNameMaps = {}
 	self.UsedNames = {}
 end
 
-function self:AddObject (object)
+function self:AddChainedNameMap (uniqueNameMap)
+	self.ChainedNameMaps [uniqueNameMap] = true
+end
+
+function self:AddObject (object, preferredName)
 	if self.NameMap [object] then return end
 	
-	local baseName = object:GetName ()
+	local baseName = preferredName or object:GetName ()
 	
-	if not self.UsedNames [baseName] then
+	if not self:IsNameInUse (baseName) then
 		self.NameMap [object] = baseName
 		self.UsedNames [baseName] = true
 	else
 		local i = 0
-		while self.UsedNames [baseName .. "_" .. tostring (i)] do
+		while self:IsNameInUse (baseName .. "_" .. tostring (i)) do
 			i = i + 1
 		end
 		self.NameMap [object] = baseName .. "_" .. tostring (i)
@@ -40,12 +46,20 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
-function self:GetObjectName (object)
+function self:GetObjectName (object, preferredName)
 	if not self.NameMap [object] then
-		self:AddObject (object)
+		self:AddObject (object, preferredName)
 	end
 	
 	return self.NameMap [object]
+end
+
+function self:IsNameInUse (name)
+	if self.UsedNames [name] then return true end
+	for uniqueNameMap, _ in pairs (self.ChainedNameMaps) do
+		if uniqueNameMap:IsNameInUse (name) then return true end
+	end
+	return false
 end
 
 function self:ReserveName (name)

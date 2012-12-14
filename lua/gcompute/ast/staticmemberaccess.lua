@@ -38,6 +38,19 @@ function self:ExecuteAsAST (astRunner, state)
 	end
 end
 
+function self:GetChildEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self.LeftExpression
+		elseif i == 2 then
+			return self.TypeArgumentList
+		end
+		return nil
+	end
+end
+
 function self:GetLeftExpression ()
 	return self.LeftExpression
 end
@@ -60,6 +73,27 @@ end
 
 function self:GetTypeArgumentList ()
 	return self.TypeArgumentList
+end
+
+function self:ResolveMemberDefinition (globalNamespace)
+	if self.MemberDefinition then return self.MemberDefinition end
+	
+	local leftNamespace = globalNamespace
+	if self.LeftExpression then
+		leftNamespace = self.LeftExpression:ResolveMemberDefinition (globalNamespace)
+	end
+	
+	if not leftNamespace then
+		GCompute.Error ("StaticMemberAccess:ResolveMemberDefinition : Left namespace is of " .. self:ToString () .. " is nil.")
+		return nil
+	end
+	self.MemberDefinition = leftNamespace:GetMember (self:GetName ())
+	
+	if self.TypeArgumentList and not self.TypeArgumentList:IsEmpty () then
+		GCompute.Error ("StaticMemberAccess:ResolveMemberDefinition : This StaticMemberAccess has a TypeArgumentList.")
+	end
+	
+	return self.MemberDefinition
 end
 
 function self:SetLeftExpression (leftExpression)

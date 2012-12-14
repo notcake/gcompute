@@ -5,6 +5,7 @@ GCompute.CompilerPassType = GCompute.Enum (
 		Parser               = 3,
 		PostParser           = 4,
 		NamespaceBuilder     = 5,
-		PostNamespaceBuilder = 6
+		PostNamespaceBuilder = 6,
+		PreTypeInference     = 7
 	}
 )

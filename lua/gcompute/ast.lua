@@ -64,6 +64,10 @@ include ("ast/functioncall.lua")
 include ("ast/memberfunctioncall.lua")
 include ("ast/new.lua")
 
+-- type casts
+include ("ast/box.lua")
+include ("ast/unbox.lua")
+
 -- types (these are also expressions)
 include ("ast/functiontype.lua")
 
@@ -73,6 +77,7 @@ include ("ast/identifier.lua")
 include ("ast/nameindex.lua")
 include ("ast/parametricname.lua")
 
+include ("ast/arrayindexassignment.lua")
 include ("ast/staticmemberaccess.lua")
 -- include ("ast/instancememberaccess.lua") -- TODO
 -- include ("ast/localaccess.lua")          -- TODO

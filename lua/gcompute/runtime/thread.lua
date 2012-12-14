@@ -28,6 +28,13 @@ function self:ctor (process)
 	self.LastExecutionTime = 0
 	
 	GCompute.EventProvider (self)
+	
+	self.ExceptionHandler = function (exception)
+		self:Terminate ()
+		
+		self:GetProcess ():GetStdErr ():WriteLine (tostring (exception))
+		self:GetProcess ():GetStdErr ():WriteLine (GCompute.StackTrace ())
+	end
 end
 
 function self:GetCpuTime ()
@@ -59,17 +66,22 @@ function self:RunSome ()
 	if not self.Started then return end
 	if self.Terminated then return end
 	
+	-- Set up execution environment
 	local _executionContext = _G.executionContext
 	_G.executionContext = self:GetExecutionContext ()
 	
+	-- Execute for 1 ms
 	local startTime = SysTime ()
 	repeat
-		executionContext:PopResumeFunction () ()
+		local executionFunction = executionContext:PopResumeFunction ()
+		xpcall (executionFunction, self.ExceptionHandler)
 	until not self:IsRunning () or SysTime () - startTime >= 0.001
 	
+	-- Execution stats
 	self.CpuTime = SysTime () - startTime
 	self.LastExecutionTime = SysTime ()
 	
+	-- Tear down execution environment
 	_G.executionContext = _executionContext
 end
 

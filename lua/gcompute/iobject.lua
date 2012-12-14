@@ -39,3 +39,16 @@ end
 function self:UnwrapAlias ()
 	return self
 end
+
+function self:UnwrapAliasAndReference ()
+	local lastUnwrapped = nil
+	local unwrapped = self
+	repeat
+		lastUnwrapped = unwrapped
+		unwrapped = unwrapped:UnwrapAlias ()
+		if unwrapped:IsType () then
+			unwrapped = unwrapped:UnwrapReference ()
+		end
+	until lastUnwrapped == unwrapped
+	return unwrapped
+end

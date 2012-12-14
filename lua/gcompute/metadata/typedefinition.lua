@@ -16,11 +16,18 @@ function self:ctor (name, typeParameterList)
 		self.TypeParameterList = GCompute.TypeParameterList (self.TypeParameterList)
 	end
 	
-	for name in self.TypeParameterList:GetEnumerator () do
-		self:AddAlias (name, "Object")
+	for i = 1, self:GetTypeParameterList ():GetParameterCount () do
+		self:AddTypeParameter (self:GetTypeParameterList ():GetParameterName (i))
+			:SetDeclaringType (self)
+			:SetTypeParameterPosition (i)
 	end
 	
+	-- Default value
+	self.DefaultValueCreator = nil
 	self:SetNullable (true)
+	
+	self.FunctionTable = {}
+	self.FunctionTableValid = false
 end
 
 --- Adds a base type to this type definition
@@ -41,6 +48,8 @@ function self:AddBaseType (baseType)
 		elseif self:IsBaseType (baseType) then
 			GCompute.Error ("TypeDefinition:AddBaseType : " .. baseType:GetFullName () .. " is already a base type of " .. self:GetFullName () .. ".")
 			return
+		elseif baseType:UnwrapAlias ():IsTypeDefinition () then
+			self:GetUniqueNameMap ():AddChainedNameMap (baseType:GetUniqueNameMap ())
 		end
 	end
 	
@@ -103,6 +112,49 @@ function self:AddNamespace (name)
 	return self:AddType (name)
 end
 
+function self:BuildFunctionTable ()
+	self.FunctionTableValid = true
+	
+	self.FunctionTable.Static = {}
+	self.FunctionTable.Virtual = {}
+	
+	-- Copy in base function tables
+	for baseType in self:GetBaseTypeEnumerator () do
+		local baseFunctionTable = baseType:GetFunctionTable ()
+		for typeName, functionTable in pairs (baseFunctionTable.Static) do
+			self.FunctionTable.Static [typeName] = self.FunctionTable.Static [typeName] or {}
+			for functionName, functionTableEntry in pairs (functionTable) do
+				self.FunctionTable.Static [typeName] [functionName] = functionTableEntry
+			end
+		end
+		for functionName, functionTableEntry in pairs (baseFunctionTable.Virtual) do
+			self.FunctionTable.Virtual [functionName] = functionTableEntry
+		end
+	end
+	
+	local fullName = self:GetFullName ()
+	self.FunctionTable.Static [fullName] = self.FunctionTable.Static [fullName] or {}
+	for _, memberDefinition, _ in self:GetEnumerator () do
+		if memberDefinition:IsOverloadedFunctionDefinition () then
+			for functionDefinition in memberDefinition:GetEnumerator () do
+				self.FunctionTable.Static [fullName] [functionDefinition:GetRuntimeName ()] = functionDefinition:GetNativeFunction () or functionDefinition
+			end
+		elseif memberDefinition:IsFunctionDefinition () then
+			self.FunctionTable.Static [fullName] [memberDefinition:GetRuntimeName ()] = memberDefinition:GetNativeFunction () or memberDefinition
+		end
+	end
+	for explicitCast in self:GetExplicitCastEnumerator () do
+		self.FunctionTable.Static [fullName] [explicitCast:GetRuntimeName ()] = explicitCast:GetNativeFunction () or explicitCast
+	end
+	for implicitCast in self:GetImplicitCastEnumerator () do
+		self.FunctionTable.Static [fullName] [implicitCast:GetRuntimeName ()] = explicitCast:GetNativeFunction () or implicitCast
+	end
+	
+	for functionName, functionTableEntry in pairs (self.FunctionTable.Static [fullName]) do
+		self.FunctionTable.Virtual [functionName] = functionTableEntry
+	end
+end
+
 function self:CanConstructFrom (sourceType)
 	local argumentTypeArray = { sourceType }
 	for _, constructorDefinition in ipairs (self.Constructors) do
@@ -133,23 +185,74 @@ end
 
 function self:CreateDefaultValue ()
 	if self:IsNullable () then return nil end
-	return nil
+	if self:IsNativelyAllocated () then
+		if self.DefaultValueCreator then
+			return self.DefaultValueCreator (self)
+		else
+			-- Find a nullary constructor
+			for constructor in self:GetConstructorEnumerator () do
+				if constructor:GetParameterList ():MatchesArgumentCount (0) then
+					return constructor:GetNativeFunction () ()
+				end
+			end
+			GCompute.Error ("TypeDefinition:CreateDefaultValue : No nullary constructor or default value creator found for non-nullable natively allocated type (" .. self:GetFullName () .. ")")
+			return
+		end
+	end
+	GCompute.Error ("TypeDefinition:CreateDefaultValue : Not implemented for non-nullable non-natively allocated types (" .. self:GetFullName () .. ").")
 end
 
 function self:CreateRuntimeObject ()
-	return {}
+	return
+	{
+		[".Type"] = self
+	}
 end
 
 function self:Equals (otherType)
 	otherType = otherType:UnwrapAlias ()
 	if self == otherType then return true end
+	if self:GetFullName () == otherType:GetFullName () then return true end
 	return false
+end
+
+function self:GetBaseType (index)
+	if #self.BaseTypes == 0 then
+		if index == 1 and not self:IsTop () and not self:IsBottom () then
+			return self:GetTypeSystem ():GetObject ()
+		end
+		return nil
+	end
+	return self.BaseTypes [index]
+end
+
+function self:GetBaseTypeCount ()
+	if #self.BaseTypes ~= 0 then return self.BaseTypes end
+	if self:IsTop () or self:IsBottom () then return 0 end
+	return 1
+end
+
+function self:GetBaseTypeEnumerator ()
+	local i = 0
+	if #self.BaseTypes == 0 then
+		return function ()
+			i = i + 1
+			if i == 1 and not self:IsTop () and not self:IsBottom () then
+				return self:GetTypeSystem ():GetObject ()
+			end
+			return nil
+		end
+	end
+	return function ()
+		i = i + 1
+		return self.BaseTypes [i]
+	end
 end
 
 function self:GetBaseTypes ()
 	if #self.BaseTypes == 0 then
-		if self:IsTop () then return {} end
-		return { GCompute.Types.Top }
+		if self:IsTop () or self:IsBottom () then return {} end
+		return { self:GetTypeSystem ():GetObject () }
 	end
 	return self.BaseTypes
 end
@@ -170,6 +273,73 @@ function self:GetConstructorEnumerator ()
 	end
 end
 
+function self:GetCorrespondingDefinition (globalNamespace)
+	if not self:GetContainingNamespace () then
+		return globalNamespace
+	end
+	
+	local leftNamespace = self:GetContainingNamespace ():GetCorrespondingDefinition (globalNamespace)
+	local memberDefinition = leftNamespace:GetMember (self:GetName ())
+	if memberDefinition:IsOverloadedTypeDefinition () then
+		local typeParameterCount = self:GetTypeParameterList ():GetParameterCount ()
+		for i = 1, memberDefinition:GetTypeCount () do
+			if memberDefinition:GetType (i):GetTypeParameterList ():GetParameterCount () == typeParameterCount then
+				return memberDefinition:GetType (i)
+			end
+		end
+		GCompute.PrintStackTrace ()
+		return nil
+	elseif memberDefinition:IsTypeDefinition () then
+		return memberDefinition
+	else
+		GCompute.PrintStackTrace ()
+		return nil
+	end
+end
+
+function self:GetDefaultValueCreator ()
+	return self.DefaultValueCreator
+end
+
+function self:GetExplicitCast (index)
+	return self.ExplicitCasts [index]
+end
+
+function self:GetExplicitCastCount ()
+	return #self.ExplicitCasts
+end
+
+function self:GetExplicitCastEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.ExplicitCasts [i]
+	end
+end
+
+function self:GetFunctionTable ()
+	if not self.FunctionTableValid then
+		self:BuildFunctionTable ()
+	end
+	return self.FunctionTable
+end
+
+function self:GetImplicitCast (index)
+	return self.ImplicitCasts [index]
+end
+
+function self:GetImplicitCastCount ()
+	return #self.ImplicitCasts
+end
+
+function self:GetImplicitCastEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.ImplicitCasts [i]
+	end
+end
+
 --- Gets the short name of this type
 -- @return The short name of this type
 function self:GetShortName ()
@@ -183,7 +353,7 @@ end
 --- Returns the Type of this object
 -- @return A Type representing the type of this object
 function self:GetType ()
-	return GCompute.Types.Type
+	return self:GetTypeSystem ():GetType ()
 end
 
 --- Gets the type definition for this type
@@ -198,12 +368,18 @@ function self:GetTypeParameterList ()
 	return self.TypeParameterList
 end
 
+function self:InvalidateFunctionTable ()
+	self.FunctionTable = {}
+	self.FunctionTableValid = false
+end
+
 --- Returns whether this type derives from baseType
 -- @param baseType The base type to be checked
 -- @return A boolean indicating whether this type derives from baseType
 function self:IsBaseType (baseType)
 	baseType = baseType:UnwrapAlias ()
-	if baseType:GetFullName () == "Object" then return true end
+	if self:IsTop () or self:IsBottom () then return false end
+	if #self.BaseTypes == 0 and baseType:IsTop () then return true end
 	
 	for _, type in ipairs (self.BaseTypes) do
 		if type:Equals (baseType) or type:IsBaseType (baseType) then
@@ -259,6 +435,9 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 				GCompute.Error ("TypeDefinition:ResolveTypes : " .. baseType:GetFullName () .. " is already a base type of " .. self:GetFullName () .. ".")
 			else
 				self.BaseTypes [k] = baseType:GetObject ()
+				if self.BaseTypes [k]:UnwrapAlias ():IsTypeDefinition () then
+					self:GetUniqueNameMap ():AddChainedNameMap (self.BaseTypes [k]:GetUniqueNameMap ())
+				end
 			end
 		end
 	end
@@ -284,15 +463,21 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	end
 end
 
+function self:SetDefaultValueCreator (defaultValueCreator)
+	self.DefaultValueCreator = defaultValueCreator
+end
+
 --- Returns a string representation of this type
 -- @return A string representing this type
 function self:ToString ()
-	local typeDefinition = "[Type] " .. (self:GetName () or "[Unnamed]")
+	local typeDefinition = (self:IsMergedTypeDefinition () and "[Merged Type]" or "[Type]") .. " " .. (self:GetName () or "[Unnamed]")
 	if not self:GetTypeParameterList ():IsEmpty () then
 		typeDefinition = typeDefinition .. self:GetTypeParameterList ():ToString ()
 	end
 	
-	if not self:IsEmpty () then
+	if self:IsEmpty () then
+		typeDefinition = typeDefinition.. " { }"
+	else
 		typeDefinition = typeDefinition .. "\n{\n"
 		local newlineRequired = false
 		

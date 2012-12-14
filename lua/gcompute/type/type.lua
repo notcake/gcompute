@@ -4,6 +4,9 @@ GCompute.Type = GCompute.MakeConstructor (self, GCompute.IObject)
 function self:ctor ()
 	self.Nullable = false
 	
+	self.Bottom = false
+	self.Top = false
+	
 	self.Primitive = false
 	self.NativelyAllocated = false
 end
@@ -18,29 +21,29 @@ function self:CanConvertTo (destinationType, typeConversionMethod)
 	end
 	if not destinationType:IsType () then
 		GCompute.Error ("Type:CanConvertTo : " .. destinationType:ToString () .. " is not a type.")
-		return false
+		return false, GCompute.TypeConversionMethod.None
 	end
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Identity) ~= 0 and
-	   self:Equals (destinationType) then
-		return true
+	   self:UnwrapReference ():Equals (destinationType) then
+		return true, GCompute.TypeConversionMethod.Identity
 	end
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Downcast) ~= 0 and
-	   self:IsBaseType (destinationType) then
-		return true
+	   self:UnwrapReference ():IsBaseType (destinationType) then
+		return true, GCompute.TypeConversionMethod.Downcast
 	end
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.ImplicitCast) ~= 0 and
 	   self:CanImplicitCastTo (destinationType) then
-		return true
+		return true, GCompute.TypeConversionMethod.ImplicitCast
 	end
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.ExplicitCast) ~= 0 and
 	   self:CanExplicitCastTo (destinationType) then
-		return true
+		return true, GCompute.TypeConversionMethod.ExplicitCast
 	end
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Constructor) ~= 0 and
 	   destinationType:CanConstructFrom (self) then
-		return true
+		return true, GCompute.TypeConversionMethod.Constructor
 	end
-	return false
+	return false, GCompute.TypeConversionMethod.None
 end
 
 function self:CanConstructFrom (sourceType)
@@ -86,6 +89,14 @@ function self:GetBaseTypes ()
 	GCompute.Error ("Type:GetBaseTypes : Not implemented for " .. self:ToString ())
 end
 
+function self:GetDeclaringFunction ()
+	return nil
+end
+
+function self:GetDeclaringType ()
+	return nil
+end
+
 function self:GetTypeDefinition ()
 	GCompute.Error ("Type:GetTypeDefinition : Not implemented for " .. self:ToString ())
 end
@@ -104,6 +115,10 @@ end
 
 function self:IsBaseTypeOf (subtype)
 	return subtype:IsBaseType (self)
+end
+
+function self:IsBottom ()
+	return self.Bottom
 end
 
 function self:IsConcreteType ()
@@ -145,7 +160,7 @@ end
 --- Returns whether this type is a superset of all other types
 -- @return A boolean indicating whether this type is a superset of all other types
 function self:IsTop ()
-	return false
+	return self.Top
 end
 
 function self:IsType ()
@@ -160,6 +175,36 @@ end
 
 function self:IsTypeParameter ()
 	return false
+end
+
+function self:RuntimeDowncastTo (destinationType, value)
+	if self:IsNativelyAllocated () == destinationType:IsNativelyAllocated () then return value end
+	if self:IsNativelyAllocated () then
+		-- Box
+		return GCompute.RuntimeObject ():Box (value, self)
+	else
+		-- Unbox
+		return value:Unbox ()
+	end
+end
+
+function self:RuntimeUpcastTo (destinationType, value)
+	if self:IsNativelyAllocated () == destinationType:IsNativelyAllocated () then return value end
+	if self:IsNativelyAllocated () then
+		-- Box
+		return GCompute.RuntimeObject ():Box (value, self)
+	else
+		-- Unbox
+		return value:Unbox ()
+	end
+end
+
+function self:SetIsBottom (isBottom)
+	self.Bottom = isBottom
+end
+
+function self:SetIsTop (isTop)
+	self.Top = isTop
 end
 
 function self:SetNativelyAllocated (nativelyAllocated)
@@ -178,6 +223,10 @@ function self:SetPrimitive (primitive)
 	if self.Primitive and not self:IsNativelyAllocated () then
 		self:SetNativelyAllocated (true)
 	end
+end
+
+function self:SubstituteTypeParameters (substitutionMap)
+	GCompute.Error ("Type:SubstituteTypeParameters : Not implemented for " .. self:ToString ())
 end
 
 --- Unwraps a ReferenceType

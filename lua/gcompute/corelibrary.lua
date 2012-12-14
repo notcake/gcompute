@@ -4,7 +4,11 @@ local Type          = Global:AddType ("Type")
 local Namespace     = Global:AddType ("Namespace")
 local Function      = Global:AddType ("Function")
 local FunctionGroup = Global:AddType ("FunctionGroup")
+
 local Void          = Global:AddType ("Void")
+Void:SetIsBottom (true)
+Global:GetTypeSystem ():SetBottom (Void)
+
 local Boolean       = Global:AddType ("Boolean")
 local Number        = Global:AddType ("Number")
 local Integer       = Global:AddType ("Integer")

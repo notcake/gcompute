@@ -18,6 +18,19 @@ function self:AddArguments (arguments)
 	end
 end
 
+function self:Clone ()
+	local argumentList = GCompute.AST.ArgumentList ()
+	argumentList:SetStartToken (self:GetStartToken ())
+	argumentList:SetEndToken (self:GetEndToken ())
+	
+	argumentList.ArgumentCount = self.ArgumentCount
+	argumentList.Arguments = {}
+	for i = 1, self.ArgumentCount do
+		argumentList.Arguments [i] = self.Arguments [i]
+	end
+	return argumentList
+end
+
 function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
 	if memoryUsageReport:IsCounted (self) then return end
@@ -85,8 +98,22 @@ function self:GetEnumerator ()
 	end
 end
 
+function self:InsertArgument (argumentId, argument)
+	if argumentId < 1 then argumentId = 1 end
+	if argumentId > self.ArgumentCount then argumentId = self.ArgumentCount + 1 end
+	
+	self.ArgumentCount = self.ArgumentCount + 1
+	table.insert (self.Arguments, argumentId, argument)
+end
+
 function self:IsEmpty ()
 	return self.ArgumentCount == 0
+end
+
+function self:RemoveArgument (argumentId)
+	if argumentId > self.ArgumentCount then return end
+	self.ArgumentCount = self.ArgumentCount - 1
+	table.remove (self.Arguments, argumentId)
 end
 
 function self:SetArgument (argumentId, expression)
@@ -95,14 +122,25 @@ function self:SetArgument (argumentId, expression)
 end
 
 function self:ToString ()
-	local parameterList = ""
+	local argumentList = ""
 	for i = 1, self.ArgumentCount do
-		if parameterList ~= "" then
-			parameterList = parameterList .. ", "
+		if argumentList ~= "" then
+			argumentList = argumentList .. ", "
 		end
-		parameterList = parameterList .. (self.Arguments [i] and self.Arguments [i]:ToString () or "[Nothing]")
+		argumentList = argumentList .. (self.Arguments [i] and self.Arguments [i]:ToString () or "[Nothing]")
 	end
-	return "(" .. parameterList .. ")"
+	return "(" .. argumentList .. ")"
+end
+
+function self:ToTypeString ()
+	local argumentList = ""
+	for i = 1, self.ArgumentCount do
+		if argumentList ~= "" then
+			argumentList = argumentList .. ", "
+		end
+		argumentList = argumentList .. (self.Arguments [i] and self.Arguments [i]:GetType () and self.Arguments [i]:GetType ():GetFullName () or "[Nothing]")
+	end
+	return "(" .. argumentList .. ")"
 end
 
 function self:Visit (astVisitor, ...)

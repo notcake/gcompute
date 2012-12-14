@@ -17,6 +17,22 @@ function self:AddArgument (type)
 	self.Arguments [self.ArgumentCount] = type
 end
 
+function self:Clone ()
+	local typeArgumentList = GCompute.TypeArgumentList ()
+	for i = 1, self.ArgumentCount do
+		typeArgumentList:AddArgument (self.Arguments [i])
+	end
+	return typeArgumentList
+end
+
+function self:Equals (otherArgumentList)
+	if self:GetArgumentCount () ~= otherArgumentList:GetArgumentCount () then return false end
+	for i = 1, self.ArgumentCount do
+		if not self.Arguments [i]:UnwrapAlias ():Equals (otherArgumentList:GetArgument (i)) then return false end
+	end
+	return true
+end
+
 function self:GetArgument (argumentId)
 	return self.Arguments [argumentId]
 end
@@ -30,6 +46,7 @@ function self:IsEmpty ()
 end
 
 function self:SetArgument (argumentId, type)
+	if argumentId > self.ArgumentCount then self.ArgumentCount = argumentId end
 	self.Arguments [argumentId] = type
 end
 
@@ -52,5 +69,3 @@ function self:Truncate (argumentCount)
 		self.Arguments [i] = nil
 	end
 end
-
-GCompute.EmptyTypeArgumentList = GCompute.TypeArgumentList ()

@@ -44,6 +44,12 @@ function self:AddParameters (parameterList)
 	end
 end
 
+function self:Clone ()
+	local parameterList = GCompute.ParameterList ()
+	parameterList:AddParameters (self)
+	return parameterList
+end
+
 function self:ComputeMemoryUsage (memoryUsageReport, poolName)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
 	if memoryUsageReport:IsCounted (self) then return end
@@ -163,16 +169,28 @@ function self:SetParameterType (parameterId, parameterType)
 	self.ParameterTypes [parameterId] = parameterType
 end
 
+function self:SubstituteTypeParameters (substitutionMap)
+	local parameterList = self:Clone ()
+	for i = 1, parameterList:GetParameterCount () do
+		local parameterType = parameterList:GetParameterType ()
+		parameterType = parameterType and parameterType:SubstituteTypeParameters (substitutionMap) or nil
+		if parameterType then
+			parameterList:SetParameterType (i, parameterType)
+		end
+	end
+	return parameterList
+end
+
 --- Returns a string representation of this parameter list
 -- @return A string representation of this parameter list
 function self:ToString ()
 	local parameterList = ""
-	for i = 1, self:GetParameterCount () do
+	for i = 1, self.ParameterCount do
 		if parameterList ~= "" then
 			parameterList = parameterList .. ", "
 		end
-		local parameterType = self:GetParameterType (i)
-		local parameterName = self:GetParameterName (i)
+		local parameterType = self.ParameterTypes [i]
+		local parameterName = self.ParameterNames [i]
 		parameterType = parameterType and parameterType:GetFullName () or "[Unknown Type]"
 		parameterList = parameterList .. parameterType
 		if parameterName then
@@ -184,10 +202,10 @@ end
 
 --- Checks for ParameterList type equality. Both ParameterLists must have all their parameter types pre-resolved.
 function self:TypeEquals (otherParameterList)
-	if self:GetParameterCount () ~= otherParameterList:GetParameterCount () then return false end
+	if self.ParameterCount ~= otherParameterList:GetParameterCount () then return false end
 	if self:IsVarArgs () ~= otherParameterList:IsVarArgs () then return false end
-	for i = 1, self:GetParameterCount () do
-		if not self:GetParameterType (i):UnwrapAlias ():Equals (otherParameterList:GetParameterType (i)) then return false end
+	for i = 1, self.ParameterCount do
+		if not self.ParameterTypes [i]:UnwrapAlias ():Equals (otherParameterList:GetParameterType (i)) then return false end
 	end
 	
 	return true

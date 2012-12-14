@@ -5,8 +5,11 @@ GCompute.AST.MemberFunctionCall = GCompute.AST.MakeConstructor (self, GCompute.A
 function self:ctor ()
 	self.LeftExpression = nil
 	self.Identifier = nil
+	self.TypeArgumentList = nil
 	
 	self.ArgumentList = GCompute.AST.ArgumentList ()
+	
+	self.FunctionCall = nil
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -29,73 +32,12 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
-function self:Evaluate (executionContext)
+function self:ExecuteAsAST (astRunner, state)
+	self.FunctionCall:ExecuteAsAST (astRunner, state)
 end
 
-function self:ExecuteAsAST (astRunner, state)
-	-- State 0: Evaluate left
-	-- State 1: Lookup function
-	-- State 2: Evaluate arguments
-	-- State 3: Call
-	if state == 0 then
-		-- Return to state 1
-		astRunner:PushState (1)
-		
-		-- Expression, state 0
-		astRunner:PushNode (self:GetLeftExpression ())
-		astRunner:PushState (0)
-	elseif state == 1 then
-		-- Return to state 2
-		astRunner:PushState (2)
-		
-		local functionCallPlan = self.FunctionCallPlan
-		if functionCallPlan:GetFunctionDefinition () then
-			astRunner:PushValue (functionCallPlan:GetFunctionDefinition ())
-		elseif functionCallPlan:GetFunction () then
-			astRunner:PushValue (functionCallPlan:GetFunction ())
-		else
-			GCompute.Error ("FAIL")
-		end
-	elseif state == 2 then
-		-- Return to state 3
-		astRunner:PushState (3)
-		
-		-- ArgumentList, state 0
-		astRunner:PushNode (self:GetArgumentList ())
-		astRunner:PushState (0)
-	elseif state == 3 then
-		-- Discard FunctionCall
-		astRunner:PopNode ()
-		
-		local arguments = {}
-		for i = self:GetArgumentList ():GetArgumentCount (), 1, -1 do
-			arguments [i] = astRunner:PopValue ()
-		end
-		local functionDefinition = astRunner:PopValue ()
-		local object = astRunner:PopValue ()
-		local func = functionDefinition
-		if type (functionDefinition) == "table" then
-			func = functionDefinition:GetNativeFunction ()
-		else
-			functionDefinition = nil
-		end
-		
-		if func then
-			astRunner:PushValue (func (object, unpack (arguments)))
-		elseif functionDefinition then
-			local block = functionDefinition:GetFunctionDeclaration ():GetBody ()
-			if block then
-				astRunner:PushNode (block)
-				astRunner:PushState (0)
-				astRunner:PushValue (object)
-				astRunner:PushValue (arguments)
-			else
-				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
-			end
-		else
-			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
-		end
-	end
+function self:GetArgumentList ()
+	return self.ArgumentList
 end
 
 function self:GetArgumentTypes (includeLeft)
@@ -129,9 +71,17 @@ function self:GetIdentifier ()
 	return self.Identifier
 end
 
+function self:GetTypeArgumentList ()
+	return self.TypeArgumentList
+end
+
 function self:SetArgumentList (argumentList)
 	self.ArgumentList = argumentList
 	if self.ArgumentList then self.ArgumentList:SetParent (self) end
+end
+
+function self:SetIdentifier (identifier)
+	self.Identifier = identifier
 end
 
 function self:SetLeftExpression (leftExpression)
@@ -139,20 +89,25 @@ function self:SetLeftExpression (leftExpression)
 	if self.LeftExpression then self.LeftExpression:SetParent (self) end
 end
 
-function self:SetIdentifier (identifier)
-	self.Identifier = identifier
+function self:SetTypeArgumentList (typeArgumentList)
+	self.TypeArgumentList = typeArgumentList
+	if self.TypeArgumentList then self.TypeArgumentList:SetParent (self) end
 end
 
 function self:ToString ()
 	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Nothing]"
 	local identifier = self.Identifier and self.Identifier:ToString () or "[Nothing]"
 	local argumentList = self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])"
+	local typeArgumentList = self.TypeArgumentList and self.TypeArgumentList:ToString () or nil
 	
-	return leftExpression .. ":" .. identifier .. " " .. argumentList
+	return leftExpression .. ":" .. identifier .. (typeArgumentList and (" " .. typeArgumentList) or "") .. " " .. argumentList
 end
 
 function self:Visit (astVisitor, ...)
 	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
+	if self.TypeArgumentList then
+		self:SetTypeArgumentList (self:GetTypeArgumentList ():Visit (astVisitor, ...) or self:GetTypeArgumentList ())
+	end
 	self:SetArgumentList (self:GetArgumentList ():Visit (astVisitor, ...) or self:GetArgumentList ())
 	
 	return astVisitor:VisitExpression (self, ...)

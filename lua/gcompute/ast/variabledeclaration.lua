@@ -33,7 +33,12 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 function self:ExecuteAsAST (astRunner, state)
-	self.AssignmentPlan:ExecuteAsAST (astRunner, self, state)
+	if self.AssignmentPlan then
+		self.AssignmentPlan:ExecuteAsAST (astRunner, self, state)
+	else
+		-- Discard VariableDeclaration
+		astRunner:PopNode ()
+	end
 end
 
 function self:GetChildEnumerator ()

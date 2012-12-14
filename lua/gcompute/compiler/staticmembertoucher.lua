@@ -23,17 +23,5 @@ function self:VisitExpression (expression)
 end
 
 function self:VisitStaticMemberAccess (staticMemberAccess)
-	local leftNamespace = self.GlobalNamespace
-	if staticMemberAccess:GetLeftExpression () then
-		leftNamespace = staticMemberAccess:GetLeftExpression ():GetMemberDefinition ()
-	end
-	
-	local memberDefinition = leftNamespace:GetMember (staticMemberAccess:GetName ())
-	
-	local typeArgumentList = staticMemberAccess:GetTypeArgumentList ()
-	if typeArgumentList and not typeArgumentList:IsEmpty () then
-		GCompute.Error ("StaticMemberToucher:VisitStaticMemberAccess : This StaticMemberAccess has TypeArgumentList.")
-	end
-	
-	staticMemberAccess:SetMemberDefinition (memberDefinition)
+	staticMemberAccess:ResolveMemberDefinition (self.GlobalNamespace)
 end

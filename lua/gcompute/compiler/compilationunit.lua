@@ -417,6 +417,30 @@ function self:PostBuildNamespace (callback)
 	callbackChain:Execute ()
 end
 
+function self:PreInferTypes (callback)
+	callback = callback or GCompute.NullCallback
+	if not self.Language.Passes.PreTypeInference then callback () return end
+	
+	local startTime = SysTime ()
+	local callbackChain = GCompute.CallbackChain ()
+	for _, pass in ipairs (self.Language.Passes.PreTypeInference) do
+		callbackChain:Then (
+			function (callback, errorCallback)
+				pass (self):Process (self.AST, callback)
+			end
+		)
+	end
+	callbackChain:Then (
+		function (callback, errorCallback)
+			self:AddPassDuration ("PreTypeInference", SysTime () - startTime)
+			
+			callback ()
+		end
+	)
+	callbackChain:ThenUnwrap (callback)
+	callbackChain:Execute ()
+end
+
 function self:RunPass (passName, passConstructor, callback)
 	callback = callback or GCompute.NullCallback
 	

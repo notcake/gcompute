@@ -18,6 +18,10 @@ function self:GetBoolean ()
 	return self.Boolean
 end
 
+function self:GetChildEnumerator ()
+	return GCompute.NullCallback
+end
+
 function self:SetBoolean (boolean)
 	self.Boolean = boolean
 end

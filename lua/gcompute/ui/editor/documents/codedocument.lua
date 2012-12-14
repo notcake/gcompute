@@ -125,6 +125,16 @@ function self:DeleteWithinLine (startLocation, endLocation)
 	self:DispatchEvent ("TextChanged")
 end
 
+function self:GetAttribute (attributeName, location)
+	local line = self:GetLine (location:GetLine ())
+	if not line then return nil end
+	return line:GetAttribute (attributeName, location:GetCharacter ())
+end
+
+function self:GetColor (location)
+	return self:GetAttribute ("Color", location) or GLib.Colors.White
+end
+
 function self:GetEnd ()
 	local endLocation = GCompute.Editor.LineCharacterLocation ()
 	endLocation:SetLine (self:GetLineCount () - 1)
@@ -360,7 +370,7 @@ function self:SaveToStream (fileStream, callback)
 	fileStream:Write (code:len (), code, callback)
 end
 
-function self:SetColor (color, startLocation, endLocation)
+function self:SetAttribute (attributeName, attributeValue, startLocation, endLocation)
 	if not startLocation then startLocation = self:GetStart () end
 	if not endLocation   then endLocation   = self:GetEnd ()   end
 	if startLocation > endLocation then
@@ -379,17 +389,21 @@ function self:SetColor (color, startLocation, endLocation)
 	
 	if startLocation:GetLine () == endLocation:GetLine () then
 		-- Single line section
-		self:GetLine (startLocation:GetLine ()):SetColor (color, startLocation:GetCharacter (), endLocation:GetCharacter ())
+		self:GetLine (startLocation:GetLine ()):SetAttribute (attributeName, attributeValue, startLocation:GetCharacter (), endLocation:GetCharacter ())
 	else
 		-- Multiple line section
-		self:GetLine (startLocation:GetLine ()):SetColor (color, startLocation:GetCharacter ())
+		self:GetLine (startLocation:GetLine ()):SetAttribute (attributeName, attributeValue, startLocation:GetCharacter ())
 		
 		for i = startLocation:GetLine () + 1, endLocation:GetLine () - 1 do
-			self:GetLine (i):SetColor (color)
+			self:GetLine (i):SetAttribute (attributeName, attributeValue)
 		end
 		
-		self:GetLine (endLocation:GetLine ()):SetColor (color, nil, endLocation:GetCharacter ())
+		self:GetLine (endLocation:GetLine ()):SetAttribute (attributeName, attributeValue, nil, endLocation:GetCharacter ())
 	end
+end
+
+function self:SetColor (color, startLocation, endLocation)
+	self:SetAttribute ("Color", color, startLocation, endLocation)
 end
 
 function self:SetText (text)

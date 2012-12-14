@@ -258,7 +258,9 @@ function self:VisitMemberFunctionCall (memberFunctionCall)
 	-- Resolve OverloadedFunctionResolver
 	memberFunctionCall.FunctionCall = self:ResolveFunctionCall (memberFunctionCall, overloadedFunctionResolver)
 	if memberFunctionCall.FunctionCall then
-		if not memberFunctionCall.FunctionCall:IsMemberFunctionCall () then
+		if memberFunctionCall.FunctionCall:IsMemberFunctionCall () then
+			memberFunctionCall:SetLeftExpression (memberFunctionCall.FunctionCall:GetLeftExpression ())
+		else
 			memberFunctionCall.FunctionCall:SetLeftExpression (GCompute.AST.InstanceMemberAccess (leftExpression, memberFunctionCall:GetName (), memberFunctionCall:GetTypeArgumentList ():ToTypeArgumentList ()))
 		end
 	end
@@ -368,9 +370,21 @@ function self:ResolveFunctionCallTypeCasts (functionCall)
 	local parameterList = functionType:GetParameterList ()
 	local argumentList = functionCall:GetArgumentList ()
 	
+	local parameterIndex = 1
+	if functionCall:IsMemberFunctionCall () then
+		local argument = functionCall:GetLeftExpression ()
+		local destinationType = parameterList:GetParameterType (parameterIndex)
+		
+		local astNode = self:ResolveTypeConversion (argument, destinationType)
+		if astNode then
+			functionCall:SetLeftExpression (astNode)
+		end
+		
+		parameterIndex = parameterIndex + 1
+	end
 	for i = 1, argumentList:GetArgumentCount () do
 		local argument = argumentList:GetArgument (i)
-		local destinationType = parameterList:GetParameterType (i)
+		local destinationType = parameterList:GetParameterType (parameterIndex)
 		
 		if not destinationType then
 			-- vararg parameter, take last parameter's type
@@ -381,6 +395,8 @@ function self:ResolveFunctionCallTypeCasts (functionCall)
 		if astNode then
 			argumentList:SetArgument (i, astNode)
 		end
+		
+		parameterIndex = parameterIndex + 1
 	end
 end
 

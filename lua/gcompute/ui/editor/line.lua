@@ -31,6 +31,10 @@ function self:Delete (startCharacter, endCharacter)
 	self:GetTextStorage ():Delete (startCharacter, endCharacter)
 end
 
+function self:GetAttribute (attributeName, character)
+	return self:GetTextStorage ():GetAttribute (attributeName, character)
+end
+
 function self:GetCharacter (character)
 	return self:GetTextStorage ():GetCharacter (character)
 end
@@ -41,6 +45,10 @@ end
 
 function self:GetCharacterObject (character)
 	return self:GetTextStorage ():GetCharacterObject (character)
+end
+
+function self:GetColor (character)
+	return self:GetTextStorage ():GetColor (character)
 end
 
 function self:GetColumnCount (textRenderer)
@@ -86,6 +94,19 @@ end
 function self:MergeAppend (line)
 	if not line then return end
 	self:GetTextStorage ():Append (line.TextStorage)
+end
+
+--- Sets an attribute of a given text span
+-- @param attributeName The name of the attribute to be set. This must not conflict with any TextSegment properties
+-- @param attributeValue The value of the attribute to be set
+-- @param startCharacter The start character, defaults to the start of the line
+-- @param endCharacter The end character, defaults to the end of the line
+function self:SetAttribute (attributeName, attributeValue, startCharacter, endCharacter)
+	if attributeName == "Color" then
+		self:GetTextStorage ():SetColor (attributeValue, startCharacter, endCharacter)
+	else
+		self:GetTextStorage ():SetAttribute (attributeName, attributeValue, startCharacter, endCharacter)
+	end
 end
 
 function self:SetColor (color, startCharacter, endCharacter)

@@ -24,6 +24,10 @@ function self:ctor (name, objectName)
 	end
 end
 
+function self:CreateRuntimeObject ()
+	return {}
+end
+
 function self:GetMetadata ()
 	return self.Object and self.Object:GetMetadata () or nil
 end

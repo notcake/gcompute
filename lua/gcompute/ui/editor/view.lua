@@ -42,6 +42,11 @@ function self:CanClose ()
 	return self.Closable
 end
 
+function self:EnsureVisible ()
+	if not self.Container then return end
+	self.Container:EnsureVisible ()
+end
+
 function self:GetDocumentManager ()
 	return self.DocumentManager
 end
@@ -64,6 +69,11 @@ end
 
 function self:GetType ()
 	return self.__Type
+end
+
+function self:Select ()
+	if not self.Container then return end
+	self.Container:Select ()
 end
 
 function self:SetCanClose (closable)

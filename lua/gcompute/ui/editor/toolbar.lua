@@ -153,6 +153,8 @@ function GCompute.Editor.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
+				local sourceDocumentId = codeEditor:GetDocument ():GetId ()
+				local sourceDocumentPath = codeEditor:GetDocument ():GetPath ()
 				local editorHelper = codeEditor and codeEditor:GetEditorHelper ()
 				if not editorHelper then return end
 				
@@ -166,7 +168,7 @@ function GCompute.Editor.Toolbar (self)
 							outputPaneCleared = true
 						end
 						
-						self.DockContainer:GetViewById ("Output"):Append (data, color)
+						self.DockContainer:GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentPath)
 					end
 				)
 				
@@ -178,7 +180,7 @@ function GCompute.Editor.Toolbar (self)
 							outputPaneCleared = true
 						end
 						
-						self.DockContainer:GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed)
+						self.DockContainer:GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentPath)
 					end
 				)
 				

@@ -70,7 +70,12 @@ function self:VisitFunction (functionNode)
 	local functionDefinition = nil
 	
 	if functionNode:Is ("FunctionDeclaration") then
-		functionDefinition = functionNode:GetParentNamespace ():AddFunction (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
+		local declaringNamespace = functionNode:GetParentNamespace ()
+		while declaringNamespace:GetNamespaceType () ~= GCompute.NamespaceType.Global and
+		      declaringNamespace:GetNamespaceType () ~= GCompute.NamespaceType.Type do
+			declaringNamespace = declaringNamespace:GetContainingNamespace ()
+		end
+		functionDefinition = declaringNamespace:AddFunction (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
 	else
 		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", functionNode:GetParameterList ():ToParameterList ())
 	end

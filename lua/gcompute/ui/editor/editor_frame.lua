@@ -69,6 +69,8 @@ function self:Init ()
 	self.DockContainer:AddEventListener ("ViewRegistered",
 		function (_, view)
 			self:HookView (view)
+			
+			view:SetDocumentManager (self.DocumentManager)
 			self:RegisterDocument (view:GetDocument ())
 			
 			self:InvalidateSavedWorkspace ()
@@ -165,6 +167,10 @@ function self:Init ()
 	self.UndoRedoController:AddRedoButton   (self.Toolbar:GetItemById ("Redo"))
 	self.UndoRedoController:AddRedoButton   (self.CodeEditorContextMenu:GetItemById ("Redo"))
 	
+	-- We need to create our DocumentManager before any views are created
+	-- so we can set their DocumentManager properly when they are registered
+	self.DocumentManager = GCompute.Editor.DocumentManager ()
+	
 	self.OutputView = GCompute.Editor.ViewTypes:Create ("Output")
 	self.OutputView:SetId ("Output")
 	self.HookProfilerView = GCompute.Editor.ViewTypes:Create ("HookProfiler")
@@ -175,8 +181,6 @@ function self:Init ()
 	self:SetKeyboardMap (GCompute.Editor.EditorKeyboardMap)
 	
 	self.NextNewId = 1
-	
-	self.DocumentManager = GCompute.Editor.DocumentManager ()
 	
 	-- Namespace browser
 	self.RootNamespaceBrowserTab = nil
@@ -211,6 +215,7 @@ function self:Init ()
 			if self.DocumentManager:GetDocumentCount () == 0 then
 				self:CreateEmptyCodeView ()
 			end
+			self.DockContainer:GetLargestView ():Select ()
 		end
 	)
 	end, GLib.Error)
@@ -304,7 +309,6 @@ function self:CreateView (className, id)
 	local view = GCompute.Editor.ViewTypes:Create (className)
 	if not view then return nil end
 	view:SetId (id)
-	view:SetDocumentManager (self.DocumentManager)
 	self.DockContainer:RegisterView (view)
 	
 	return view
@@ -314,9 +318,7 @@ function self:CreateCodeView (title)
 	local view = self:CreateView ("Code")
 	view:SetTitle (title)
 	
-	local activeView = self:GetActiveView ()
-	local dockContainer = activeView and activeView:GetContainer ():GetDockContainer () or self.DockContainer:GetLargestContainer ()
-	dockContainer:AddView (view)
+	self.DockContainer:GetLargestContainer ():AddView (view)
 	return view
 end
 
@@ -489,7 +491,7 @@ end
 function self:OpenPath (path, callback)
 	callback = callback or GCompute.NullCallback
 	
-	local document = self.DocumentManager:GetDocumentByPath (file:GetPath ())
+	local document = self.DocumentManager:GetDocumentByPath (path)
 	if document then
 		callback (true, document:GetFile (), document:GetView (1))
 		return

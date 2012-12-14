@@ -644,7 +644,7 @@ function PANEL:LoadSession (inBuffer)
 			local view = self:GetViewById (inBuffer:String ())
 			self:AddView (view)
 			if i == selectedTabIndex then
-				view:GetContainer ():Select ()
+				view:GetContainer ():EnsureVisible ()
 			end
 		end
 	elseif self.DockContainerType == GCompute.DockContainerType.View then

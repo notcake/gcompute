@@ -113,6 +113,12 @@ function self:Delete (startCharacter, endCharacter)
 	self:InvalidateCache ()
 end
 
+function self:GetAttribute (attributeName, character)
+	local segmentIndex = self:SegmentIndexFromCharacter (character)
+	if segmentIndex > #self.Segments then segmentIndex = #self.Segments end
+	return self.Segments [segmentIndex] and self.Segments [segmentIndex] [attributeName] or nil
+end
+
 function self:GetCharacter (character)
 	return GLib.UTF8.Sub (self.Text, character + 1, character + 1)
 end
@@ -125,6 +131,10 @@ end
 function self:GetCharacterObject (character)
 	local segment = self.Segments [self:SegmentIndexFromCharacter (character)]
 	return segment and segment.Object or nil
+end
+
+function self:GetColor (character)
+	return self:GetAttribute ("Color", character)
 end
 
 function self:GetColumnCount (textRenderer)
@@ -288,6 +298,28 @@ function self:SegmentIndexFromColumn (column, textRenderer)
 	end
 	
 	return i, column
+end
+
+function self:SetAttribute (attributeName, attributeValue, startCharacter, endCharacter)
+	startCharacter = startCharacter or 0
+	if endCharacter and endCharacter < startCharacter then
+		local temp = startCharacter
+		startCharacter = endCharacter
+		endCharacter = temp
+	end
+	
+	local startIndex = self:SplitSegment (startCharacter)
+	local afterEndIndex = endCharacter and self:SplitSegment (endCharacter) or #self.Segments + 1
+	
+	if startIndex > #self.Segments then return end
+	
+	for i = startIndex, afterEndIndex - 1 do
+		self.Segments [i] [attributeName] = attributeValue
+	end
+	
+	for i = afterEndIndex - 1, startIndex - 1, -1 do
+		self:CheckMerge (i)
+	end
 end
 
 function self:SetColor (color, startCharacter, endCharacter)

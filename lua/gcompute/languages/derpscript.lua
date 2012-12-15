@@ -56,4 +56,4 @@ LANGUAGE:AddKeywords (GCompute.KeywordType.Modifier, {"public", "private", "prot
 LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
 
-LANGUAGE:LoadParser ()
+LANGUAGE:LoadParser ("derpscript_parser.lua")

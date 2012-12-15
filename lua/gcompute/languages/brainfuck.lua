@@ -45,4 +45,4 @@ LANGUAGE:GetTokenizer ()
 	:AddPatternSymbol (GCompute.TokenType.Operator,  "[<>+\\-]+")
 	:AddPlainSymbols  (GCompute.TokenType.Operator, {"[", "]"})
 
-LANGUAGE:LoadParser ()
+LANGUAGE:LoadParser ("brainfuck_parser.lua")

@@ -5,7 +5,9 @@ include ("glib/glib.lua")
 include ("vfs/vfs.lua")
 
 GLib.Initialize ("GCompute", GCompute)
-GCompute.AddCSLuaFolderRecursive ("gcompute")
+GLib.AddCSLuaPackFile ("autorun/gcompute.lua")
+GLib.AddCSLuaPackFolderRecursive ("gcompute")
+GLib.AddCSLuaPackSystem ("GCompute")
 
 GCompute.Reflection = GCompute.Reflection or {}
 

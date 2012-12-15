@@ -847,7 +847,7 @@ function self:ExpressionIncrement ()
 	local operator = self:AcceptTokens (increment)
 	if operator then
 		local unaryExpression = GCompute.AST.RightUnaryOperator ()
-		unaryExpression:SetStartToken (leftExpression:GetStartToken ())
+		unaryExpression:SetStartToken (leftExpression and leftExpression:GetStartToken ())
 		unaryExpression:SetEndToken (self:GetLastToken ())
 		
 		unaryExpression:SetLeftExpression (leftExpression)

@@ -39,6 +39,7 @@ function self:ctor (container)
 end
 
 function self:dtor ()
+	if not self:GetDocument () then return end
 	self:GetDocument ():RemoveView (self)
 end
 
@@ -67,6 +68,8 @@ function self:GetClipboardTarget ()
 end
 
 function self:GetDocument ()
+	if not self.CodeEditor then return nil end
+	if not self.CodeEditor:IsValid () then return nil end
 	return self.CodeEditor:GetDocument ()
 end
 

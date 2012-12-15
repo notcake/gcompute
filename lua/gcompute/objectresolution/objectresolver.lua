@@ -116,7 +116,10 @@ function self:ResolveNameIndex (astNode, recursive, globalNamespace, localNamesp
 		astNode:AddErrorMessage ("NameIndex is missing an Identifier (" .. astNode:ToString () .. ")")
 	elseif right:Is ("Identifier") then
 		for i = 1, leftResults:GetFilteredResultCount () do
-			self:ResolveMember (rightResults, right:GetName (), leftResults:GetFilteredResult (i):GetObject ())
+			local leftNamespace = leftResults:GetFilteredResult (i):GetObject ():UnwrapAlias ()
+			if leftNamespace:IsNamespace () or leftNamespace:IsTypeDefinition () then
+				self:ResolveMember (rightResults, right:GetName (), leftNamespace)
+			end
 		end
 	else
 		astNode:AddErrorMessage ("Unknown AST node on right of NameIndex (" .. identifier:GetNodeType () .. ")")

@@ -50,6 +50,11 @@ function self:CharacterFromColumn (column, textRenderer)
 		actualColumn = actualColumn + segmentColumnCount
 	end
 	
+	if not segment then
+		-- Malformed UTF8 sequence present, length data invalid.
+		return self:GetLengthExcludingLineBreak (), self:GetColumnCount (textRenderer)
+	end
+	
 	local relativeCharacter, relativeActualColumn = textRenderer:CharacterFromColumn (segment.Text, column, actualColumn)
 	return character + relativeCharacter, actualColumn + relativeActualColumn
 end
@@ -256,7 +261,7 @@ function self:Insert (character, text)
 	self:CheckMerge (insertionIndex - 1)
 	
 	local before, after = GLib.UTF8.SplitAt (self.Text, character + 1)
-	self.Text = before .. text .. after
+	self.Text = before .. text .. (after or "")
 	self:InvalidateCache ()
 end
 
@@ -369,6 +374,8 @@ end
 
 function self:Split (character)
 	local before, after = GLib.UTF8.SplitAt (self.Text, character + 1)
+	before = before or ""
+	after = after or ""
 	
 	local splitIndex = self:SplitSegment (character)
 	local textStorage = GCompute.Editor.ArrayTextStorage ()

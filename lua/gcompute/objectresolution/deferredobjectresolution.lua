@@ -15,13 +15,18 @@ function self:ctor (name, objectType, globalNamespace, localNamespace)
 	if name == nil then
 		GCompute.Error ("DeferredObjectResolution constructed with a nil value.")
 		self.Name = "nil"
-		self.AST = GCompute.TypeParser:Root ("nil")
+		self.AST = GCompute.AST.Identifier ("nil")
 	elseif type (name) == "string" then
-		self.AST = GCompute.TypeParser:Root (name)
+		self.AST = GCompute.TypeParser (name):Root ()
 	elseif name:IsASTNode () then
 		self.Name = self.AST:ToString ()
 	else
 		GCompute.Error ("DeferredObjectResolution constructed with an unknown object.")
+	end
+	
+	local compilerMessages = self.AST and self.AST:GetMessages ()
+	if compilerMessages then
+		ErrorNoHalt ("In \"" .. (self.Name or self.AST:ToString ()) .. "\":\n" .. compilerMessages:ToString () .. "\n")
 	end
 end
 

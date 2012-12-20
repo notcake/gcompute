@@ -2,27 +2,99 @@ local self = {}
 GCompute.Type = GCompute.MakeConstructor (self, GCompute.IObject)
 
 function self:ctor ()
-	self.Nullable = false
+	-- System
+	self.GlobalNamespace    = nil
+	self.TypeSystem         = nil
 	
-	self.Bottom = false
-	self.Top = false
+	-- Hierarchy
+	self.Definition        = nil
+	self.Namespace          = nil
 	
-	self.Primitive = false
-	self.NativelyAllocated = false
+	-- Type
+	self.Nullable           = false
+	
+	self.Primitive          = false
+	self.NativelyAllocated  = false
+	
+	-- Runtime function tables
+	self.FunctionTable      = {}
+	self.FunctionTableValid = false
 end
 
+-- System
+function self:GetGlobalNamespace ()
+	return self.GlobalNamespace
+end
+
+function self:GetTypeSystem ()
+	return self.TypeSystem
+end
+
+function self:SetGlobalNamespace (globalNamespace)
+	self.GlobalNamespace = globalNamespace
+	return self
+end
+
+function self:SetTypeSystem (typeSystem)
+	self.TypeSystem = typeSystem
+	return self
+end
+
+-- Hierarchy
+function self:GetDefinition ()
+	return self.Definition
+end
+
+function self:GetNamespace ()
+	return self.Namespace
+end
+
+-- Inheritance
+function self:GetBaseType (index)
+	GCompute.Error ("Type:GetBaseType : Not implemented for " .. self:ToString ())
+end
+
+function self:GetBaseTypeCount (index)
+	GCompute.Error ("Type:GetBaseTypeCount : Not implemented for " .. self:ToString ())
+end
+
+function self:GetBaseTypeEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self:GetBaseType (i)
+	end
+end
+
+--- Returns whether this type derives from the specified type
+-- @param type The type to be checked
+-- @return A boolean indicating whether this type derives from baseType
+function self:IsBaseType (type)
+	if self:IsTop () or self:IsBottom () then return false end
+	type = type:ToType ()
+	
+	for baseType in self:GetBaseTypeEnumerator () do
+		baseType = baseType:UnwrapAlias ()
+		if baseType:IsType () and (baseType:Equals (type) or baseType:IsBaseType (type)) then
+			return true
+		end
+	end
+	
+	return false
+end
+
+function self:IsBaseTypeOf (subtype)
+	subtype = subtype:ToType ()
+	return subtype:IsBaseType (self)
+end
+
+-- Type
 --- Returns a boolean indicating whether this type can be converted to destinationType
 -- @param destinationType The Type to be converted to
 -- @param typeConversionMethod The type conversion methods to try
 -- @return A boolean indicating whether this type can be converted to destinationType
 function self:CanConvertTo (destinationType, typeConversionMethod)
-	if destinationType:IsAlias () then
-		destinationType = destinationType:UnwrapAlias ()
-	end
-	if not destinationType:IsType () then
-		GCompute.Error ("Type:CanConvertTo : " .. destinationType:ToString () .. " is not a type.")
-		return false, GCompute.TypeConversionMethod.None
-	end
+	destinationType = destinationType:ToType ()
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Identity) ~= 0 and
 	   self:UnwrapReference ():Equals (destinationType) then
 		return true, GCompute.TypeConversionMethod.Identity
@@ -76,53 +148,53 @@ function self:ContainsUnboundTypeParameters ()
 end
 
 function self:CreateDefaultValue ()
-	return nil
+	GCompute.Error ("Type:CreateDefaultValue : Not implemented (" .. self:GetFullName () .. ")")
 end
 
 function self:Equals (otherType)
 	GCompute.Error ("Type:Equals : Not implemented for " .. self:ToString ())
 end
 
---- Returns an array of types from which this type inherits. The returned array is only a copy.
--- @return An array of types from which this type inherits. The returned array is only a copy.
-function self:GetBaseTypes ()
-	GCompute.Error ("Type:GetBaseTypes : Not implemented for " .. self:ToString ())
+function self:GetFullName ()
+	return "[Type]"
 end
 
-function self:GetDeclaringFunction ()
-	return nil
+--- Gets the type's runtime function table
+-- @return The type's runtime function table
+function self:GetFunctionTable ()
+	if not self.FunctionTableValid then
+		self:BuildFunctionTable ()
+	end
+	return self.FunctionTable
 end
 
-function self:GetDeclaringType ()
-	return nil
-end
-
-function self:GetTypeDefinition ()
-	GCompute.Error ("Type:GetTypeDefinition : Not implemented for " .. self:ToString ())
+function self:GetRelativeName (referenceDefinition)
+	return self:GetFullName ()
 end
 
 function self:GetTypeParameterList ()
 	return GCompute.EmptyTypeParameterList
 end
 
+--- Invalidates the type's cached runtime function table
+function self:InvalidateFunctionTable ()
+	self.FunctionTableValid = false
+end
+
 function self:IsArrayType ()
 	return false
 end
 
-function self:IsBaseType (supertype)
-	GCompute.Error ("Type:IsBaseType not implemented for " .. self:ToString ())
-end
-
-function self:IsBaseTypeOf (subtype)
-	return subtype:IsBaseType (self)
-end
-
 function self:IsBottom ()
-	return self.Bottom
+	return self == self.TypeSystem:GetBottom ()
 end
 
 function self:IsConcreteType ()
 	return true
+end
+
+function self:IsErrorType ()
+	return false
 end
 
 function self:IsFunctionType ()
@@ -141,7 +213,7 @@ function self:IsNullable ()
 	return self.Nullable
 end
 
-function self:IsOverloadedTypeDefinition ()
+function self:IsOverloadedClass ()
 	return false
 end
 
@@ -160,17 +232,11 @@ end
 --- Returns whether this type is a superset of all other types
 -- @return A boolean indicating whether this type is a superset of all other types
 function self:IsTop ()
-	return self.Top
+	return self == self.TypeSystem:GetTop ()
 end
 
 function self:IsType ()
 	return true
-end
-
---- Gets whether this object is a TypeDefinition
--- @return A boolean indicating whether this object is a TypeDefinition
-function self:IsTypeDefinition ()
-	return false
 end
 
 function self:IsTypeParameter ()
@@ -178,6 +244,7 @@ function self:IsTypeParameter ()
 end
 
 function self:RuntimeDowncastTo (destinationType, value)
+	destinationType = destinationType:ToType ()
 	if self:IsNativelyAllocated () == destinationType:IsNativelyAllocated () then return value end
 	if self:IsNativelyAllocated () then
 		-- Box
@@ -189,6 +256,7 @@ function self:RuntimeDowncastTo (destinationType, value)
 end
 
 function self:RuntimeUpcastTo (destinationType, value)
+	destinationType = destinationType:ToType ()
 	if self:IsNativelyAllocated () == destinationType:IsNativelyAllocated () then return value end
 	if self:IsNativelyAllocated () then
 		-- Box
@@ -197,14 +265,6 @@ function self:RuntimeUpcastTo (destinationType, value)
 		-- Unbox
 		return value:Unbox ()
 	end
-end
-
-function self:SetIsBottom (isBottom)
-	self.Bottom = isBottom
-end
-
-function self:SetIsTop (isTop)
-	self.Top = isTop
 end
 
 function self:SetNativelyAllocated (nativelyAllocated)
@@ -226,11 +286,79 @@ function self:SetPrimitive (primitive)
 end
 
 function self:SubstituteTypeParameters (substitutionMap)
-	GCompute.Error ("Type:SubstituteTypeParameters : Not implemented for " .. self:ToString ())
+	return substitutionMap:GetReplacement (self) or self
+end
+
+function self:ToString ()
+	return self:GetFullName ()
+end
+
+function self:ToType ()
+	return self
 end
 
 --- Unwraps a ReferenceType
 --@return The Type contained by this ReferenceType or this Type if this is not a ReferenceType
 function self:UnwrapReference ()
 	return self
+end
+
+-- Internal, do not call
+function self:BuildFunctionTable ()
+	if self.FunctionTableValid then return end
+	self.FunctionTableValid = true
+	
+	self.FunctionTable = {}
+	self.FunctionTable.Static = {}
+	self.FunctionTable.Virtual = {}
+	
+	-- Merge in base function tables
+	for baseType in self:GetBaseTypeEnumerator () do
+		local baseFunctionTable = baseType:GetFunctionTable ()
+		
+		-- Merge in static function tables
+		for typeName, functionTable in pairs (baseFunctionTable.Static) do
+			self.FunctionTable.Static [typeName] = self.FunctionTable.Static [typeName] or {}
+			for functionName, functionTableEntry in pairs (functionTable) do
+				self.FunctionTable.Static [typeName] [functionName] = functionTableEntry
+			end
+		end
+		
+		-- Merge in virtual function table
+		for functionName, functionTableEntry in pairs (baseFunctionTable.Virtual) do
+			self.FunctionTable.Virtual [functionName] = functionTableEntry
+		end
+	end
+	
+	local fullName = self:GetFullName ()
+	self.FunctionTable.Static [fullName] = self.FunctionTable.Static [fullName] or {}
+	
+	local definition = self:GetDefinition ()
+	if definition then
+		-- Add functions
+		for _, memberDefinition in definition:GetEnumerator () do
+			if memberDefinition:IsOverloadedFunctionDefinition () then
+				for functionDefinition in memberDefinition:GetEnumerator () do
+					self.FunctionTable.Static [fullName] [functionDefinition:GetRuntimeName ()] = functionDefinition:GetNativeFunction () or functionDefinition
+				end
+			elseif memberDefinition:IsFunctionDefinition () then
+				self.FunctionTable.Static [fullName] [memberDefinition:GetRuntimeName ()] = memberDefinition:GetNativeFunction () or memberDefinition
+			end
+		end
+		
+		-- Add explicit casts
+		for explicitCast in definition:GetExplicitCastEnumerator () do
+			self.FunctionTable.Static [fullName] [explicitCast:GetRuntimeName ()] = explicitCast:GetNativeFunction () or explicitCast
+		end
+		
+		-- Add implicit casts
+		for implicitCast in definition:GetImplicitCastEnumerator () do
+			self.FunctionTable.Static [fullName] [implicitCast:GetRuntimeName ()] = explicitCast:GetNativeFunction () or implicitCast
+		end
+	end
+	
+	-- Merge our static function table into the virtual function table
+	for functionName, functionTableEntry in pairs (self.FunctionTable.Static [fullName]) do
+		self.FunctionTable.Virtual [functionName] = functionTableEntry
+	end
 end

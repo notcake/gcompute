@@ -1,5 +1,5 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
-local Array = Expression2:AddType ("array")
+local Array = Expression2:AddClass ("array")
 Array:SetNullable (false)
 Array:SetNativelyAllocated (true)
 
@@ -19,17 +19,17 @@ Array:AddConstructor ({ { "object", "..." } })
 		end
 	)
 
-local inToString = {}
-
-Array:AddFunction ("ToString")
+Array:AddMethod ("ToString")
 	:SetReturnType ("string")
 	:SetNativeFunction (
 		function (self)
+			local inToString = thread:GetThreadLocalStorage ().Expression2.InToString
+			
 			if inToString [self] then
 				return "{array}"
 			end
 			
-			inToString [self] = true
+			executionContext:GetThreadLocalStorage ()inToString [self] = true
 			
 			local str = "[" .. #self.Values .. "] {"
 			for i = 1, 16 do
@@ -47,7 +47,7 @@ Array:AddFunction ("ToString")
 		end
 	)
 
-Array:AddFunction ("count")
+Array:AddMethod ("count")
 	:SetReturnType ("number")
 	:SetNativeFunction (
 		function (self)
@@ -55,7 +55,7 @@ Array:AddFunction ("count")
 		end
 	)
 
-Array:AddFunction ("pushNumber", { { "number", "val" } })
+Array:AddMethod ("pushNumber", "number val")
 	:SetNativeFunction (
 		function (self, val)
 			self.Values [#self.Values + 1] = val
@@ -63,7 +63,7 @@ Array:AddFunction ("pushNumber", { { "number", "val" } })
 		end
 	)
 
-Array:AddFunction ("operator[]", { { "number", "index" } }, { "T" })
+Array:AddMethod ("operator[]", "number index", { "T" })
 	:SetReturnType ("T")
 	:SetNativeString ("%self% [%arg:index%]")
 	:SetTypeCurryerFunction (
@@ -87,7 +87,7 @@ Array:AddFunction ("operator[]", { { "number", "index" } }, { "T" })
 		end
 	)
 
-Array:AddFunction ("operator[]", { { "number", "index" }, { "T", "val" } }, { "T" })
+Array:AddMethod ("operator[]", "number index, T val", { "T" })
 	:SetReturnType ("T")
 	:SetNativeString ("%self% [%arg:index%] = %arg:val%")
 	:SetTypeCurryerFunction (

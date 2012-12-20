@@ -42,11 +42,13 @@ function self:VisitStatement (statement)
 	if statement:Is ("FunctionDeclaration") then
 		self:VisitFunction (statement)
 	elseif statement:Is ("VariableDeclaration") then
-		local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
-		typeResults:FilterToConcreteTypes ()
-		typeResults:FilterByLocality ()
-		statement:SetType (typeResults:GetFilteredResultObject (1))
-		statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
+		if statement:GetTypeExpression () then
+			local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
+			typeResults:FilterToConcreteTypes ()
+			typeResults:FilterByLocality ()
+			statement:SetType (typeResults:GetFilteredResultObject (1))
+			statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
+		end
 	end
 end
 
@@ -76,7 +78,7 @@ end
 -- AnonymousFunction or FunctionDeclaration
 function self:VisitFunction (functionNode)
 	local functionDefinition = functionNode:GetFunctionDefinition ()
-	local parameterNamespace = functionDefinition:GetParameterNamespace ()
+	local parameterNamespace = functionDefinition:GetNamespace ()
 	
 	local returnTypeResults = functionNode:GetReturnTypeExpression ():GetResolutionResults ()
 	returnTypeResults:FilterToConcreteTypes ()

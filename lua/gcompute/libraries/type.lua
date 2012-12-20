@@ -1,10 +1,10 @@
 local Global = GCompute.GlobalNamespace
-local Type = Global:AddType ("Type")
+local Type = Global:AddClass ("Type")
 Type:SetNativelyAllocated (true)
 
 Global:GetTypeSystem ():SetType (Type)
 
-Type:AddFunction ("ToString")
+Type:AddMethod ("ToString")
 	:SetNativeFunction (
 		function (type)
 			return type:GetFullName ()

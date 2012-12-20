@@ -28,25 +28,24 @@ function self.ItemComparator (a, b)
 	if defA:IsNamespace () and not defB:IsNamespace () then return true end
 	if defB:IsNamespace () and not defA:IsNamespace () then return false end
 	
-	if defA:IsTypeDefinition () and not defB:IsTypeDefinition () then return true end
-	if defB:IsTypeDefinition () and not defA:IsTypeDefinition () then return false end
+	if defA:IsClass () and not defB:IsClass () then return true end
+	if defB:IsClass () and not defA:IsClass () then return false end
 	
-	if defA:IsFunction () and not defB:IsFunction () then return true end
-	if defB:IsFunction () and not defA:IsFunction () then return false end
+	if defA:IsMethod () and not defB:IsMethod () then return true end
+	if defB:IsMethod () and not defA:IsMethod () then return false end
 	
 	return a:GetText () < b:GetText ()
 end
 
 function self:Populate (objectDefinition, treeViewNode)
-	for name, definition, metadata in objectDefinition:GetEnumerator () do
-		if definition:IsOverloadedTypeDefinition () then
-			self:PopulateOverloadedTypeDefinition (definition, treeViewNode)
-		elseif definition:IsOverloadedFunctionDefinition () then
-			self:PopulateOverloadedFunctionDefinition (definition, treeViewNode)
+	for name, definition in objectDefinition:GetNamespace ():GetEnumerator () do
+		if definition:IsOverloadedClass () then
+			self:PopulateOverloadedClassDefinition (definition, treeViewNode)
+		elseif definition:IsOverloadedMethod () then
+			self:PopulateOverloadedMethodDefinition (definition, treeViewNode)
 		else
 			local childNode = treeViewNode:AddNode (name)
 			childNode.Definition = definition
-			childNode.Metadata = metadata
 			childNode:SetText (definition:GetDisplayText ())
 			
 			if definition:IsNamespace () then
@@ -55,7 +54,7 @@ function self:Populate (objectDefinition, treeViewNode)
 				childNode:SetIcon ("gui/codeicons/field")
 			elseif definition:IsAlias () then
 				childNode:SetIcon ("icon16/link_go.png")
-			elseif definition:IsFunction () then
+			elseif definition:IsMethod () then
 				childNode:SetIcon ("gui/codeicons/method")
 			else
 				childNode:SetIcon ("icon16/exclamation.png")
@@ -67,26 +66,24 @@ function self:Populate (objectDefinition, treeViewNode)
 	treeViewNode:SortChildren (self.ItemComparator)
 end
 
-function self:PopulateOverloadedFunctionDefinition (overloadedFunctionDefinition, treeViewNode)
-	for definition in overloadedFunctionDefinition:GetEnumerator () do
+function self:PopulateOverloadedClassDefinition (overloadedClassDefinition, treeViewNode)
+	for definition in overloadedClassDefinition:GetEnumerator () do
 		local childNode = treeViewNode:AddNode (definition:GetName ())
 		childNode.Definition = definition
-		childNode.Metadata = metadata
-		
-		childNode:SetText (definition:GetDisplayText ())
-		childNode:SetIcon ("gui/codeicons/method")
-	end
-end
-
-function self:PopulateOverloadedTypeDefinition (overloadedTypeDefinition, treeViewNode)
-	for definition in overloadedTypeDefinition:GetEnumerator () do
-		local childNode = treeViewNode:AddNode (definition:GetName ())
-		childNode.Definition = definition
-		childNode.Metadata = metadata
 		
 		childNode:SetText (definition:GetDisplayText ())
 		childNode:SetIcon (definition:GetTypeParameterList ():GetParameterCount () > 0 and "gui/codeicons/parametrictype" or "gui/codeicons/class")
 		childNode:SetExpandable (not definition:IsEmpty ())
+	end
+end
+
+function self:PopulateOverloadedMethodDefinition (overloadedMethodDefinition, treeViewNode)
+	for definition in overloadedMethodDefinition:GetEnumerator () do
+		local childNode = treeViewNode:AddNode (definition:GetName ())
+		childNode.Definition = definition
+		
+		childNode:SetText (definition:GetDisplayText ())
+		childNode:SetIcon ("gui/codeicons/method")
 	end
 end
 

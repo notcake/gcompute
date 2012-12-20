@@ -1,5 +1,5 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
-local String = Expression2:AddType ("string")
+local String = Expression2:AddClass ("string")
 String:SetNullable (false)
 String:SetPrimitive (true)
 String:SetDefaultValueCreator (
@@ -8,11 +8,11 @@ String:SetDefaultValueCreator (
 	end
 )
 	
-Expression2:AddFunction ("format", { { "string", "formatString" }, { "object", "..." } })
+Expression2:AddMethod ("format", "string formatString, object ...")
 	:SetReturnType ("string")
 	:SetNativeFunction (string.format)
 	
-Expression2:AddFunction ("print", { { "object", "..." } })
+Expression2:AddMethod ("print", "object ...")
 	:SetNativeFunction (
 		function (...)
 			local t = {...}
@@ -23,23 +23,54 @@ Expression2:AddFunction ("print", { { "object", "..." } })
 		end
 	)
 
-String:AddFunction ("ToString")
+Expression2:AddMethod ("toByte", "string char")
+	:SetReturnType ("number")
+	:SetNativeFunction (string.byte)
+
+Expression2:AddMethod ("toByte", "string char, number offset")
+	:SetReturnType ("number")
+	:SetNativeFunction (string.byte)
+
+Expression2:AddMethod ("toChar", "number value")
+	:SetReturnType ("string")
+	:SetNativeFunction (string.char)
+
+String:AddMethod ("ToString")
 	:SetNativeFunction (tostring)
 	
-String:AddFunction ("toString")
+String:AddMethod ("toString")
 	:SetNativeFunction (tostring)
 
-String:AddFunction ("upper")
+String:AddMethod ("find", "string substring")
+	:SetReturnType ("number")
+	:SetNativeString ("string.find (%self%, %arg:substring%, 1, true)")
+	:SetNativeFunction (
+		function (self, substring)
+			return string.find (self, substring, 1, true)
+		end
+	)
+
+String:AddMethod ("sub", "number start")
+	:SetReturnType ("string")
+	:SetNativeString ("string.sub (%self%, %arg:start%)")
+	:SetNativeFunction (string.sub)
+
+String:AddMethod ("sub", "number start, number end")
+	:SetReturnType ("string")
+	:SetNativeString ("string.sub (%self%, %arg:end%)")
+	:SetNativeFunction (string.sub)
+
+String:AddMethod ("upper")
 	:SetReturnType ("string")
 	:SetNativeString ("string.upper (%self%)")
 	:SetNativeFunction (string.upper)
 
-String:AddFunction ("lower")
+String:AddMethod ("lower")
 	:SetReturnType ("string")
 	:SetNativeString ("string.lower (%self%)")
 	:SetNativeFunction (string.lower)
 	
-String:AddFunction ("operator+", { { "string", "str" } })
+String:AddMethod ("operator+", "string str")
 	:SetReturnType ("string")
 	:SetNativeString ("(%self% .. %str%)")
 	:SetNativeFunction (
@@ -48,7 +79,7 @@ String:AddFunction ("operator+", { { "string", "str" } })
 		end
 	)
 	
-String:AddFunction ("operator+", { { "number", "n" } })
+String:AddMethod ("operator+", "number n")
 	:SetReturnType ("string")
 	:SetNativeString ("(%self% .. %n%")
 	:SetNativeFunction (

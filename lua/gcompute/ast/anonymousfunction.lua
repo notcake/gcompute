@@ -66,11 +66,15 @@ end
 
 function self:GetNamespace ()
 	if not self.FunctionDefinition then return nil end
-	return self.FunctionDefinition:GetParameterNamespace ()
+	return self.FunctionDefinition:GetNamespace ()
 end
 
 function self:GetParameterList ()
 	return self.ParameterList
+end
+
+function self:GetResolutionResult ()
+	return self.FunctionDefinition
 end
 
 function self:GetReturnTypeExpression ()

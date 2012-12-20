@@ -41,6 +41,14 @@ function self:GetArgumentCount ()
 	return self.ArgumentCount
 end
 
+function self:GetFullName ()
+	return self:GetName ("GetFullName")
+end
+
+function self:GetRelativeName (referenceDefinition)
+	return self:GetName ("GetRelativeName", referenceDefinition)
+end
+
 function self:IsEmpty ()
 	return self.ArgumentCount == 0
 end
@@ -53,14 +61,7 @@ end
 --- Returns a string representation of this type argument list
 -- @return A string representation of this type argument list
 function self:ToString ()
-	local typeArgumentList = ""
-	for i = 1, self:GetArgumentCount () do
-		if typeArgumentList ~= "" then
-			typeArgumentList = typeArgumentList .. ", "
-		end
-		typeArgumentList = typeArgumentList .. (self:GetArgument (i) and self:GetArgument (i):GetFullName () or "[Nothing]")
-	end
-	return "<" .. typeArgumentList .. ">"
+	return self:GetFullName ()
 end
 
 function self:Truncate (argumentCount)
@@ -68,4 +69,17 @@ function self:Truncate (argumentCount)
 	for i = argumentCount + 1, #self.Arguments do
 		self.Arguments [i] = nil
 	end
+end
+
+-- Internal, do not call
+function self:GetName (functionName, ...)
+	local typeArgumentList = ""
+	for i = 1, self:GetArgumentCount () do
+		if typeArgumentList ~= "" then
+			typeArgumentList = typeArgumentList .. ", "
+		end
+		local argument = self:GetArgument (i)
+		typeArgumentList = typeArgumentList .. (argument and argument [functionName] (argument, ...) or "[Nothing]")
+	end
+	return "<" .. typeArgumentList .. ">"
 end

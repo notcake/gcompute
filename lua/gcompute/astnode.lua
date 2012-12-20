@@ -115,6 +115,7 @@ function self:AddErrorMessage (text, startToken, endToken)
 	message:SetEndToken (endToken or startToken)
 	
 	self:AddMessage (message)
+	return message
 end
 
 function self:AddMessage (message)

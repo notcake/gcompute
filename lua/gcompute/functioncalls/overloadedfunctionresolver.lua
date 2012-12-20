@@ -59,17 +59,19 @@ function self:AddMemberOverloads (type, functionName, typeArgumentList)
 	type = type and type:UnwrapAliasAndReference ()
 	if not type then return end
 
-	local typeDefinition = type:GetTypeDefinition ()
-	if not typeDefinition then return end
-	
-	local memberDefinition = typeDefinition:GetMember (functionName)
-	if not memberDefinition then
-	elseif memberDefinition:IsOverloadedFunctionDefinition () then
-		self:AddOverloads (memberDefinition, typeArgumentList)
-	elseif memberDefinition:IsFunctionDefinition () then
-		self:AddOverload (memberDefinition, typeArgumentList)
+	local typeDefinition = type:GetClassDefinition ()
+	if typeDefinition then
+		-- Add matching members of the specified type
+		local memberDefinition = typeDefinition:GetMember (functionName)
+		if not memberDefinition then
+		elseif memberDefinition:IsOverloadedFunctionDefinition () then
+			self:AddOverloads (memberDefinition, typeArgumentList)
+		elseif memberDefinition:IsFunctionDefinition () then
+			self:AddOverload (memberDefinition, typeArgumentList)
+		end
 	end
 	
+	-- Add matching members of the specified type's base types
 	for baseType in type:GetBaseTypeEnumerator () do
 		self:AddMemberOverloads (baseType, functionName, typeArgumentList)
 	end
@@ -186,9 +188,9 @@ function self:Resolve ()
 			argumentList:InsertArgument (1, self.Object)
 		end
 	end
-	functionCall:SetFunctionName (bestOverload:GetName ())
+	functionCall:SetFunctionName (bestOverload:IsObjectDefinition () and bestOverload:GetName ())
 	functionCall:SetFunctionType (bestOverload:GetType ())
-	if bestOverload:IsFunction () then
+	if bestOverload:IsObjectDefinition () and bestOverload:IsFunction () then
 		if bestOverloadCallPlan.TypeArgumentList then
 			local typeCurriedFunctionDefinition = bestOverload:CreateTypeCurriedDefinition (bestOverloadCallPlan.TypeArgumentList)
 			functionCall:SetFunctionDefinition (typeCurriedFunctionDefinition)
@@ -213,7 +215,7 @@ function self:ToString ()
 	overloadedFunctionResolver = overloadedFunctionResolver .. "{\n"
 	
 	if self.Object then
-		overloadedFunctionResolver = overloadedFunctionResolver .. "    Arguments: " .. self.Object:GetType ():GetFullName () .. ":" .. self.ArgumentList:ToTypeString () .. "\n"
+		overloadedFunctionResolver = overloadedFunctionResolver .. "    Arguments: " .. (self.Object:GetType () and self.Object:GetType ():GetFullName () or "<error-type>") .. ":" .. self.ArgumentList:ToTypeString () .. "\n"
 	else
 		overloadedFunctionResolver = overloadedFunctionResolver .. "    Arguments: " .. self.ArgumentList:ToTypeString () .. "\n"
 	end
@@ -269,16 +271,23 @@ function self:IsBetterThan (leftCallPlan, rightCallPlan)
 end
 
 function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overloadCallPlan)
+	-- objectDefinition may be an ObjectDefinition or an AST node whose type is a function
+	
 	overloadCallPlan.Incompatible = false
 	overloadCallPlan.TypeConversions = {}
 	overloadCallPlan.DestinationTypes = {}
 	
 	-- Generate type parameter substitution map
 	local typeParameterMap = {}
-	local typeParameterList = objectDefinition:IsFunction () and objectDefinition:GetTypeParameterList () or GCompute.EmptyTypeParameterList
+	local typeParameterList = GCompute.EmptyTypeParameterList
+	
+	if objectDefinition:IsObjectDefinition () and objectDefinition:IsFunction () then
+		typeParameterList = objectDefinition:GetTypeParameterList ()
+	end
+	
 	typeArgumentList = typeArgumentList or GCompute.EmptyTypeArgumentList
 	for i = 1, typeArgumentList:GetArgumentCount () do
-		local typeParameter = objectDefinition:GetParameterNamespace ():GetMember (typeParameterList:GetParameterName (i))
+		local typeParameter = objectDefinition:GetNamespace ():GetMember (typeParameterList:GetParameterName (i))
 		typeParameterMap [typeParameter] = typeArgumentList:GetArgument (i)
 	end
 	

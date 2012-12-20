@@ -1,9 +1,9 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
 
-Expression2:AddFunction ("curtime")
+Expression2:AddMethod ("curtime")
 	:SetReturnType ("number")
 	:SetNativeFunction (CurTime)
 
-Expression2:AddFunction ("systime")
+Expression2:AddMethod ("systime")
 	:SetReturnType ("number")
 	:SetNativeFunction (SysTime)

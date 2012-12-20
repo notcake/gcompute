@@ -4,27 +4,22 @@ GCompute.VariableDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDef
 --- @param The name of this variable
 -- @param typeName The type of this variable as a string or DeferredObjectResolution or Type
 function self:ctor (name, typeName)
-	self.TypeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
+	self.Type = nil
 	
 	self:SetType (typeName)
 end
 
-function self:CreateRuntimeObject ()
-	return self.Type:UnwrapAlias ():CreateDefaultValue ()
+-- Variable
+--- Sets the type of this object
+-- @param type The Type of this object as a string or DeferredObjectResolution or Type
+function self:SetType (type)
+	self.Type = GCompute.ToDeferredTypeResolution (type, self:GetGlobalNamespace (), self:GetDeclaringObject ())
+	return self
 end
 
---- Resolves the type of this variable
-function self:ResolveTypes (globalNamespace, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
-	
-	if self.Type:IsDeferredObjectResolution () then
-		self.Type:Resolve (globalNamespace, self:GetContainingNamespace ())
-		if self.Type:IsFailedResolution () then
-			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
-		else
-			self.Type = self.Type:GetObject ()
-		end
-	end
+-- Definition
+function self:CreateRuntimeObject ()
+	return self.Type:UnwrapAlias ():CreateDefaultValue ()
 end
 
 --- Returns the type of this object
@@ -37,21 +32,20 @@ function self:IsVariable ()
 	return true
 end
 
---- Sets the type of this object
--- @param type The Type of this object as a string or DeferredObjectResolution or Type
-function self:SetType (typeName)
-	if typeName == nil then
-		self.Type = nil
-	elseif type (typeName) == "string" then
-		self.Type = GCompute.DeferredObjectResolution (typeName, GCompute.ResolutionObjectType.Type)
-	elseif typeName:IsDeferredObjectResolution () then
-		self.Type = typeName
-	elseif typeName:UnwrapAlias ():IsType () then
-		self.Type = typeName
-	else
-		GCompute.Error ("VariableDefinition:SetType : typeName must be a string, DeferredObjectResolution or Type")
+--- Resolves the type of this variable
+function self:ResolveTypes (globalNamespace, errorReporter)
+	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+	
+	if not self.Type then return end
+	
+	if self.Type:IsDeferredObjectResolution () then
+		self.Type:Resolve (globalNamespace, self:GetDeclaringObject ())
+		if self.Type:IsFailedResolution () then
+			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+		else
+			self.Type = self.Type:GetObject ():ToType ()
+		end
 	end
-	return self
 end
 
 --- Returns a string representing this VariableDefinition

@@ -59,13 +59,15 @@ function self:ToString ()
 		if self.Object:IsObjectDefinition () then
 			if self.Object:IsNamespace () then
 				object = "[Namespace] " .. self.Object:GetFullName ()
-			elseif self.Object:IsOverloadedTypeDefinition () then
+			elseif self.Object:IsOverloadedClass () then
 				object = "[Type Group] " .. self.Object:GetFullName ()
-			elseif self.Object:IsTypeDefinition () then
-				object = "[Type] " .. self.Object:GetFullName ()
+			elseif self.Object:IsClass () then
+				object = "[Class] " .. self.Object:GetFullName ()
 			else
 				object = self.Object:ToString ()
 			end
+		elseif self.Object:IsType () then
+			object = "[Type]" .. self.Object:ToString ()
 		else
 			object = self.Object:ToString ()
 		end

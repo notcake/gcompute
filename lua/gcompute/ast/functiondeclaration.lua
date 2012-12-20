@@ -79,7 +79,7 @@ end
 
 function self:GetNamespace ()
 	if not self.FunctionDefinition then return nil end
-	return self.FunctionDefinition:GetParameterNamespace ()
+	return self.FunctionDefinition:GetNamespace ()
 end
 
 function self:GetParameterList ()

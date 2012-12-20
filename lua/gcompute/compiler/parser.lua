@@ -233,7 +233,7 @@ end
 function self:Process (tokens, startToken, endToken)
 	self:Initialize (tokens, startToken, endToken)
 	
-	self.CompilationUnit:Debug ("Parsing from line " .. (startToken.Line + 1) .. ", char " .. (startToken.Character + 1) .. " to line " .. (endToken.EndLine + 1) .. ", char " .. (endToken.EndCharacter + 1) .. ".")
+	-- self.CompilationUnit:Debug ("Parsing from line " .. (startToken.Line + 1) .. ", char " .. (startToken.Character + 1) .. " to line " .. (endToken.EndLine + 1) .. ", char " .. (endToken.EndCharacter + 1) .. ".")
 	
 	return self:Root ()
 end

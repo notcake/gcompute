@@ -23,7 +23,7 @@ function self:VisitExpression (expression)
 			local typeArgumentList = GCompute.AST.TypeArgumentList ()
 			typeArgumentList:SetStartToken (argumentList:GetArgument (2):GetStartToken ())
 			typeArgumentList:SetEndToken (argumentList:GetArgument (2):GetEndToken ())
-			typeArgumentList:AddArgument (argumentList:GetArgument (2))
+			typeArgumentList:AddArgument (argumentList:GetArgument (2):ToTypeNode (self.GlobalNamespace:GetTypeSystem ()))
 			argumentList:RemoveArgument (2)
 			expression:SetTypeArgumentList (typeArgumentList)
 		end

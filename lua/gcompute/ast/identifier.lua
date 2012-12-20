@@ -43,16 +43,16 @@ function self:GetName ()
 	return self.Name
 end
 
-function self:GetResolutionResults ()
-	return self.ResolutionResults
-end
-
 function self:SetName (name)
 	self.Name = name
 end
 
 function self:ToString ()
-	return self.Name or "[Identifier]"
+	return self.Name or "[Missing Identifier]"
+end
+
+function self:ToTypeNode (typeSystem)
+	return self
 end
 
 function self:Visit (astVisitor, ...)

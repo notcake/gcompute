@@ -5,7 +5,8 @@ function self:ctor ()
 end
 
 function self:GetFullName ()
-	ErrorNoHalt ("IObject:GetFullName : Not implemented for " .. self:ToString () .. "\n")
+	GCompute.Error ("IObject:GetFullName : Not implemented for " .. self:ToString ())
+	return "[Nothing]"
 end
 
 --- Gets whether this object is an alias for another object
@@ -15,10 +16,6 @@ function self:IsAlias ()
 end
 
 function self:IsASTNode ()
-	return false
-end
-
-function self:IsType ()
 	return false
 end
 
@@ -32,6 +29,17 @@ end
 
 function self:IsNamespace ()
 	return false
+end
+
+--- Gets whether this object is a Type
+-- @return A boolean indicating whether this object is a Type
+function self:IsType ()
+	return false
+end
+
+function self:ToType ()
+	GCompute.Error ("IObject:ToType : " .. self:GetFullName () .. " is not a Type!")
+	return nil
 end
 
 --- Returns the target of this AliasDefinition or this IObject if this is not an AliasDefinition

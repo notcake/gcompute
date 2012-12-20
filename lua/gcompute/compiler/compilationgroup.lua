@@ -72,7 +72,14 @@ function self:Compile (callback)
 			for sourceFile in self:GetEnumerator () do
 				self.NamespaceDefinition:AddSourceNamespace (sourceFile:GetCompilationUnit ():GetNamespaceDefinition ())
 			end
-			self.NamespaceDefinition:SetTypeSystem (GCompute.GlobalNamespace:GetTypeSystem ():Clone (self.NamespaceDefinition))
+			
+			-- Create new type system
+			local typeSystem = GCompute.GlobalNamespace:GetTypeSystem ():Clone (self.NamespaceDefinition)
+			self.NamespaceDefinition:SetTypeSystem (typeSystem)
+			for sourceFile in self:GetEnumerator () do
+				sourceFile:GetCompilationUnit ():GetNamespaceDefinition ():SetTypeSystem (typeSystem)
+			end
+			
 			GCompute.UniqueNameAssigner ():Process (self.NamespaceDefinition)
 			callback ()
 		end
@@ -84,7 +91,7 @@ function self:Compile (callback)
 			function (callback, errorCallback)
 				local callbackChain = GCompute.CallbackChain ()
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
-					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
+					-- :Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:PreInferTypes (callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)

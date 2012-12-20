@@ -1,5 +1,5 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
-local Number = Expression2:AddType ("number")
+local Number = Expression2:AddClass ("number")
 Number:SetNullable (false)
 Number:SetPrimitive (true)
 Number:SetDefaultValueCreator (
@@ -15,13 +15,13 @@ Number:AddConstructor ({ { "int", "n" } })
 		end
 	)
 
-Number:AddFunction ("ToString")
+Number:AddMethod ("ToString")
 	:SetNativeFunction (tostring)
 	
-Number:AddFunction ("toString")
+Number:AddMethod ("toString")
 	:SetNativeFunction (tostring)
 
-Number:AddFunction ("toHex")
+Number:AddMethod ("toHex")
 	:SetReturnType ("string")
 	:SetNativeFunction (
 		function (n)
@@ -30,14 +30,14 @@ Number:AddFunction ("toHex")
 	)
 
 local function addOperator (symbol, f)
-	Number:AddFunction ("operator" .. symbol, { { "number", "b" } })
+	Number:AddMethod ("operator" .. symbol, "number b")
 		:SetReturnType ("number")
 		:SetNativeString ("(%self% " .. symbol .. "%arg:b%)")
 		:SetNativeFunction (f)
 end
 
 local function addComparisonOperator (symbol, f)
-	Number:AddFunction ("operator" .. symbol, { { "number", "b" } })
+	Number:AddMethod ("operator" .. symbol, "number b")
 		:SetReturnType ("bool")
 		:SetNativeString ("(%self% " .. symbol .. "%arg:b%)")
 		:SetNativeFunction (f)

@@ -72,6 +72,16 @@ function self:ToString ()
 	return leftExpression .. " " .. argumentList
 end
 
+function self:ToTypeNode (typeSystem)
+	local functionType = GCompute.AST.FunctionType ()
+	functionType:SetTypeSystem (typeSystem)
+	functionType:SetStartToken (self:GetStartToken ())
+	functionType:SetEndToken (self:GetEndToken ())
+	functionType:SetReturnTypeExpression (self:GetLeftExpression ():ToTypeNode ())
+	functionType:SetParameterList (self:GetArgumentList ():ToTypeNode ())
+	return functionType
+end
+
 function self:Visit (astVisitor, ...)
 	self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
 	self:SetArgumentList (self:GetArgumentList ():Visit (astVisitor, ...) or self:GetArgumentList ())

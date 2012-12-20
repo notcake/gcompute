@@ -21,7 +21,7 @@ end
 function self:VisitFunction (functionDefinition, ...)
 end
 
-function self:VisitOverloadedType (overloadedTypeDefinition, ...)
+function self:VisitOverloadedType (overloadedClassDefinition, ...)
 end
 
 function self:VisitType (typeDefinition, ...)

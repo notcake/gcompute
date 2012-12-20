@@ -23,6 +23,8 @@ function self:ctor (process)
 	self.Function = GCompute.NullCallback
 	self.Parameters = {}
 	
+	self.ThreadLocalStorage = {}
+	
 	-- Statistics
 	self.CpuTime = 0
 	self.LastExecutionTime = 0
@@ -52,6 +54,10 @@ end
 
 function self:GetThreadID ()
 	return self.ThreadID
+end
+
+function self:GetThreadLocalStorage ()
+	return self.ThreadLocalStorage
 end
 
 function self:GetName ()

@@ -36,6 +36,9 @@ function self:ctor (processList, processId)
 	
 	self.NamespaceDefinition = {}
 	self.RuntimeNamespace = {}
+	
+	self.ProcessLocalStorage = {}
+	
 	self.StdIn  = nil
 	self.StdOut = GCompute.Pipe ()
 	self.StdErr = GCompute.Pipe ()
@@ -46,6 +49,8 @@ end
 function self:CreateThread ()
 	local thread = GCompute.Thread (self)
 	self.Threads [thread:GetThreadID ()] = thread
+	
+	GCompute:DispatchEvent ("ThreadCreated", self, thread)
 	
 	return thread
 end
@@ -72,6 +77,10 @@ end
 
 function self:GetProcessId ()
 	return self.ProcessId
+end
+
+function self:GetProcessLocalStorage ()
+	return self.ProcessLocalStorage
 end
 
 function self:GetRuntimeNamespace ()

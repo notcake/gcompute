@@ -5,15 +5,20 @@ function self:ctor (name, f)
 	self.Function = f
 	
 	self.ReturnType = nil
-	self.ParameterList = GCompute.ParameterList ()
+	self.ParameterList = GCompute.Lua.FunctionParameterList (nil, self.Function)
 end
 
 function self:GetDisplayText ()
-	return self:ToString ()
+	local displayText = ""
+	if debug.getlocal (self.Function, 1) == "self" then
+		displayText = displayText .. ":"
+	end
+	displayText = displayText .. self:GetShortName () .. " " .. self:GetParameterList ():GetRelativeName (self)
+	return displayText
 end
 
 function self:GetParameterCount ()
-	return 0
+	return self.ParameterList:GetParameterCount ()
 end
 
 function self:GetParameterList ()
@@ -35,37 +40,41 @@ end
 function self:GetType ()
 	if self:IsMemberFunction () then
 		local parameterList = GCompute.ParameterList ()
-		parameterList:AddParameter (self:GetContainingNamespace (), "self")
+		parameterList:AddParameter (self:GetDeclaringType (), "self")
 		parameterList:AddParameters (self:GetParameterList ())
-		return GCompute.FunctionType (self:GetReturnType (), parameterList)
+		return self:GetTypeSystem ():CreateFunctionType (self:GetReturnType (), parameterList)
 	else
-		return GCompute.FunctionType (self:GetReturnType (), self:GetParameterList ())
+		return self:GetTypeSystem ():CreateFunctionType (self:GetReturnType (), self:GetParameterList ())
 	end
 end
 
-function self:GetTypeParameterList ()
-	return self.TypeParameterList
+function self:GetTypeArgumentList ()
+	return GCompute.EmptyTypeArgumentList
 end
 
-function self:IsFunction ()
+function self:GetTypeParameterList ()
+	return GCompute.EmptyTypeParameterList
+end
+
+function self:IsMethod ()
 	return true
 end
 
 function self:IsMemberFunction ()
-	if not self:GetContainingNamespace () then return false end
+	if not self:GetDeclaringObject () then return false end
 	if self:IsMemberStatic () then return false end
-	return self:GetContainingNamespace ():IsType ()
+	return self:GetDeclaringObject ():IsType ()
 end
 
---- Returns a string representation of this function
--- @return A string representation of this function
+--- Returns a string representation of this method
+-- @return A string representation of this method
 function self:ToString ()
-	local functionDefinition = self.ReturnType and (self.ReturnType:GetFullName () .. " ") or ""
+	local methodDefinition = self.ReturnType and (self.ReturnType:GetFullName () .. " ") or ""
 	if self:IsMemberFunction () then
-		functionDefinition = functionDefinition .. self:GetContainingNamespace ():GetFullName () .. ":" .. self:GetName ()
+		methodDefinition = methodDefinition .. self:GetDeclaringObject ():GetFullName () .. ":" .. self:GetName ()
 	else
-		functionDefinition = functionDefinition .. self:GetName ()
+		methodDefinition = methodDefinition .. self:GetName ()
 	end
-	functionDefinition = functionDefinition .. " " .. self:GetParameterList ():ToString ()
-	return functionDefinition
+	methodDefinition = methodDefinition .. " " .. self:GetParameterList ():ToString ()
+	return methodDefinition
 end

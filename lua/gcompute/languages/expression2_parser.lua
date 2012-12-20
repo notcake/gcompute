@@ -585,7 +585,7 @@ function self:StatementFunctionDeclaration ()
 			if self:Accept (":") then
 				parameterType = self:Type () or GCompute.AST.Error ("Expected <type> after ':' in argument list of function declaration.", self:GetCurrentToken ())
 			else
-				parameterType = GCompute.TypeParser:Root ("Expression2.number")
+				parameterType = GCompute.TypeParser ("Expression2.number"):Root ()
 			end
 			
 			functionDeclaration:GetParameterList ():AddParameter (parameterType, parameterName)

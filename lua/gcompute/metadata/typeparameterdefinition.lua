@@ -1,29 +1,33 @@
 local self = {}
-GCompute.TypeParameterDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition, GCompute.Type)
+GCompute.TypeParameterDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
 
 function self:ctor (name)
-	self.DeclaringFunction = nil
+	self.TypeParameterType = GCompute.TypeParameterType (self)
 	self.TypeParameterPosition = 1
 end
 
-function self:GetDeclaringFunction ()
-	return self.DeclaringFunction
+-- System
+function self:SetGlobalNamespace (globalNamespace)
+	if self.GlobalNamespace == globalNamespace then return end
+	
+	self.GlobalNamespace = globalNamespace
+	self.TypeParameterType:SetGlobalNamespace (globalNamespace)
 end
 
+function self:SetTypeSystem (typeSystem)
+	if self.TypeSystem == typeSystem then return end
+	
+	self.TypeSystem = typeSystem
+	self.TypeParameterType:SetTypeSystem (typeSystem)
+end
+
+-- Type Parameter
 function self:GetTypeParameterPosition ()
 	return self.TypeParameterPosition
 end
 
-function self:IsTypeParameter ()
+function self:IsConcreteType ()
 	return true
-end
-
-function self:ResolveTypes (globalNamespace, errorReporter)
-end
-
-function self:SetDeclaringFunction (declaringFunction)
-	self.DeclaringFunction = declaringFunction
-	return self
 end
 
 function self:SetTypeParameterPosition (typeParameterPosition)
@@ -31,10 +35,22 @@ function self:SetTypeParameterPosition (typeParameterPosition)
 	return self
 end
 
-function self:SubstituteTypeParameters (substitutionMap)
-	return substitutionMap:GetReplacement (self)
+-- Definition
+function self:IsTypeParameter ()
+	return true
+end
+
+function self:IsType ()
+	return true
+end
+
+function self:ResolveTypes (globalNamespace, errorReporter)
 end
 
 function self:ToString ()
 	return "[Type Parameter] " .. self:GetName ()
+end
+
+function self:ToType ()
+	return self.TypeParameterType
 end

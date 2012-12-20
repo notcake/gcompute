@@ -193,7 +193,9 @@ function GCompute.Editor.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				if not self.RootNamespaceBrowserView then
-					self.RootNamespaceBrowserView = self:CreateNamespaceBrowserView (GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu))
+					-- local namespace = GCompute.Lua.Table ("g_SpawnMenu", g_SpawnMenu)
+					local namespace = GCompute.Lua.Table ("GLib", GLib)
+					self.RootNamespaceBrowserView = self:CreateNamespaceBrowserView (namespace)
 					self.RootNamespaceBrowserView:AddEventListener ("Removed",
 						function ()
 							self.RootNamespaceBrowserView = nil

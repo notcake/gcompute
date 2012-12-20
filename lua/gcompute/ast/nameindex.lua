@@ -58,10 +58,6 @@ function self:GetLeftExpression ()
 	return self.LeftExpression
 end
 
-function self:GetResolutionResults ()
-	return self.ResolutionResults
-end
-
 function self:SetIdentifier (identifier)
 	self.Identifier = identifier
 	if self.Identifier then self.Identifier:SetParent (self) end
@@ -76,6 +72,10 @@ function self:ToString ()
 	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Unknown Expression]"
 	local identifier = self.Identifier and self.Identifier:ToString () or "[Unknown Identifier]"
 	return leftExpression .. "." .. identifier
+end
+
+function self:ToTypeNode (typeSystem)
+	return self
 end
 
 function self:Visit (astVisitor, ...)

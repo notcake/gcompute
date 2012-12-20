@@ -83,16 +83,17 @@ function self:Equals (other)
 	return self == other
 end
 
-function self:GetBaseTypes ()
-	return { self:GetTypeSystem ():GetObject () }
-end
-
 function self:GetFullName ()
 	return "[InferredType " .. tostring (self):sub (8) .. "]"
 end
 
-function self:GetTypeDefinition ()
-	return self:GetTypeSystem ():GetObject ():GetTypeDefinition ()
+function self:GetClassDefinition ()
+	return self:GetTypeSystem ():GetObject ():GetClassDefinition ()
+end
+
+function self:ImportFunctionTypes (overloadedFunctionDefinition)
+	for functionDefinition in overloadedFunctionDefinition:GetEnumerator () do
+	end
 end
 
 function self:IsInferredType ()

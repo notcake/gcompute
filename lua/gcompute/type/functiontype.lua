@@ -8,6 +8,8 @@ function self:ctor (returnType, parameterList)
 	if #self.ParameterList > 0 then
 		self.ParameterList = GCompute.ParameterList (self.ParameterList)
 	end
+	
+	self:SetNativelyAllocated (true)
 end
 
 --- Returns the compatibility rating of the given number and types of arguments with this FunctionDefinition
@@ -60,6 +62,15 @@ function self:Equals (otherType)
 	return self:GetParameterList ():TypeEquals (otherType:GetParameterList ())
 end
 
+function self:GetBaseType (index)
+	if index == 1 then return self:GetTypeSystem ():GetTop () end
+	return nil
+end
+
+function self:GetBaseTypeCount ()
+	return 1
+end
+
 function self:GetFullName ()
 	local returnType = self.ReturnType and self.ReturnType:GetFullName () or "[Unknown Type]"
 	
@@ -72,6 +83,9 @@ end
 
 function self:GetReturnType ()
 	return self.ReturnType
+end
+
+function self:GetClassDefinition ()
 end
 
 function self:IsFunctionType ()

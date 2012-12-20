@@ -3,12 +3,12 @@ self.__Type = "FunctionType"
 GCompute.AST.FunctionType = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
 function self:ctor ()
+	self.TypeSystem = nil
+	
 	self.Name = "[Unknown Identifier]"
 	
 	self.ReturnTypeExpression = nil	
 	self.ParameterList = GCompute.AST.ParameterList ()
-	
-	self.ResolutionResults = GCompute.ResolutionResults ()
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -44,8 +44,17 @@ function self:GetParameterList ()
 	return self.ParameterList
 end
 
+function self:GetResolutionResult ()
+	return GCompute.FunctionType (self:GetReturnTypeExpression ():GetResolutionResult (), self:GetParameterList ():ToParameterList ())
+		:SetTypeSystem (self:GetTypeSystem ())
+end
+
 function self:GetReturnTypeExpression ()
 	return self.ReturnTypeExpression
+end
+
+function self:GetTypeSystem ()
+	return self.TypeSystem
 end
 
 function self:SetParameterList (parameterList)
@@ -53,13 +62,13 @@ function self:SetParameterList (parameterList)
 	if parameterList then parameterList:SetParent (self) end
 end
 
-function self:GetResolutionResults ()
-	return self.ResolutionResults
-end
-
 function self:SetReturnTypeExpression (returnTypeExpression)
 	self.ReturnTypeExpression = returnTypeExpression
 	if self.ReturnTypeExpression then self.ReturnTypeExpression:SetParent (self) end
+end
+
+function self:SetTypeSystem (typeSystem)
+	self.TypeSystem = typeSystem
 end
 
 function self:ToString ()

@@ -63,10 +63,6 @@ function self:GetName ()
 	return self.Name
 end
 
-function self:GetResolutionResults ()
-	return self.ResolutionResults
-end
-
 function self:GetRuntimeName ()
 	return self.RuntimeName
 end
@@ -127,6 +123,10 @@ function self:ToString ()
 		return (self.LeftExpression and (self.LeftExpression:ToString () .. ".") or "") .. (self.Name or "[Nothing]") .. " " .. self.TypeArgumentList:ToString ()
 	end
 	return (self.LeftExpression and (self.LeftExpression:ToString () .. ".") or "")  .. (self.Name or "[Nothing]")
+end
+
+function self:ToTypeNode (typeSystem)
+	return self
 end
 
 function self:Visit (astVisitor, ...)

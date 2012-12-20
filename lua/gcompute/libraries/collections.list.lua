@@ -1,4 +1,4 @@
 local Global = GCompute.GlobalNamespace
 local Collections = Global:AddNamespace ("Collections")
 
-local List = Collections:AddType ("List", { "T" })
+local List = Collections:AddClass ("List", { "T" })

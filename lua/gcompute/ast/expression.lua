@@ -5,10 +5,22 @@ GCompute.AST.Expression = GCompute.AST.MakeConstructor (self)
 function self:ctor ()
 	self.Type           = nil
 	self.Value          = nil
+	
+	self.ResolutionResults = nil
+	self.ResolutionResult  = nil
 end
 
 function self:Evaluate (executionContext)
 	return nil
+end
+
+function self:GetResolutionResults ()
+	return self.ResolutionResults
+end
+
+function self:GetResolutionResult ()
+	if not self:GetResolutionResults () then return nil end
+	return self:GetResolutionResults ():GetFilteredResultObject (1)
 end
 
 function self:GetType ()
@@ -29,4 +41,8 @@ end
 
 function self:ToString ()
 	return "[Unknown Expression]"
+end
+
+function self:ToTypeNode (typeSystem)
+	GCompute.Error (self:GetNodeType () .. ":ToTypeNode : Not implemented.")
 end

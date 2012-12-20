@@ -25,7 +25,8 @@ function self:VisitBlock (blockStatement)
 	blockStatement:SetNamespace (blockStatement:GetNamespace () or GCompute.NamespaceDefinition ())
 	
 	local namespace = blockStatement:GetNamespace ()
-	namespace:SetContainingNamespace (blockStatement:GetParentNamespace ())
+	namespace:SetDeclaringNamespace (blockStatement:GetParentNamespace ())
+	namespace:SetDeclaringObject (blockStatement:GetParentNamespace ())
 	namespace:SetConstructorAST (blockStatement)
 	if namespace:GetNamespaceType () == GCompute.NamespaceType.Unknown then
 		namespace:SetNamespaceType (GCompute.NamespaceType.Local)
@@ -38,7 +39,7 @@ function self:VisitStatement (statement)
 			statement:SetNamespace (GCompute.NamespaceDefinition ())
 		end
 		if statement:GetNamespace () then
-			statement:GetNamespace ():SetContainingNamespace (statement:GetParentNamespace ())
+			statement:GetNamespace ():SetDeclaringNamespace (statement:GetParentNamespace ())
 		end
 	end
 	
@@ -69,15 +70,17 @@ end
 function self:VisitFunction (functionNode)
 	local functionDefinition = nil
 	
+	local declaringObject = functionNode:GetParentNamespace ()
+	while declaringObject:GetNamespace ():GetNamespaceType () ~= GCompute.NamespaceType.Global and
+		  declaringObject:GetNamespace ():GetNamespaceType () ~= GCompute.NamespaceType.Type do
+		declaringObject = declaringObject:GetDeclaringObject ()
+	end
+	
 	if functionNode:Is ("FunctionDeclaration") then
-		local declaringNamespace = functionNode:GetParentNamespace ()
-		while declaringNamespace:GetNamespaceType () ~= GCompute.NamespaceType.Global and
-		      declaringNamespace:GetNamespaceType () ~= GCompute.NamespaceType.Type do
-			declaringNamespace = declaringNamespace:GetContainingNamespace ()
-		end
-		functionDefinition = declaringNamespace:AddFunction (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
+		functionDefinition = declaringObject:GetNamespace ():AddMethod (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
 	else
 		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", functionNode:GetParameterList ():ToParameterList ())
+		declaringObject:GetNamespace ():SetupMemberHierarchy (functionDefinition)
 	end
 	
 	functionDefinition:SetReturnType (GCompute.DeferredObjectResolution (functionNode:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
@@ -85,6 +88,7 @@ function self:VisitFunction (functionNode)
 	functionNode:SetFunctionDefinition (functionDefinition)
 	
 	-- Set up function parameter namespace
-	functionDefinition:BuildParameterNamespace ()
-	functionDefinition:GetParameterNamespace ():SetContainingNamespace (functionNode:GetParentNamespace ())
+	functionDefinition:BuildNamespace ()
+	functionDefinition:GetNamespace ():SetDeclaringNamespace (functionNode:GetParentNamespace ())
+	functionDefinition:GetNamespace ():SetDeclaringObject (functionNode:GetParentNamespace ())
 end

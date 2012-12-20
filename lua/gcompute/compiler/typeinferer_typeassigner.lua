@@ -20,10 +20,10 @@ function self:VisitStatement (statement)
 		statement:SetType (typeResults:GetFilteredResultObject (1))
 		statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
 		
-		if statement:GetType () then
-			self.CompilationUnit:Debug ("Type of " .. statement:ToString () .. " is " .. statement:GetType ():GetFullName ())
-		else
-			self.CompilationUnit:Debug (statement:ToString () .. " has no type.")
+		if not statement:GetType () then
+			statement:AddErrorMessage (statement:ToString () .. " has no type.")
+		elseif statement:GetType ():UnwrapAlias ():IsErrorType () then
+			statement:AddErrorMessage ("Type of " .. statement:ToString () .. " is " .. statement:GetType ():GetFullName ())
 		end
 	end
 end
@@ -34,11 +34,7 @@ function self:VisitExpression (expression)
 	if expression:GetType () then
 		if expression:GetType ():IsDeferredObjectResolution () then
 			-- There shouldn't be any DeferredObjectResolutions here!
-			self.CompilationUnit:Error ("Pre-assigned type of " .. expression:ToString () .. " should not be a DeferredObjectResolution! (" .. expression:GetType ():ToString () .. ")")
-		elseif expression:GetType ():IsTypeDefinition () then
-			self.CompilationUnit:Debug ("Pre-assigned type of " .. expression:ToString () .. " is " .. expression:GetType ():GetFullName ())
-		else
-			self.CompilationUnit:Debug ("Pre-assigned type of " .. expression:ToString () .. " is " .. expression:GetType ():ToString ())
+			expression:AddErrorMessage ("Pre-assigned type of " .. expression:ToString () .. " should not be a DeferredObjectResolution! (" .. expression:GetType ():ToString () .. ")")
 		end
 		return
 	end
@@ -49,7 +45,7 @@ function self:VisitExpression (expression)
 	
 		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
 			local result = expression.ResolutionResults:GetFilteredResultObject (1)
-			local resultNamespace = result:GetContainingNamespace ()
+			local resultNamespace = result:GetDeclaringObject ()
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
 				local staticMemberAccess = GCompute.AST.StaticMemberAccess ()
@@ -77,13 +73,13 @@ function self:VisitExpression (expression)
 			
 			self:ResolveAccessType (expression)
 		else
-			expression:SetType (GCompute.NullType ())
+			expression:SetType (GCompute.ErrorType ())
 			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
 		end
 	elseif expression:Is ("NameIndex") then
 		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
 			local result = expression.ResolutionResults:GetFilteredResultObject (1)
-			local resultNamespace = result:GetContainingNamespace ()
+			local resultNamespace = result:GetDeclaringObject ()
 			local namespaceType = resultNamespace:GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
 				local staticMemberAccess = GCompute.AST.StaticMemberAccess ()
@@ -111,7 +107,7 @@ function self:VisitExpression (expression)
 			
 			self:ResolveAccessType (expression)
 		else
-			expression:SetType (GCompute.NullType ())
+			expression:SetType (GCompute.ErrorType ())
 			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
 		end
 	elseif expression:Is ("ArrayIndex") then
@@ -135,14 +131,14 @@ function self:VisitExpression (expression)
 	elseif expression:Is ("AnonymousFunction") then
 		expression:SetType (expression:GetFunctionDefinition ():GetType ())
 	else
-		expression:SetType (GCompute.InferredType ())
+		expression:SetType (GCompute.ErrorType ())
 	end
 	
 	expression = overrideExpression or expression
-	if expression:GetType () then
-		self.CompilationUnit:Debug ("Type of " .. expression:ToString () .. " is " .. expression:GetType ():GetFullName ())
-	else
-		self.CompilationUnit:Debug (expression:ToString () .. " has no type.")
+	if not expression:GetType () then
+		expression:AddErrorMessage (expression:ToString () .. " has no type.")
+	elseif expression:GetType ():UnwrapAlias ():IsErrorType () then
+		expression:AddErrorMessage ("Type of " .. expression:ToString () .. " is " .. expression:GetType ():GetFullName ())
 	end
 	
 	return overrideExpression
@@ -197,6 +193,7 @@ function self:VisitBinaryOperator (binaryOperator)
 		self:ResolveOperatorCall (binaryOperator, "operator" .. operator, binaryOperator:GetLeftExpression (), argumentList)
 		if binaryOperator.FunctionCall then
 			if binaryOperator.FunctionCall:IsMemberFunctionCall () then
+				binaryOperator:SetLeftExpression (binaryOperator.FunctionCall:GetLeftExpression ())
 				binaryOperator:SetRightExpression (binaryOperator.FunctionCall:GetArgumentList ():GetArgument (1))
 			else
 				binaryOperator:SetLeftExpression (binaryOperator.FunctionCall:GetArgumentList ():GetArgument (1))
@@ -212,21 +209,24 @@ end
 
 function self:VisitFunctionCall (functionCall)
 	local leftExpression = functionCall:GetLeftExpression ()
-	local leftDefinition = leftExpression:GetResolutionResults ():GetFilteredResultObject (1)
+	local leftDefinition = leftExpression:GetResolutionResult ()
+	
 	local leftType = leftExpression:GetType ():UnwrapReference ()
 	if leftType:IsInferredType () then
 	elseif leftType:IsFunctionType () then
-		local leftValue = leftExpression.ResolutionResults:GetFilteredResultObject (1)
-		-- leftValue could be an OverloadedFunctionDefinition or a VariableDefinition
+		-- leftDefinition could be an OverloadedFunctionDefinition or a VariableDefinition
 		
 		local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Static, nil, functionCall:GetArgumentList ())
 		
 		-- Populate OverloadedFunctionResolver
-		if leftValue:IsOverloadedFunctionDefinition () then
-			overloadedFunctionResolver:AddOverloads (leftValue)
-		elseif leftValue:IsFunction () or
-		       leftValue:GetType ():IsFunctionType () then
-			overloadedFunctionResolver:AddOverload (leftValue)
+		if not leftDefinition then
+			-- leftExpression is some expression returning a function
+			overloadedFunctionResolver:AddOverload (leftExpression)
+		elseif leftDefinition:IsOverloadedFunctionDefinition () then
+			overloadedFunctionResolver:AddOverloads (leftDefinition)
+		elseif leftDefinition:IsFunction () or
+		       leftDefinition:GetType ():IsFunctionType () then
+			overloadedFunctionResolver:AddOverload (leftDefinition)
 		else
 			self.CompilationUnit:Error ("Left hand side of function call is not a function! (" .. expression:GetLeftExpression ():ToString () .. ")")
 		end
@@ -238,10 +238,10 @@ function self:VisitFunctionCall (functionCall)
 				functionCall.FunctionCall:SetLeftExpression (leftExpression)
 			end
 		end
-	elseif leftDefinition:UnwrapAlias ():IsType () or leftDefinition:UnwrapAlias ():IsOverloadedTypeDefinition () then
+	elseif leftDefinition and (leftDefinition:UnwrapAlias ():IsType () or leftDefinition:UnwrapAlias ():IsOverloadedClass ()) then
 		return self:ConvertFunctionCallToConstructor (functionCall)
 	else
-		functionCall:SetType (GCompute.NullType ())
+		functionCall:SetType (GCompute.ErrorType ())
 		self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function (type was " .. leftType:ToString () .. ").", functionCall:GetLocation ())
 	end
 end
@@ -326,7 +326,6 @@ end
 function self:ResolveAccessType (astNode)
 	local resolutionResults = astNode:GetResolutionResults ()
 	local result = resolutionResults:GetFilteredResultObject (1):UnwrapAlias ()
-	local metadata = result:GetMetadata ()
 	
 	if result:IsOverloadedFunctionDefinition () then
 		if result:GetFunctionCount () == 1 then
@@ -337,7 +336,7 @@ function self:ResolveAccessType (astNode)
 			astNode:SetType (inferredType)
 			inferredType:ImportFunctionTypes (result)
 		end
-	elseif result:IsOverloadedTypeDefinition () or result:IsType () then
+	elseif result:IsOverloadedClass () or result:IsType () then
 		astNode:SetType (self.GlobalNamespace:GetTypeSystem ():GetType ())
 	else
 		astNode:SetType (GCompute.ReferenceType (result:GetType ()))
@@ -348,11 +347,11 @@ function self:ResolveFunctionCall (astNode, overloadedFunctionResolver)
 	local functionCall = overloadedFunctionResolver:Resolve ()
 	
 	if overloadedFunctionResolver:HasNoResults () then
-		self.CompilationUnit:Error ("Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
-		astNode:SetType (GCompute.NullType ())
+		astNode:AddErrorMessage ("Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
+		astNode:SetType (GCompute.ErrorType ())
 	elseif overloadedFunctionResolver:IsAmbiguous () then
-		self.CompilationUnit:Error ("Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
-		astNode:SetType (GCompute.NullType ())
+		astNode:AddErrorMessage ("Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
+		astNode:SetType (GCompute.ErrorType ())
 	else
 		self.CompilationUnit:Debug ("Resolving " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
 		astNode:SetType (functionCall:GetFunctionType ():GetReturnType ())
@@ -445,7 +444,7 @@ function self:ResolveAssignment (astNode)
 		GCompute.Error ("ResolveAssignment : Unhandled node type on left (" .. leftNodeType .. ", " .. left:ToString () .. ").")
 	end
 	
-	local leftNamespace = leftDefinition:GetContainingNamespace ()
+	local leftNamespace = leftDefinition:GetDeclaringObject ()
 	local leftNamespaceType = leftNamespace:GetNamespaceType ()
 	
 	if leftNamespaceType == GCompute.NamespaceType.Global then
@@ -502,6 +501,8 @@ function self:ResolveTypeConversion (astNode, destinationType)
 	local originalSourceType      = astNode:GetType ()
 	local originalDestinationType = destinationType
 	
+	if not originalSourceType then return end
+	
 	local sourceType = originalSourceType     :UnwrapAlias ()
 	destinationType  = originalDestinationType:UnwrapAlias ()
 	
@@ -533,17 +534,17 @@ function self:ResolveTypeConversion (astNode, destinationType)
 end
 
 function self:GetMergedLocalScope (memberDefinition)
-	local namespace = memberDefinition:GetContainingNamespace ()
+	local namespace = memberDefinition:GetDeclaringObject ()
 	local mergedLocalScope = nil
 	while not mergedLocalScope and namespace do
 		while not namespace:GetMergedLocalScope () do
-			namespace = namespace:GetContainingNamespace ()
+			namespace = namespace:GetDeclaringObject ()
 		end
 		
 		if namespace:GetMergedLocalScope ():Contains (memberDefinition) then
 			mergedLocalScope = namespace:GetMergedLocalScope ()
 		else
-			namespace = namespace:GetContainingNamespace ()
+			namespace = namespace:GetDeclaringObject ()
 		end
 	end
 	if not namespace then

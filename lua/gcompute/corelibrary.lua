@@ -1,18 +1,17 @@
 local Global        = GCompute.GlobalNamespace
-local Object        = Global:AddType ("Object")
-local Type          = Global:AddType ("Type")
-local Namespace     = Global:AddType ("Namespace")
-local Function      = Global:AddType ("Function")
-local FunctionGroup = Global:AddType ("FunctionGroup")
+local Object        = Global:AddClass ("Object")
+local Type          = Global:AddClass ("Type")
+local Namespace     = Global:AddClass ("Namespace")
+local Function      = Global:AddClass ("Function")
+local FunctionGroup = Global:AddClass ("FunctionGroup")
 
-local Void          = Global:AddType ("Void")
-Void:SetIsBottom (true)
+local Void          = Global:AddClass ("Void")
 Global:GetTypeSystem ():SetBottom (Void)
 
-local Boolean       = Global:AddType ("Boolean")
-local Number        = Global:AddType ("Number")
-local Integer       = Global:AddType ("Integer")
-local String        = Global:AddType ("String")
+local Boolean       = Global:AddClass ("Boolean")
+local Number        = Global:AddClass ("Number")
+local Integer       = Global:AddClass ("Integer")
+local String        = Global:AddClass ("String")
 
 Global:AddAlias ("object",  "Object")
 Global:AddAlias ("type",    "Type")

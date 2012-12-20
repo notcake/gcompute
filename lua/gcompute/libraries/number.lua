@@ -1,5 +1,5 @@
 local Global = GCompute.GlobalNamespace
-local Number = Global:AddType ("Number")
+local Number = Global:AddClass ("Number")
 Number:SetNullable (false)
 Number:SetPrimitive (true)
 Number:SetDefaultValueCreator (
@@ -8,10 +8,10 @@ Number:SetDefaultValueCreator (
 	end
 )
 
-Number:AddFunction ("ToString")
+Number:AddMethod ("ToString")
 	:SetNativeFunction (tostring)
 
-Number:AddFunction ("ToHex")
+Number:AddMethod ("ToHex")
 	:SetNativeFunction (
 		function (n)
 			return string.format ("%x", n)

@@ -25,7 +25,7 @@ function self:ctor ()
 	self.Statements = {}
 	self.StatementCount = 0
 	
-	self.NamespaceDefinition = nil -- NamespaceDefinition or TypeDefinition
+	self.NamespaceDefinition = nil -- NamespaceDefinition or ClassDefinition
 	self.PopStackFrame = false
 end
 

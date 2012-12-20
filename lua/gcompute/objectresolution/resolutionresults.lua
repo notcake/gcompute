@@ -63,7 +63,7 @@ function self:FilterByType (objectType)
 	end
 end
 
---- Filters results down to concrete (non-parametric) types, whilst expanding OverloadedTypeDefinitions which are non-aliased or contain more than one TypeDefinition
+--- Filters results down to concrete (non-parametric) types, whilst expanding OverloadedClassDefinitions which are non-aliased or contain more than one ClassDefinition
 function self:FilterToConcreteTypes ()
 	local filteredResults = {}
 	for i = 1, #self.FilteredResults do
@@ -73,15 +73,15 @@ function self:FilterToConcreteTypes ()
 			if filteredObject:IsConcreteType () then
 				filteredResults [#filteredResults + 1] = self.FilteredResults [i]
 			end
-		elseif filteredObject:IsOverloadedTypeDefinition () then
+		elseif filteredObject:IsOverloadedClass () then
 			if isAlias and filteredObject:GetTypeCount () == 1 then
 				if filteredObject:GetType (1):IsConcreteType () then
 					filteredResults [#filteredResults + 1] = self.FilteredResults [i]
 				end
 			else
-				for j = 1, filteredObject:GetTypeCount () do
-					if filteredObject:GetType (j):IsConcreteType () then
-						local resolutionResult = GCompute.ResolutionResult (filteredObject:GetType (j), self.FilteredResults [i]:GetResultType ())
+				for class in filteredObject:GetEnumerator () do
+					if class:IsConcreteType () then
+						local resolutionResult = GCompute.ResolutionResult (class, self.FilteredResults [i]:GetResultType ())
 						resolutionResult:SetLocalDistance (self.FilteredResults [i]:GetLocalDistance ())
 						filteredResults [#filteredResults + 1] = resolutionResult
 					end
@@ -103,7 +103,7 @@ function self:FilterToNamespaces ()
 	self.FilteredResults = filteredResults
 end
 
---- Filters results down to types and parametric types, whilst expanding OverloadedTypeDefinitions which are non-aliased or contain more than one TypeDefinition
+--- Filters results down to types and parametric types, whilst expanding OverloadedClassDefinitions which are non-aliased or contain more than one ClassDefinition
 function self:FilterToParametricTypes ()
 	local filteredResults = {}
 	for i = 1, #self.FilteredResults do
@@ -111,12 +111,12 @@ function self:FilterToParametricTypes ()
 		local filteredObject = self.FilteredResults [i]:GetObject ():UnwrapAlias ()
 		if filteredObject:IsType () then
 			filteredResults [#filteredResults + 1] = self.FilteredResults [i]
-		elseif filteredObject:IsOverloadedTypeDefinition () then
-			if isAlias and filteredObject:GetTypeCount () == 1 then
+		elseif filteredObject:IsOverloadedClass () then
+			if isAlias and filteredObject:GetClassCount () == 1 then
 				filteredResults [#filteredResults + 1] = self.FilteredResults [i]
 			else
-				for j = 1, filteredObject:GetTypeCount () do
-					local resolutionResult = GCompute.ResolutionResult (filteredObject:GetType (j), self.FilteredResults [i]:GetResultType ())
+				for class in filteredObject:GetEnumerator () do
+					local resolutionResult = GCompute.ResolutionResult (class, self.FilteredResults [i]:GetResultType ())
 					resolutionResult:SetLocalDistance (self.FilteredResults [i]:GetLocalDistance ())
 					filteredResults [#filteredResults + 1] = resolutionResult
 				end

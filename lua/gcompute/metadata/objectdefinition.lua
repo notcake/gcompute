@@ -3,91 +3,92 @@ GCompute.ObjectDefinition = GCompute.MakeConstructor (self, GCompute.IObject)
 
 --- @param name The name of this object
 function self:ctor (name)
-	self.Name = name
+	-- System
+	self.GlobalNamespace    = nil
+	self.TypeSystem         = nil
 	
 	-- Hierarchy
-	self.ContainingNamespace = nil
-	self.DeclaringType = nil
+	self.Name               = name
+	self.DeclaringMethod    = nil
+	self.DeclaringNamespace = nil
+	self.DeclaringObject    = nil
+	self.DeclaringType      = nil
 	
-	self.Metadata = nil
+	-- Children
+	self.Namespace          = nil
 	
-	self.FileStatic = false
-	self.MemberStatic = false
-	self.LocalStatic = false
-end
-
-function self:ComputeMemoryUsage (memoryUsageReport)
-	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
-	if memoryUsageReport:IsCounted (self) then return end
+	-- Member
+	self.MemberVisibility   = GCompute.MemberVisibility.Public
+	self.FileStatic         = false
+	self.MemberStatic       = false
+	self.LocalStatic        = false
 	
-	memoryUsageReport:CreditTableStructure ("Object Definitions", self)
+	-- Attributes
+	self.Attributes         = {}
 	
-	return memoryUsageReport
+	-- Definition
 end
 
---- Returns true if this ObjectDefinition has unbound type parameters
--- @return A boolean indicating whether this ObjectDefinition has unbound type parameters
-function self:ContainsUnboundTypeParameters ()
-	GCompute.Error ("ObjectDefinition:ContainsTypeParameterUsage : Not implemented (" .. self:GetFullName () .. ")")
+-- System
+function self:GetGlobalNamespace ()
+	return self.GlobalNamespace
 end
 
-function self:CreateRuntimeObject ()
-	GCompute.Error ("ObjectDefinition:CreateRuntimeObject : Not implemented (" .. self:GetFullName () .. ")")
+function self:GetTypeSystem ()
+	return self.TypeSystem
 end
 
---- Gets the namespace definition containing this object
--- @return The NamespaceDefinition containing this object
-function self:GetContainingNamespace ()
-	return self.ContainingNamespace
+function self:IsGlobalNamespace ()
+	return self:GetGlobalNamespace () == self
 end
 
-function self:GetCorrespondingDefinition (globalNamespace)
-	GCompute.Error ("ObjectDefinition:GetCorrespondingDefinition : Not implemented (" .. self:GetFullName () .. ")")
+function self:SetGlobalNamespace (globalNamespace)
+	if self.GlobalNamespace == globalNamespace then return self end
+	self.GlobalNamespace = globalNamespace
+	if self:GetNamespace () then
+		self:GetNamespace ():SetGlobalNamespace (globalNamespace)
+	end
+	return self
+end
+
+function self:SetTypeSystem (typeSystem)
+	if self.TypeSystem == typeSystem then return self end
+	self.TypeSystem = typeSystem
+	if self:GetNamespace () then
+		self:GetNamespace ():SetTypeSystem (typeSystem)
+	end
+	return self
+end
+
+-- Hierarchy
+function self:GetDeclaringMethod ()
+	return self.DeclaringMethod
+end
+
+--- Gets the NamespaceDefinition or ClassDefinition containing this object
+-- @return The NamespaceDefinition or ClassDefinition containing this object
+function self:GetDeclaringNamespace ()
+	return self.DeclaringNamespace
+end
+
+function self:GetDeclaringObject ()
+	return self.DeclaringObject
 end
 
 function self:GetDeclaringType ()
 	return self.DeclaringType
 end
 
-function self:GetDisplayText ()
-	return self:GetName ()
-end
-
---- Gets the location of this object
--- @return The location of this object
+--- Gets the fully qualified name of this object
+-- @return The fully qualified name of this object
 function self:GetFullName ()
-	return self:GetLocation ()
-end
-
-function self:GetFullRuntimeName ()
-	local containingNamespace = self:GetContainingNamespace ()
-	if not containingNamespace then return self:GetRuntimeName () end
+	local declaringObject = self:GetDeclaringObject ()
 	
-	if containingNamespace:GetContainingNamespace () then
-		return containingNamespace:GetFullRuntimeName () .. "." .. self:GetRuntimeName ()
-	end
-	
-	return self:GetRuntimeName ()
-end
-
---- Gets the location of this object
--- @return The location of this object
-function self:GetLocation ()
-	if self:GetContainingNamespace () then
-		if self:GetContainingNamespace ():GetContainingNamespace () then
-			return self:GetContainingNamespace ():GetLocation () .. "." .. self:GetShortName ()
-		else
-			return self:GetShortName ()
-		end
-	else
+	if not declaringObject or declaringObject:IsGlobalNamespace () then
 		return self:GetShortName ()
 	end
-end
-
---- Gets the metadata of this object
--- @return The MemberInfo for this object
-function self:GetMetadata ()
-	return self.Metadata
+	
+	return declaringObject:GetFullName () .. "." .. self:GetShortName ()
 end
 
 --- Gets the name of this object
@@ -96,22 +97,23 @@ function self:GetName ()
 	return self.Name
 end
 
-function self:GetRootNamespace ()
-	if not self:GetContainingNamespace () and self:IsNamespace () then
-		return self
-	end
-	return self:GetContainingNamespace ():GetRootNamespace ()
-end
-
-function self:GetRuntimeName (invalidParameter)
-	if invalidParameter then
-		GCompute.Error ("MergedNamespaceDefinition:GetRuntimeName : This function does not do what you think it does.")
+function self:GetRelativeName (referenceDefinition)
+	local declaringObject = self:GetDeclaringObject ()
+	
+	if not declaringObject or declaringObject:IsGlobalNamespace () then
+		return self:GetShortName ()
 	end
 	
-	local containingNamespace = self:GetContainingNamespace ()
-	if not containingNamespace then return self:GetShortName () end
+	-- Check referenceDefinition's parents
+	local reference = referenceDefinition
+	while reference do
+		if declaringObject == reference then
+			return self:GetShortName ()
+		end
+		reference = reference:GetDeclaringObject ()
+	end
 	
-	return containingNamespace:GetUniqueNameMap ():GetObjectName (self, self:GetShortName ())
+	return declaringObject:GetRelativeName (referenceDefinition) .. "." .. self:GetShortName ()
 end
 
 --- Gets the short name of this object
@@ -120,26 +122,72 @@ function self:GetShortName ()
 	return self:GetName () or "[Unnamed]"
 end
 
---- Returns the Type of this object
--- @return A Type representing the type of this object
-function self:GetType ()
-	GCompute.Error (self.Name .. ":GetType : Not implemented.")
-	return nil
+function self:SetDeclaringMethod (declaringMethod)
+	if self.DeclaringMethod == declaringMethod then return self end
+	self.DeclaringMethod = declaringMethod
+	if not self:IsMethod () and self:GetNamespace () then
+		self:GetNamespace ():SetDeclaringMethod (declaringMethod)
+	end
+	return self
 end
 
-function self:GetTypeSystem ()
-	if not self:GetContainingNamespace () then return nil end
-	return self:GetContainingNamespace ():GetTypeSystem ()
+function self:SetDeclaringNamespace (declaringNamespace)
+	if self.DeclaringNamespace == declaringNamespace then return self end
+	self.DeclaringNamespace = declaringNamespace
+	if self:GetNamespace () then
+		self:GetNamespace ():SetDeclaringNamespace (declaringNamespace)
+	end
+	return self
+end
+
+function self:SetDeclaringObject (declaringObject)
+	if self.DeclaringObject == declaringObject then return self end
+	self.DeclaringObject = declaringObject
+	if self:GetNamespace () then
+		self:GetNamespace ():SetDeclaringObject (declaringObject)
+	end
+	return self
+end
+
+function self:SetDeclaringType (declaringType)
+	if self.DeclaringType == declaringType then return self end
+	self.DeclaringType = declaringType
+	if self:GetNamespace () then
+		self:GetNamespace ():SetDeclaringType (declaringType)
+	end
+	return self
+end
+
+-- Children
+function self:GetNamespace ()
+	return self.Namespace
+end
+
+function self:HasNamespace ()
+	return self:GetNamespace () ~= nil
+end
+
+-- Member
+function self:GetMemberVisibility ()
+	return self.MemberVisibility
+end
+
+function self:IsPrivate ()
+	return self.MemberVisibility == GCompute.MemberVisibility.Private
+end
+
+function self:IsProtected ()
+	return self.MemberVisibility == GCompute.MemberVisibility.Protected
+end
+
+function self:IsPublic ()
+	return self.MemberVisibility == GCompute.MemberVisibility.Public
 end
 
 --- Gets whether this object is inaccessible from code in other files
 -- @return A boolean indicating whether this object is inaccessible from code in other files
 function self:IsFileStatic ()
 	return self.FileStatic
-end
-
-function self:IsFunction ()
-	return false
 end
 
 --- Gets whether this local object's state is preserved between function calls
@@ -152,63 +200,6 @@ end
 -- @return A boolean indicating whether this object is shared between all instances of a type
 function self:IsMemberStatic ()
 	return self.MemberStatic
-end
-
---- Gets whether this object is a NamespaceDefinition
--- @return A boolean indicating whether this object is a NamespaceDefinition
-function self:IsNamespace ()
-	return false
-end
-
---- Gets whether this object is an ObjectDefinition
--- @return A boolean indicating whether this object is an ObjectDefinition
-function self:IsObjectDefinition ()
-	return true
-end
-
---- Gets whether this object is an OverloadedFunctionDefinition
--- @return A boolean indicating whether this object is an OverloadedFunctionDefinition
-function self:IsOverloadedFunctionDefinition ()
-	return false
-end
-
---- Gets whether this object is an OverloadedTypeDefinition
--- @return A boolean indicating whether this object is an OverloadedTypeDefinition
-function self:IsOverloadedTypeDefinition ()
-	return false
-end
-
---- Gets whether this object is a TypeDefinition
--- @return A boolean indicating whether this object is a TypeDefinition
-function self:IsType ()
-	return false
-end
-
---- Gets whether this object is a TypeDefinition
--- @return A boolean indicating whether this object is a TypeDefinition
-function self:IsTypeDefinition ()
-	return false
-end
-
-function self:IsVariable ()
-	return false
-end
-
---- Resolves all types
-function self:ResolveTypes (globalNamespace, errorReporter)
-	ErrorNoHalt (self:GetLocation () .. ":ResolveTypes : Not implemented.\n")
-end
-
---- Sets the containing namespace definition of this object
--- @param containingNamespaceDefinition The NamespaceDefinition containing this object
-function self:SetContainingNamespace (containingNamespaceDefinition)
-	self.ContainingNamespace = containingNamespaceDefinition
-	return self
-end
-
-function self:SetDeclaringType (declaringType)
-	self.DeclaringType = declaringType
-	return self
 end
 
 --- Sets whether this object is inaccessible from code in other files
@@ -232,11 +223,150 @@ function self:SetMemberStatic (memberStatic)
 	return self
 end
 
---- Sets the metadata for this object
--- @param metadata The MemberInfo for this object
-function self:SetMetadata (metadata)
-	self.Metadata = metadata
+function self:SetMemberVisibility (memberVisibility)
+	self.MemberVisibility = memberVisibility
 	return self
+end
+
+-- Attributes
+function self:AddAttribute (attribute)
+	self.Attributes [#self.Attributes + 1] = attribute
+end
+
+function self:GetAttribute (index)
+	return self.Attributes [index]
+end
+
+function self:GetAttributeCount ()
+	return #self.Attributes
+end
+
+function self:GetAttributeEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Attributes [i]
+	end
+end
+
+function self:RemoveAttribute (index)
+	table.remove (self.Attributes, index)
+end
+
+-- Definition
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Object Definitions", self)
+	if self:GetNamespace () then
+		self:GetNamespace ():CreditTableStructure ("Object Definitions", self)
+	end
+	
+	return memoryUsageReport
+end
+
+--- Returns true if this ObjectDefinition has unbound type parameters
+-- @return A boolean indicating whether this ObjectDefinition has unbound type parameters
+function self:ContainsUnboundTypeParameters ()
+	GCompute.Error ("ObjectDefinition:ContainsUnboundTypeParameters : Not implemented (" .. self:GetFullName () .. ")")
+end
+
+function self:CreateRuntimeObject ()
+	GCompute.Error ("ObjectDefinition:CreateRuntimeObject : Not implemented (" .. self:GetFullName () .. ")")
+end
+
+function self:GetCorrespondingDefinition (globalNamespace)
+	GCompute.Error ("ObjectDefinition:GetCorrespondingDefinition : Not implemented (" .. self:GetFullName () .. ")")
+end
+
+function self:GetDisplayText ()
+	return self:GetName ()
+end
+
+function self:GetFullRuntimeName ()
+	local declaringObject = self:GetDeclaringObject ()
+	
+	if not declaringObject or declaringObject:IsGlobalNamespace () then
+		return self:GetRuntimeName ()
+	end
+	
+	return declaringObject:GetFullRuntimeName () .. "." .. self:GetRuntimeName ()
+end
+
+function self:GetRuntimeName (invalidParameter)
+	if invalidParameter then
+		GCompute.Error ("MergedNamespaceDefinition:GetRuntimeName : This function does not do what you think it does.")
+	end
+	
+	local declaringObject = self:GetDeclaringObject ()
+	if not declaringObject then return self:GetShortName () end
+	
+	return declaringObject:GetUniqueNameMap ():GetObjectName (self, self:GetShortName ())
+end
+
+--- Returns the Type of this object
+-- @return A Type representing the type of this object
+function self:GetType ()
+	GCompute.Error (self.Name .. ":GetType : Not implemented.")
+	return nil
+end
+
+--- Gets whether this object is a ClassDefinition
+-- @return A boolean indicating whether this object is a ClassDefinition
+function self:IsClass ()
+	return false
+end
+
+--- Gets whether this object is an EventDefinition
+-- @return A boolean indicating whether this object is a EventDefinition
+function self:IsEvent ()
+	return false
+end
+
+--- Gets whether this object is a MethodDefinition
+-- @return A boolean indicating whether this object is a MethodDefinition
+function self:IsMethod ()
+	return false
+end
+
+--- Gets whether this object is a NamespaceDefinition
+-- @return A boolean indicating whether this object is a NamespaceDefinition
+function self:IsNamespace ()
+	return false
+end
+
+--- Gets whether this object is an ObjectDefinition
+-- @return A boolean indicating whether this object is an ObjectDefinition
+function self:IsObjectDefinition ()
+	return true
+end
+
+--- Gets whether this object is an OverloadedClassDefinition
+-- @return A boolean indicating whether this object is an OverloadedClassDefinition
+function self:IsOverloadedClass ()
+	return false
+end
+
+--- Gets whether this object is an OverloadedMethodDefinition
+-- @return A boolean indicating whether this object is an OverloadedMethodDefinition
+function self:IsOverloadedMethod ()
+	return false
+end
+
+--- Gets whether this object is a PropertyDefinition
+-- @return A boolean indicating whether this object is a PropertyDefinition
+function self:IsProperty ()
+	return false
+end
+
+function self:IsVariable ()
+	return false
+end
+
+--- Resolves all types
+function self:ResolveTypes (globalNamespace, errorReporter)
+	ErrorNoHalt (self:GetLocation () .. ":ResolveTypes : Not implemented.\n")
 end
 
 --- Returns a string representing this ObjectDefinition

@@ -13,7 +13,7 @@ end
 
 function self:VisitBlock (blockStatement)
 	blockStatement:SetNamespace (blockStatement:GetNamespace () or GCompute.NamespaceDefinition ())
-	blockStatement:GetNamespace ():SetContainingNamespace (blockStatement:GetParentNamespace ())
+	blockStatement:GetNamespace ():SetDeclaringNamespace (blockStatement:GetParentNamespace ())
 	blockStatement:GetNamespace ():SetConstructorAST (blockStatement)
 end
 
@@ -22,7 +22,7 @@ function self:VisitStatement (statement)
 	local parentMergedScope = nil
 	if statement:Is ("FunctionDeclaration") or
 	   statement:Is ("VariableDeclaration") then
-		parentNamespace = self:GetRootNamespace (statement:GetParentNamespace ())
+		parentNamespace = self:GetGlobalNamespace (statement:GetParentNamespace ())
 		parentMergedScope = parentNamespace:GetMergedLocalScope () or GCompute.MergedLocalScope ()
 		parentNamespace:SetMergedLocalScope (parentMergedScope)
 	end
@@ -65,11 +65,11 @@ function self:GetNamespace (statement)
 	return self:GetNamespace (statement:GetParent ())
 end
 
-function self:GetRootNamespace (namespaceDefinition)
-	local namespaceType = namespaceDefinition:GetNamespaceType ()
+function self:GetGlobalNamespace (objectDefinition)
+	local namespaceType = objectDefinition:GetNamespace ():GetNamespaceType ()
 	if namespaceType == GCompute.NamespaceType.Global or
 	   namespaceType == GCompute.NamespaceType.FunctionRoot then
-		return namespaceDefinition
+		return objectDefinition
 	end
-	return self:GetRootNamespace (namespaceDefinition:GetContainingNamespace ())
+	return self:GetGlobalNamespace (objectDefinition:GetDeclaringObject ())
 end

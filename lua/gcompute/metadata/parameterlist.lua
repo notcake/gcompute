@@ -77,6 +77,10 @@ function self:GetEnumerator ()
 	end
 end
 
+function self:GetFullName ()
+	return self:GetName ("GetFullName")
+end
+
 --- Gets the number of parameters in this parameter list
 -- @return The number of parameters in this parameter list
 function self:GetParameterCount ()
@@ -102,6 +106,10 @@ end
 -- @return The type of the parameter as a DeferredObjectResolution or Type or nil if unknown
 function self:GetParameterType (parameterId)
 	return self.ParameterTypes [parameterId]
+end
+
+function self:GetRelativeName (referenceDefinition)
+	return self:GetName ("GetRelativeName", referenceDefinition)
 end
 
 --- Returns a boolean indicating whether this parameter list is empty
@@ -135,7 +143,7 @@ function self:ResolveTypes (globalNamespace, localNamespace, errorReporter)
 			if self.ParameterTypes [i]:IsFailedResolution () then
 				self.ParameterTypes [i]:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 			else
-				self.ParameterTypes [i] = self.ParameterTypes [i]:GetObject ()
+				self.ParameterTypes [i] = self.ParameterTypes [i]:GetObject ():ToType ()
 			end
 		end
 	end
@@ -159,13 +167,7 @@ end
 -- @param parameterId The id of the parameter
 -- @param parameterType The new type of the parameter as a string, DeferredObjectResolution or Type
 function self:SetParameterType (parameterId, parameterType)
-	if type (parameterType) == "string" then
-		parameterType = GCompute.DeferredObjectResolution (parameterType, GCompute.ResolutionObjectType.Type)
-	elseif parameterType and
-	       not parameterType:IsDeferredObjectResolution () and
-	       not parameterType:UnwrapAlias ():IsType () then
-		GCompute.Error ("ParameterList:SetParameterType : parameterType must be a string, DeferredObjectResolution or Type")
-	end
+	parameterType = GCompute.ToDeferredTypeResolution (parameterType)
 	self.ParameterTypes [parameterId] = parameterType
 end
 
@@ -184,20 +186,7 @@ end
 --- Returns a string representation of this parameter list
 -- @return A string representation of this parameter list
 function self:ToString ()
-	local parameterList = ""
-	for i = 1, self.ParameterCount do
-		if parameterList ~= "" then
-			parameterList = parameterList .. ", "
-		end
-		local parameterType = self.ParameterTypes [i]
-		local parameterName = self.ParameterNames [i]
-		parameterType = parameterType and parameterType:GetFullName () or "[Unknown Type]"
-		parameterList = parameterList .. parameterType
-		if parameterName then
-			parameterList = parameterList .. " " .. parameterName
-		end
-	end
-	return "(" .. parameterList .. ")"
+	return self:GetFullName ()
 end
 
 --- Checks for ParameterList type equality. Both ParameterLists must have all their parameter types pre-resolved.
@@ -209,4 +198,22 @@ function self:TypeEquals (otherParameterList)
 	end
 	
 	return true
+end
+
+-- Internal, do not call
+function self:GetName (functionName, ...)
+	local parameterList = ""
+	for i = 1, self.ParameterCount do
+		if parameterList ~= "" then
+			parameterList = parameterList .. ", "
+		end
+		local parameterType = self.ParameterTypes [i]
+		local parameterName = self.ParameterNames [i]
+		parameterType = parameterType and parameterType [functionName] (parameterType, ...) or "[Unknown Type]"
+		parameterList = parameterList .. parameterType
+		if parameterName then
+			parameterList = parameterList .. " " .. parameterName
+		end
+	end
+	return "(" .. parameterList .. ")"
 end

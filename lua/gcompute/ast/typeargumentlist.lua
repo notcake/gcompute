@@ -20,9 +20,9 @@ end
 function self:ToTypeArgumentList ()
 	local typeArgumentList = GCompute.TypeArgumentList ()
 	for argument in self:GetEnumerator () do
-		-- resolvedObject should always be a Type or TypeDefinition (which is a Type) or OverloadedTypeDefinition here.
-		local resolvedObject = argument and argument.ResolutionResults:GetFilteredResultObject (1)
-		if resolvedObject and resolvedObject:UnwrapAlias ():IsOverloadedTypeDefinition () then
+		-- resolvedObject should always be a Type or ClassDefinition (which is a Type) or OverloadedClassDefinition here.
+		local resolvedObject = argument and argument:GetResolutionResult ()
+		if resolvedObject and resolvedObject:UnwrapAlias ():IsOverloadedClass () then
 			resolvedObject = resolvedObject:GetType (1):UnwrapAlias ()
 		end
 		typeArgumentList:AddArgument (resolvedObject or GCompute.PlaceholderType ())

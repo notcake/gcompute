@@ -39,12 +39,20 @@ function self:GetProcess ()
 	return self.Process
 end
 
+function self:GetProcessLocalStorage ()
+	return self.Process:GetProcessLocalStorage ()
+end
+
 function self:GetReturnValue ()
 	return self.ReturnValue
 end
 
 function self:GetThread ()
 	return self.Thread
+end
+
+function self:GetThreadLocalStorage ()
+	return self.Thread:GetThreadLocalStorage ()
 end
 
 -- Execution

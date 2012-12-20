@@ -31,75 +31,77 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	return memoryUsageReport
 end
 
-function self:ResolveGlobal (resolutionResults, name, globalNamespace, usingNamespace)
-	local currentUsingSource = usingNamespace
+function self:ResolveGlobal (resolutionResults, name, globalDefinition, usingDefinition)
+	local currentUsingSource = usingDefinition
 	while currentUsingSource do
-		for i = 1, currentUsingSource:GetUsingCount () do
-			local usingDirective = currentUsingSource:GetUsing (i)
-			if usingDirective:GetNamespace () and usingDirective:GetNamespace ():MemberExists (name) then
-				resolutionResults:AddResult (GCompute.ResolutionResult (usingDirective:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Global))
+		if currentUsingSource:IsNamespace () or currentUsingSource:IsClass () then
+			for i = 1, currentUsingSource:GetUsingCount () do
+				local usingDirective = currentUsingSource:GetUsing (i)
+				local usingNamespace = usingDirective:GetNamespace () and usingDirective:GetNamespace ():GetNamespace ()
+				if usingNamespace:MemberExists (name) then
+					resolutionResults:AddResult (GCompute.ResolutionResult (usingNamespace:GetMember (name), GCompute.ResolutionResultType.Global))
+				end
 			end
 		end
 	
-		currentUsingSource = currentUsingSource:GetContainingNamespace ()
+		currentUsingSource = currentUsingSource:GetDeclaringObject ()
 	end
 	
-	if globalNamespace:MemberExists (name) then
-		resolutionResults:AddResult (GCompute.ResolutionResult (globalNamespace:GetMember (name), GCompute.ResolutionResultType.Global))
+	if globalDefinition:GetNamespace ():MemberExists (name) then
+		resolutionResults:AddResult (GCompute.ResolutionResult (globalDefinition:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Global))
 	end
 	
 	return resolutionResults
 end
 
-function self:ResolveLocal (resolutionResults, name, localNamespace)
+function self:ResolveLocal (resolutionResults, name, localDefinition)
 	local localDistance = 0
-	local containingNamespace = localNamespace
-	while containingNamespace do
-		if containingNamespace:MemberExists (name) then
+	while localDefinition do
+		if localDefinition:GetNamespace ():MemberExists (name) then
 			resolutionResults:AddResult (
 				GCompute.ResolutionResult (
-					containingNamespace:GetMember (name),
+					localDefinition:GetNamespace ():GetMember (name),
 					GCompute.ResolutionResultType.Local
 				):SetLocalDistance (localDistance)
 			)
 		end
 		
-		containingNamespace = containingNamespace:GetContainingNamespace ()
+		localDefinition = localDefinition:GetDeclaringObject ()
 		localDistance = localDistance + 1
 	end
 	
 	return resolutionResults
 end
 
-function self:ResolveMember (resolutionResults, name, containingNamespace)
-	if containingNamespace:MemberExists (name) then
-		resolutionResults:AddResult (GCompute.ResolutionResult (containingNamespace:GetMember (name), GCompute.ResolutionResultType.Other))
+function self:ResolveMember (resolutionResults, name, objectDefinition)
+	if objectDefinition:GetNamespace ():MemberExists (name) then
+		resolutionResults:AddResult (GCompute.ResolutionResult (objectDefinition:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Other))
 	end
 end
 
-function self:ResolveUnqualifiedIdentifier (resolutionResults, name, globalNamespace, localNamespace)
-	self:ResolveLocal  (resolutionResults, name, localNamespace)
-	self:ResolveGlobal (resolutionResults, name, globalNamespace, localNamespace)
+function self:ResolveUnqualifiedIdentifier (resolutionResults, name, globalDefinition, localDefinition)
+	self:ResolveLocal  (resolutionResults, name, localDefinition)
+	self:ResolveGlobal (resolutionResults, name, globalDefinition, localDefinition)
 end
 
 -- AST node resolution
-function self:ResolveASTNode (astNode, recursive, globalNamespace, localNamespace)
+function self:ResolveASTNode (astNode, recursive, globalDefinition, localDefinition)
 	if astNode:Is ("Identifier") then
-		self:ResolveIdentifier (astNode, recursive, globalNamespace, localNamespace)
+		self:ResolveIdentifier (astNode, recursive, globalDefinition, localDefinition)
 	elseif astNode:Is ("NameIndex") then
-		self:ResolveNameIndex (astNode, recursive, globalNamespace, localNamespace)
+		self:ResolveNameIndex (astNode, recursive, globalDefinition, localDefinition)
 	elseif astNode:Is ("FunctionType") then
-		self:ResolveFunctionType (astNode, recursive, globalNamespace, localNamespace)
+		self:ResolveFunctionType (astNode, recursive, globalDefinition, localDefinition)
 	end
 end
 
-function self:ResolveIdentifier (astNode, recursive, globalNamespace, localNamespace)
-	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), globalNamespace, localNamespace)
+function self:ResolveIdentifier (astNode, recursive, globalDefinition, localDefinition)
+	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), globalDefinition, localDefinition)
 end
 
-function self:ResolveNameIndex (astNode, recursive, globalNamespace, localNamespace)
+function self:ResolveNameIndex (astNode, recursive, globalDefinition, localDefinition)
 	if recursive then
-		self:ResolveASTNode (astNode:GetLeftExpression (), recursive, globalNamespace, localNamespace)
+		self:ResolveASTNode (astNode:GetLeftExpression (), recursive, globalDefinition, localDefinition)
 	end
 	
 	local leftResults = astNode:GetLeftExpression ():GetResolutionResults ()
@@ -116,22 +118,22 @@ function self:ResolveNameIndex (astNode, recursive, globalNamespace, localNamesp
 		astNode:AddErrorMessage ("NameIndex is missing an Identifier (" .. astNode:ToString () .. ")")
 	elseif right:Is ("Identifier") then
 		for i = 1, leftResults:GetFilteredResultCount () do
-			local leftNamespace = leftResults:GetFilteredResult (i):GetObject ():UnwrapAlias ()
-			if leftNamespace:IsNamespace () or leftNamespace:IsTypeDefinition () then
-				self:ResolveMember (rightResults, right:GetName (), leftNamespace)
+			local leftDefinition = leftResults:GetFilteredResult (i):GetObject ():UnwrapAlias ()
+			if leftDefinition:HasNamespace () then
+				self:ResolveMember (rightResults, right:GetName (), leftDefinition)
 			end
 		end
 	else
-		astNode:AddErrorMessage ("Unknown AST node on right of NameIndex (" .. identifier:GetNodeType () .. ")")
+		astNode:AddErrorMessage ("Unknown AST node on right of NameIndex (" .. right:GetNodeType () .. ")")
 	end
 end
 
-function self:ResolveFunctionType (astNode, recursive, globalNamespace, localNamespace)
+function self:ResolveFunctionType (astNode, recursive, globalDefinition, localDefinition)
 	if recursive then
-		self:ResolveASTNode (astNode:GetReturnTypeExpression (), recursive, globalNamespace, localNamespace)
+		self:ResolveASTNode (astNode:GetReturnTypeExpression (), recursive, globalDefinition, localDefinition)
 		for i = 1, astNode:GetParameterList ():GetParameterCount () do
 			local parameterType = astNode:GetParameterList ():GetParameterType (i)
-			self:ResolveASTNode (parameterType, recursive, globalNamespace, localNamespace)
+			self:ResolveASTNode (parameterType, recursive, globalDefinition, localDefinition)
 		end
 	end
 	
@@ -153,16 +155,6 @@ function self:ResolveFunctionType (astNode, recursive, globalNamespace, localNam
 			parameterType:AddErrorMessage ("Cannot resolve " .. parameterType:ToString () .. " - too many matching concrete types found.\n" .. parameterResults:ToString ())
 		end
 	end
-	
-	astNode:GetResolutionResults ():AddResult (
-		GCompute.ResolutionResult (
-			GCompute.FunctionType (
-				returnResults:GetFilteredResult (1) and returnResults:GetFilteredResult (1):GetObject () or GCompute.NullType (),
-				astNode:GetParameterList ():ToParameterList ()
-			),
-			GCompute.ResolutionResultType.Other
-		)
-	)
 end
 
 GCompute.ObjectResolver = GCompute.ObjectResolver ()

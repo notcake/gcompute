@@ -1,5 +1,5 @@
 local Global = GCompute.GlobalNamespace
-local String = Global:AddType ("String")
+local String = Global:AddClass ("String")
 String:SetNullable (false)
 String:SetPrimitive (true)
 String:SetDefaultValueCreator (
@@ -8,9 +8,15 @@ String:SetDefaultValueCreator (
 	end
 )
 
-String:AddFunction ("ToUpper")
+String:AddProperty ("Length")
+	:SetType ("number")
+	:AddGetter ()
+		:SetNativeString ("#%self%")
+		:SetNativeFunction (string.len)
+
+String:AddMethod ("ToUpper")
 	:SetNativeFunction (string.upper)
-String:AddFunction ("ToLower")
+String:AddMethod ("ToLower")
 	:SetNativeFunction (string.lower)
-String:AddFunction ("ToString")
+String:AddMethod ("ToString")
 	:SetNativeFunction (tostring)

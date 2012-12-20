@@ -1,10 +1,8 @@
 local Global = GCompute.GlobalNamespace
-local Object = Global:AddType ("Object")
-Object:SetIsTop (true)
-
+local Object = Global:AddClass ("Object")
 Global:GetTypeSystem ():SetObject (Object)
 
-Object:AddFunction ("GetHashCode")
+Object:AddMethod ("GetHashCode")
 	:SetReturnType ("int")
 	:SetNativeFunction (
 		function (self)
@@ -12,7 +10,7 @@ Object:AddFunction ("GetHashCode")
 		end
 	)
 
-Object:AddFunction ("GetType")
+Object:AddMethod ("GetType")
 	:SetReturnType ("Type")
 	:SetNativeFunction (
 		function (self)
@@ -20,15 +18,15 @@ Object:AddFunction ("GetType")
 		end
 	)
 
-Object:AddFunction ("ToString")
+Object:AddMethod ("ToString")
 	:SetReturnType ("string")
 	:SetNativeFunction (
 		function (self)
-			return "{Object}"
+			return "{" .. self:GetType ():GetFullName () .. "}"
 		end
 	)
 
-Object:AddFunction ("operator==", { { "Object", "other" } })
+Object:AddMethod ("operator==", "Object other")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function (self, other)
@@ -36,7 +34,7 @@ Object:AddFunction ("operator==", { { "Object", "other" } })
 		end
 	)
 	
-Object:AddFunction ("operator!=", { { "Object", "other" } })
+Object:AddMethod ("operator!=", "Object other")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function (self, other)

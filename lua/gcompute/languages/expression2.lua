@@ -45,6 +45,15 @@ LANGUAGE:GetTokenizer ()
 			return string.sub (code, offset), string.len (code) - offset + 1
 		end
 	)
+	:AddCustomSymbol (GCompute.TokenType.Comment, "#[",
+		function (code, offset)
+			local endOffset = string.find (code, "]#", offset + 2, true)
+			if endOffset then
+				return string.sub (code, offset, endOffset + 1), endOffset - offset + 2
+			end
+			return string.sub (code, offset), string.len (code) - offset + 1
+		end
+	)
 	:AddPatternSymbol (GCompute.TokenType.Comment,              "#[^\n\r]*")
 	:AddPatternSymbol (GCompute.TokenType.Identifier,           "[a-zA-Z_][a-zA-Z0-9_]*")
 	:AddPatternSymbol (GCompute.TokenType.Number,               "0b[01]+")

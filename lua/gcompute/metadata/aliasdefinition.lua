@@ -8,6 +8,8 @@ function self:ctor (name, objectName)
 	self.ObjectName = nil
 	self.Object = nil
 	
+	self.AliasedType = nil
+	
 	if type (objectName) == "string" then
 		self.DeferredObjectResolution = GCompute.DeferredObjectResolution (objectName)
 		self.ObjectName = objectName
@@ -24,24 +26,53 @@ function self:ctor (name, objectName)
 	end
 end
 
-function self:CreateRuntimeObject ()
-	return {}
-end
-
-function self:GetMetadata ()
-	return self.Object and self.Object:GetMetadata () or nil
-end
-
+-- Alias
 function self:GetObject ()
 	if not self:IsResolved () then
 		GCompute.Error ("AliasDefinition:GetObject : " .. self:ToString () .. " has not been resolved yet.")
 	end
 	if self.Object and
-	   self.Object:IsOverloadedTypeDefinition () and
-	   self.Object:GetTypeCount () == 1 then
-		return self.Object:GetType (1)
+	   self.Object:IsOverloadedClass () and
+	   self.Object:GetClassCount () == 1 then
+		return self.Object:GetClass (1)
 	end
 	return self.Object
+end
+
+function self:IsResolved ()
+	return self.Object and true or false
+end
+
+local unwrapAlias = {}
+--- Returns the target of this AliasDefinition
+-- @return The target of this AliasDefinition
+function self:UnwrapAlias ()
+	if unwrapAlias [self] then
+		GCompute.Error ("AliasDefinition:UnwrapAlias : Cycle in alias " .. self:ToString () .. " detected.")
+		return nil
+	end
+
+	self:ResolveTypes ()
+	local ret = self:GetObject ()
+	if ret and ret:IsAlias () then
+		unwrapAlias [self] = true
+		ret = ret:UnwrapAlias ()
+		unwrapAlias [self] = nil
+	end
+	return ret
+end
+
+-- System
+function self:SetGlobalNamespace (globalNamespace)
+	self.__base.SetGlobalNamespace (self, globalNamespace)
+	if self.DeferredObjectResolution then
+		self.DeferredObjectResolution:SetGlobalNamespace (globalNamespace)
+	end
+end
+
+-- Definition
+function self:CreateRuntimeObject ()
+	return {}
 end
 
 function self:GetType ()
@@ -57,10 +88,6 @@ function self:IsAlias ()
 	return true
 end
 
-function self:IsResolved ()
-	return self.Object and true or false
-end
-
 function self:ResolveTypes (globalNamespace, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
@@ -69,6 +96,10 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	local deferredObjectResolution = self.DeferredObjectResolution
 	if deferredObjectResolution:IsResolved () then return end
 	
+	deferredObjectResolution:SetLocalNamespace (self:GetDeclaringObject ())
+	if globalNamespace then
+		deferredObjectResolution:SetGlobalNamespace (globalNamespace)
+	end
 	deferredObjectResolution:Resolve ()
 	if deferredObjectResolution:IsFailedResolution () then
 		deferredObjectResolution:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
@@ -92,21 +123,10 @@ function self:ToString ()
 	return aliasDefinition
 end
 
-local unwrapAlias = {}
---- Returns the target of this AliasDefinition
--- @return The target of this AliasDefinition
-function self:UnwrapAlias ()
-	if unwrapAlias [self] then
-		GCompute.Error ("AliasDefinition:UnwrapAlias : Cycle in alias " .. self:ToString () .. " detected.")
-		return nil
+function self:ToType ()
+	if not self.AliasedType then
+		local innerType = self:UnwrapAlias ():ToType ()
+		self.AliasedType = self:GetTypeSystem ():CreateAliasedType (self, innerType)
 	end
-
-	self:ResolveTypes ()
-	local ret = self:GetObject ()
-	if ret and ret:IsAlias () then
-		unwrapAlias [self] = true
-		ret = ret:UnwrapAlias ()
-		unwrapAlias [self] = nil
-	end
-	return ret
+	return self.AliasedType
 end

@@ -1,5 +1,5 @@
 local self = {}
-GCompute.NullType = GCompute.MakeConstructor (self, GCompute.Type)
+GCompute.ErrorType = GCompute.MakeConstructor (self, GCompute.Type)
 
 function self:ctor ()
 end
@@ -17,10 +17,10 @@ function self:Equals (otherType)
 end
 
 function self:GetFullName ()
-	return "[Error Type]"
+	return "<error-type>"
 end
 
-function self:GetTypeDefinition ()
+function self:GetClassDefinition ()
 	return nil
 end
 
@@ -28,6 +28,10 @@ function self:IsBaseType (supertype)
 	return false
 end
 
+function self:IsErrorType ()
+	return true
+end
+
 function self:ToString ()
-	return "[Error Type]"
+	return "<error-type>"
 end

@@ -212,6 +212,11 @@ include ("metadata/lua/variable.lua")
 include ("metadata/lua/functionparameterlist.lua")
 include ("metadata/lua/tablenamespace.lua")
 
+-- other
+GCompute.Other = {}
+include ("metadata/other/expression2.lua")
+include ("metadata/other/lemongate.lua")
+
 GCompute.EmptyTypeParameterList = GCompute.TypeParameterList ()
 GCompute.EmptyParameterList = GCompute.ParameterList ()
 

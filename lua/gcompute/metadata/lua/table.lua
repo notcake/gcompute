@@ -4,7 +4,8 @@ GCompute.Lua.Table = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
 --- @param name The name of this namespace
 function self:ctor (name, table)
 	self.Value = table
-	if type (self.Value) ~= "table" then
+	if self.Value == nil then
+	elseif type (self.Value) ~= "table" then
 		self.Table = self.Value:GetTable ()
 	else
 		self.Table = table

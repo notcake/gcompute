@@ -34,26 +34,47 @@ function self:Populate ()
 	if self.Populated then return end
 	self.Populated = true
 	
+	if not self.Table then return end
+	
+	local explored = {}
+	local t = self.Table
+	while t and not explored [t] and type (t) == "table" do
+		self:PopulateFromTable (t, 200)
+		explored [t] = true
+		
+		t = t and getmetatable (t)
+		t = t and t.__index
+	end
+end
+
+function self:PopulateFromTable (t, limit)
+	limit = limit or 200
+	
 	local count = 0
-	for k, v in pairs (self.Table) do
-		if count > 200 then break end
+	for k, v in pairs (t) do
+		if count >= limit then break end
 		
-		count = count + 1
-		local t = type (v)
-		local metatable = debug.getmetatable (v)
-		if type (metatable) ~= "table" then metatable = nil end
+		local name = tostring (k)
 		
-		local objectDefinition
-		if t == "function" then
-			objectDefinition = GCompute.Lua.Function (tostring (k), v)
-		elseif t == "table" or (metatable and metatable.GetTable) then
-			objectDefinition = GCompute.Lua.Table (tostring (k), v)
-		else
-			objectDefinition = GCompute.Lua.Variable (tostring (k), v)
+		if not self.Members [name] then
+			count = count + 1
+			
+			local t = type (v)
+			local metatable = debug.getmetatable (v)
+			if type (metatable) ~= "table" then metatable = nil end
+			
+			local objectDefinition
+			if t == "function" then
+				objectDefinition = GCompute.Lua.Function (name, v)
+			elseif t == "table" or (metatable and metatable.GetTable) then
+				objectDefinition = GCompute.Lua.Table (name, v)
+			else
+				objectDefinition = GCompute.Lua.Variable (name, v)
+			end
+			if objectDefinition then
+				self:SetupMemberHierarchy (objectDefinition)
+			end
+			self.Members [name] = objectDefinition
 		end
-		if objectDefinition then
-			self:SetupMemberHierarchy (objectDefinition)
-		end
-		self.Members [tostring (k)] = objectDefinition
 	end
 end

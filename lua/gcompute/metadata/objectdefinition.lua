@@ -370,6 +370,12 @@ function self:IsClass ()
 	return false
 end
 
+--- Gets whether this object is a ConstructorDefinition
+-- @return A boolean indicating whether this object is a ConstructorDefinition
+function self:IsConstructor ()
+	return false
+end
+
 --- Gets whether this object is an EventDefinition
 -- @return A boolean indicating whether this object is a EventDefinition
 function self:IsEvent ()

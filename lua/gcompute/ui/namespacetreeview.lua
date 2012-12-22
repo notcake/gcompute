@@ -31,14 +31,27 @@ function self.ItemComparator (a, b)
 	if defA:IsClass () and not defB:IsClass () then return true end
 	if defB:IsClass () and not defA:IsClass () then return false end
 	
+	if defA:IsConstructor () and not defB:IsConstructor () then return true end
+	if defB:IsConstructor () and not defA:IsConstructor () then return false end
+	
 	if defA:IsMethod () and not defB:IsMethod () then return true end
 	if defB:IsMethod () and not defA:IsMethod () then return false end
 	
-	return a:GetText () < b:GetText ()
+	return defA:GetName ():lower () < defB:GetName ():lower ()
 end
 
 function self:Populate (objectDefinition, treeViewNode)
-	for name, definition in objectDefinition:GetNamespace ():GetEnumerator () do
+	local namespace = objectDefinition:GetNamespace ()
+	if namespace:IsClassNamespace () then
+		for constructor in namespace:GetConstructorEnumerator () do
+			local childNode = treeViewNode:AddNode (constructor:GetName ())
+			childNode.Definition = constructor
+			
+			childNode:SetText (constructor:GetDisplayText ())
+			childNode:SetIcon ("gui/codeicons/method")
+		end
+	end
+	for name, definition in namespace:GetEnumerator () do
 		if definition:IsOverloadedClass () then
 			self:PopulateOverloadedClassDefinition (definition, treeViewNode)
 		elseif definition:IsOverloadedMethod () then

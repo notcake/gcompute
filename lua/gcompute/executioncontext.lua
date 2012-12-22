@@ -23,18 +23,7 @@ function self:ctor (process, thread)
 	self.Stack = GCompute.Containers.Stack ()
 end
 
-function self:Error (message)
-	ErrorNoHalt (message .. "\n")
-end
-
-function self:GetASTRunner ()
-	return self.ASTRunner
-end
-
-function self:GetRuntimeNamespace ()
-	return self.Process:GetRuntimeNamespace ()
-end
-
+-- Process
 function self:GetProcess ()
 	return self.Process
 end
@@ -43,16 +32,43 @@ function self:GetProcessLocalStorage ()
 	return self.Process:GetProcessLocalStorage ()
 end
 
-function self:GetReturnValue ()
-	return self.ReturnValue
-end
-
+-- Thread
 function self:GetThread ()
 	return self.Thread
 end
 
 function self:GetThreadLocalStorage ()
 	return self.Thread:GetThreadLocalStorage ()
+end
+
+-- IO
+function self:GetStdErr ()
+	return self:GetProcess ():GetStdErr ()
+end
+
+function self:GetStdIn ()
+	return self:GetProcess ():GetStdIn ()
+end
+
+function self:GetStdOut ()
+	return self:GetProcess ():GetStdOut ()
+end
+
+-- Execution
+function self:Error (message)
+	ErrorNoHalt (message .. "\n")
+end
+
+function self:GetASTRunner ()
+	return self.ASTRunner
+end
+
+function self:GetEnvironment ()
+	return self.Process:GetEnvironment ()
+end
+
+function self:GetReturnValue ()
+	return self.ReturnValue
 end
 
 -- Execution

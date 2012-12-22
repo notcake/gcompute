@@ -88,7 +88,7 @@ function self:GetFullName ()
 end
 
 function self:GetClassDefinition ()
-	return self:GetTypeSystem ():GetObject ():GetClassDefinition ()
+	return GCompute.TypeSystem:GetObject ():GetClassDefinition ()
 end
 
 function self:ImportMethodTypes (overloadedMethodDefinition)

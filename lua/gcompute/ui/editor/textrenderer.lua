@@ -74,3 +74,6 @@ function self:UpdateStateHash ()
 	self.StateHash = tostring (self) .. tostring (self.NextHashId)
 	self.NextHashId = self.NextHashId + 1
 end
+
+-- Workaround for LuaJIT bugs
+jit.off (self.GetStringColumnCount)

@@ -51,7 +51,7 @@ function self:ToString ()
 	return self.Name or "[Missing Identifier]"
 end
 
-function self:ToTypeNode (typeSystem)
+function self:ToTypeNode ()
 	return self
 end
 

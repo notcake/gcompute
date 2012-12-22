@@ -26,7 +26,9 @@ function self:ctor (name, parameterList, typeParameterList)
 		self.ParameterList = GCompute.ParameterList (self.ParameterList)
 	end
 	
+	-- AST
 	self.FunctionDeclaration = nil
+	self.BlockStatement      = nil
 	
 	self.NativeString = nil
 	self.NativeFunction = nil
@@ -68,12 +70,6 @@ function self:GetNamespace ()
 end
 
 -- Method
---- Gets the FunctionDeclaration syntax tree node corresponding to this function
--- @return The FunctionDeclaration corresponding to this function
-function self:GetFunctionDeclaration ()
-	return self.FunctionDeclaration
-end
-
 --- Gets the native implementation of this function
 -- @return The native implementation of this function
 function self:GetNativeFunction ()
@@ -114,12 +110,6 @@ function self:IsMemberFunction ()
 	return true
 end
 
---- Sets the FunctionDeclaration syntax tree node corresponding to this function
--- @param functionDeclaration The FunctionDeclaration corresponding to this function
-function self:SetFunctionDeclaration (functionDeclaration)
-	self.FunctionDeclaration = functionDeclaration
-end
-
 --- Sets the native implementation of this function
 -- @param nativeFunction The native implementation of this function
 function self:SetNativeFunction (nativeFunction)
@@ -139,6 +129,28 @@ end
 function self:SetReturnType (returnType)
 	self.ReturnType = GCompute.ToDeferredTypeResolution (returnType, self:GetGlobalNamespace (), self)
 	return self
+end
+
+-- AST
+function self:GetBlockStatement ()
+	return self.BlockStatement
+end
+
+--- Gets the FunctionDeclaration syntax tree node corresponding to this function
+-- @return The FunctionDeclaration corresponding to this function
+function self:GetFunctionDeclaration ()
+	return self.FunctionDeclaration
+end
+
+function self:SetBlockStatement (blockStatement)
+	self.BlockStatement = blockStatement
+end
+
+--- Sets the FunctionDeclaration syntax tree node corresponding to this function
+-- @param functionDeclaration The FunctionDeclaration corresponding to this function
+function self:SetFunctionDeclaration (functionDeclaration)
+	self.FunctionDeclaration = functionDeclaration
+	self:SetBlockStatement (self.FunctionDeclaration and self.FunctionDeclaration:GetBody ())
 end
 
 -- Type Parameters
@@ -255,10 +267,10 @@ function self:CreateRuntimeObject ()
 	return self
 end
 
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	if not self:GetDeclaringObject () then return nil end
 	
-	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace, typeSystem)
+	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace)
 	local memberDefinition = declaringObject:GetNamespace ():GetMember (self:GetName ())
 	if memberDefinition:IsOverloadedMethod () then
 		local typeParameterCount = self:GetTypeParameterList ():GetParameterCount ()
@@ -289,9 +301,9 @@ function self:GetType ()
 		local parameterList = GCompute.ParameterList ()
 		parameterList:AddParameter (self:GetDeclaringType (), "this")
 		parameterList:AddParameters (self:GetParameterList ())
-		return self:GetTypeSystem ():CreateFunctionType (self:GetReturnType (), parameterList)
+		return GCompute.FunctionType (self:GetReturnType (), parameterList)
 	else
-		return self:GetTypeSystem ():CreateFunctionType (self:GetReturnType (), self:GetParameterList ())
+		return GCompute.FunctionType (self:GetReturnType (), self:GetParameterList ())
 	end
 end
 

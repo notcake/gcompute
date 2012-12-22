@@ -102,13 +102,13 @@ function self:ResolveMember (name)
 	
 	-- Assume that they are all the same type
 	if matchObjects [1]:IsAlias () then
-		self:AddAlias (name, matchObjects [1]:UnwrapAlias ():GetCorrespondingDefinition (self:GetGlobalNamespace (), self:GetTypeSystem ()))
+		self:AddAlias (name, matchObjects [1]:UnwrapAlias ():GetCorrespondingDefinition (self:GetGlobalNamespace ()))
 	elseif matchObjects [1]:IsVariable () then
 		-- TODO: Fix this
 		-- The type of the source VariableDefinition may be a DeferredObjectResolution,
 		-- for which GetCorrespondingDefinition should not be implemented.
 		self.Members [name] = matchObjects [1]
-		-- self:AddVariable (name, matchObjects [1]:GetType ():GetCorrespondingDefinition (self:GetGlobalNamespace (), self:GetTypeSystem ()))
+		-- self:AddVariable (name, matchObjects [1]:GetType ():GetCorrespondingDefinition (self:GetGlobalNamespace ()))
 	elseif matchObjects [1]:IsOverloadedMethod () then
 		for _, overloadedMethod in ipairs (matchObjects) do
 			self:MergeOverloadedMethod (name, overloadedMethod)

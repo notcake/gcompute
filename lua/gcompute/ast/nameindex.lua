@@ -74,7 +74,7 @@ function self:ToString ()
 	return leftExpression .. "." .. identifier
 end
 
-function self:ToTypeNode (typeSystem)
+function self:ToTypeNode ()
 	return self
 end
 

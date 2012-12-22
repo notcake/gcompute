@@ -3,7 +3,8 @@ GCompute.NamespaceBuilder = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 
 --[[
 	NamespaceBuilder
-	
+		Operates on source file ASTs
+		
 	1. Assigns a NamespaceDefinition to all Statements that should have one
 		and adds member variables to them
 	2. Assigns MethodDefinitions to FunctionDeclarations and AnonymousFunctions
@@ -16,9 +17,10 @@ function self:ctor (compilationUnit)
 end
 
 function self:VisitRoot (blockStatement)
-	blockStatement:SetDefinition (blockStatement:GetDefinition () or GCompute.NamespaceDefinition ())
-	blockStatement:GetDefinition ():SetConstructorAST (blockStatement)
-	blockStatement:GetDefinition ():SetNamespaceType (GCompute.NamespaceType.Global)
+	if blockStatement:GetDefinition () then
+		blockStatement:AddErrorMessage ("Compiler bug: The root BlockStatement should not be assigned a NamespaceDefinition by anything other than the NamespaceBuilder!")
+	end
+	blockStatement:SetDefinition (self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ())
 end
 
 function self:VisitBlock (blockStatement)
@@ -26,7 +28,7 @@ function self:VisitBlock (blockStatement)
 	
 	local namespace = blockStatement:GetDefinition ()
 	self:SetupDefinitionHierarchy (namespace, blockStatement:GetParentDefinition ())
-	namespace:SetConstructorAST (blockStatement)
+	namespace:AddConstructorAST (blockStatement)
 	if namespace:GetNamespaceType () == GCompute.NamespaceType.Unknown then
 		namespace:SetNamespaceType (GCompute.NamespaceType.Local)
 	end
@@ -44,7 +46,7 @@ function self:VisitStatement (statement)
 	end
 	
 	if statement:Is ("RangeForLoop") then
-		statement:GetNamespace ():SetNamespaceType (GCompute.NamespaceType.Local)
+		statement:GetDefinition ():SetNamespaceType (GCompute.NamespaceType.Local)
 	end
 	
 	if statement:Is ("VariableDeclaration") then
@@ -81,7 +83,10 @@ function self:VisitFunction (functionNode)
 	end
 	
 	methodDefinition:SetReturnType (GCompute.DeferredObjectResolution (functionNode:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
+	
 	methodDefinition:SetFunctionDeclaration (functionNode)
+	methodDefinition:SetBlockStatement (functionNode:GetBody ())
+	
 	functionNode:SetMethodDefinition (methodDefinition)
 	
 	-- Set up function parameter namespace
@@ -92,7 +97,6 @@ function self:SetupDefinitionHierarchy (child, parent)
 	if not parent then return end
 	
 	child:SetGlobalNamespace (parent:GetGlobalNamespace ())
-	child:SetTypeSystem (parent:GetTypeSystem ())
 	child:SetDeclaringMethod (parent:IsMethod () and parent or parent:GetDeclaringMethod ())
 	child:SetDeclaringNamespace (parent:IsNamespace () and parent or parent:GetDeclaringNamespace ())
 	child:SetDeclaringObject (parent)

@@ -4,6 +4,10 @@ GCompute.ErrorType = GCompute.MakeConstructor (self, GCompute.Type)
 function self:ctor ()
 end
 
+function self:CanConstructFrom (sourceType)
+	return false
+end
+
 function self:CanExplicitCastTo (destinationType)
 	return false
 end
@@ -14,6 +18,14 @@ end
 
 function self:Equals (otherType)
 	return false
+end
+
+function self:GetBaseTypeCount ()
+	return 0
+end
+
+function self:GetBaseType (index)
+	return nil
 end
 
 function self:GetFullName ()

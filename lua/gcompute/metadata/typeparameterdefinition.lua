@@ -14,13 +14,6 @@ function self:SetGlobalNamespace (globalNamespace)
 	self.TypeParameterType:SetGlobalNamespace (globalNamespace)
 end
 
-function self:SetTypeSystem (typeSystem)
-	if self.TypeSystem == typeSystem then return end
-	
-	self.TypeSystem = typeSystem
-	self.TypeParameterType:SetTypeSystem (typeSystem)
-end
-
 -- Type Parameter
 function self:GetTypeParameterPosition ()
 	return self.TypeParameterPosition

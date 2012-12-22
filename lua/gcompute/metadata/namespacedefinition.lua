@@ -9,8 +9,7 @@ function self:ctor (name)
 	self.Namespace:SetDefinition (self)
 	-- Namespace hierarchy data will get set later automatically
 	
-	self.ConstructorAST = nil
-	self.Constructor = nil
+	self.Constructors     = {}
 	
 	self.UniqueNameMap    = nil
 	self.MergedLocalScope = nil
@@ -42,6 +41,24 @@ for _, functionName in ipairs (forwardedFunctions) do
 	end
 end
 
+--- Adds a runtime initialization function for this namespace
+-- @param constructor A runtime initialization function for this namespace
+function self:AddConstructor (constructor)
+	local constructor = GCompute.MethodDefinition ()
+	constructor:SetNativeFunction (constructor)
+	
+	self.Constructors [#self.Constructors + 1] = constructor
+end
+
+--- Adds a runtime initialization function AST for this namespace
+-- @param constructorAST A runtime initialization function AST for this namespace
+function self:AddConstructorAST (blockStatement)
+	local constructor = GCompute.MethodDefinition ()
+	constructor:SetBlockStatement (blockStatement)
+	
+	self.Constructors [#self.Constructors + 1] = constructor
+end
+
 --- Adds a using directive to this namespace definition
 -- @param qualifiedName The name of the namespace to be used
 function self:AddUsing (qualifiedName)
@@ -71,7 +88,22 @@ end
 --- Returns a function which handles runtime namespace initialization
 -- @return A function which handles runtime namespace initialization
 function self:GetConstructor ()
-	return self.Constructor or GCompute.NullCallback
+	return function ()
+		for _, method in ipairs (self.Constructors) do
+			local nativeFunction = method:GetNativeFunction ()
+			if not nativeFunction then
+				nativeFunction = function ()
+					executionContext:GetStdOut ():WriteLine ("Warning: Static constructor for " .. self:GetFullName () .. " has not been native-compiled!")
+					local astRunner = GCompute.ASTRunner ()
+					astRunner:PushNode (method:GetBlockStatement ())
+					astRunner:PushState (0)
+					astRunner:SetYieldEnabled (false)
+					astRunner:Execute ()
+				end
+			end
+			nativeFunction ()
+		end
+	end
 end
 
 function self:GetMemberRuntimeName (memberDefinition)
@@ -107,22 +139,6 @@ function self:ResolveUsings (globalNamespace)
 	end
 end
 
---- Sets the runtime initialization function for this namespace
--- @param constructor The runtime initialization function for this namespace
-function self:SetConstructor (constructor)
-	self.ConstructorAST = nil
-	self.Constructor = constructor
-end
-
---- Sets the runtime initialization function AST for this namespace
--- @param constructorAST The runtime initialization function AST for this namespace
-function self:SetConstructorAST (constructorAST)
-	self.ConstructorAST = constructorAST
-	self.Constructor = function ()
-		executionContext:PushResumeAST (constructorAST)
-	end
-end
-
 function self:SetMergedLocalScope (mergedLocalScope)
 	self.MergedLocalScope = mergedLocalScope
 end
@@ -146,7 +162,7 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 function self:GetType ()
-	return self:GetTypeSystem ():GetObject ()
+	return GCompute.TypeSystem:GetObject ()
 end
 
 function self:IsNamespace ()

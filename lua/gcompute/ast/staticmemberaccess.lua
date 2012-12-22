@@ -28,7 +28,7 @@ function self:ExecuteAsAST (astRunner, state)
 			astRunner:PushNode (self:GetLeftExpression ())
 			astRunner:PushState (0)
 		else
-			astRunner:PushValue (executionContext:GetRuntimeNamespace ())
+			astRunner:PushValue (executionContext:GetEnvironment ())
 		end
 	elseif state == 1 then
 		-- Discard StaticMemberAccess
@@ -125,7 +125,7 @@ function self:ToString ()
 	return (self.LeftExpression and (self.LeftExpression:ToString () .. ".") or "")  .. (self.Name or "[Nothing]")
 end
 
-function self:ToTypeNode (typeSystem)
+function self:ToTypeNode ()
 	return self
 end
 

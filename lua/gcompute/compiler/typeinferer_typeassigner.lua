@@ -4,7 +4,12 @@ GCompute.TypeInfererTypeAssigner = GCompute.MakeConstructor (self, GCompute.ASTV
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.CompilationGroup = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ()
-	self.GlobalNamespace = self.CompilationGroup and self.CompilationGroup:GetNamespaceDefinition ()
+	
+	self.RootNamespaces = {}
+	for referencedModule in self.CompilationGroup:GetModule ():GetReferencedModuleEnumerator () do
+		self.RootNamespaces [#self.RootNamespaces + 1] = referencedModule:GetRootNamespace ()
+	end
+	self.RootNamespaces [#self.RootNamespaces + 1] = self.CompilationGroup:GetRootNamespace ()
 end
 
 function self:VisitStatement (statement)
@@ -17,8 +22,9 @@ function self:VisitStatement (statement)
 		-- type of VariableDefinitions to be reset, so we have to set them
 		-- again here.
 		local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
-		statement:SetType (typeResults:GetFilteredResultObject (1))
-		statement:GetVariableDefinition ():SetType (typeResults:GetFilteredResultObject (1))
+		local type = typeResults:GetFilteredResultObject (1)
+		statement:SetType (type or GCompute.ErrorType ())
+		statement:GetVariableDefinition ():SetType (type or GCompute.ErrorType ())
 		
 		if not statement:GetType () then
 			statement:AddErrorMessage (statement:ToString () .. " has no type.")
@@ -127,7 +133,7 @@ function self:VisitExpression (expression)
 	elseif expression:Is ("StringLiteral") then
 		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("String",  GCompute.ResolutionObjectType.Type):Resolve ())
 	elseif expression:Is ("FunctionType") then
-		expression:SetType (self.GlobalNamespace:GetTypeSystem ():GetType ())
+		expression:SetType (GCompute.TypeSystem:GetType ())
 	elseif expression:Is ("AnonymousFunction") then
 		expression:SetType (expression:GetMethodDefinition ():GetType ())
 	else
@@ -296,7 +302,7 @@ function self:VisitNew (new)
 	new:SetType (type)
 	
 	-- Constructor resolution
-	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.OverloadedFunctionResolver.Static, nil, new:GetArgumentList ())
+	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Static, nil, new:GetArgumentList ())
 	
 	-- Populate OverloadedFunctionResolver
 	for constructor in leftDefinition:UnwrapAlias ():GetConstructorEnumerator () do
@@ -343,7 +349,7 @@ function self:ResolveAccessType (astNode)
 			inferredType:ImportFunctionTypes (result)
 		end
 	elseif result:IsOverloadedClass () or result:IsType () then
-		astNode:SetType (self.GlobalNamespace:GetTypeSystem ():GetType ())
+		astNode:SetType (GCompute.TypeSystem:GetType ())
 	else
 		astNode:SetType (GCompute.ReferenceType (result:GetType ()))
 	end
@@ -451,17 +457,18 @@ function self:ResolveAssignment (astNode)
 	end
 	
 	local leftNamespace = leftDefinition:GetDeclaringObject ()
-	local leftNamespaceType = leftNamespace:GetNamespaceType ()
+	local leftNamespaceType = leftNamespace:GetNamespace ():GetNamespaceType ()
 	
 	if leftNamespaceType == GCompute.NamespaceType.Global then
 		assignmentPlan:SetAssignmentType (GCompute.AssignmentType.NamespaceMember)
 		assignmentPlan:SetLeftRuntimeName (leftNamespace:GetUniqueNameMap ():GetObjectName (leftDefinition))
-	elseif leftNamespaceType == GCompute.NamespaceType.Local then
+	elseif leftNamespaceType == GCompute.NamespaceType.Local or
+	       leftNamespaceType == GCompute.NamespaceType.FunctionRoot then
 		local mergedLocalScope = self:GetMergedLocalScope (leftDefinition)
 		assignmentPlan:SetAssignmentType (GCompute.AssignmentType.Local)
 		assignmentPlan:SetLeftRuntimeName (mergedLocalScope:GetRuntimeName (left))
 	else
-		self.CompilationUnit:Error ("TypeInfererTypeAssigner:ResolveAssignment : Cannot handle namespace type of " .. astNode:ToString () .."'s left hand side (" .. GCompute.NamespaceType [leftNamespaceType] .. ").")
+		astNode:AddErrorMessage ("TypeInfererTypeAssigner:ResolveAssignment : Cannot handle namespace type of " .. astNode:ToString () .."'s left hand side (" .. GCompute.NamespaceType [leftNamespaceType] .. ").")
 	end
 	
 	if astNode:Is ("BinaryOperator") then
@@ -492,7 +499,9 @@ end
 function self:ResolveOperatorCall (astNode, methodName, object, argumentList, typeArgumentList)
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Operator, object, argumentList)
 	
-	overloadedFunctionResolver:AddOperatorOverloads (self.GlobalNamespace, object:GetType (), methodName, typeArgumentList)
+	for _, rootNamespace in ipairs (self.RootNamespaces) do
+		overloadedFunctionResolver:AddOperatorOverloads (rootNamespace, object:GetType (), methodName, typeArgumentList)
+	end
 	
 	-- Resolve OverloadedFunctionResolver
 	astNode.FunctionCall = self:ResolveFunctionCall (astNode, overloadedFunctionResolver)

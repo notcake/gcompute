@@ -6,8 +6,7 @@ function self:ctor (compilationUnit)
 end
 
 function self:Process (blockStatement, callback)
-	local namespace = blockStatement:GetDefinition () or GCompute.NamespaceDefinition ()
-	blockStatement:SetDefinition (namespace)
+	local namespace = self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ()
 
 	for _, variableEntry in ipairs (self.CompilationUnit:GetExtraData ("inputs") or {}) do
 		if variableEntry.Type then

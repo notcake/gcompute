@@ -26,10 +26,16 @@ function self:GetErrorCallback (i)
 	end
 end
 
+local function wrap (f)
+	return function (...)
+		return xpcall (f, GCompute.Error, ...)
+	end
+end
+
 function self:Then (callback, errorCallback)
 	if not callback then return self end
 	
-	self.Callbacks [#self.Callbacks + 1] = callback
+	self.Callbacks [#self.Callbacks + 1] = wrap (callback)
 	self.ErrorCallbacks [#self.ErrorCallbacks + 1] = errorCallback or error
 	
 	return self

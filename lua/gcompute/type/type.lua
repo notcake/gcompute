@@ -4,13 +4,15 @@ GCompute.Type = GCompute.MakeConstructor (self, GCompute.IObject)
 function self:ctor ()
 	-- System
 	self.GlobalNamespace    = nil
-	self.TypeSystem         = nil
 	
 	-- Hierarchy
 	self.Definition        = nil
 	self.Namespace          = nil
 	
 	-- Type
+	self.Top                = false
+	self.Bottom             = false
+	
 	self.Nullable           = false
 	
 	self.Primitive          = false
@@ -26,17 +28,8 @@ function self:GetGlobalNamespace ()
 	return self.GlobalNamespace
 end
 
-function self:GetTypeSystem ()
-	return self.TypeSystem
-end
-
 function self:SetGlobalNamespace (globalNamespace)
 	self.GlobalNamespace = globalNamespace
-	return self
-end
-
-function self:SetTypeSystem (typeSystem)
-	self.TypeSystem = typeSystem
 	return self
 end
 
@@ -156,7 +149,7 @@ function self:GetFullName ()
 	return "[Type]"
 end
 
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	GCompute.Error ("Type:GetCorrespondingDefinition : Not implemented (" .. self:GetFullName () .. ")")
 	return nil
 end
@@ -188,7 +181,7 @@ function self:IsArrayType ()
 end
 
 function self:IsBottom ()
-	return self == self.TypeSystem:GetBottom ()
+	return self.Bottom
 end
 
 function self:IsConcreteType ()
@@ -234,7 +227,7 @@ end
 --- Returns whether this type is a superset of all other types
 -- @return A boolean indicating whether this type is a superset of all other types
 function self:IsTop ()
-	return self == self.TypeSystem:GetTop ()
+	return self.Top
 end
 
 function self:IsType ()
@@ -243,6 +236,10 @@ end
 
 function self:IsTypeParameter ()
 	return false
+end
+
+function self:IsVoid ()
+	return self.Bottom
 end
 
 function self:RuntimeDowncastTo (destinationType, value)
@@ -267,6 +264,10 @@ function self:RuntimeUpcastTo (destinationType, value)
 	end
 end
 
+function self:SetBottom (isBottom)
+	self.Bottom = isBottom
+end
+
 function self:SetNativelyAllocated (nativelyAllocated)
 	self.NativelyAllocated = nativelyAllocated
 	if not self.NativelyAllocated and self:IsPrimitive () then
@@ -283,6 +284,10 @@ function self:SetPrimitive (primitive)
 	if self.Primitive and not self:IsNativelyAllocated () then
 		self:SetNativelyAllocated (true)
 	end
+end
+
+function self:SetTop (isTop)
+	self.Top = isTop
 end
 
 function self:SubstituteTypeParameters (substitutionMap)

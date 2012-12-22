@@ -27,12 +27,11 @@ function self:Clone (globalNamespace)
 	local typeSystem = GCompute.TypeSystem ()
 	typeSystem:SetGlobalNamespace (globalNamespace or self.GlobalNamespace)
 	if globalNamespace then
-		globalNamespace:SetTypeSystem (typeSystem)
-		typeSystem:SetBottom   (self.Bottom   and self.Bottom  :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
-		typeSystem:SetTop      (self.Top      and self.Top     :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
-		typeSystem:SetEnum     (self.Enum     and self.Enum    :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
-		typeSystem:SetFunction (self.Function and self.Function:GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
-		typeSystem:SetType     (self.Type     and self.Type    :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
+		typeSystem:SetBottom   (self.Bottom   and self.Bottom  :GetCorrespondingDefinition (globalNamespace) or nil)
+		typeSystem:SetTop      (self.Top      and self.Top     :GetCorrespondingDefinition (globalNamespace) or nil)
+		typeSystem:SetEnum     (self.Enum     and self.Enum    :GetCorrespondingDefinition (globalNamespace) or nil)
+		typeSystem:SetFunction (self.Function and self.Function:GetCorrespondingDefinition (globalNamespace) or nil)
+		typeSystem:SetType     (self.Type     and self.Type    :GetCorrespondingDefinition (globalNamespace) or nil)
 	else
 		typeSystem:SetBottom   (self.Bottom)
 		typeSystem:SetTop      (self.Top)
@@ -46,37 +45,31 @@ end
 function self:CreateAliasedType (aliasDefinition, innerType)
 	return GCompute.AliasedType (aliasDefinition, innerType)
 		:SetGlobalNamespace (self.GlobalNamespace)
-		:SetTypeSystem (self)
 end
 
 function self:CreateArrayType (elementType, rank)
 	return GCompute.ArrayType (elementType, rank)
 		:SetGlobalNamespace (self.GlobalNamespace)
-		:SetTypeSystem (self)
 end
 
 function self:CreateClassType (classDefinition)
 	return GCompute.ClassType (classDefinition)
 		:SetGlobalNamespace (self.GlobalNamespace)
-		:SetTypeSystem (self)
 end
 
 function self:CreateEnumType (enumDefinition)
 	return GCompute.EnumType (enumDefinition)
 		:SetGlobalNamespace (self.GlobalNamespace)
-		:SetTypeSystem (self)
 end
 
 function self:CreateFunctionType (returnType, parameterList)
 	return GCompute.FunctionType (returnType, parameterList)
 		:SetGlobalNamespace (self.GlobalNamespace)
-		:SetTypeSystem (self)
 end
 
 function self:CreateTypeParameter (typeParameterDefinition)
 	return GCompute.TypeParameterType (typeParameterDefinition)
 		:SetGlobalNamespace (self.GlobalNamespace)
-		:SetTypeSystem (self)
 end
 
 function self:GetBottom ()
@@ -143,3 +136,5 @@ function self:ToString ()
 	
 	return typeSystem
 end
+
+GCompute.TypeSystem = GCompute.TypeSystem ()

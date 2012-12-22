@@ -38,15 +38,6 @@ function self:SetGlobalNamespace (globalNamespace)
 	
 	self.GlobalNamespace = globalNamespace
 	self.ClassType:SetGlobalNamespace (globalNamespace)
-	self:GetNamespace ():SetTypeSystem (globalNamespace)
-end
-
-function self:SetTypeSystem (typeSystem)
-	if self.TypeSystem == typeSystem then return end
-	
-	self.TypeSystem = typeSystem
-	self.ClassType:SetTypeSystem (typeSystem)
-	self:GetNamespace ():SetTypeSystem (typeSystem)
 end
 
 -- Hierarchy
@@ -254,12 +245,14 @@ function self:CreateRuntimeObject ()
 	}
 end
 
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	if not self:GetDeclaringObject () then
 		return globalNamespace
 	end
 	
-	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace, typeSystem)
+	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace)
+	if not declaringObject then return nil end
+	
 	local memberDefinition = declaringObject:GetNamespace ():GetMember (self:GetName ())
 	if memberDefinition:IsOverloadedClass () then
 		local typeParameterCount = self:GetTypeParameterList ():GetParameterCount ()
@@ -296,7 +289,7 @@ end
 --- Returns the Type of this object
 -- @return A Type representing the type of this object
 function self:GetType ()
-	return self:GetTypeSystem ():GetType ()
+	return GCompute.TypeSystem:GetType ()
 end
 
 function self:IsNamespace ()

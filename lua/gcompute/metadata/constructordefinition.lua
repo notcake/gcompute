@@ -5,7 +5,7 @@ function self:ctor (name, parameterList)
 end
 
 -- Definition
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	GCompute.Error ("ConstructorDefinition:GetCorrespondingDefinition : Not implemented.")
 end
 

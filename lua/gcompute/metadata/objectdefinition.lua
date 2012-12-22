@@ -5,10 +5,10 @@ GCompute.ObjectDefinition = GCompute.MakeConstructor (self, GCompute.IObject)
 function self:ctor (name)
 	-- System
 	self.GlobalNamespace      = nil
-	self.TypeSystem           = nil
 	
 	-- Hierarchy
 	self.Name                 = name
+	self.Module               = nil
 	self.DeclaringMethod      = nil
 	self.DeclaringNamespace   = nil
 	self.DeclaringObject      = nil
@@ -35,10 +35,6 @@ function self:GetGlobalNamespace ()
 	return self.GlobalNamespace
 end
 
-function self:GetTypeSystem ()
-	return self.TypeSystem
-end
-
 function self:IsGlobalNamespace ()
 	return self:GetGlobalNamespace () == self
 end
@@ -51,18 +47,6 @@ function self:SetGlobalNamespace (globalNamespace)
 	end
 	for _, namespace in self:GetFileStaticNamespaceEnumerator () do
 		namespace:SetGlobalNamespace (globalNamespace)
-	end
-	return self
-end
-
-function self:SetTypeSystem (typeSystem)
-	if self.TypeSystem == typeSystem then return self end
-	self.TypeSystem = typeSystem
-	if self:GetNamespace () then
-		self:GetNamespace ():SetTypeSystem (typeSystem)
-	end
-	for _, namespace in self:GetFileStaticNamespaceEnumerator () do
-		namespace:SetTypeSystem (typeSystem)
 	end
 	return self
 end
@@ -96,6 +80,10 @@ function self:GetFullName ()
 	end
 	
 	return declaringObject:GetFullName () .. "." .. self:GetShortName ()
+end
+
+function self:GetModule ()
+	return self.Module
 end
 
 --- Gets the name of this object
@@ -179,20 +167,28 @@ function self:SetDeclaringType (declaringType)
 	return self
 end
 
+function self:SetModule (module)
+	if self.Module == module then return self end
+	self.Module = module
+	if self:GetNamespace () then
+		self:GetNamespace ():SetModule (module)
+	end
+	return self
+end
+
 -- Children
-function self:GetFileStaticNamespace (file)
+function self:GetFileStaticNamespace (fileId)
 	self.FileStaticNamespaces = self.FileStaticNamespaces or {}
-	if not self.FileStaticNamespaces [file] then
+	if not self.FileStaticNamespaces [fileId] then
 		local namespace = GCompute.Namespace ()
-		self.FileStaticNamespaces [file] = namespace
+		self.FileStaticNamespaces [fileId] = namespace
 		namespace:SetGlobalNamespace (self:GetGlobalNamespace ())
-		namespace:SetTypeSystem (self:GetTypeSystem ())
 		namespace:SetDeclaringMethod (self:GetDeclaringMethod ())
 		namespace:SetDeclaringNamespace (self:GetDeclaringNamespace ())
 		namespace:SetDeclaringObject (self:GetDeclaringObject ())
 		namespace:SetDeclaringType (self:GetDeclaringType ())
 	end
-	return self.FileStaticNamespaces [file]
+	return self.FileStaticNamespaces [fileId]
 end
 
 function self:GetFileStaticNamespaceEnumerator ()
@@ -207,6 +203,11 @@ end
 
 function self:GetNamespace ()
 	return self.Namespace
+end
+
+function self:HasFileStaticNamespace (fileId)
+	if not self.FileStaticNamespaces then return false end
+	return self.FileStaticNamespaces [fileId] and true or false
 end
 
 function self:HasNamespace ()
@@ -322,12 +323,12 @@ function self:CreateRuntimeObject ()
 	GCompute.Error ("ObjectDefinition:CreateRuntimeObject : Not implemented (" .. self:GetFullName () .. ")")
 end
 
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	if not self:GetDeclaringObject () then
 		return globalNamespace
 	end
 	
-	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace, typeSystem)
+	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace)
 	return declaringObject:GetNamespace ():GetMember (self:GetName ())
 end
 

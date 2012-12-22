@@ -6,7 +6,8 @@ local Function      = Global:AddClass ("Function")
 local FunctionGroup = Global:AddClass ("FunctionGroup")
 
 local Void          = Global:AddClass ("Void")
-Global:GetTypeSystem ():SetBottom (Void)
+Void:GetClassType ():SetBottom (true)
+GCompute.TypeSystem:SetBottom (Void)
 
 local Boolean       = Global:AddClass ("Boolean")
 local Number        = Global:AddClass ("Number")

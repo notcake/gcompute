@@ -37,9 +37,10 @@ function self:ResolveGlobal (resolutionResults, name, globalDefinition, usingDef
 		if currentUsingSource:IsNamespace () or currentUsingSource:IsClass () then
 			for i = 1, currentUsingSource:GetUsingCount () do
 				local usingDirective = currentUsingSource:GetUsing (i)
-				local usingNamespace = usingDirective:GetNamespace () and usingDirective:GetNamespace ():GetNamespace ()
-				if usingNamespace:MemberExists (name) then
-					resolutionResults:AddResult (GCompute.ResolutionResult (usingNamespace:GetMember (name), GCompute.ResolutionResultType.Global))
+				local targetDefinition = usingDirective:GetNamespace ()
+				local targetNamespace  = targetDefinition and targetDefinition:GetNamespace ()
+				if targetNamespace:MemberExists (name) then
+					resolutionResults:AddResult (GCompute.ResolutionResult (targetNamespace:GetMember (name), GCompute.ResolutionResultType.Global))
 				end
 			end
 		end
@@ -57,13 +58,27 @@ end
 function self:ResolveLocal (resolutionResults, name, localDefinition)
 	local localDistance = 0
 	while localDefinition do
-		if localDefinition:GetNamespace ():MemberExists (name) then
+		local member = localDefinition:GetNamespace ():GetMember (name)
+		if member then
 			resolutionResults:AddResult (
 				GCompute.ResolutionResult (
-					localDefinition:GetNamespace ():GetMember (name),
+					member,
 					GCompute.ResolutionResultType.Local
 				):SetLocalDistance (localDistance)
 			)
+		end
+		
+		-- Check file static namespaces
+		if localDefinition:HasFileStaticNamespace (fileId) then
+			member = localDefinition:GetFileStaticNamespace (fileId):GetMember (name)
+			if member then
+				resolutionResults:AddResult (
+					GCompute.ResolutionResult (
+						member,
+						GCompute.ResolutionResultType.Local
+					):SetLocalDistance (localDistance)
+				)
+			end
 		end
 		
 		localDefinition = localDefinition:GetDeclaringObject ()

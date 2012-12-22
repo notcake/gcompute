@@ -58,6 +58,10 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 	return true, compatibility
 end
 
+function self:CreateDefaultValue ()
+	return error
+end
+
 function self:Equals (otherType)
 	otherType = otherType:UnwrapAlias ()
 	if self == otherType then return true end
@@ -67,7 +71,7 @@ function self:Equals (otherType)
 end
 
 function self:GetBaseType (index)
-	if index == 1 then return self:GetTypeSystem ():GetTop () end
+	if index == 1 then return GCompute.TypeSystem:GetTop () end
 	return nil
 end
 

@@ -58,6 +58,12 @@ function self:Equals (otherType)
 	return self:UnwrapReference ():Equals (otherType:UnwrapReference ())
 end
 
+function self:GetCorrespondingDefinition (globalNamespace)
+	local innerType = self.InnerType:GetCorrespondingDefinition (globalNamespace)
+	if not innerType then return nil end
+	return GCompute.ReferenceType (innerType)
+end
+
 function self:GetFullName ()
 	if self.InnerType then
 		return self.InnerType:GetFullName () .. " &"

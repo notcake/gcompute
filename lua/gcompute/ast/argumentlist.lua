@@ -132,13 +132,13 @@ function self:ToString ()
 	return "(" .. argumentList .. ")"
 end
 
-function self:ToTypeNode (typeSystem)
+function self:ToTypeNode ()
 	local parameterList = GCompute.AST.ParameterList ()
 	parameterList:SetStartToken (self:GetStartToken ())
 	parameterList:SetEndToken (self:GetEndToken ())
 	
 	for i = 1, self.ArgumentCount do
-		parameterList:AddParameter (self.Arguments [i]:ToTypeNode (typeSystem))
+		parameterList:AddParameter (self.Arguments [i]:ToTypeNode ())
 	end
 	return parameterList
 end

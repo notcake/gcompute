@@ -59,7 +59,7 @@ Array:AddMethod ("pushNumber", "number val")
 	:SetNativeFunction (
 		function (self, val)
 			self.Values [#self.Values + 1] = val
-			self.Types  [#self.Types  + 1] = executionContext:GetRuntimeNamespace ().Expression2.number [".Type"]
+			self.Types  [#self.Types  + 1] = executionContext:GetEnvironment ().Expression2.number [".Type"]
 		end
 	)
 

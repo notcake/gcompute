@@ -1,6 +1,7 @@
 local Global = GCompute.GlobalNamespace
 local Object = Global:AddClass ("Object")
-Global:GetTypeSystem ():SetObject (Object)
+Object:GetClassType ():SetTop (true)
+GCompute.TypeSystem:SetObject (Object)
 
 Object:AddMethod ("GetHashCode")
 	:SetReturnType ("int")

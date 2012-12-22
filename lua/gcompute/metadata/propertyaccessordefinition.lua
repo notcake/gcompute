@@ -5,6 +5,6 @@ function self:ctor (name)
 end
 
 -- Definition
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	GCompute.Error ("PropertyAccessorDefinition:GetCorrespondingDefinition : Not implemented.")
 end

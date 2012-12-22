@@ -56,7 +56,6 @@ function self:ctor (sourceFile)
 	
 	self.ParserJobQueue = nil
 	self.AST = nil
-	self.NamespaceDefinition = nil
 	
 	-- Extra data
 	self.Data = {}
@@ -97,9 +96,6 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	end
 	if self.AST then
 		self.AST:ComputeMemoryUsage (memoryUsageReport)
-	end
-	if self.NamespaceDefinition then
-		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
 	memoryUsageReport:CreditTable ("Extra Compilation Data", self.Data)
@@ -169,10 +165,10 @@ function self:GetTokens ()
 	return self.Tokens
 end
 
---- Gets the NamespaceDefinition produced by this CompilationUnit
--- @return The NamespaceDefinition produced by this CompilationUnit
+--- Gets the NamespaceDefinition for this CompilationUnit's CompilationGroup
+-- @return The NamespaceDefinition for this CompilationUnit's CompilationGroup
 function self:GetNamespaceDefinition ()
-	return self.NamespaceDefinition
+	return self:GetCompilationGroup ():GetRootNamespace ()
 end
 
 function self:HasLanguage ()
@@ -364,48 +360,29 @@ function self:Parse (callback)
 	callbackChain:Execute ()
 end
 
-function self:PostParse (callback)
-	callback = callback or GCompute.NullCallback
-	if not self.Language.Passes.PostParser then callback () return end
-	
-	local startTime = SysTime ()
-	local callbackChain = GCompute.CallbackChain ()
-	for _, pass in ipairs (self.Language.Passes.PostParser) do
-		callbackChain:Then (
-			function (callback, errorCallback)
-				pass (self):Process (self.AST, callback)
-			end
-		)
-	end
-	callbackChain:Then (
-		function (callback, errorCallback)
-			self:AddPassDuration ("PostParser", SysTime () - startTime)
-			
-			callback ()
-		end
-	)
-	callbackChain:ThenUnwrap (callback)
-	callbackChain:Execute ()
-end
-
 function self:BuildNamespace (callback)
 	callback = callback or GCompute.NullCallback
 	
 	self:RunPass ("NamespaceBuilder", GCompute.NamespaceBuilder,
 		function ()
-			self.NamespaceDefinition = self.AST:GetDefinition ()
 			callback ()
 		end
 	)
 end
 
-function self:PostBuildNamespace (callback)
+function self:RunCustomPass (passType, callback)
 	callback = callback or GCompute.NullCallback
-	if not self.Language.Passes.PostNamespaceBuilder then callback () return end
+	local passName = GCompute.CompilerPassType [passType]
+	if not passName then
+		GCompute.Error ("CompilationUnit:RunCustomPass : Invalid pass type (" .. passType .. ")!")
+		return
+	end
+	
+	if not self.Language.Passes [passName] then callback () return end
 	
 	local startTime = SysTime ()
 	local callbackChain = GCompute.CallbackChain ()
-	for _, pass in ipairs (self.Language.Passes.PostNamespaceBuilder) do
+	for _, pass in ipairs (self.Language.Passes [passName]) do
 		callbackChain:Then (
 			function (callback, errorCallback)
 				pass (self):Process (self.AST, callback)
@@ -414,32 +391,7 @@ function self:PostBuildNamespace (callback)
 	end
 	callbackChain:Then (
 		function (callback, errorCallback)
-			self:AddPassDuration ("PostNamespaceBuilder", SysTime () - startTime)
-			
-			callback ()
-		end
-	)
-	callbackChain:ThenUnwrap (callback)
-	callbackChain:Execute ()
-end
-
-function self:PreInferTypes (callback)
-	callback = callback or GCompute.NullCallback
-	if not self.Language.Passes.PreTypeInference then callback () return end
-	
-	local startTime = SysTime ()
-	local callbackChain = GCompute.CallbackChain ()
-	for _, pass in ipairs (self.Language.Passes.PreTypeInference) do
-		callbackChain:Then (
-			function (callback, errorCallback)
-				pass (self):Process (self.AST, callback)
-			end
-		)
-	end
-	callbackChain:Then (
-		function (callback, errorCallback)
-			self:AddPassDuration ("PreTypeInference", SysTime () - startTime)
-			
+			self:AddPassDuration (passName, SysTime () - startTime)
 			callback ()
 		end
 	)

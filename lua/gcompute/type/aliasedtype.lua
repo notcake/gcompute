@@ -4,9 +4,7 @@ GCompute.AliasedType = GCompute.MakeConstructor (self, GCompute.Type)
 local blacklist =
 {
 	["GetGlobalNamespace"] = true,
-	["GetTypeSystem"]      = true,
-	["SetGlobalNamespace"] = true,
-	["SetTypeSystem"]      = true
+	["SetGlobalNamespace"] = true
 }
 
 for functionName, v in pairs (GCompute.GetMetaTable (GCompute.Type)) do

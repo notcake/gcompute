@@ -1,13 +1,31 @@
 local self = {}
 GCompute.CompilationGroup = GCompute.MakeConstructor (self)
 
-function self:ctor ()
+--[[
+	CompilationGroup
+	
+		The output of a CompilationGroup is a Module.
+]]
+
+function self:ctor (fullName, ownerId)
+	-- Source Files
 	self.SourceFiles = {}
 	self.SourceFileCount = 0
 	
-	self.NamespaceDefinition = GCompute.MirrorNamespaceDefinition ()
-	self.NamespaceDefinition:SetGlobalNamespace (self.NamespaceDefinition)
-	self.NamespaceDefinition:SetNamespaceType (GCompute.NamespaceType.Global)
+	-- Module
+	self.Module = GCompute.Module ()
+	self.Module:SetFullName (fullName)
+	self.Module:SetName (string.match (fullName, "[/\\]([^/\\]+)$") or fullName)
+	self.Module:SetOwnerId (ownerId)
+	
+	self.Module:AddReferencedModule (GCompute.System)
+	
+	self.Module:SetRootNamespace (GCompute.NamespaceDefinition ())
+	
+	-- Root Namespace
+	self.RootNamespace = self.Module:GetRootNamespace ()
+	self.RootNamespace:SetGlobalNamespace (self.NamespaceDefinition)
+	self.RootNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 end
 
 -- Source Files
@@ -41,6 +59,16 @@ function self:GetSourceFileCount ()
 	return self.SourceFileCount
 end
 
+-- Module
+function self:GetModule ()
+	return self.Module
+end
+
+-- Root Namespace
+function self:GetRootNamespace ()
+	return self.RootNamespace
+end
+
 -- Compilation
 --- Starts compilation of this CompilationGroup.
 -- @param callback A callback function (success)
@@ -58,10 +86,10 @@ function self:Compile (callback)
 					:Then (function (callback, errorCallback) compilationUnit:GenerateParserJobs (callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:Parse (callback) end)
 					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
-					:Then (function (callback, errorCallback) compilationUnit:PostParse (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:RunCustomPass (GCompute.CompilerPassType.PostParser, callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("BlockStatementInserter", GCompute.BlockStatementInserter, callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:BuildNamespace (callback) end)
-					:Then (function (callback, errorCallback) compilationUnit:PostBuildNamespace (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:RunCustomPass (GCompute.CompilerPassType.PostNamespaceBuilder, callback) end)
 					:ThenUnwrap (callback)
 					:Execute ()
 			end
@@ -69,20 +97,6 @@ function self:Compile (callback)
 	end
 	callbackChain:Then (
 		function (callback, errorCallback)
-			self.NamespaceDefinition:AddSourceNamespace (GCompute.GlobalNamespace)
-			for sourceFile in self:GetEnumerator () do
-				self.NamespaceDefinition:AddSourceNamespace (sourceFile:GetCompilationUnit ():GetNamespaceDefinition ())
-			end
-			
-			-- Create new type system
-			local typeSystem = GCompute.GlobalNamespace:GetTypeSystem ():Clone (self.NamespaceDefinition)
-			typeSystem:SetGlobalNamespace (self.NamespaceDefinition)
-			self.NamespaceDefinition:SetTypeSystem (typeSystem)
-			
-			for sourceFile in self:GetEnumerator () do
-				sourceFile:GetCompilationUnit ():GetNamespaceDefinition ():SetTypeSystem (typeSystem)
-			end
-			
 			GCompute.UniqueNameAssigner ():Process (self.NamespaceDefinition)
 			callback ()
 		end
@@ -93,15 +107,15 @@ function self:Compile (callback)
 		callbackChain:Then (
 			function (callback, errorCallback)
 				local callbackChain = GCompute.CallbackChain ()
+					:Then (function (callback, errorCallback) compilationUnit:RunCustomPass (GCompute.CompilerPassType.PreNameResolution, callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("SimpleNameResolver", GCompute.SimpleNameResolver, callback) end)
 					-- :Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("LocalScopeMerger",   GCompute.LocalScopeMerger, callback) end)
-					:Then (function (callback, errorCallback) compilationUnit:PreInferTypes (callback) end)
+					:Then (function (callback, errorCallback) compilationUnit:RunCustomPass (GCompute.CompilerPassType.PreTypeInference, callback) end)
 					:Then (function (callback, errorCallback) compilationUnit:RunPass ("TypeInferer",        GCompute.TypeInfererTypeAssigner, callback) end)
 					:Then (self:ASTErrorChecker (compilationUnit), self:ASTErrorHandler (compilationUnit, rootCallback))
 					
 					-- Runtime preparation
-					:Then (function (callback, errorCallback) compilationUnit:RunPass ("StaticMemberToucher", GCompute.StaticMemberToucher, callback) end)
 					:ThenUnwrap (callback)
 					:Execute ()
 			end
@@ -114,10 +128,6 @@ function self:Compile (callback)
 		end
 	)
 	callbackChain:Execute ()
-end
-
-function self:GetNamespaceDefinition ()
-	return self.NamespaceDefinition
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)

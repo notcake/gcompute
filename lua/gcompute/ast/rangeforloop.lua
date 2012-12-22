@@ -162,8 +162,11 @@ function self:ExecuteAsAST (astRunner, state)
 		-- Check loop variable
 		local i = astRunner:PeekValue ()
 		local range = astRunner:PeekValue (-1)
+		local descending = range [3] and range [3] < 0
 		
-		if not range [2] or i > range [2] then
+		if not range [2] or
+		   (not descending and i > range [2]) or
+		   (descending and i < range [2]) then
 			-- Done with this range.
 			astRunner:PopValue () -- Pop i
 			astRunner:PopValue () -- Pop range

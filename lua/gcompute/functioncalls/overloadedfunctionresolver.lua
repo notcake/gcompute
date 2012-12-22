@@ -86,6 +86,9 @@ function self:AddOperatorOverloads (globalNamespace, objectType, methodName, typ
 		self:AddOverload (memberDefinition, typeArgumentList)
 	end
 	
+	-- Translate objectType into the specified global namespace
+	objectType = objectType:GetCorrespondingDefinition (globalNamespace)
+	if not objectType then return end
 	self:AddMemberOverloads (objectType, methodName, typeArgumentList)
 end
 

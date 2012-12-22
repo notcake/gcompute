@@ -2,15 +2,14 @@ local self = {}
 GCompute.ASTRunner = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.NodeStack = GCompute.Containers.Stack ()
+	self.NodeStack  = GCompute.Containers.Stack ()
 	self.StateStack = GCompute.Containers.Stack ()
 	self.ValueStack = GCompute.Containers.Stack ()
+	
+	self.YieldEnabled = true
 end
 
-function self:Execute ()
-	self:Resume ()
-end
-
+-- Stacks
 function self:PeekNode (offset)
 	return self.NodeStack:Peek (offset)
 end
@@ -51,12 +50,16 @@ function self:PushValue (value)
 	self.ValueStack:Push (value)
 end
 
+-- Execution
+function self:Execute ()
+	self:Resume ()
+end
+
 function self:Resume ()
-	for i = 1, 1000 do
+	for i = 1, (self:IsYieldEnabled () and 1000 or math.huge) do
 		local topNode = self.NodeStack.Top
 		if not topNode then
 			self:PopNode ()
-			print ("Done.")
 			return
 		end
 		local state = self.StateStack:Pop ()
@@ -69,6 +72,21 @@ function self:Resume ()
 		end
 	end
 	
+	if self:IsYieldEnabled () then
+		self:Yield ()
+	end
+end
+
+-- Yielding
+function self:IsYieldEnabled ()
+	return self.YieldEnabled
+end
+
+function self:SetYieldEnabled (yieldEnabled)
+	self.YieldEnabled = yieldEnabled
+end
+
+function self:Yield ()
 	executionContext:PushResumeFunction (
 		function ()
 			self:Resume ()

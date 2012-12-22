@@ -63,7 +63,7 @@ end
 function self:GetBaseType (index)
 	if #self.BaseTypes == 0 then
 		if index == 1 and not self:IsTop () and not self:IsBottom () then
-			return self:GetTypeSystem ():GetObject ()
+			return GCompute.TypeSystem:GetObject ()
 		end
 		return nil
 	end
@@ -76,9 +76,11 @@ function self:GetBaseTypeCount ()
 	return 1
 end
 
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	if self:GetGlobalNamespace () == globalNamespace then return self end
-	return self:GetDefinition ():GetCorrespondingDefinition (globalNamespace, typeSystem):GetClassType ()
+	local correspondingDefinition = self:GetDefinition ():GetCorrespondingDefinition (globalNamespace)
+	if not correspondingDefinition then return nil end
+	return correspondingDefinition:GetClassType ()
 end
 
 function self:ResolveTypes (globalNamespace, errorReporter)

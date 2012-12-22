@@ -12,14 +12,12 @@ function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 
 	self.Root = nil
-	self.RootNamespace = nil
+	self.RootNamespace = compilationUnit:GetCompilationGroup ():GetRootNamespace ()
 end
 
 function self:VisitRoot (blockStatement)
 	self.Root = blockStatement
-	self.RootNamespace = self.Root:GetDefinition () or GCompute.NamespaceDefinition ()
-	self.Root:SetDefinition (self.RootNamespace)
-	self.Root:GetDefinition ():AddUsing ("Expression2"):Resolve ()
+	self.RootNamespace:AddUsing ("Expression2"):Resolve ()
 end
 
 function self:VisitBlock (blockStatement)

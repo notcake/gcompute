@@ -48,7 +48,7 @@ function self:GetAST ()
 	return self.AST
 end
 
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	GCompute.Error ("DeferredObjectResolution:GetCorrespondingDefinition : This should never be called (" .. self:GetFullName () .. ")!")
 end
 

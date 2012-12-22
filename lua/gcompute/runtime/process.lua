@@ -21,24 +21,34 @@ function self:ctor (processList, processId)
 	end
 
 	self.ProcessList = processList
-	self.ProcessId = processId
 	
+	-- Identity
+	self.ProcessId = processId
 	self.Name = "Process " .. string.format ("%08x", self.ProcessId)
+	self.OwnerId = GLib.GetSystemId ()
+	
+	-- Modules
+	self.Modules   = {}
+	self.ModuleSet = {}
+	
+	-- Process
 	self.CreationTimestamp = os.time ()
 	
-	self.Started = false
-	self.Suspended = false
+	self.Started     = false
+	self.Suspended   = false
 	self.Terminating = false
-	self.Terminated = false
-
-	self.Modules = {}
-	self.Threads = {}
+	self.Terminated  = false
 	
-	self.NamespaceDefinition = {}
-	self.RuntimeNamespace = {}
+	-- Threads
+	self.Threads   = {}
+	
+	-- Environment
+	self.RootNamespace = GCompute.MirrorNamespaceDefinition ()
+	self.Environment   = {}
 	
 	self.ProcessLocalStorage = {}
 	
+	-- IO
 	self.StdIn  = nil
 	self.StdOut = GCompute.Pipe ()
 	self.StdErr = GCompute.Pipe ()
@@ -46,15 +56,62 @@ function self:ctor (processList, processId)
 	GCompute.EventProvider (self)
 end
 
-function self:CreateThread ()
-	local thread = GCompute.Thread (self)
-	self.Threads [thread:GetThreadID ()] = thread
-	
-	GCompute:DispatchEvent ("ThreadCreated", self, thread)
-	
-	return thread
+-- Identity
+function self:GetName ()
+	return self.Name
 end
 
+function self:GetOwnerId ()
+	return self.OwnerId
+end
+
+function self:GetProcessId ()
+	return self.ProcessId
+end
+
+function self:SetName (name)
+	name = name or string.format ("Process %08x", self:GetProcessId ())
+	if self.Name == name then return end
+	
+	self.Name = name
+	self:DispatchEvent ("NameChanged", name)
+end
+
+function self:SetOwnerId (ownerId)
+	self.OwnerId = ownerId
+end
+
+-- Modules
+function self:AddModule (module)
+	if self.ModuleSet [module] then return end
+	self.ModuleSet [module] = true
+	
+	for referencedModule in module:GetReferencedModuleEnumerator () do
+		self:AddModule (referencedModule)
+	end
+	
+	self.Modules [#self.Modules + 1] = module
+	
+	self.RootNamespace:AddSourceNamespace (module:GetRootNamespace ())
+end
+
+function self:GetModule (index)
+	return self.Modules [index]
+end
+
+function self:GetModuleCount ()
+	return #self.Modules
+end
+
+function self:GetModuleEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Modules [i]
+	end
+end
+
+-- Process
 function self:GetCreationTimestamp ()
 	return self.CreationTimestamp
 end
@@ -67,42 +124,6 @@ function self:GetCpuTime ()
 	return cpuTime
 end
 
-function self:GetName ()
-	return self.Name
-end
-
-function self:GetNamespace ()
-	return self.NamespaceDefinition
-end
-
-function self:GetProcessId ()
-	return self.ProcessId
-end
-
-function self:GetProcessLocalStorage ()
-	return self.ProcessLocalStorage
-end
-
-function self:GetRuntimeNamespace ()
-	return self.RuntimeNamespace
-end
-
-function self:GetStdErr ()
-	return self.StdErr
-end
-
-function self:GetStdIn ()
-	return self.StdIn
-end
-
-function self:GetStdOut ()
-	return self.StdOut
-end
-
-function self:GetThreadEnumerator ()
-	return pairs (self.Threads)
-end
-
 function self:Resume ()
 	if not self.Suspended then return end
 	
@@ -110,27 +131,24 @@ function self:Resume ()
 	self:DispatchEvent ("Resumed")
 end
 
-function self:SetNamespace (namespaceDefinition)
-	self.NamespaceDefinition = namespaceDefinition
-end
-
-function self:SetName (name)
-	name = name or string.format ("Process %08x", self:GetProcessId ())
-	if self.Name == name then return end
-	
-	self.Name = name
-	self:DispatchEvent ("NameChanged", name)
-end
-
 function self:Start ()
 	if self.Started then return end
 
 	self.Started = true
-	self.RuntimeNamespace = self.NamespaceDefinition:CreateRuntimeObject ()
+	self.Environment = self.RootNamespace:CreateRuntimeObject ()
 	
 	local mainThread = self:CreateThread ()
 	mainThread:SetName ("Main Thread")
-	mainThread:SetFunction (self:GetNamespace ():GetConstructor ())
+	mainThread:SetFunction (
+		function ()
+			self:GetStdOut ():WriteLine ("Starting process...")
+			self:GetStdOut ():WriteLine (self:ToString ())
+			for module in self:GetModuleEnumerator () do
+				self:GetStdOut ():WriteLine ("\t" .. module:ToString ():gsub ("\n", "\n\t"))
+			end
+			self:GetRootNamespace ():GetConstructor () ()
+		end
+	)
 	mainThread:Start ()
 	
 	mainThread:AddEventListener ("Terminated",
@@ -155,4 +173,48 @@ function self:Terminate ()
 	self.Terminating = true
 	self.Terminated = true
 	self:DispatchEvent ("Terminated")
+end
+
+-- Threads
+function self:CreateThread ()
+	local thread = GCompute.Thread (self)
+	self.Threads [thread:GetThreadID ()] = thread
+	
+	GCompute:DispatchEvent ("ThreadCreated", self, thread)
+	
+	return thread
+end
+
+function self:GetThreadEnumerator ()
+	return pairs (self.Threads)
+end
+
+-- Environment
+function self:GetEnvironment ()
+	return self.Environment
+end
+
+function self:GetRootNamespace ()
+	return self.RootNamespace
+end
+
+function self:GetProcessLocalStorage ()
+	return self.ProcessLocalStorage
+end
+
+-- IO
+function self:GetStdErr ()
+	return self.StdErr
+end
+
+function self:GetStdIn ()
+	return self.StdIn
+end
+
+function self:GetStdOut ()
+	return self.StdOut
+end
+
+function self:ToString ()
+	return "[Process 0x" .. string.format ("%08x", self:GetProcessId ()) .. " (" .. self:GetName () .. ", " .. self:GetOwnerId () .. ")]"
 end

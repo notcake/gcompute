@@ -85,9 +85,9 @@ end
 --- Returns a function which handles runtime namespace initialization
 -- @return A function which handles runtime namespace initialization
 function self:GetConstructor (name)
-	return function (executionContext)
+	return function ()
 		for _, namespaceDefinition in ipairs (self.SourceNamespaces) do
-			namespaceDefinition:GetConstructor () (executionContext)
+			namespaceDefinition:GetConstructor () ()
 		end
 	end
 end
@@ -98,7 +98,7 @@ function self:GetMemberRuntimeName (memberDefinition)
 end
 
 function self:GetType ()
-	return self:GetTypeSystem ():GetObject ()
+	return GCompute.TypeSystem:GetObject ()
 end
 
 function self:GetUniqueNameMap ()

@@ -60,7 +60,6 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			leftExpression = nameIndex
 		elseif nextSymbol == "(" then
 			local functionType = GCompute.AST.FunctionType ()
-			functionType:SetTypeSystem (GCompute.GlobalNamespace:GetTypeSystem ())
 			functionType:SetReturnTypeExpression (leftExpression)
 			
 			local parameterList = self:ParameterList (pos, str)

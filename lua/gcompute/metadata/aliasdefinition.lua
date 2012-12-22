@@ -126,7 +126,7 @@ end
 function self:ToType ()
 	if not self.AliasedType then
 		local innerType = self:UnwrapAlias ():ToType ()
-		self.AliasedType = self:GetTypeSystem ():CreateAliasedType (self, innerType)
+		self.AliasedType = GCompute.AliasedType (self, innerType)
 	end
 	return self.AliasedType
 end

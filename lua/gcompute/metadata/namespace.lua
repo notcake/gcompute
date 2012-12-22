@@ -4,10 +4,10 @@ GCompute.Namespace = GCompute.MakeConstructor (self)
 function self:ctor ()
 	-- System
 	self.GlobalNamespace    = nil
-	self.TypeSystem         = nil
 	
 	-- Hierarchy
 	self.Definition         = nil
+	self.Module             = nil
 	self.DeclaringMethod    = nil
 	self.DeclaringNamespace = nil
 	self.DeclaringObject    = nil
@@ -23,23 +23,11 @@ function self:GetGlobalNamespace ()
 	return self.GlobalNamespace
 end
 
-function self:GetTypeSystem ()
-	return self.TypeSystem
-end
-
 function self:SetGlobalNamespace (globalNamespace)
 	if self.GlobalNamespace == globalNamespace then return end
 	self.GlobalNamespace = globalNamespace
 	for _, member in self:GetEnumerator () do
 		member:SetGlobalNamespace (globalNamespace)
-	end
-end
-
-function self:SetTypeSystem (typeSystem)
-	if self.TypeSystem == typeSystem then return end
-	self.TypeSystem = typeSystem
-	for _, member in self:GetEnumerator () do
-		member:SetTypeSystem (typeSystem)
 	end
 end
 
@@ -62,6 +50,10 @@ end
 
 function self:GetDefinition ()
 	return self.Definition
+end
+
+function self:GetModule ()
+	return self.Module
 end
 
 function self:SetDeclaringMethod (declaringMethod)
@@ -101,6 +93,15 @@ function self:SetDefinition (objectDefinition)
 	
 	for _, member in self:GetEnumerator () do
 		self:SetupMemberHierarchy (member)
+	end
+end
+
+function self:SetModule (module)
+	if self.Module == module then return end
+	self.Module = module
+	
+	for _, member in self:GetEnumerator () do
+		member:SetModule (module)
 	end
 end
 
@@ -258,7 +259,7 @@ end
 
 function self:SetupMemberHierarchy (memberDefinition)
 	memberDefinition:SetGlobalNamespace (self.GlobalNamespace)
-	memberDefinition:SetTypeSystem (self.TypeSystem)
+	memberDefinition:SetModule (self.Module)
 	memberDefinition:SetDeclaringMethod (self.Definition and self.Definition:IsMethod () and self.Definition or self:GetDeclaringMethod ())
 	memberDefinition:SetDeclaringNamespace (self.Definition and self.Definition:IsNamespace () and self.Definition or self:GetDeclaringNamespace ())
 	memberDefinition:SetDeclaringObject (self.Definition)

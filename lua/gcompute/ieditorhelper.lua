@@ -15,8 +15,9 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	compilationUnit:ClearPassDurations ()
 	compilationUnit:ClearMessages ()
 	
-	local compilationGroup = GCompute.CompilationGroup ()
 	sourceFile:SetCode (code)
+	
+	local compilationGroup = GCompute.CompilationGroup (sourceFile:GetId (), GLib.GetLocalId ())
 	compilationGroup:AddSourceFile (sourceFile)
 	
 	compilationGroup:Compile (
@@ -57,11 +58,12 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				compilerStdOut:WriteLine (AST:ToString ())
 				
 				compilerStdOut:WriteLine ("Namespace:")
-				compilerStdOut:WriteLine (compilationGroup:GetNamespaceDefinition ():ToString ())
+				compilerStdOut:WriteLine (compilationGroup:GetRootNamespace ():ToString ())
 				
 				local process = GCompute.LocalProcessList:CreateProcess ()
 				process:SetName (sourceFile:GetId ())
-				process:SetNamespace (compilationGroup:GetNamespaceDefinition ())
+				process:SetOwnerId (GLib.GetLocalId ())
+				process:AddModule (compilationGroup:GetModule ())
 				
 				stdOut:Chain (process:GetStdOut ())
 				stdErr:Chain (process:GetStdErr ())

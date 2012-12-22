@@ -5,7 +5,7 @@ function self:ctor (name)
 end
 
 -- Definition
-function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+function self:GetCorrespondingDefinition (globalNamespace)
 	GCompute.Error ("ExplicitCastDefinition:GetCorrespondingDefinition : Not implemented.")
 end
 

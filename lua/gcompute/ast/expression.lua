@@ -48,6 +48,6 @@ function self:ToString ()
 	return "[Unknown Expression]"
 end
 
-function self:ToTypeNode (typeSystem)
+function self:ToTypeNode ()
 	GCompute.Error (self:GetNodeType () .. ":ToTypeNode : Not implemented.")
 end

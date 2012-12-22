@@ -99,7 +99,6 @@ include ("compiler/simplenameresolver.lua")
 include ("compiler/typeinferer.lua")
 include ("compiler/typeinferer_typeassigner.lua")
 include ("compiler/localscopemerger.lua")
-include ("compiler/staticmembertoucher.lua")
 
 include ("uniquenamemap.lua")
 
@@ -144,6 +143,8 @@ include ("objectresolution/resolutionresult.lua")
 include ("objectresolution/resolutionresults.lua")
 include ("objectresolution/deferredobjectresolution.lua")
 include ("objectresolution/objectresolver.lua")
+-- TODO: Replace ObjectResolver with ObjectResolver2
+include ("objectresolution/objectresolver2.lua")
 
 -- text output
 include ("textoutputbuffer.lua")
@@ -152,6 +153,8 @@ include ("nulloutputbuffer.lua")
 -- compile time and reflection
 include ("metadata/namespacetype.lua")
 include ("metadata/membervisibility.lua")
+
+include ("metadata/module.lua")
 
 include ("metadata/objectdefinition.lua")
 include ("metadata/namespace.lua")
@@ -242,7 +245,6 @@ include ("runtime/runtimeobject.lua")
 include ("runtime/processlist.lua")
 include ("runtime/process.lua")
 include ("runtime/thread.lua")
-include ("runtime/module.lua")
 
 include ("runtime/localprocesslist.lua")
 
@@ -252,10 +254,15 @@ include ("nativegen/luaemitter.lua")
 
 GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 
-GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
+GCompute.System = GCompute.Module ()
+	:SetName ("System")
+	:SetFullName ("System")
+	:SetOwnerId (GLib.GetSystemId ())
+
+GCompute.System:SetRootNamespace (GCompute.NamespaceDefinition ())
+
+GCompute.GlobalNamespace = GCompute.System:GetRootNamespace ()
 GCompute.GlobalNamespace:SetGlobalNamespace (GCompute.GlobalNamespace)
-GCompute.GlobalNamespace:SetTypeSystem (GCompute.TypeSystem ())
-GCompute.GlobalNamespace:GetTypeSystem ():SetGlobalNamespace (GCompute.GlobalNamespace)
 GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 
 include ("corelibrary.lua")

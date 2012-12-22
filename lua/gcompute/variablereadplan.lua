@@ -30,7 +30,7 @@ function self:ExecuteAsAST (astRunner, node, state)
 	
 	if self.VariableReadType == GCompute.AssignmentType.NamespaceMember then
 		if not self.CachedLeft then
-			self.CachedLeft = executionContext:GetRuntimeNamespace ()
+			self.CachedLeft = executionContext:GetEnvironment ()
 		end
 		
 		astRunner:PushValue (self.CachedLeft [self.RuntimeName])

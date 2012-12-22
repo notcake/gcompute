@@ -82,9 +82,12 @@ function self:ToParameterList ()
 	local parameterList = GCompute.ParameterList ()
 	for parameterType, parameterName in self:GetEnumerator () do
 		-- resolvedObject should always be a Type or ClassDefinition (which is a Type) or OverloadedClassDefinition here.
-		local resolvedObject = parameterType and parameterType.ResolutionResults:GetFilteredResultObject (1)
-		if resolvedObject and resolvedObject:UnwrapAlias ():IsOverloadedClass () then
-			resolvedObject = resolvedObject:GetClass (1):UnwrapAlias ()
+		local resolvedObject = parameterType and parameterType:GetResolutionResult ()
+		if resolvedObject then
+			if resolvedObject:IsOverloadedClass () then
+				resolvedObject = resolvedObject:GetClass (1)
+			end
+			resolvedObject = resolvedObject:ToType ()
 		end
 		parameterList:AddParameter (resolvedObject or parameterType, parameterName)
 	end

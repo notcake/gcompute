@@ -7,11 +7,9 @@ function self:ctor (compilationUnit)
 end
 
 function self:VisitRoot (blockStatement)
-	blockStatement:GetDefinition ():SetConstructorAST (blockStatement)
 end
 
 function self:VisitBlock (blockStatement)
-	blockStatement:GetDefinition ():SetConstructorAST (blockStatement)
 end
 
 function self:VisitStatement (statement)

@@ -42,9 +42,9 @@ function self:GetType ()
 		local parameterList = GCompute.ParameterList ()
 		parameterList:AddParameter (self:GetDeclaringType (), "self")
 		parameterList:AddParameters (self:GetParameterList ())
-		return self:GetTypeSystem ():CreateFunctionType (self:GetReturnType (), parameterList)
+		return GCompute.FunctionType (self:GetReturnType (), parameterList)
 	else
-		return self:GetTypeSystem ():CreateFunctionType (self:GetReturnType (), self:GetParameterList ())
+		return GCompute.FunctionType (self:GetReturnType (), self:GetParameterList ())
 	end
 end
 

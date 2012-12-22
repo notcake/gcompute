@@ -6,7 +6,7 @@ GCompute.NamespaceBuilder = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 	
 	1. Assigns a NamespaceDefinition to all Statements that should have one
 		and adds member variables to them
-	2. Assigns NamespaceDefinitions to FunctionDeclarations and AnonymousFunctions
+	2. Assigns MethodDefinitions to FunctionDeclarations and AnonymousFunctions
 		and adds function parameters to them
 ]]
 
@@ -16,17 +16,16 @@ function self:ctor (compilationUnit)
 end
 
 function self:VisitRoot (blockStatement)
-	blockStatement:SetNamespace (blockStatement:GetNamespace () or GCompute.NamespaceDefinition ())
-	blockStatement:GetNamespace ():SetConstructorAST (blockStatement)
-	blockStatement:GetNamespace ():SetNamespaceType (GCompute.NamespaceType.Global)
+	blockStatement:SetDefinition (blockStatement:GetDefinition () or GCompute.NamespaceDefinition ())
+	blockStatement:GetDefinition ():SetConstructorAST (blockStatement)
+	blockStatement:GetDefinition ():SetNamespaceType (GCompute.NamespaceType.Global)
 end
 
 function self:VisitBlock (blockStatement)
-	blockStatement:SetNamespace (blockStatement:GetNamespace () or GCompute.NamespaceDefinition ())
+	blockStatement:SetDefinition (blockStatement:GetDefinition () or GCompute.NamespaceDefinition ())
 	
-	local namespace = blockStatement:GetNamespace ()
-	namespace:SetDeclaringNamespace (blockStatement:GetParentNamespace ())
-	namespace:SetDeclaringObject (blockStatement:GetParentNamespace ())
+	local namespace = blockStatement:GetDefinition ()
+	self:SetupDefinitionHierarchy (namespace, blockStatement:GetParentDefinition ())
 	namespace:SetConstructorAST (blockStatement)
 	if namespace:GetNamespaceType () == GCompute.NamespaceType.Unknown then
 		namespace:SetNamespaceType (GCompute.NamespaceType.Local)
@@ -34,17 +33,14 @@ function self:VisitBlock (blockStatement)
 end
 
 function self:VisitStatement (statement)
-	if statement:HasNamespace () then
-		if not statement:GetNamespace () and statement.SetNamespace then
-			statement:SetNamespace (GCompute.NamespaceDefinition ())
-		end
-		if statement:GetNamespace () then
-			statement:GetNamespace ():SetDeclaringNamespace (statement:GetParentNamespace ())
-		end
-	end
-	
 	if statement:Is ("FunctionDeclaration") then
 		self:VisitFunction (statement)
+		return
+	end
+	
+	if statement:HasDefinition () then
+		statement:SetDefinition (statement:GetDefinition () or GCompute.NamespaceDefinition ())
+		self:SetupDefinitionHierarchy (statement:GetDefinition (), statement:GetParentDefinition ())
 	end
 	
 	if statement:Is ("RangeForLoop") then
@@ -56,7 +52,7 @@ function self:VisitStatement (statement)
 			statement:SetType (GCompute.InferredType ())
 		end
 		
-		local variableDefinition = statement:GetParentNamespace ():AddMemberVariable (statement:GetName (), statement:GetType ())
+		local variableDefinition = statement:GetParentDefinition ():AddVariable (statement:GetName (), statement:GetType ())
 		statement:SetVariableDefinition (variableDefinition)
 	end
 end
@@ -68,27 +64,37 @@ function self:VisitExpression (expression)
 end
 
 function self:VisitFunction (functionNode)
-	local functionDefinition = nil
+	local methodDefinition = nil
 	
-	local declaringObject = functionNode:GetParentNamespace ()
+	local declaringObject = functionNode:GetParentDefinition ()
 	while declaringObject:GetNamespace ():GetNamespaceType () ~= GCompute.NamespaceType.Global and
 		  declaringObject:GetNamespace ():GetNamespaceType () ~= GCompute.NamespaceType.Type do
 		declaringObject = declaringObject:GetDeclaringObject ()
 	end
 	
 	if functionNode:Is ("FunctionDeclaration") then
-		functionDefinition = declaringObject:GetNamespace ():AddMethod (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
+		methodDefinition = declaringObject:GetNamespace ():AddMethod (functionNode:GetName (), functionNode:GetParameterList ():ToParameterList ())
 	else
-		functionDefinition = GCompute.FunctionDefinition ("<anonymous-function>", functionNode:GetParameterList ():ToParameterList ())
-		declaringObject:GetNamespace ():SetupMemberHierarchy (functionDefinition)
+		methodDefinition = GCompute.MethodDefinition ("<anonymous-function>", functionNode:GetParameterList ():ToParameterList ())
+		self:SetupDefinitionHierarchy (methodDefinition, functionNode:GetParentDefinition ())
+		declaringObject:GetNamespace ():SetupMemberHierarchy (methodDefinition)
 	end
 	
-	functionDefinition:SetReturnType (GCompute.DeferredObjectResolution (functionNode:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
-	functionDefinition:SetFunctionDeclaration (functionNode)
-	functionNode:SetFunctionDefinition (functionDefinition)
+	methodDefinition:SetReturnType (GCompute.DeferredObjectResolution (functionNode:GetReturnTypeExpression (), GCompute.ResolutionObjectType.Type))
+	methodDefinition:SetFunctionDeclaration (functionNode)
+	functionNode:SetMethodDefinition (methodDefinition)
 	
 	-- Set up function parameter namespace
-	functionDefinition:BuildNamespace ()
-	functionDefinition:GetNamespace ():SetDeclaringNamespace (functionNode:GetParentNamespace ())
-	functionDefinition:GetNamespace ():SetDeclaringObject (functionNode:GetParentNamespace ())
+	methodDefinition:BuildNamespace ()
+end
+
+function self:SetupDefinitionHierarchy (child, parent)
+	if not parent then return end
+	
+	child:SetGlobalNamespace (parent:GetGlobalNamespace ())
+	child:SetTypeSystem (parent:GetTypeSystem ())
+	child:SetDeclaringMethod (parent:IsMethod () and parent or parent:GetDeclaringMethod ())
+	child:SetDeclaringNamespace (parent:IsNamespace () and parent or parent:GetDeclaringNamespace ())
+	child:SetDeclaringObject (parent)
+	child:SetDeclaringType (parent:IsType () and parent or parent:GetDeclaringType ())
 end

@@ -8,6 +8,11 @@ function self:ctor (classDefinition)
 	self.BaseTypes  = {}
 end
 
+function self:SetNamespace (namespace)
+	self.Namespace = namespace
+end
+
+-- Type
 local forwardedFunctions =
 {
 	"CanConstructFrom",
@@ -50,6 +55,11 @@ function self:AddBaseType (baseType)
 	self.BaseTypes [#self.BaseTypes + 1] = baseType
 end
 
+function self:Equals (otherType)
+	if self == otherType then return true end
+	return self:GetFullName () == otherType:UnwrapAlias ():GetFullName ()
+end
+
 function self:GetBaseType (index)
 	if #self.BaseTypes == 0 then
 		if index == 1 and not self:IsTop () and not self:IsBottom () then
@@ -64,6 +74,11 @@ function self:GetBaseTypeCount ()
 	if #self.BaseTypes ~= 0 then return #self.BaseTypes end
 	if self:IsTop () or self:IsBottom () then return 0 end
 	return 1
+end
+
+function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+	if self:GetGlobalNamespace () == globalNamespace then return self end
+	return self:GetDefinition ():GetCorrespondingDefinition (globalNamespace, typeSystem):GetClassType ()
 end
 
 function self:ResolveTypes (globalNamespace, errorReporter)
@@ -90,11 +105,4 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 			end
 		end
 	end
-end
-
--- Type
-function self:Equals (otherType)
-	otherType = otherType:ToType ()
-	if self == otherType then return true end
-	return self:GetFullName () == otherType:GetFullName ()
 end

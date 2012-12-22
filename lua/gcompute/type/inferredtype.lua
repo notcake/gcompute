@@ -91,8 +91,8 @@ function self:GetClassDefinition ()
 	return self:GetTypeSystem ():GetObject ():GetClassDefinition ()
 end
 
-function self:ImportFunctionTypes (overloadedFunctionDefinition)
-	for functionDefinition in overloadedFunctionDefinition:GetEnumerator () do
+function self:ImportMethodTypes (overloadedMethodDefinition)
+	for methodDefinition in overloadedMethodDefinition:GetEnumerator () do
 	end
 end
 

@@ -67,8 +67,8 @@ Array:AddMethod ("operator[]", "number index", { "T" })
 	:SetReturnType ("T")
 	:SetNativeString ("%self% [%arg:index%]")
 	:SetTypeCurryerFunction (
-		function (functionDefinition, typeArgumentList)
-			functionDefinition:SetNativeFunction (
+		function (methodDefinition, typeArgumentList)
+			methodDefinition:SetNativeFunction (
 				function (self, index)
 					local sourceType = self.Types [index]
 					local destinationType = typeArgumentList:GetArgument (1):UnwrapAlias ()
@@ -91,16 +91,16 @@ Array:AddMethod ("operator[]", "number index, T val", { "T" })
 	:SetReturnType ("T")
 	:SetNativeString ("%self% [%arg:index%] = %arg:val%")
 	:SetTypeCurryerFunction (
-		function (functionDefinition, typeArgumentList)
+		function (methodDefinition, typeArgumentList)
 			if typeArgumentList:GetArgument (1):UnwrapAlias ():IsNativelyAllocated () then
-				functionDefinition:SetNativeFunction (
+				methodDefinition:SetNativeFunction (
 					function (self, index, value)
 						self.Types [index] = typeArgumentList:GetArgument (1)
 						self.Values [index] = value
 					end
 				)
 			else
-				functionDefinition:SetNativeFunction (
+				methodDefinition:SetNativeFunction (
 					function (self, index, value)
 						self.Types [index] = value:GetType ()
 						self.Values [index] = typeArgumentList:GetArgument (1):RuntimeUpcastTo (value:GetType (), value)

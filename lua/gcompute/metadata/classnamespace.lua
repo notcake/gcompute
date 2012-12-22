@@ -7,6 +7,33 @@ function self:ctor ()
 	self.ExplicitCasts = {}
 end
 
+-- Definition
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self.Members)
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self.Constructors)
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self.ExplicitCasts)
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self.ImplicitCasts)
+	for _, member in self:GetEnumerator () do
+		member:ComputeMemoryUsage (memoryUsageReport)
+	end
+	for constructor in self:GetConstructorEnumerator () do
+		constructor:ComputeMemoryUsage (memoryUsageReport)
+	end
+	for implicitCast in self:GetImplicitCastEnumerator () do
+		implicitCast:ComputeMemoryUsage (memoryUsageReport)
+	end
+	for explicitCast in self:GetExplicitCastEnumerator () do
+		explicitCast:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	return memoryUsageReport
+end
+
+-- Class Namespace
 function self:AddConstructor (parameterList)
 	local constructorDefinition = GCompute.ConstructorDefinition (self.Definition and self.Definition:GetName () or "<anonymous>", parameterList)
 	self:SetupMemberHierarchy (constructorDefinition)
@@ -92,6 +119,10 @@ function self:GetImplicitCastEnumerator ()
 		i = i + 1
 		return self.ImplicitCasts [i]
 	end
+end
+
+function self:IsClassNamespace ()
+	return true
 end
 
 --- Returns whether this namespace has no members

@@ -9,8 +9,6 @@ function self:ctor ()
 	
 	self.NamespaceDefinition = nil
 	
-	-- TODO: Remove this
-	self.Scope = GCompute.Scope ()
 	self.Loop = nil
 end
 
@@ -55,11 +53,11 @@ function self:Evaluate (executionContext)
 	end
 end
 
-function self:GetNamespace ()
+function self:GetDefinition ()
 	return self.NamespaceDefinition
 end
 
-function self:SetNamespace (namespaceDefinition)
+function self:SetDefinition (namespaceDefinition)
 	self.NamespaceDefinition = namespaceDefinition
 end
 

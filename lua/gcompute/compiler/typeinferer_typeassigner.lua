@@ -46,7 +46,7 @@ function self:VisitExpression (expression)
 		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
 			local result = expression.ResolutionResults:GetFilteredResultObject (1)
 			local resultNamespace = result:GetDeclaringObject ()
-			local namespaceType = resultNamespace:GetNamespaceType ()
+			local namespaceType = resultNamespace:GetNamespace ():GetNamespaceType ()
 			if namespaceType == GCompute.NamespaceType.Global then
 				local staticMemberAccess = GCompute.AST.StaticMemberAccess ()
 				
@@ -129,7 +129,7 @@ function self:VisitExpression (expression)
 	elseif expression:Is ("FunctionType") then
 		expression:SetType (self.GlobalNamespace:GetTypeSystem ():GetType ())
 	elseif expression:Is ("AnonymousFunction") then
-		expression:SetType (expression:GetFunctionDefinition ():GetType ())
+		expression:SetType (expression:GetMethodDefinition ():GetType ())
 	else
 		expression:SetType (GCompute.ErrorType ())
 	end
@@ -214,7 +214,7 @@ function self:VisitFunctionCall (functionCall)
 	local leftType = leftExpression:GetType ():UnwrapReference ()
 	if leftType:IsInferredType () then
 	elseif leftType:IsFunctionType () then
-		-- leftDefinition could be an OverloadedFunctionDefinition or a VariableDefinition
+		-- leftDefinition could be an OverloadedMethodDefinition or a VariableDefinition
 		
 		local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Static, nil, functionCall:GetArgumentList ())
 		
@@ -222,9 +222,9 @@ function self:VisitFunctionCall (functionCall)
 		if not leftDefinition then
 			-- leftExpression is some expression returning a function
 			overloadedFunctionResolver:AddOverload (leftExpression)
-		elseif leftDefinition:IsOverloadedFunctionDefinition () then
+		elseif leftDefinition:IsOverloadedMethod () then
 			overloadedFunctionResolver:AddOverloads (leftDefinition)
-		elseif leftDefinition:IsFunction () or
+		elseif leftDefinition:IsMethod () or
 		       leftDefinition:GetType ():IsFunctionType () then
 			overloadedFunctionResolver:AddOverload (leftDefinition)
 		else
@@ -267,8 +267,6 @@ function self:VisitMemberFunctionCall (memberFunctionCall)
 end
 
 function self:VisitNew (new)
-	new:SetType (new:GetLeftExpression ():GetResolutionResults ():GetFilteredResultObject (1))
-	
 	local leftExpression = new:GetLeftExpression ()
 	local leftResolutionResults = leftExpression:GetResolutionResults ()
 	
@@ -282,14 +280,22 @@ function self:VisitNew (new)
 		leftExpression:AddErrorMessage (leftExpression:ToString () .. " is ambiguous as a type name.")
 		return
 	end
-	
 	local leftDefinition = leftExpression:GetResolutionResults ():GetFilteredResultObject (1)
 	
-	if not leftDefinition:UnwrapAlias ():IsType () then
+	if not leftDefinition:UnwrapAlias ():IsType () or leftDefinition:UnwrapAlias ():IsOverloadedClass () then
 		self.CompilationUnit:Error ("Left hand side of <new-expression> must be a type! (" .. leftExpression:ToString () .. " is not a type).", leftExpression:GetLocation ())
 		return
 	end
 	
+	-- leftDefinition is (an alias to) a Type, ClassDefinition or OverloadedClassDefinition
+	local type = leftDefinition
+	if type:IsOverloadedClass () and type:GetClassCount () == 1 then
+		type = type:GetClass (1)
+	end
+	type = type:ToType ()
+	new:SetType (type)
+	
+	-- Constructor resolution
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.OverloadedFunctionResolver.Static, nil, new:GetArgumentList ())
 	
 	-- Populate OverloadedFunctionResolver
@@ -299,7 +305,7 @@ function self:VisitNew (new)
 	
 	-- Resolve OverloadedFunctionResolver
 	new.FunctionCall = self:ResolveFunctionCall (new, overloadedFunctionResolver)
-	new:SetNativelyAllocated (leftDefinition:UnwrapAlias ():IsNativelyAllocated ())
+	new:SetNativelyAllocated (leftDefinition:ToType ():IsNativelyAllocated ())
 	
 	if new.FunctionCall then
 		new.FunctionCall:SetLeftExpression (new:GetLeftExpression ())
@@ -327,9 +333,9 @@ function self:ResolveAccessType (astNode)
 	local resolutionResults = astNode:GetResolutionResults ()
 	local result = resolutionResults:GetFilteredResultObject (1):UnwrapAlias ()
 	
-	if result:IsOverloadedFunctionDefinition () then
-		if result:GetFunctionCount () == 1 then
-			astNode:SetType (result:GetFunction (1):GetType ())
+	if result:IsOverloadedMethod () then
+		if result:GetMethodCount () == 1 then
+			astNode:SetType (result:GetMethod (1):GetType ())
 		else
 			-- overload resolution
 			local inferredType = GCompute.InferredType ()
@@ -483,16 +489,16 @@ function self:ResolveAssignment (astNode)
 	end
 end
 
-function self:ResolveOperatorCall (astNode, functionName, object, argumentList, typeArgumentList)
+function self:ResolveOperatorCall (astNode, methodName, object, argumentList, typeArgumentList)
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Operator, object, argumentList)
 	
-	overloadedFunctionResolver:AddOperatorOverloads (self.GlobalNamespace, object:GetType (), functionName, typeArgumentList)
+	overloadedFunctionResolver:AddOperatorOverloads (self.GlobalNamespace, object:GetType (), methodName, typeArgumentList)
 	
 	-- Resolve OverloadedFunctionResolver
 	astNode.FunctionCall = self:ResolveFunctionCall (astNode, overloadedFunctionResolver)
 	if astNode.FunctionCall then
 		if not astNode.FunctionCall:IsMemberFunctionCall () then
-			astNode.FunctionCall:SetLeftExpression (astNode.FunctionCall:GetFunctionDefinition ():CreateStaticMemberAccessNode ())
+			astNode.FunctionCall:SetLeftExpression (astNode.FunctionCall:GetMethodDefinition ():CreateStaticMemberAccessNode ())
 		end
 	end
 end

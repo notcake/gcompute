@@ -26,12 +26,12 @@ function self:ExecuteAsAST (astRunner, state)
 		local leftValue = astRunner:PopValue ()
 		astRunner:PushValue (leftValue)
 		
-		if self.FunctionDefinition then
-			astRunner:PushValue (self.FunctionDefinition)
+		if self.MethodDefinition then
+			astRunner:PushValue (self.MethodDefinition)
 		elseif self.Function then
 			astRunner:PushValue (self.Function)
 		else
-			astRunner:PushValue (leftValue.FunctionTable.Virtual [self.FunctionName])
+			astRunner:PushValue (leftValue.FunctionTable.Virtual [self.MethodName])
 		end
 	elseif state == 2 then
 		self.__base.ExecuteAsAST (self, astRunner, state)
@@ -55,5 +55,5 @@ end
 function self:ToString ()
 	local leftExpression = self.LeftExpression and self.LeftExpression:ToString () or "[Nothing]"
 	local argumentList = self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])"
-	return leftExpression .. ":" .. (self.FunctionName or "[Nothing]") .. (self.TypeArgumentList and (" " .. self.TypeArgumentList:ToString ()) or "") .. argumentList
+	return leftExpression .. ":" .. (self.MethodName or "[Nothing]") .. (self.TypeArgumentList and (" " .. self.TypeArgumentList:ToString ()) or "") .. argumentList
 end

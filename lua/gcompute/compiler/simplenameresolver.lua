@@ -4,9 +4,10 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 --[[
 	SimpleObjectResolver
 	
-	1. Resolves using directives
-	2. Resolves names
-	3. Updates the type of function parameters in FunctionRoot NamespaceDefinitions
+	1. Sets the TypeSystem of everything
+	2. Resolves using directives
+	3. Resolves names
+	4. Updates the type of function parameters in FunctionRoot NamespaceDefinitions
 	
 	This class should be generating ObjectResolutionResults
 	using the ObjectResolver class and filtering them.
@@ -35,7 +36,8 @@ function self:VisitBlock (blockStatement)
 end
 
 function self:VisitStatement (statement)
-	if statement:HasNamespace () then
+	if statement:HasDefinition () then
+		statement:GetDefinition ():SetTypeSystem (self.GlobalNamespace:GetTypeSystem ())
 		self:ResolveUsings (statement)
 	end
 	
@@ -54,7 +56,7 @@ end
 
 function self:VisitExpression (expression, referenceNamespace)
 	if expression:Is ("Identifier") then
-		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
+		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentDefinition ())
 		local resolutionResults = expression:GetResolutionResults ()
 		resolutionResults:FilterByLocality ()
 		
@@ -62,14 +64,14 @@ function self:VisitExpression (expression, referenceNamespace)
 			expression:AddErrorMessage ("Cannot resolve identifier " .. expression:GetName () .. ".")
 		end
 	elseif expression:Is ("NameIndex") then
-		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
+		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentDefinition ())
 		local resolutionResults = expression:GetResolutionResults ()
 		
 		if resolutionResults:GetFilteredResultCount () == 0 then
 			expression:AddErrorMessage ("Cannot resolve " .. expression:ToString () .. ".")
 		end
 	elseif expression:Is ("FunctionType") then
-		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentNamespace ())
+		GCompute.ObjectResolver:ResolveASTNode (expression, false, self.GlobalNamespace, referenceNamespace or expression:GetParentDefinition ())
 	elseif expression:Is ("AnonymousFunction") then
 		self:VisitFunction (expression)
 	end
@@ -77,12 +79,14 @@ end
 
 -- AnonymousFunction or FunctionDeclaration
 function self:VisitFunction (functionNode)
-	local functionDefinition = functionNode:GetFunctionDefinition ()
-	local parameterNamespace = functionDefinition:GetNamespace ()
+	local methodDefinition = functionNode:GetMethodDefinition ()
+	methodDefinition:SetTypeSystem (self.GlobalNamespace:GetTypeSystem ())
+	
+	local parameterNamespace = methodDefinition:GetNamespace ()
 	
 	local returnTypeResults = functionNode:GetReturnTypeExpression ():GetResolutionResults ()
 	returnTypeResults:FilterToConcreteTypes ()
-	functionDefinition:SetReturnType (returnTypeResults:GetFilteredResultObject (1))
+	methodDefinition:SetReturnType (returnTypeResults:GetFilteredResultObject (1))
 	
 	local parameterList = functionNode:GetParameterList ()
 	local parameterType
@@ -92,12 +96,16 @@ function self:VisitFunction (functionNode)
 		if parameterType then
 			parameterTypeResults = parameterType:GetResolutionResults ()
 			parameterTypeResults:FilterToConcreteTypes ()
-			functionDefinition:GetParameterList ():SetParameterType (i, parameterTypeResults:GetFilteredResultObject (1))
+			methodDefinition:GetParameterList ():SetParameterType (i, parameterTypeResults:GetFilteredResultObject (1))
 			parameterNamespace:GetMember (parameterList:GetParameterName (i)):SetType (parameterTypeResults:GetFilteredResultObject (1))
 		end
 	end
 end
 
 function self:ResolveUsings (statement)
-	statement:GetNamespace ():ResolveUsings (self.GlobalNamespace)
+	local definition = statement:GetDefinition ()
+	if not definition then return end
+	if not definition:IsNamespace () or not definition:IsClass () then return end
+	
+	definition:ResolveUsings (self.GlobalNamespace)
 end

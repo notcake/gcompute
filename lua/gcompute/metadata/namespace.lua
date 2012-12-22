@@ -110,6 +110,7 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if memoryUsageReport:IsCounted (self) then return end
 	
 	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self.Members)
 	for _, member in self:GetEnumerator () do
 		member:ComputeMemoryUsage (memoryUsageReport)
 	end
@@ -231,6 +232,10 @@ end
 
 function self:GetNamespaceType ()
 	return self.NamespaceType
+end
+
+function self:IsClassNamespace ()
+	return false
 end
 
 function self:IsEmpty ()

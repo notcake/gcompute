@@ -38,6 +38,16 @@ function self:GetClassCount ()
 	return #self.Classes
 end
 
+--- Returns the class which takes 0 type parameters
+function self:GetConcreteClass ()
+	for class in self:GetEnumerator () do
+		if class:GetTypeParameterList ():IsEmpty () then
+			return class
+		end
+	end
+	return nil
+end
+
 --- Gets an iterator for this class group
 -- @return An iterator function returning the ClassDefinitions in this class group
 function self:GetEnumerator ()

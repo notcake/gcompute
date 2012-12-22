@@ -5,7 +5,8 @@ function self:ctor ()
 	self.SourceFiles = {}
 	self.SourceFileCount = 0
 	
-	self.NamespaceDefinition = GCompute.MergedNamespaceDefinition ()
+	self.NamespaceDefinition = GCompute.MirrorNamespaceDefinition ()
+	self.NamespaceDefinition:SetGlobalNamespace (self.NamespaceDefinition)
 	self.NamespaceDefinition:SetNamespaceType (GCompute.NamespaceType.Global)
 end
 
@@ -75,7 +76,9 @@ function self:Compile (callback)
 			
 			-- Create new type system
 			local typeSystem = GCompute.GlobalNamespace:GetTypeSystem ():Clone (self.NamespaceDefinition)
+			typeSystem:SetGlobalNamespace (self.NamespaceDefinition)
 			self.NamespaceDefinition:SetTypeSystem (typeSystem)
+			
 			for sourceFile in self:GetEnumerator () do
 				sourceFile:GetCompilationUnit ():GetNamespaceDefinition ():SetTypeSystem (typeSystem)
 			end

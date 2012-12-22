@@ -7,7 +7,7 @@ function self:ctor ()
 	self.VariableCount = 0
 	self.IteratorExpression = nil
 	
-	self.NamespaceDefinition = GCompute.NamespaceDefinition ()
+	self.NamespaceDefinition = nil
 	self.Body = nil
 end
 
@@ -30,12 +30,12 @@ function self:GetBody ()
 	return self.Body
 end
 
-function self:GetIteratorExpression()
-	return self.IteratorExpression
+function self:GetDefinition ()
+	return self.NamespaceDefinition
 end
 
-function self:GetNamespace ()
-	return self.NamespaceDefinition
+function self:GetIteratorExpression()
+	return self.IteratorExpression
 end
 
 function self:GetVariable (index)
@@ -51,13 +51,13 @@ function self:SetBody (statement)
 	if self.Body then self.Body:SetParent (self) end
 end
 
+function self:SetDefinition (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
+end
+
 function self:SetIteratorExpression (iteratorExpression)
 	self.IteratorExpression = iteratorExpression
 	if self.IteratorExpression then self.IteratorExpression:SetParent (self) end
-end
-
-function self:SetNamespace (namespaceDefinition)
-	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:SetVariable (index, variable)

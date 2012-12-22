@@ -25,7 +25,7 @@ function self:ctor ()
 	self.Statements = {}
 	self.StatementCount = 0
 	
-	self.NamespaceDefinition = nil -- NamespaceDefinition or ClassDefinition
+	self.Definition = nil -- NamespaceDefinition or ClassDefinition
 	self.PopStackFrame = false
 end
 
@@ -50,8 +50,8 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	for statement in self:GetEnumerator () do
 		statement:ComputeMemoryUsage (memoryUsageReport)
 	end
-	if self.NamespaceDefinition then
-		self.NamespaceDefinition:ComputeMemoryUsage (memoryUsageReport)
+	if self.Definition then
+		self.Definition:ComputeMemoryUsage (memoryUsageReport)
 	end
 	return memoryUsageReport
 end
@@ -126,6 +126,10 @@ function self:GetChildEnumerator ()
 	return self:GetEnumerator ()
 end
 
+function self:GetDefinition ()
+	return self.Definition
+end
+
 function self:GetEnumerator ()
 	local i = 0
 	return function ()
@@ -135,11 +139,7 @@ function self:GetEnumerator ()
 end
 
 function self:GetMergedLocalScope ()
-	return self:GetNamespace () and self:GetNamespace ():GetMergedLocalScope ()
-end
-
-function self:GetNamespace ()
-	return self.NamespaceDefinition
+	return self:GetDefinition () and self:GetDefinition ():GetMergedLocalScope ()
 end
 
 function self:GetStatement (index)
@@ -170,8 +170,8 @@ function self:SetBlockType (blockType)
 	self.BlockType = blockType
 end
 
-function self:SetNamespace (namespaceDefinition)
-	self.NamespaceDefinition = namespaceDefinition
+function self:SetDefinition (objectDefinition)
+	self.Definition = objectDefinition
 end
 
 function self:SetOptimized (optimized)
@@ -192,8 +192,8 @@ end
 
 function self:ToString ()
 	local block = "[" .. (BlockTypeLookup [self.BlockType] or "?") .. "]\n{\n"
-	if self.NamespaceDefinition and not self.NamespaceDefinition:IsEmpty () then
-		block = block .. "    " .. self.NamespaceDefinition:ToString ():gsub ("\n", "\n    ") .. "\n    \n"
+	if self.Definition and not self.Definition:IsEmpty () then
+		block = block .. "    " .. self.Definition:ToString ():gsub ("\n", "\n    ") .. "\n    \n"
 	end
 	
 	local contents = {}

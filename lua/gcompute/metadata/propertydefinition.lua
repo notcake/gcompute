@@ -9,7 +9,7 @@ end
 
 function self:AddGetter ()
 	if not self.Getter then
-		self.Getter = GCompute.MethodDefinition (self:GetName ())
+		self.Getter = GCompute.PropertyAccessorDefinition (self:GetName ())
 			:SetReturnType (self:GetType ())
 			:SetMemberVisibility (self:GetMemberVisibility ())
 		self:GetDeclaringObject ():GetNamespace ():SetupMemberHierarchy (self.Getter)
@@ -19,7 +19,7 @@ end
 
 function self:AddSetter ()
 	if not self.Setter then
-		self.Setter = GCompute.MethodDefinition (self:GetName (), { { self:GetType (), "value" } })
+		self.Setter = GCompute.PropertyAccessorDefinition (self:GetName (), { { self:GetType (), "value" } })
 			:SetMemberVisibility (self:GetMemberVisibility ())
 		self:GetDeclaringObject ():GetNamespace ():SetupMemberHierarchy (self.Setter)
 	end

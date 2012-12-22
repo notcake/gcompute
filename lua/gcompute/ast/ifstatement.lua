@@ -133,12 +133,12 @@ function self:GetConditionCount ()
 	return self.ConditionCount
 end
 
-function self:GetElseStatement ()
-	return self.Else
+function self:GetDefinition ()
+	return self.NamespaceDefinition
 end
 
-function self:GetNamespace ()
-	return self.NamespaceDefinition
+function self:GetElseStatement ()
+	return self.Else
 end
 
 function self:SetCondition (index, condition)
@@ -151,13 +151,13 @@ function self:SetConditionBody (index, conditionBody)
 	if conditionBody then conditionBody:SetParent (self) end
 end
 
+function self:SetDefinition (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
+end
+
 function self:SetElseStatement (elseStatement)
 	self.Else = elseStatement
 	if self.Else then self.Else:SetParent (self) end
-end
-
-function self:SetNamespace (namespaceDefinition)
-	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:ToString ()

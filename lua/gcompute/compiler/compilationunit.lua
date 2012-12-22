@@ -48,11 +48,11 @@ function self:ctor (sourceFile)
 	-- Lexing
 	self.Lexer = nil
 	self.LexingInProgress = false
-	self.LexingRevision = 0
+	self.LexingRevision = -1
 	self.Tokens = nil
 	
 	-- Preprocessing
-	self.PreprocessingRevision = 0
+	self.PreprocessingRevision = -1
 	
 	self.ParserJobQueue = nil
 	self.AST = nil
@@ -66,6 +66,7 @@ function self:ctor (sourceFile)
 	
 	GCompute.EventProvider (self)
 	
+	self:Reset ()
 	self:AutodetectLanguage ()
 end
 
@@ -182,6 +183,11 @@ function self:ProcessDirective (directive, startToken, endToken)
 	self:GetLanguage ():ProcessDirective (self, directive, startToken, endToken)
 end
 
+function self:Reset ()
+	self.LexingRevision = -1
+	self.PreprocessingRevision = -1
+end
+
 function self:SetCompilationGroup (compilationGroup)
 	self.CompilationGroup = compilationGroup
 end
@@ -199,7 +205,7 @@ function self:SetLanguage (languageOrLanguageName)
 	self.Language = languageOrLanguageName
 	
 	-- Reset cached data
-	self.LexingRevision = 0
+	self:Reset ()
 	
 	self:DispatchEvent ("LanguageChanged", self.Language)
 end
@@ -387,7 +393,7 @@ function self:BuildNamespace (callback)
 	
 	self:RunPass ("NamespaceBuilder", GCompute.NamespaceBuilder,
 		function ()
-			self.NamespaceDefinition = self.AST:GetNamespace ()
+			self.NamespaceDefinition = self.AST:GetDefinition ()
 			callback ()
 		end
 	)

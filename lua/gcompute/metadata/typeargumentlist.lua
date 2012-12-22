@@ -13,6 +13,10 @@ function self:ctor (arguments)
 end
 
 function self:AddArgument (type)
+	if type:IsObjectDefinition () then
+		GCompute.Error ("TypeArgumentList:AddArgument : type should be a Type, not an ObjectDefinition.")
+	end
+	
 	self.ArgumentCount = self.ArgumentCount + 1
 	self.Arguments [self.ArgumentCount] = type
 end
@@ -54,6 +58,10 @@ function self:IsEmpty ()
 end
 
 function self:SetArgument (argumentId, type)
+	if type:IsObjectDefinition () then
+		GCompute.Error ("TypeArgumentList:SetArgument : type should be a Type, not an ObjectDefinition.")
+	end
+	
 	if argumentId > self.ArgumentCount then self.ArgumentCount = argumentId end
 	self.Arguments [argumentId] = type
 end

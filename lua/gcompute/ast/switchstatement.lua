@@ -35,7 +35,7 @@ function self:GetCaseExpression (index)
 	return self.CaseExpressions [index]
 end
 
-function self:GetNamespace ()
+function self:GetDefinition ()
 	return self.NamespaceDefinition
 end
 
@@ -53,7 +53,7 @@ function self:SetCaseExpression (index, caseExpression)
 	if caseExpression then caseExpression:SetParent (self) end
 end
 
-function self:SetNamespace (namespaceDefinition)
+function self:SetDefinition (namespaceDefinition)
 	self.NamespaceDefinition = namespaceDefinition
 end
 

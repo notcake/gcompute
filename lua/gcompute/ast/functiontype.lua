@@ -45,7 +45,7 @@ function self:GetParameterList ()
 end
 
 function self:GetResolutionResult ()
-	return GCompute.FunctionType (self:GetReturnTypeExpression ():GetResolutionResult (), self:GetParameterList ():ToParameterList ())
+	return GCompute.FunctionType (self:GetReturnTypeExpression ():GetResolutionResult ():ToType (), self:GetParameterList ():ToParameterList ())
 		:SetTypeSystem (self:GetTypeSystem ())
 end
 

@@ -2,16 +2,16 @@ local self = {}
 GCompute.FunctionCall = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.LeftExpression = nil
-	self.FunctionName = nil
-	self.FunctionType = nil
+	self.LeftExpression    = nil
+	self.MethodName        = nil
+	self.FunctionType      = nil
 	
-	self.ArgumentList = nil
+	self.ArgumentList      = nil
 	self.PrependedArgument = false
 	
 	-- Runtime caching
-	self.FunctionDefinition = nil
-	self.Function = nil
+	self.MethodDefinition  = nil
+	self.Function          = nil
 end
 
 function self:ExecuteAsAST (astRunner, state)
@@ -23,8 +23,8 @@ function self:ExecuteAsAST (astRunner, state)
 		-- Return to state 2
 		astRunner:PushState (2)
 		
-		if self.FunctionDefinition then
-			astRunner:PushValue (self.FunctionDefinition)
+		if self.MethodDefinition then
+			astRunner:PushValue (self.MethodDefinition)
 		elseif self.Function then
 			astRunner:PushValue (self.Function)
 		elseif self.LeftExpression then
@@ -32,7 +32,7 @@ function self:ExecuteAsAST (astRunner, state)
 			astRunner:PushNode (self:GetLeftExpression ())
 			astRunner:PushState (0)
 		else
-			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no native function, FunctionDefinition or left expression provided)\n")
+			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no native function, MethodDefinition or left expression provided)\n")
 		end
 	elseif state == 2 then
 		-- Return to state 3
@@ -52,14 +52,14 @@ function self:ExecuteAsAST (astRunner, state)
 			arguments [i] = astRunner:PopValue ()
 		end
 		
-		local nativeFunctionOrFunctionDefinition = astRunner:PopValue ()
-		local functionDefinition = nil
+		local nativeFunctionOrMethodDefinition = astRunner:PopValue ()
+		local methodDefinition = nil
 		local nativeFunction
-		if type (nativeFunctionOrFunctionDefinition) == "table" then
-			functionDefinition = nativeFunctionOrFunctionDefinition
-			nativeFunction = functionDefinition:GetNativeFunction ()
+		if type (nativeFunctionOrMethodDefinition) == "table" then
+			methodDefinition = nativeFunctionOrMethodDefinition
+			nativeFunction = methodDefinition:GetNativeFunction ()
 		else
-			nativeFunction = nativeFunctionOrFunctionDefinition
+			nativeFunction = nativeFunctionOrMethodDefinition
 		end
 		
 		local prependedArgument = nil
@@ -73,18 +73,18 @@ function self:ExecuteAsAST (astRunner, state)
 			else
 				astRunner:PushValue (nativeFunction (unpack (arguments)))
 			end
-		elseif functionDefinition then
-			local functionDeclaration = functionDefinition:GetFunctionDeclaration ()
-			local namespace = functionDeclaration:GetNamespace ()
-			local mergedLocalScope = namespace:GetMergedLocalScope ()
+		elseif methodDefinition then
+			local functionDeclaration = methodDefinition:GetFunctionDeclaration ()
+			local namespace = methodDefinition:GetNamespace ()
+			local mergedLocalScope = methodDefinition:GetMergedLocalScope ()
 			local block = functionDeclaration:GetBody ()
 			if block then
 				if mergedLocalScope then
 					local stackFrame = mergedLocalScope:CreateStackFrame ()
 					executionContext:PushStackFrame (stackFrame)
 					
-					for i = 1, functionDefinition:GetParameterCount () do
-						stackFrame [mergedLocalScope:GetRuntimeName (namespace:GetMember (functionDefinition:GetParameterName (i)))] = arguments [i]
+					for i = 1, methodDefinition:GetParameterCount () do
+						stackFrame [mergedLocalScope:GetRuntimeName (namespace:GetMember (methodDefinition:GetParameterName (i)))] = arguments [i]
 					end
 					if self.PrependedArgument then
 						stackFrame ["this"] = prependedArgument
@@ -95,11 +95,11 @@ function self:ExecuteAsAST (astRunner, state)
 				astRunner:PushState (0)
 			else
 				astRunner:PushValue (nil)
-				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
+				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (MethodDefinition has no native function or AST block node)\n")
 			end
 		else
 			astRunner:PushValue (nil)
-			ErrorNoHalt ("Failed to call " .. self.FunctionName .. " (no native function or FunctionDefinition)\n")
+			ErrorNoHalt ("Failed to call " .. self.MethodName .. " (no native function or MethodDefinition)\n")
 		end
 	end
 end
@@ -112,16 +112,16 @@ function self:GetFunction ()
 	return self.Function
 end
 
-function self:GetFunctionDefinition ()
-	return self.FunctionDefinition
-end
-
-function self:GetFunctionName ()
-	return self.FunctionName
-end
-
 function self:GetFunctionType ()
 	return self.FunctionType
+end
+
+function self:GetMethodDefinition ()
+	return self.MethodDefinition
+end
+
+function self:GetMethodName ()
+	return self.MethodName
 end
 
 function self:GetLeftExpression ()
@@ -144,12 +144,8 @@ function self:SetFunction (f)
 	self.Function = f
 end
 
-function self:SetFunctionDefinition (functionDefinition)
-	self.FunctionDefinition = functionDefinition
-end
-
-function self:SetFunctionName (functionName)
-	self.FunctionName = functionName
+function self:SetMethodName (methodName)
+	self.MethodName = methodName
 end
 
 function self:SetFunctionType (functionType)
@@ -160,6 +156,10 @@ function self:SetHasPrependedArgument (hasPrependedArgument)
 	self.PrependedArgument = hasPrependedArgument
 end
 
+function self:SetMethodDefinition (methodDefinition)
+	self.MethodDefinition = methodDefinition
+end
+
 function self:SetLeftExpression (leftExpression)
 	self.LeftExpression = leftExpression
 end
@@ -168,5 +168,5 @@ function self:ToString ()
 	if self.LeftExpression then
 		return self.LeftExpression:ToString () .. " " .. (self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])")
 	end
-	return (self.FunctionName and self.FunctionName or "[Nothing]") .. " " .. (self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])")
+	return (self.MethodName or "[Nothing]") .. " " .. (self.ArgumentList and self.ArgumentList:ToString () or "([Nothing])")
 end

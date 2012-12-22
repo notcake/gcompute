@@ -41,25 +41,17 @@ function self:CopySource (sourceNode)
 	self.SourceCharacter = sourceNode.SourceCharacter
 end
 
+function self:GetAncestorOfType (astNodeType)
+	local parent = self:GetParent ()
+	while parent and not parent:Is (astNodeType) do
+		parent = parent:GetParent ()
+	end
+	return parent
+end
+
 function self:GetChildEnumerator ()
 	GCompute.Error (self:GetNodeType () .. ":GetChildEnumerator : Not implemented.")
 	return GCompute.NullCallback
-end
-
-function self:GetNamespaceParent ()
-	local parent = self:GetParent ()
-	while parent and not parent.GetNamespace do
-		parent = parent:GetParent ()
-	end
-	return parent
-end
-
-function self:GetNextParent (type)
-	local parent = self:GetParent ()
-	while parent and not parent:Is (type) do
-		parent = parent:GetParent ()
-	end
-	return parent
 end
 
 function self:GetNodeType ()
@@ -70,20 +62,22 @@ function self:GetParent ()
 	return self.Parent
 end
 
-function self:GetParentNamespace ()
+function self:GetParentDefinition ()
 	local parent = self:GetParent ()
-	while parent and not parent.GetNamespace do
+	while parent and
+	      (not parent.GetDefinition or
+		  not parent:GetDefinition ():HasNamespace ()) do
 		parent = parent:GetParent ()
 	end
-	return parent and parent:GetNamespace ()
+	return parent and parent:GetDefinition ()
 end
 
 function self:IsASTNode ()
 	return true
 end
 
-function self:HasNamespace ()
-	return self.GetNamespace and true or false
+function self:HasDefinition ()
+	return self.GetDefinition and true or false
 end
 
 function self:HasType ()

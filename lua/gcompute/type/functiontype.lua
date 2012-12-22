@@ -2,6 +2,10 @@ local self = {}
 GCompute.FunctionType = GCompute.MakeConstructor (self, GCompute.Type)
 
 function self:ctor (returnType, parameterList)
+	if returnType:IsObjectDefinition () then
+		GCompute.Error ("FunctionType:ctor : returnType should be a Type, not an ObjectDefinition.")
+	end
+	
 	self:SetReturnType (returnType)
 	self.ParameterList = parameterList or GCompute.EmptyParameterList
 	
@@ -12,10 +16,10 @@ function self:ctor (returnType, parameterList)
 	self:SetNativelyAllocated (true)
 end
 
---- Returns the compatibility rating of the given number and types of arguments with this FunctionDefinition
+--- Returns the compatibility rating of the given number and types of arguments with this MethodDefinition
 -- @param argumentTypeArray An array of argument Types
--- @return A boolean indicating whether this FunctionDefinition can accept the given argument type list
--- @return A number indicating how compatible this FunctionDefinition is with the given argument type list
+-- @return A boolean indicating whether this MethodDefinition can accept the given argument type list
+-- @return A number indicating how compatible this MethodDefinition is with the given argument type list
 function self:CanAcceptArgumentTypes (argumentTypeArray)
 	-- Bail out if we cannot accept the given number of arguments
 	if not self.ParameterList:MatchesArgumentCount (#argumentTypeArray) then return false, -math.huge end

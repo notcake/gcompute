@@ -7,14 +7,11 @@ function self:ctor (compilationUnit)
 end
 
 function self:VisitRoot (blockStatement)
-	blockStatement:SetNamespace (blockStatement:GetNamespace () or GCompute.NamespaceDefinition ())
-	blockStatement:GetNamespace ():SetConstructorAST (blockStatement)
+	blockStatement:GetDefinition ():SetConstructorAST (blockStatement)
 end
 
 function self:VisitBlock (blockStatement)
-	blockStatement:SetNamespace (blockStatement:GetNamespace () or GCompute.NamespaceDefinition ())
-	blockStatement:GetNamespace ():SetDeclaringNamespace (blockStatement:GetParentNamespace ())
-	blockStatement:GetNamespace ():SetConstructorAST (blockStatement)
+	blockStatement:GetDefinition ():SetConstructorAST (blockStatement)
 end
 
 function self:VisitStatement (statement)
@@ -22,7 +19,7 @@ function self:VisitStatement (statement)
 	local parentMergedScope = nil
 	if statement:Is ("FunctionDeclaration") or
 	   statement:Is ("VariableDeclaration") then
-		parentNamespace = self:GetGlobalNamespace (statement:GetParentNamespace ())
+		parentNamespace = self:GetGlobalNamespace (statement:GetParentDefinition ())
 		parentMergedScope = parentNamespace:GetMergedLocalScope () or GCompute.MergedLocalScope ()
 		parentNamespace:SetMergedLocalScope (parentMergedScope)
 	end
@@ -33,7 +30,7 @@ function self:VisitStatement (statement)
 	
 	if parentMergedScope then
 		if statement:Is ("FunctionDeclaration") then
-			parentMergedScope:AddMember (statement:GetFunctionDefinition ())
+			parentMergedScope:AddMember (statement:GetMethodDefinition ())
 		elseif statement:Is ("VariableDeclaration") then
 			parentMergedScope:AddMember (statement:GetVariableDefinition ())
 		end
@@ -46,23 +43,16 @@ function self:VisitExpression (expression)
 	end
 end
 
-function self:VisitFunction (func)
-	local namespace = func:GetNamespace ()
-	local mergedLocalScope = namespace:GetMergedLocalScope () or GCompute.MergedLocalScope ()
-	namespace:SetMergedLocalScope (mergedLocalScope)
+function self:VisitFunction (functionNode)
+	local methodDefinition = functionNode:GetDefinition ()
+	local mergedLocalScope = methodDefinition:GetMergedLocalScope () or GCompute.MergedLocalScope ()
+	methodDefinition:SetMergedLocalScope (mergedLocalScope)
 	
-	func:GetBody ():SetPopStackFrame (true)
+	functionNode:GetBody ():SetPopStackFrame (true)
 	
-	for _, parameterName in func:GetParameterList ():GetEnumerator () do
-		mergedLocalScope:AddMember (namespace:GetMember (parameterName))
+	for _, parameterName in functionNode:GetParameterList ():GetEnumerator () do
+		mergedLocalScope:AddMember (methodDefinition:GetNamespace ():GetMember (parameterName))
 	end
-end
-
-function self:GetNamespace (statement)
-	if statement:HasNamespace () then
-		return statement:GetNamespace ()
-	end
-	return self:GetNamespace (statement:GetParent ())
 end
 
 function self:GetGlobalNamespace (objectDefinition)

@@ -12,16 +12,27 @@ function self:ctor ()
 	self.Type     = nil
 end
 
+-- System
+function self:GetGlobalNamespace ()
+	return self.GlobalNamespace
+end
+
+function self:SetGlobalNamespace (globalNamespace)
+	self.GlobalNamespace = globalNamespace
+	return self
+end
+
+-- Type System
 function self:Clone (globalNamespace)
 	local typeSystem = GCompute.TypeSystem ()
 	typeSystem:SetGlobalNamespace (globalNamespace or self.GlobalNamespace)
 	if globalNamespace then
 		globalNamespace:SetTypeSystem (typeSystem)
-		typeSystem:SetBottom   (self.Bottom   and self.Bottom  :GetCorrespondingDefinition (globalNamespace):ToType () or nil)
-		typeSystem:SetTop      (self.Top      and self.Top     :GetCorrespondingDefinition (globalNamespace):ToType () or nil)
-		typeSystem:SetEnum     (self.Enum     and self.Enum    :GetCorrespondingDefinition (globalNamespace):ToType () or nil)
-		typeSystem:SetFunction (self.Function and self.Function:GetCorrespondingDefinition (globalNamespace):ToType () or nil)
-		typeSystem:SetType     (self.Type     and self.Type    :GetCorrespondingDefinition (globalNamespace):ToType () or nil)
+		typeSystem:SetBottom   (self.Bottom   and self.Bottom  :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
+		typeSystem:SetTop      (self.Top      and self.Top     :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
+		typeSystem:SetEnum     (self.Enum     and self.Enum    :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
+		typeSystem:SetFunction (self.Function and self.Function:GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
+		typeSystem:SetType     (self.Type     and self.Type    :GetCorrespondingDefinition (globalNamespace, typeSystem) or nil)
 	else
 		typeSystem:SetBottom   (self.Bottom)
 		typeSystem:SetTop      (self.Top)

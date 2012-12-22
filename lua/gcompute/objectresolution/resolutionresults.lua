@@ -75,7 +75,7 @@ function self:FilterToConcreteTypes ()
 			end
 		elseif filteredObject:IsOverloadedClass () then
 			if isAlias and filteredObject:GetTypeCount () == 1 then
-				if filteredObject:GetType (1):IsConcreteType () then
+				if filteredObject:GetClass (1):IsConcreteType () then
 					filteredResults [#filteredResults + 1] = self.FilteredResults [i]
 				end
 			else

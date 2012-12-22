@@ -41,6 +41,9 @@ function self:ctor (name, parameterList, typeParameterList)
 	self.TypeParametricMethodDefinition = self
 	self.TypeCurriedDefinitions         = GCompute.WeakValueTable ()
 	self.TypeCurryerFunction            = GCompute.NullCallback
+	
+	-- Runtime
+	self.MergedLocalScope = nil
 end
 
 -- Hierarchy
@@ -220,6 +223,15 @@ function self:SetTypeParametricMethodDefinition (typeParametricMethodDefinition)
 	self.TypeParametricMethodDefinition = typeParametricMethodDefinition
 end
 
+-- Runtime
+function self:GetMergedLocalScope ()
+	return self.MergedLocalScope
+end
+
+function self:SetMergedLocalScope (mergedLocalScope)
+	self.MergedLocalScope = mergedLocalScope
+end
+
 -- Definition
 function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
@@ -228,11 +240,42 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport:CreditTableStructure ("Object Definitions", self)
 	self.Namespace:ComputeMemoryUsage (memoryUsageReport)
 	
+	if self.MergedLocalScope then
+		self.MergedLocalScope:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
+		typeCurriedDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
 	return memoryUsageReport
 end
 
 function self:CreateRuntimeObject ()
 	return self
+end
+
+function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+	if not self:GetDeclaringObject () then return nil end
+	
+	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace, typeSystem)
+	local memberDefinition = declaringObject:GetNamespace ():GetMember (self:GetName ())
+	if memberDefinition:IsOverloadedMethod () then
+		local typeParameterCount = self:GetTypeParameterList ():GetParameterCount ()
+		for method in memberDefinition:GetEnumerator () do
+			if method:GetTypeParameterList ():GetParameterCount () == typeParameterCount and
+			   method:GetParameterList ():Equals (self:GetParameterList ()) then
+				return method
+			end
+		end
+		GCompute.Error ("MethodDefinition:GetCorrespondingDefinition : Corresponding ClassDefinition not found.")
+		return nil
+	elseif memberDefinition:IsMethod () then
+		return memberDefinition
+	else
+		GCompute.Error ("MethodDefinition:GetCorrespondingDefinition : Corresponding ObjectDefinition is not a ClassDefinition.")
+		return nil
+	end
 end
 
 function self:GetDisplayText ()

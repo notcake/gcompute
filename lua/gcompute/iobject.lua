@@ -38,6 +38,7 @@ function self:IsType ()
 end
 
 function self:ToType ()
+	A = self
 	GCompute.Error ("IObject:ToType : " .. self:GetFullName () .. " is not a Type!")
 	return nil
 end

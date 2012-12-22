@@ -9,7 +9,7 @@ function self:ctor ()
 	
 	self.Body = nil
 	
-	self.FunctionDefinition = nil
+	self.MethodDefinition = nil
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -28,14 +28,14 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if self.Body then
 		self.Body:ComputeMemoryUsage (memoryUsageReport)
 	end
-	if self.FunctionDefinition then
-		self.FunctionDefinition:ComputeMemoryUsage (memoryUsageReport)
+	if self.MethodDefinition then
+		self.MethodDefinition:ComputeMemoryUsage (memoryUsageReport)
 	end
 	return memoryUsageReport
 end
 
 function self:ExecuteAsAST (astRunner, state)
-	astRunner:PushValue (self.FunctionDefinition)
+	astRunner:PushValue (self.MethodDefinition)
 	
 	-- Discard AnonymousFunction
 	astRunner:PopNode ()
@@ -60,13 +60,12 @@ function self:GetChildEnumerator ()
 	end
 end
 
-function self:GetFunctionDefinition ()
-	return self.FunctionDefinition
+function self:GetDefinition ()
+	return self.MethodDefinition
 end
 
-function self:GetNamespace ()
-	if not self.FunctionDefinition then return nil end
-	return self.FunctionDefinition:GetNamespace ()
+function self:GetMethodDefinition ()
+	return self.MethodDefinition
 end
 
 function self:GetParameterList ()
@@ -74,7 +73,7 @@ function self:GetParameterList ()
 end
 
 function self:GetResolutionResult ()
-	return self.FunctionDefinition
+	return self.MethodDefinition
 end
 
 function self:GetReturnTypeExpression ()
@@ -89,8 +88,12 @@ function self:SetBody (blockStatement)
 	end
 end
 
-function self:SetFunctionDefinition (functionDefinition)
-	self.FunctionDefinition = functionDefinition
+function self:SetDefinition (methodDefinition)
+	self.MethodDefinition = methodDefinition
+end
+
+function self:SetMethodDefinition (methodDefinition)
+	self.MethodDefinition = methodDefinition
 end
 
 function self:SetParameterList (parameterList)

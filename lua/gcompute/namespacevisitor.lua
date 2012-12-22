@@ -15,14 +15,14 @@ end
 function self:VisitVariable (variableDefinition, ...)
 end
 
-function self:VisitOverloadedFunction (overloadedFunctionDefinition, ...)
+function self:VisitOverloadedMethod (overloadedMethodDefinition, ...)
 end
 
-function self:VisitFunction (functionDefinition, ...)
+function self:VisitMethod (methodDefinition, ...)
 end
 
-function self:VisitOverloadedType (overloadedClassDefinition, ...)
+function self:VisitOverloadedClass (overloadedClassDefinition, ...)
 end
 
-function self:VisitType (typeDefinition, ...)
+function self:VisitClass (classDefinition, ...)
 end

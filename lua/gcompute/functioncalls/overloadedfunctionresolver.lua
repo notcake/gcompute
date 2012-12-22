@@ -55,41 +55,41 @@ function self:ctor (functionResolutionType, objectOrArgumentList, argumentList)
 	self.Ambiguous = false
 end
 
-function self:AddMemberOverloads (type, functionName, typeArgumentList)
-	type = type and type:UnwrapAliasAndReference ()
+function self:AddMemberOverloads (type, methodName, typeArgumentList)
+	type = type and type:UnwrapReference ()
 	if not type then return end
 
-	local typeDefinition = type:GetClassDefinition ()
-	if typeDefinition then
+	local namespace = type:GetNamespace ()
+	if namespace then
 		-- Add matching members of the specified type
-		local memberDefinition = typeDefinition:GetMember (functionName)
+		local memberDefinition = namespace:GetMember (methodName)
 		if not memberDefinition then
-		elseif memberDefinition:IsOverloadedFunctionDefinition () then
+		elseif memberDefinition:IsOverloadedMethod () then
 			self:AddOverloads (memberDefinition, typeArgumentList)
-		elseif memberDefinition:IsFunctionDefinition () then
+		elseif memberDefinition:IsMethod () then
 			self:AddOverload (memberDefinition, typeArgumentList)
 		end
 	end
 	
 	-- Add matching members of the specified type's base types
 	for baseType in type:GetBaseTypeEnumerator () do
-		self:AddMemberOverloads (baseType, functionName, typeArgumentList)
+		self:AddMemberOverloads (baseType, methodName, typeArgumentList)
 	end
 end
 
-function self:AddOperatorOverloads (globalNamespace, objectType, functionName, typeArgumentList)
-	local memberDefinition = globalNamespace and globalNamespace:GetMember (functionName) or nil
+function self:AddOperatorOverloads (globalNamespace, objectType, methodName, typeArgumentList)
+	local memberDefinition = globalNamespace and globalNamespace:GetMember (methodName) or nil
 	if not memberDefinition then
-	elseif memberDefinition:IsOverloadedFunctionDefinition () then
+	elseif memberDefinition:IsOverloadedMethod () then
 		self:AddOverloads (memberDefinition, typeArgumentList)
-	elseif memberDefinition:IsFunction () then
+	elseif memberDefinition:IsMethod () then
 		self:AddOverload (memberDefinition, typeArgumentList)
 	end
 	
-	self:AddMemberOverloads (objectType, functionName, typeArgumentList)
+	self:AddMemberOverloads (objectType, methodName, typeArgumentList)
 end
 
---- Adds a FunctionDefinition or ObjectDefinition whose type is a FunctionType
+--- Adds a MethodDefinition or ObjectDefinition whose type is a FunctionType
 -- @param objectDefinition The ObjectDefinition to be added
 -- @param typeArgumentList The type parameters for the ObjectDefinition. If not provided, type parameters will attempt to be inferred
 function self:AddOverload (objectDefinition, typeArgumentList)
@@ -98,12 +98,12 @@ function self:AddOverload (objectDefinition, typeArgumentList)
 	self.OverloadTypeArgumentLists [nextOverloadId] = typeArgumentList
 end
 
---- Adds the FunctionDefinitions in an OverloadedFunctionDefinition
--- @param overloadedFunctionDefinition The OverloadedFunctionDefinition
--- @param typeArgumentList The type parameters for the FunctionDefinitions. If a FunctionDefinition has no unbound type parameters, this is ignored
-function self:AddOverloads (overloadedFunctionDefinition, typeArgumentList)
-	for functionDefinition in overloadedFunctionDefinition:GetEnumerator () do
-		self:AddOverload (functionDefinition, typeArgumentList)
+--- Adds the FunctionDefinitions in an OverloadedMethodDefinition
+-- @param overloadedFunctionDefinition The OverloadedMethodDefinition
+-- @param typeArgumentList The type parameters for the MethodDefinitions. If a MethodDefinition has no unbound type parameters, this is ignored
+function self:AddOverloads (overloadedMethodDefinition, typeArgumentList)
+	for methodDefinition in overloadedMethodDefinition:GetEnumerator () do
+		self:AddOverload (methodDefinition, typeArgumentList)
 	end
 end
 
@@ -188,15 +188,15 @@ function self:Resolve ()
 			argumentList:InsertArgument (1, self.Object)
 		end
 	end
-	functionCall:SetFunctionName (bestOverload:IsObjectDefinition () and bestOverload:GetName ())
+	functionCall:SetMethodName (bestOverload:IsObjectDefinition () and bestOverload:GetName ())
 	functionCall:SetFunctionType (bestOverload:GetType ())
-	if bestOverload:IsObjectDefinition () and bestOverload:IsFunction () then
+	if bestOverload:IsObjectDefinition () and bestOverload:IsMethod () then
 		if bestOverloadCallPlan.TypeArgumentList then
-			local typeCurriedFunctionDefinition = bestOverload:CreateTypeCurriedDefinition (bestOverloadCallPlan.TypeArgumentList)
-			functionCall:SetFunctionDefinition (typeCurriedFunctionDefinition)
-			functionCall:SetFunctionType (typeCurriedFunctionDefinition:GetType ())
+			local typeCurriedMethodDefinition = bestOverload:CreateTypeCurriedDefinition (bestOverloadCallPlan.TypeArgumentList)
+			functionCall:SetMethodDefinition (typeCurriedMethodDefinition)
+			functionCall:SetFunctionType (typeCurriedMethodDefinition:GetType ())
 		else
-			functionCall:SetFunctionDefinition (bestOverload)
+			functionCall:SetMethodDefinition (bestOverload)
 		end
 	end
 	functionCall:SetArgumentList (self.ArgumentList)
@@ -281,7 +281,7 @@ function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overl
 	local typeParameterMap = {}
 	local typeParameterList = GCompute.EmptyTypeParameterList
 	
-	if objectDefinition:IsObjectDefinition () and objectDefinition:IsFunction () then
+	if objectDefinition:IsObjectDefinition () and objectDefinition:IsMethod () then
 		typeParameterList = objectDefinition:GetTypeParameterList ()
 	end
 	
@@ -307,14 +307,14 @@ function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overl
 		destinationType = typeParameterMap [destinationType] or destinationType
 		
 		-- Check for type parameters and attempt to infer them
-		if destinationType:UnwrapAlias ():IsTypeParameter () and destinationType:GetDeclaringFunction () == objectDefinition then
+		if destinationType:IsTypeParameter () and destinationType:GetDefinition ():GetDeclaringMethod () == objectDefinition then
 			if not inferredTypeArgumentList then
 				-- Create the inferred TypeArgumentList since it doesn't already exist
 				inferredTypeArgumentList = typeArgumentList:Clone ()
 				
-				-- Populate the inferred TypeArgumentList's empty arguments with PlaceholderTypes
+				-- Populate the inferred TypeArgumentList's empty arguments with ErrorTypes
 				for j = 1, typeParameterList:GetParameterCount () do
-					inferredTypeArgumentList:SetArgument (j, inferredTypeArgumentList:GetArgument (i) or GCompute.PlaceholderType ())
+					inferredTypeArgumentList:SetArgument (j, inferredTypeArgumentList:GetArgument (i) or GCompute.ErrorType ())
 				end
 			end
 			
@@ -355,7 +355,7 @@ end
 
 function self:ShouldIncludeObjectInCall (objectDefinition)
 	if self.FunctionResolutionType == GCompute.FunctionResolutionType.Operator then return true end
-	if objectDefinition:IsFunction () and objectDefinition:IsMemberFunction () and not objectDefinition:IsMemberStatic () then return true end
-	if self.FunctionResolutionType == GCompute.FunctionResolutionType.Member and not objectDefinition:IsFunction () then return true end
+	if objectDefinition:IsMethod () and objectDefinition:IsMemberFunction () and not objectDefinition:IsMemberStatic () then return true end
+	if self.FunctionResolutionType == GCompute.FunctionResolutionType.Member and not objectDefinition:IsMethod () then return true end
 	return false
 end

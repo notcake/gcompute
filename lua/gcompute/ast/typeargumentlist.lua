@@ -22,10 +22,13 @@ function self:ToTypeArgumentList ()
 	for argument in self:GetEnumerator () do
 		-- resolvedObject should always be a Type or ClassDefinition (which is a Type) or OverloadedClassDefinition here.
 		local resolvedObject = argument and argument:GetResolutionResult ()
-		if resolvedObject and resolvedObject:UnwrapAlias ():IsOverloadedClass () then
-			resolvedObject = resolvedObject:GetType (1):UnwrapAlias ()
+		if resolvedObject then
+			if resolvedObject:UnwrapAlias ():IsOverloadedClass () then
+				resolvedObject = resolvedObject:UnwrapAlias ():GetConcreteClass ()
+			end
+			resolvedObject = resolvedObject and resolvedObject:ToType ()
 		end
-		typeArgumentList:AddArgument (resolvedObject or GCompute.PlaceholderType ())
+		typeArgumentList:AddArgument (resolvedObject or GCompute.ErrorType ())
 	end
 	return typeArgumentList
 end

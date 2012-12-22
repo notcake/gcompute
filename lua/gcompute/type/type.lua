@@ -71,7 +71,6 @@ end
 -- @return A boolean indicating whether this type derives from baseType
 function self:IsBaseType (type)
 	if self:IsTop () or self:IsBottom () then return false end
-	type = type:ToType ()
 	
 	for baseType in self:GetBaseTypeEnumerator () do
 		baseType = baseType:UnwrapAlias ()
@@ -84,7 +83,6 @@ function self:IsBaseType (type)
 end
 
 function self:IsBaseTypeOf (subtype)
-	subtype = subtype:ToType ()
 	return subtype:IsBaseType (self)
 end
 
@@ -94,7 +92,6 @@ end
 -- @param typeConversionMethod The type conversion methods to try
 -- @return A boolean indicating whether this type can be converted to destinationType
 function self:CanConvertTo (destinationType, typeConversionMethod)
-	destinationType = destinationType:ToType ()
 	if bit.band (typeConversionMethod, GCompute.TypeConversionMethod.Identity) ~= 0 and
 	   self:UnwrapReference ():Equals (destinationType) then
 		return true, GCompute.TypeConversionMethod.Identity
@@ -152,11 +149,16 @@ function self:CreateDefaultValue ()
 end
 
 function self:Equals (otherType)
-	GCompute.Error ("Type:Equals : Not implemented for " .. self:ToString ())
+	GCompute.Error ("Type:Equals : Not implemented (" .. self:GetFullName () .. ")")
 end
 
 function self:GetFullName ()
 	return "[Type]"
+end
+
+function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+	GCompute.Error ("Type:GetCorrespondingDefinition : Not implemented (" .. self:GetFullName () .. ")")
+	return nil
 end
 
 --- Gets the type's runtime function table
@@ -244,7 +246,6 @@ function self:IsTypeParameter ()
 end
 
 function self:RuntimeDowncastTo (destinationType, value)
-	destinationType = destinationType:ToType ()
 	if self:IsNativelyAllocated () == destinationType:IsNativelyAllocated () then return value end
 	if self:IsNativelyAllocated () then
 		-- Box
@@ -256,7 +257,6 @@ function self:RuntimeDowncastTo (destinationType, value)
 end
 
 function self:RuntimeUpcastTo (destinationType, value)
-	destinationType = destinationType:ToType ()
 	if self:IsNativelyAllocated () == destinationType:IsNativelyAllocated () then return value end
 	if self:IsNativelyAllocated () then
 		-- Box
@@ -319,14 +319,14 @@ function self:BuildFunctionTable ()
 		-- Merge in static function tables
 		for typeName, functionTable in pairs (baseFunctionTable.Static) do
 			self.FunctionTable.Static [typeName] = self.FunctionTable.Static [typeName] or {}
-			for functionName, functionTableEntry in pairs (functionTable) do
-				self.FunctionTable.Static [typeName] [functionName] = functionTableEntry
+			for methodName, functionTableEntry in pairs (functionTable) do
+				self.FunctionTable.Static [typeName] [methodName] = functionTableEntry
 			end
 		end
 		
 		-- Merge in virtual function table
-		for functionName, functionTableEntry in pairs (baseFunctionTable.Virtual) do
-			self.FunctionTable.Virtual [functionName] = functionTableEntry
+		for methodName, functionTableEntry in pairs (baseFunctionTable.Virtual) do
+			self.FunctionTable.Virtual [methodName] = functionTableEntry
 		end
 	end
 	
@@ -337,11 +337,11 @@ function self:BuildFunctionTable ()
 	if definition then
 		-- Add functions
 		for _, memberDefinition in definition:GetEnumerator () do
-			if memberDefinition:IsOverloadedFunctionDefinition () then
-				for functionDefinition in memberDefinition:GetEnumerator () do
-					self.FunctionTable.Static [fullName] [functionDefinition:GetRuntimeName ()] = functionDefinition:GetNativeFunction () or functionDefinition
+			if memberDefinition:IsOverloadedMethod () then
+				for methodDefinition in memberDefinition:GetEnumerator () do
+					self.FunctionTable.Static [fullName] [methodDefinition:GetRuntimeName ()] = methodDefinition:GetNativeFunction () or methodDefinition
 				end
-			elseif memberDefinition:IsFunctionDefinition () then
+			elseif memberDefinition:IsMethod () then
 				self.FunctionTable.Static [fullName] [memberDefinition:GetRuntimeName ()] = memberDefinition:GetNativeFunction () or memberDefinition
 			end
 		end
@@ -358,7 +358,7 @@ function self:BuildFunctionTable ()
 	end
 	
 	-- Merge our static function table into the virtual function table
-	for functionName, functionTableEntry in pairs (self.FunctionTable.Static [fullName]) do
-		self.FunctionTable.Virtual [functionName] = functionTableEntry
+	for methodName, functionTableEntry in pairs (self.FunctionTable.Static [fullName]) do
+		self.FunctionTable.Virtual [methodName] = functionTableEntry
 	end
 end

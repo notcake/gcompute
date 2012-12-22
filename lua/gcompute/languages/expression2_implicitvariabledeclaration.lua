@@ -17,9 +17,9 @@ end
 
 function self:VisitRoot (blockStatement)
 	self.Root = blockStatement
-	self.RootNamespace = self.Root:GetNamespace () or GCompute.NamespaceDefinition ()
-	self.Root:SetNamespace (self.RootNamespace)
-	self.Root:GetNamespace ():AddUsing ("Expression2"):Resolve ()
+	self.RootNamespace = self.Root:GetDefinition () or GCompute.NamespaceDefinition ()
+	self.Root:SetDefinition (self.RootNamespace)
+	self.Root:GetDefinition ():AddUsing ("Expression2"):Resolve ()
 end
 
 function self:VisitBlock (blockStatement)
@@ -57,12 +57,15 @@ function self:VisitExpression (expression)
 end
 
 function self:ProcessIdentifier (identifier, type)
-	local namespace = identifier:GetParentNamespace ()
+	-- Attempt to resolve the identifier
+	local namespace = identifier:GetParentDefinition ()
 	local resolutionResults = GCompute.ResolutionResults ()
 	GCompute.ObjectResolver:ResolveUnqualifiedIdentifier (resolutionResults, identifier:GetName (), GCompute.GlobalNamespace, namespace)
+	
 	if resolutionResults:GetFilteredResultCount () == 0 then
+		-- Failed to resolve, add it as a variable
 		self.CompilationUnit:Debug ("Adding variable declaration for " .. identifier:GetName ())
-		self.RootNamespace:AddMemberVariable (identifier:GetName (), type or GCompute.InferredType ())
+		self.RootNamespace:AddVariable (identifier:GetName (), type or GCompute.InferredType ())
 			:SetFileStatic (true)
 	end
 end

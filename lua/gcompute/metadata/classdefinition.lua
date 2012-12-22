@@ -108,8 +108,8 @@ end
 
 function self:CanConstructFrom (sourceType)
 	local argumentTypeArray = { sourceType }
-	for _, constructorDefinition in ipairs (self.Constructors) do
-		if constructorDefinition:GetType ():CanAcceptArgumentTypes (argumentTypeArray) then
+	for constructor in self:GetNamespace ():GetConstructorEnumerator () do
+		if constructor:GetType ():CanAcceptArgumentTypes (argumentTypeArray) then
 			return true
 		end
 	end
@@ -226,6 +226,27 @@ function self:SetTypeParametricClassDefinition (typeParametricClassDefinition)
 end
 
 -- Definition
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
+	self.Namespace:ComputeMemoryUsage (memoryUsageReport)
+	
+	if self.MergedLocalScope then
+		self.MergedLocalScope:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.UniqueNameMap then
+		self.UniqueNameMap:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
+		typeCurriedDefinition:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	return memoryUsageReport
+end
+
 function self:CreateRuntimeObject ()
 	return
 	{
@@ -233,13 +254,13 @@ function self:CreateRuntimeObject ()
 	}
 end
 
-function self:GetCorrespondingDefinition (globalNamespace)
+function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
 	if not self:GetDeclaringObject () then
 		return globalNamespace
 	end
 	
-	local leftNamespace = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace)
-	local memberDefinition = leftNamespace:GetMember (self:GetName ())
+	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace, typeSystem)
+	local memberDefinition = declaringObject:GetNamespace ():GetMember (self:GetName ())
 	if memberDefinition:IsOverloadedClass () then
 		local typeParameterCount = self:GetTypeParameterList ():GetParameterCount ()
 		for class in memberDefinition:GetEnumerator () do

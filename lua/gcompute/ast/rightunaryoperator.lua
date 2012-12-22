@@ -59,24 +59,24 @@ function self:ExecuteAsAST (astRunner, state)
 		local left = astRunner:PopValue ()
 		
 		local functionCallPlan = self.FunctionCallPlan
-		local functionDefinition = functionCallPlan:GetFunctionDefinition ()
+		local methodDefinition = functionCallPlan:GetMethodDefinition ()
 		local func = functionCallPlan:GetFunction ()
-		if not func and functionDefinition then
-			func = functionDefinition:GetNativeFunction ()
+		if not func and methodDefinition then
+			func = methodDefinition:GetNativeFunction ()
 		end
 		
 		if func then
 			astRunner:PushValue (func (left))
-		elseif functionDefinition then
-			local block = functionDefinition:GetBlock ()
+		elseif methodDefinition then
+			local block = methodDefinition:GetBlock ()
 			if block then
-				astRunner:PushNode (functionDefinition:GetBlock ())
+				astRunner:PushNode (methodDefinition:GetBlock ())
 				astRunner:PushState (0)
 			else
-				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (FunctionDefinition has no native function or AST block node)\n")
+				ErrorNoHalt ("Failed to run " .. self:ToString () .. " (MethodDefinition has no native function or AST block node)\n")
 			end
 		else
-			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or FunctionDefinition)\n")
+			ErrorNoHalt ("Failed to run " .. self:ToString () .. " (no function or MethodDefinition)\n")
 		end
 	end
 end

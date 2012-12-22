@@ -108,6 +108,8 @@ function self:SetStatic (static)
 end
 
 function self:SetType (type)
+	type = type:ToType ()
+	
 	self.Type = type
 	
 	if self.VariableDefinition then

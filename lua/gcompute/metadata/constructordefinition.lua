@@ -5,6 +5,10 @@ function self:ctor (name, parameterList)
 end
 
 -- Definition
+function self:GetCorrespondingDefinition (globalNamespace, typeSystem)
+	GCompute.Error ("ConstructorDefinition:GetCorrespondingDefinition : Not implemented.")
+end
+
 function self:ToString ()
 	return self:GetShortName () .. " " .. self:GetParameterList ():GetRelativeName (self)
 end

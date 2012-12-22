@@ -84,7 +84,7 @@ function self:ToParameterList ()
 		-- resolvedObject should always be a Type or ClassDefinition (which is a Type) or OverloadedClassDefinition here.
 		local resolvedObject = parameterType and parameterType.ResolutionResults:GetFilteredResultObject (1)
 		if resolvedObject and resolvedObject:UnwrapAlias ():IsOverloadedClass () then
-			resolvedObject = resolvedObject:GetType (1):UnwrapAlias ()
+			resolvedObject = resolvedObject:GetClass (1):UnwrapAlias ()
 		end
 		parameterList:AddParameter (resolvedObject or parameterType, parameterName)
 	end

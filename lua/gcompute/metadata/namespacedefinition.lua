@@ -12,8 +12,7 @@ function self:ctor (name)
 	self.ConstructorAST = nil
 	self.Constructor = nil
 	
-	self.UniqueNameMap = nil
-	
+	self.UniqueNameMap    = nil
 	self.MergedLocalScope = nil
 end
 
@@ -65,6 +64,7 @@ end
 
 function self:CreateStaticMemberAccessNode ()
 	if self:IsGlobalNamespace () then return nil end
+	if not self:GetDeclaringObject () then return nil end
 	return GCompute.AST.StaticMemberAccess (self:GetDeclaringObject ():CreateStaticMemberAccessNode (), self:GetName ())
 end
 
@@ -84,9 +84,7 @@ function self:GetMergedLocalScope ()
 end
 
 function self:GetUniqueNameMap ()
-	if not self.UniqueNameMap then
-		self.UniqueNameMap = GCompute.UniqueNameMap ()
-	end
+	self.UniqueNameMap = self.UniqueNameMap or GCompute.UniqueNameMap ()
 	return self.UniqueNameMap
 end
 
@@ -135,7 +133,7 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if memoryUsageReport:IsCounted (self) then return end
 	
 	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
-	self.Namespace:CreditTableStructure ("Namespace Definitions", self)
+	self.Namespace:ComputeMemoryUsage (memoryUsageReport)
 	
 	if self.MergedLocalScope then
 		self.MergedLocalScope:ComputeMemoryUsage (memoryUsageReport)
@@ -185,7 +183,7 @@ function self:ToString ()
 			if newlineRequired then namespaceDefinition = namespaceDefinition .. "\n    " end
 			newlineRequired = true
 		end
-		for name, memberDefinition in self:GetNamespace ():GetEnumerator () do
+		for _, memberDefinition in self:GetNamespace ():GetEnumerator () do
 			namespaceDefinition = namespaceDefinition .. "\n    " .. memberDefinition:ToString ():gsub ("\n", "\n    ")
 		end
 		namespaceDefinition = namespaceDefinition .. "\n}"

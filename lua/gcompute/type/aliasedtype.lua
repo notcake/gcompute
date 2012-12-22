@@ -21,7 +21,7 @@ function self:ctor (aliasDefinition, innerType)
 	self.Alias      = aliasDefinition
 	self.InnerType  = innerType
 	
-	self.Definition = definition
+	self.Definition = innerType:GetDefinition ()
 	self.Namespace  = innerType:GetNamespace ()
 end
 

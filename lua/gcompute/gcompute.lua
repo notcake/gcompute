@@ -120,8 +120,6 @@ include ("type/typeparser.lua")
 include ("type/type.lua")
 
 include ("type/errortype.lua")
--- TODO: Remove this
--- include ("type/placeholdertype.lua")
 
 include ("type/aliasedtype.lua")
 -- include ("type/arraytype.lua")
@@ -172,6 +170,7 @@ include ("metadata/methoddefinition.lua")
 include ("metadata/constructordefinition.lua")
 include ("metadata/explicitcastdefinition.lua")
 include ("metadata/implicitcastdefinition.lua")
+include ("metadata/propertyaccessordefinition.lua")
 
 include ("metadata/overloadedclassdefinition.lua")
 include ("metadata/overloadedmethoddefinition.lua")
@@ -179,11 +178,16 @@ include ("metadata/overloadedmethoddefinition.lua")
 -- include ("metadata/typecurriedclassdefinition.lua")
 include ("metadata/typecurriedmethoddefinition.lua")
 
-include ("metadata/mergednamespacedefinition.lua")
-include ("metadata/mergedtypedefinition.lua")
-include ("metadata/mergedoverloadedtypedefinition.lua")
-include ("metadata/mergedoverloadedfunctiondefinition.lua")
+-- mirror
+include ("metadata/mirror/mirrornamespace.lua")
 
+include ("metadata/mirror/mirrornamespacedefinition.lua")
+include ("metadata/mirror/mirrorclassdefinition.lua")
+-- include ("metadata/mirror/mirrormethoddefinition.lua")
+include ("metadata/mirror/mirroroverloadedclassdefinition.lua")
+include ("metadata/mirror/mirroroverloadedmethoddefinition.lua")
+
+-- parameters and arguments
 include ("metadata/typeparameterlist.lua")
 include ("metadata/parameterlist.lua")
 
@@ -251,6 +255,7 @@ GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 GCompute.GlobalNamespace = GCompute.NamespaceDefinition ()
 GCompute.GlobalNamespace:SetGlobalNamespace (GCompute.GlobalNamespace)
 GCompute.GlobalNamespace:SetTypeSystem (GCompute.TypeSystem ())
+GCompute.GlobalNamespace:GetTypeSystem ():SetGlobalNamespace (GCompute.GlobalNamespace)
 GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 
 include ("corelibrary.lua")

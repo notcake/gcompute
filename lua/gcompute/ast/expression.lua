@@ -23,6 +23,8 @@ function self:GetResolutionResult ()
 	return self:GetResolutionResults ():GetFilteredResultObject (1)
 end
 
+--- Gets the type of this expression as a Type
+-- @return The type of this expression, as a Type
 function self:GetType ()
 	return self.Type
 end
@@ -31,7 +33,10 @@ function self:GetValue ()
 	return self.Value
 end
 
+--- Sets the type of this expression
+-- @param type The Type of this expression, or an ObjectDefinition which corresponds to a Type
 function self:SetType (type)
+	type = type and type:ToType ()
 	self.Type = type
 end
 

@@ -92,7 +92,7 @@ function self:GetCondition ()
 	return self.Condition
 end
 
-function self:GetNamespace ()
+function self:GetDefinition ()
 	return self.NamespaceDefinition
 end
 
@@ -106,7 +106,7 @@ function self:SetCondition (condition)
 	if self.Condition then self.Condition:SetParent (self) end
 end
 
-function self:SetNamespace (namespaceDefinition)
+function self:SetDefinition (namespaceDefinition)
 	self.NamespaceDefinition = namespaceDefinition
 end
 

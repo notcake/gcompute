@@ -212,12 +212,12 @@ function self:GetChildEnumerator ()
 	end
 end
 
-function self:GetLoopVariable ()
-	return self.LoopVariable
+function self:GetDefinition ()
+	return self.NamespaceDefinition
 end
 
-function self:GetNamespace ()
-	return self.NamespaceDefinition
+function self:GetLoopVariable ()
+	return self.LoopVariable
 end
 
 function self:SetBody (statement)
@@ -225,13 +225,13 @@ function self:SetBody (statement)
 	if self.Body then self.Body:SetParent (self) end
 end
 
+function self:SetDefinition (namespaceDefinition)
+	self.NamespaceDefinition = namespaceDefinition
+end
+
 function self:SetLoopVariable (loopVariable)
 	self.LoopVariable = loopVariable
 	self.LoopVariableAssignment:SetLeftExpression (loopVariable)
-end
-
-function self:SetNamespace (namespaceDefinition)
-	self.NamespaceDefinition = namespaceDefinition
 end
 
 function self:ToString ()

@@ -122,6 +122,7 @@ LANGUAGE:AddDirective ("persist", parseVariables)
 
 LANGUAGE:LoadEditorHelper ("expression2_editorhelper.lua")
 LANGUAGE:LoadParser ("expression2_parser.lua")
+LANGUAGE:LoadPass ("expression2_binaryoperators.lua", GCompute.CompilerPassType.PostParser)
 LANGUAGE:LoadPass ("expression2_iopvariables.lua", GCompute.CompilerPassType.PostParser)
 LANGUAGE:LoadPass ("expression2_typefixer.lua", GCompute.CompilerPassType.PostParser)
 LANGUAGE:LoadPass ("expression2_implicitvariabledeclaration.lua", GCompute.CompilerPassType.PostNamespaceBuilder)

@@ -38,7 +38,7 @@ function self:Process (callback)
 			self.Stack:Push (token)
 		elseif self.ClosingSymbols [symbol] then
 			local expectedOpeningSymbol = self.ClosingSymbols [symbol]
-			if self.Stack.Top.Value == expectedOpeningSymbol then
+			if self.Stack.Top and self.Stack.Top.Value == expectedOpeningSymbol then
 				if self.Stack.Top.Value == self.BlockSymbol then
 					self:AddJob (self.Stack.Top.Next, token.Previous)
 				end

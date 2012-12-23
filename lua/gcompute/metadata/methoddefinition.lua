@@ -322,6 +322,7 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 		returnType:Resolve ()
 		if returnType:IsFailedResolution () then
 			returnType:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+			self:SetReturnType (GCompute.ErrorType ())
 		else
 			self:SetReturnType (returnType:GetObject ())
 		end

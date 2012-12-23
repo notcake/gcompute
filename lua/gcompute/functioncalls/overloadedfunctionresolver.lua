@@ -118,6 +118,10 @@ function self:GetFunctionResolutionType ()
 	return self.FunctionResolutionType
 end
 
+function self:GetObject ()
+	return self.Object
+end
+
 function self:HasNoResults ()
 	return self.NoResults
 end

@@ -254,7 +254,9 @@ function self:GetCorrespondingDefinition (globalNamespace)
 	if not declaringObject then return nil end
 	
 	local memberDefinition = declaringObject:GetNamespace ():GetMember (self:GetName ())
-	if memberDefinition:IsOverloadedClass () then
+	if not memberDefinition then
+		return nil
+	elseif memberDefinition:IsOverloadedClass () then
 		local typeParameterCount = self:GetTypeParameterList ():GetParameterCount ()
 		for class in memberDefinition:GetEnumerator () do
 			if class:GetTypeParameterList ():GetParameterCount () == typeParameterCount then

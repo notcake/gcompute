@@ -93,9 +93,6 @@ function self:GetReturnType ()
 	return self.ReturnType
 end
 
-function self:GetClassDefinition ()
-end
-
 function self:IsFunctionType ()
 	return true
 end

@@ -19,3 +19,13 @@ addMathFunction ("tan", "angleInRadians")
 addMathFunction ("asin", "sin")
 addMathFunction ("acos", "cos")
 addMathFunction ("atan", "tan")
+
+Expression2:AddMethod ("max", "number a, number ...")
+	:SetReturnType ("number")
+	:SetNativeString ("math.max (%arg:a%, %args%)")
+	:SetNativeFunction (math.max)
+
+Expression2:AddMethod ("min", "number a, number ...")
+	:SetReturnType ("number")
+	:SetNativeString ("math.min (%arg:a%, %args%)")
+	:SetNativeFunction (math.min)

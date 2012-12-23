@@ -49,7 +49,7 @@ function self:VisitExpression (expression)
 	if expression:Is ("BinaryOperator") and expression:GetOperator () == "=" then
 		local leftExpression = expression:GetLeftExpression ()
 		if leftExpression:Is ("Identifier") then
-			self:ProcessIdentifier (leftExpression, "Expression2.number")
+			self:ProcessIdentifier (leftExpression)
 		end
 	end
 end

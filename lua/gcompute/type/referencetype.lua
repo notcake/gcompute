@@ -12,6 +12,7 @@ function self:ctor (innerType)
 	end
 	
 	if not self.InnerType then
+		self.InnerType = GCompute.ErrorType ()
 	elseif self.InnerType:IsType () then
 		if self.InnerType:IsReference () then
 			GCompute.Error ("ReferenceType constructor cannot be passed a ReferenceType (" .. self.InnerType:ToString () .. ")")
@@ -59,16 +60,16 @@ function self:Equals (otherType)
 end
 
 function self:GetCorrespondingDefinition (globalNamespace)
+	if not self.InnerType then return nil end
+	
 	local innerType = self.InnerType:GetCorrespondingDefinition (globalNamespace)
 	if not innerType then return nil end
 	return GCompute.ReferenceType (innerType)
 end
 
 function self:GetFullName ()
-	if self.InnerType then
-		return self.InnerType:GetFullName () .. " &"
-	end
-	return "[nil] &"
+	if not self.InnerType then return "[Nothing] &" end
+	return self.InnerType:GetFullName () .. " &"
 end
 
 function self:IsBaseType (supertype)

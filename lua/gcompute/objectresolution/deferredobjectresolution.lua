@@ -107,7 +107,11 @@ function self:Resolve ()
 	results:FilterByLocality ()
 	
 	if results:GetFilteredResultCount () == 0 then
-		self.AST:AddErrorMessage ("Cannnot resolve " .. self.AST:ToString () .. " - no suitable matches found.\n" .. results:ToString ())
+		if results:GetResultCount () == 0 then
+			self.AST:AddErrorMessage ("Cannnot resolve " .. self.AST:ToString () .. " - no object with that name exists.")
+		else
+			self.AST:AddErrorMessage ("Cannnot resolve " .. self.AST:ToString () .. " - no suitable matches found.\n" .. results:ToString ())
+		end
 		
 		self.Resolved = true
 		self.ResolutionFailed = true

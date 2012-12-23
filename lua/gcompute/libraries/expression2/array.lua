@@ -55,13 +55,22 @@ Array:AddMethod ("count")
 		end
 	)
 
-Array:AddMethod ("pushNumber", "number val")
-	:SetNativeFunction (
-		function (self, val)
-			self.Values [#self.Values + 1] = val
-			self.Types  [#self.Types  + 1] = executionContext:GetEnvironment ().Expression2.number [".Type"]
-		end
-	)
+local methodTypes =
+{
+	"string",
+	"number",
+	"vector"
+}
+
+for _, typeName in ipairs (methodTypes) do
+	Array:AddMethod ("push" .. string.sub (typeName, 1, 1):upper () .. string.sub (typeName, 2), typeName .. " val")
+		:SetNativeFunction (
+			function (self, val)
+				self.Values [#self.Values + 1] = val
+				self.Types  [#self.Types  + 1] = executionContext:GetEnvironment ().Expression2 [typeName] [".Type"]
+			end
+		)
+end
 
 Array:AddMethod ("operator[]", "number index", { "T" })
 	:SetReturnType ("T")

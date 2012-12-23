@@ -68,10 +68,6 @@ function self:VisitExpression (expression, referenceNamespace)
 		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition ())
 		local resolutionResults = expression:GetResolutionResults ()
 		resolutionResults:FilterByLocality ()
-		
-		if resolutionResults:GetFilteredResultCount () == 0 then
-			expression:AddErrorMessage ("Cannot resolve identifier " .. expression:GetName () .. ".")
-		end
 	elseif expression:Is ("NameIndex") then
 		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition ())
 		local resolutionResults = expression:GetResolutionResults ()

@@ -68,9 +68,11 @@ function self:IsRunning ()
 	return self.Started and not self.Terminated
 end
 
-function self:RunSome ()
+function self:RunSome (timeLimit)
 	if not self.Started then return end
 	if self.Terminated then return end
+	
+	timeLimit = timeLimit or 0.001
 	
 	-- Set up execution environment
 	local _executionContext = _G.executionContext
@@ -81,7 +83,7 @@ function self:RunSome ()
 	repeat
 		local executionFunction = executionContext:PopResumeFunction ()
 		xpcall (executionFunction, self.ExceptionHandler)
-	until not self:IsRunning () or SysTime () - startTime >= 0.001
+	until not self:IsRunning () or SysTime () - startTime >= timeLimit
 	
 	-- Execution stats
 	self.CpuTime = SysTime () - startTime

@@ -142,6 +142,7 @@ function self:ResolveTypes (globalNamespace, localNamespace, errorReporter)
 			self.ParameterTypes [i]:Resolve ()
 			if self.ParameterTypes [i]:IsFailedResolution () then
 				self.ParameterTypes [i]:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+				self.ParameterTypes [i] = GCompute.ErrorType ()
 			else
 				self.ParameterTypes [i] = self.ParameterTypes [i]:GetObject ():ToType ()
 			end

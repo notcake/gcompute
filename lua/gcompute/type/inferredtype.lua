@@ -76,6 +76,18 @@ function self:AddCastableFrom (type)
 	self.ImplicitlyCastableFrom [#self.ImplicitlyCastableFrom + 1] = type
 end
 
+function self:CanConstructFrom (sourceType)
+	return false
+end
+
+function self:CanExplicitCastTo (destinationType)
+	return false
+end
+
+function self:CanImplicitCastTo (destinationType)
+	return false
+end
+
 function self:Equals (other)
 	if self.Type then
 		return self.Type:Equals (other)
@@ -83,12 +95,20 @@ function self:Equals (other)
 	return self == other
 end
 
-function self:GetFullName ()
-	return "[InferredType " .. tostring (self):sub (8) .. "]"
+function self:GetBaseType (index)
+	return nil
 end
 
-function self:GetClassDefinition ()
-	return GCompute.TypeSystem:GetObject ():GetClassDefinition ()
+function self:GetBaseTypeCount ()
+	return 0
+end
+
+function self:GetCorrespondingDefinition (globalNamespace)
+	return self
+end
+
+function self:GetFullName ()
+	return "<inferred-type " .. tostring (self):sub (8) .. ">"
 end
 
 function self:ImportMethodTypes (overloadedMethodDefinition)

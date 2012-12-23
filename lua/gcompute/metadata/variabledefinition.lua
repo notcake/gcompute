@@ -42,6 +42,7 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 		self.Type:Resolve (globalNamespace, self:GetDeclaringObject ())
 		if self.Type:IsFailedResolution () then
 			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+			self.Type = GCompute.ErrorType ()
 		else
 			self.Type = self.Type:GetObject ():ToType ()
 		end

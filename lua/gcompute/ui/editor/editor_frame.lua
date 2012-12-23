@@ -171,12 +171,18 @@ function self:Init ()
 	-- so we can set their DocumentManager properly when they are registered
 	self.DocumentManager = GCompute.Editor.DocumentManager ()
 	
-	self.OutputView = GCompute.Editor.ViewTypes:Create ("Output")
-	self.OutputView:SetId ("Output")
-	self.HookProfilerView = GCompute.Editor.ViewTypes:Create ("HookProfiler")
-	self.HookProfilerView:SetId ("HookProfiler")
-	self.DockContainer:RegisterView (self.OutputView)
-	self.DockContainer:RegisterView (self.HookProfilerView)
+	local viewTypes =
+	{
+		"Output",
+		"ProcessBrowser",
+		"HookProfiler"
+	}
+	for _, viewType in ipairs (viewTypes) do
+		local view = GCompute.Editor.ViewTypes:Create (viewType)
+		view:SetId (viewType)
+		self [viewType .. "View"] = view
+		self.DockContainer:RegisterView (view)
+	end
 	
 	self:SetKeyboardMap (GCompute.Editor.EditorKeyboardMap)
 	

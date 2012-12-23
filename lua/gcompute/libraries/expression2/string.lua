@@ -50,6 +50,11 @@ String:AddMethod ("find", "string substring")
 		end
 	)
 
+String:AddMethod ("length")
+	:SetReturnType ("number")
+	:SetNativeString ("#%self%")
+	:SetNativeFunction (string.len)
+
 String:AddMethod ("sub", "number start")
 	:SetReturnType ("string")
 	:SetNativeString ("string.sub (%self%, %arg:start%)")

@@ -28,12 +28,12 @@ function self:GetBaseType (index)
 	return nil
 end
 
-function self:GetFullName ()
-	return "<error-type>"
+function self:GetCorrespondingDefinition (globalNamespace)
+	return self
 end
 
-function self:GetClassDefinition ()
-	return nil
+function self:GetFullName ()
+	return "<error-type>"
 end
 
 function self:IsBaseType (supertype)

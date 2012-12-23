@@ -11,10 +11,6 @@ function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 end
 
-function self:VisitStatement (statement)
-	
-end
-
 function self:VisitExpression (expression)
 	if expression:Is ("Identifier") then
 		if expression:GetName () ~= "number" and

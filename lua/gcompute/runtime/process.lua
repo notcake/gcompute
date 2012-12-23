@@ -13,6 +13,10 @@ GCompute.Process = GCompute.MakeConstructor (self)
 			Fired when this process is started.
 		Terminated ()
 			Fired when this process is terminated.
+		ThreadCreated (thread)
+			Fired when this process creates a thread.
+		ThreadTerminated (thread)
+			Fired when a thread belonging to this process has terminated.
 ]]
 
 function self:ctor (processList, processId)
@@ -40,7 +44,8 @@ function self:ctor (processList, processId)
 	self.Terminated  = false
 	
 	-- Threads
-	self.Threads   = {}
+	self.MainThread  = nil
+	self.Threads     = {}
 	
 	-- Environment
 	self.RootNamespace = GCompute.MirrorNamespaceDefinition ()
@@ -48,12 +53,24 @@ function self:ctor (processList, processId)
 	
 	self.ProcessLocalStorage = {}
 	
+	-- Holds
+	self.Holds = {}
+	
 	-- IO
 	self.StdIn  = nil
 	self.StdOut = GCompute.Pipe ()
 	self.StdErr = GCompute.Pipe ()
 	
 	GCompute.EventProvider (self)
+	
+	self:AddEventListener ("ThreadTerminated",
+		function (_, thread)
+			if self.MainThread == thread then
+				self.MainThread = nil
+			end
+			self:CheckShouldTerminate ()
+		end
+	)
 end
 
 -- Identity
@@ -129,6 +146,7 @@ function self:Resume ()
 	
 	self.Suspended = false
 	self:DispatchEvent ("Resumed")
+	GCompute:DispatchEvent ("ProcessResumed", self)
 end
 
 function self:Start ()
@@ -138,6 +156,7 @@ function self:Start ()
 	self.Environment = self.RootNamespace:CreateRuntimeObject ()
 	
 	local mainThread = self:CreateThread ()
+	self.MainThread = mainThread
 	mainThread:SetName ("Main Thread")
 	mainThread:SetFunction (
 		function ()
@@ -151,13 +170,8 @@ function self:Start ()
 	)
 	mainThread:Start ()
 	
-	mainThread:AddEventListener ("Terminated",
-		function ()
-			self:Terminate ()
-		end
-	)
-	
 	self:DispatchEvent ("Started")
+	GCompute:DispatchEvent ("ProcessStarted", self)
 end
 
 function self:Suspend ()
@@ -165,6 +179,7 @@ function self:Suspend ()
 	
 	self.Suspended = true
 	self:DispatchEvent ("Suspended")
+	GCompute:DispatchEvent ("ProcessSuspended", self)
 end
 
 function self:Terminate ()
@@ -173,6 +188,7 @@ function self:Terminate ()
 	self.Terminating = true
 	self.Terminated = true
 	self:DispatchEvent ("Terminated")
+	GCompute:DispatchEvent ("ProcessTerminated", self)
 end
 
 -- Threads
@@ -180,9 +196,30 @@ function self:CreateThread ()
 	local thread = GCompute.Thread (self)
 	self.Threads [thread:GetThreadID ()] = thread
 	
+	thread:AddEventListener ("Terminated",
+		function ()
+			self.Threads [thread:GetThreadID ()] = nil
+			self:DispatchEvent ("ThreadTerminated", thread)
+			GCompute:DispatchEvent ("ThreadTerminated", self, thread)
+		end
+	)
+	
+	self:DispatchEvent ("ThreadCreated", thread)
 	GCompute:DispatchEvent ("ThreadCreated", self, thread)
 	
 	return thread
+end
+
+function self:GetMainThread ()
+	return self.MainThread
+end
+
+function self:GetThreadCount ()
+	local count = 0
+	for _, _ in pairs (self.Threads) do
+		count = count + 1
+	end
+	return count
 end
 
 function self:GetThreadEnumerator ()
@@ -202,6 +239,35 @@ function self:GetProcessLocalStorage ()
 	return self.ProcessLocalStorage
 end
 
+-- Holds
+function self:AddHold (holdName)
+	self.Holds [holdName] = true
+end
+
+function self:GetHoldCount ()
+	local count = 0
+	for _, _ in pairs (self.Holds) do
+		count = count + 1
+	end
+	return count
+end
+
+function self:GetHoldEnumerator ()
+	local next, tbl, key = pairs (self.Holds)
+	return function ()
+		key = next (tbl, key)
+		return key
+	end
+end
+
+function self:RemoveHold (holdName)
+	if not self.Holds [holdName] then return end
+	
+	self.Holds [holdName] = nil
+	
+	self:CheckShouldTerminate ()
+end
+
 -- IO
 function self:GetStdErr ()
 	return self.StdErr
@@ -217,4 +283,11 @@ end
 
 function self:ToString ()
 	return "[Process 0x" .. string.format ("%08x", self:GetProcessId ()) .. " (" .. self:GetName () .. ", " .. self:GetOwnerId () .. ")]"
+end
+
+-- Internal, do not call
+function self:CheckShouldTerminate ()
+	if self:GetThreadCount () == 0 and self:GetHoldCount () == 0 then
+		self:Terminate ()
+	end
 end

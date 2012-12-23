@@ -80,7 +80,13 @@ function self:VisitExpression (expression)
 			self:ResolveAccessType (expression)
 		else
 			expression:SetType (GCompute.ErrorType ())
-			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
+			
+			-- Produce an error message only if this Identifier is not being used
+			-- as a function in a FunctionCall. VisitFunctionCall will produce
+			-- a better error.
+			if not expression:GetParent ():Is ("FunctionCall") or expression:GetParent ():GetLeftExpression () ~= expression then
+				expression:AddErrorMessage ("Cannot resolve unqualified name \"" .. expression:ToString () .. "\".")
+			end
 		end
 	elseif expression:Is ("NameIndex") then
 		if expression.ResolutionResults:GetFilteredResultCount () > 0 then
@@ -114,7 +120,7 @@ function self:VisitExpression (expression)
 			self:ResolveAccessType (expression)
 		else
 			expression:SetType (GCompute.ErrorType ())
-			self.CompilationUnit:Error ("Cannot find \"" .. expression:ToString () .. "\".", expression:GetLocation ())
+			self.CompilationUnit:Error ("Cannot resolve qualified name \"" .. expression:ToString () .. "\".", expression:GetLocation ())
 		end
 	elseif expression:Is ("ArrayIndex") then
 		overrideExpression = self:VisitArrayIndex (expression)
@@ -138,13 +144,12 @@ function self:VisitExpression (expression)
 		expression:SetType (expression:GetMethodDefinition ():GetType ())
 	else
 		expression:SetType (GCompute.ErrorType ())
+		expression:AddErrorMessage ("TypeInfererTypeAssigner: Unhandled expression type " .. expression:GetNodeType ())
 	end
 	
 	expression = overrideExpression or expression
 	if not expression:GetType () then
 		expression:AddErrorMessage (expression:ToString () .. " has no type.")
-	elseif expression:GetType ():UnwrapAlias ():IsErrorType () then
-		expression:AddErrorMessage ("Type of " .. expression:ToString () .. " is " .. expression:GetType ():GetFullName ())
 	end
 	
 	return overrideExpression
@@ -234,11 +239,11 @@ function self:VisitFunctionCall (functionCall)
 		       leftDefinition:GetType ():IsFunctionType () then
 			overloadedFunctionResolver:AddOverload (leftDefinition)
 		else
-			self.CompilationUnit:Error ("Left hand side of function call is not a function! (" .. expression:GetLeftExpression ():ToString () .. ")")
+			self.CompilationUnit:Error ("Left hand side of function call is not a function! (" .. leftExpression:ToString () .. ")")
 		end
 		
 		-- Resolve OverloadedFunctionResolver
-		functionCall.FunctionCall = self:ResolveFunctionCall (functionCall, overloadedFunctionResolver)
+		functionCall.FunctionCall = self:ResolveFunctionCall (functionCall, overloadedFunctionResolver, leftExpression:ToString ())
 		if functionCall.FunctionCall then
 			if not functionCall.FunctionCall:IsMemberFunctionCall () then
 				functionCall.FunctionCall:SetLeftExpression (leftExpression)
@@ -248,7 +253,11 @@ function self:VisitFunctionCall (functionCall)
 		return self:ConvertFunctionCallToConstructor (functionCall)
 	else
 		functionCall:SetType (GCompute.ErrorType ())
-		self.CompilationUnit:Error ("Cannot perform a function call on " .. leftExpression:ToString () .. " because it is not a function (type was " .. leftType:ToString () .. ").", functionCall:GetLocation ())
+		if leftExpression:GetResolutionResult () then
+			functionCall:AddErrorMessage ("Cannot call " .. leftExpression:ToString () .. " because it is not a function, its type is " .. leftType:ToString () .. ".")
+		else
+			leftExpression:AddErrorMessage ("Cannot find method " .. leftExpression:ToString () .. " " .. self:GetFormattedArgumentTypes (functionCall:GetArgumentList ()) .. ".")
+		end
 	end
 end
 
@@ -259,10 +268,11 @@ function self:VisitMemberFunctionCall (memberFunctionCall)
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Member, leftExpression, memberFunctionCall:GetArgumentList ())
 	
 	-- Populate OverloadedFunctionResolver
-	overloadedFunctionResolver:AddMemberOverloads (leftType, memberFunctionCall:GetIdentifier ():GetName (), memberFunctionCall:GetTypeArgumentList () and memberFunctionCall:GetTypeArgumentList ():ToTypeArgumentList ())
+	local typeArgumentList = memberFunctionCall:GetTypeArgumentList () and memberFunctionCall:GetTypeArgumentList ():ToTypeArgumentList ()
+	overloadedFunctionResolver:AddMemberOverloads (leftType, memberFunctionCall:GetIdentifier ():GetName (), typeArgumentList)
 	
 	-- Resolve OverloadedFunctionResolver
-	memberFunctionCall.FunctionCall = self:ResolveFunctionCall (memberFunctionCall, overloadedFunctionResolver)
+	memberFunctionCall.FunctionCall = self:ResolveFunctionCall (memberFunctionCall, overloadedFunctionResolver, memberFunctionCall:GetIdentifier ():GetName (), typeArgumentList)
 	if memberFunctionCall.FunctionCall then
 		if memberFunctionCall.FunctionCall:IsMemberFunctionCall () then
 			memberFunctionCall:SetLeftExpression (memberFunctionCall.FunctionCall:GetLeftExpression ())
@@ -310,7 +320,7 @@ function self:VisitNew (new)
 	end
 	
 	-- Resolve OverloadedFunctionResolver
-	new.FunctionCall = self:ResolveFunctionCall (new, overloadedFunctionResolver)
+	new.FunctionCall = self:ResolveFunctionCall (new, overloadedFunctionResolver, leftDefinition:GetShortName ())
 	new:SetNativelyAllocated (leftDefinition:ToType ():IsNativelyAllocated ())
 	
 	if new.FunctionCall then
@@ -351,22 +361,55 @@ function self:ResolveAccessType (astNode)
 	elseif result:IsOverloadedClass () or result:IsType () then
 		astNode:SetType (GCompute.TypeSystem:GetType ())
 	else
-		astNode:SetType (GCompute.ReferenceType (result:GetType ()))
+		astNode:SetType (GCompute.ReferenceType (result:GetType () or GCompute.ErrorType ()))
 	end
 end
 
-function self:ResolveFunctionCall (astNode, overloadedFunctionResolver)
+--- Resolves an OverloadedFunctionResolver
+-- @param astNode The node which will invoke the function call
+-- @param overloadedFunctionResolver The OverloadedFunctionResolver to resolve
+-- @param methodName The name of the method, used for error reporting
+-- @param typeArgumentList The TypeArgumentList of the function call, used for error reporting
+function self:ResolveFunctionCall (astNode, overloadedFunctionResolver, methodName, typeArgumentList)
 	local functionCall = overloadedFunctionResolver:Resolve ()
 	
+	local suppressErrors = false
+	if overloadedFunctionResolver:GetObject () and
+	   overloadedFunctionResolver:GetObject ():GetType () and
+	   overloadedFunctionResolver:GetObject ():GetType ():UnwrapReference ():IsErrorType () then
+		suppressErrors = true
+	end
+	for argument in overloadedFunctionResolver:GetArgumentList ():GetEnumerator () do
+		if argument:GetType () and argument:GetType ():UnwrapReference ():IsErrorType () then
+			suppressErrors = true
+			break
+		end
+	end
+	
+	local errorMessage = nil
+	
 	if overloadedFunctionResolver:HasNoResults () then
-		astNode:AddErrorMessage ("Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
+		-- Build error message
+		errorMessage = "Cannot find method "
+		if overloadedFunctionResolver:GetObject () then
+			errorMessage = errorMessage .. overloadedFunctionResolver:GetObject ():GetType ():UnwrapReference ():GetFullName () .. ":"
+		end
+		errorMessage = errorMessage .. methodName
+		if typeArgumentList and not typeArgumentList:IsEmpty () then
+			errorMessage = errorMessage .. " " .. typeArgumentList:ToString ()
+		end
+		errorMessage = errorMessage .. " " .. self:GetFormattedArgumentTypes (overloadedFunctionResolver:GetArgumentList ()) .. ")"
+		
 		astNode:SetType (GCompute.ErrorType ())
 	elseif overloadedFunctionResolver:IsAmbiguous () then
-		astNode:AddErrorMessage ("Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
+		errorMessage = "Failed to resolve " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ()
 		astNode:SetType (GCompute.ErrorType ())
 	else
-		self.CompilationUnit:Debug ("Resolving " .. astNode:ToString () .. ": " .. overloadedFunctionResolver:ToString ())
 		astNode:SetType (functionCall:GetFunctionType ():GetReturnType ())
+	end
+	
+	if errorMessage and not suppressErrors then
+		astNode:AddErrorMessage (errorMessage)
 	end
 	
 	if functionCall then
@@ -414,6 +457,9 @@ end
 function self:ResolveArrayIndexAssignment (assignmentExpression)
 	local arrayIndex = assignmentExpression:GetLeftExpression ()
 	local arrayIndexAssignment = GCompute.AST.ArrayIndexAssignment ()
+	arrayIndexAssignment:SetStartToken (assignmentExpression:GetStartToken ())
+	arrayIndexAssignment:SetEndToken (assignmentExpression:GetEndToken ())
+	
 	arrayIndexAssignment:SetLeftExpression (arrayIndex:GetLeftExpression ())
 	arrayIndexAssignment:SetArgumentList (arrayIndex:GetArgumentList ())
 	arrayIndexAssignment:SetTypeArgumentList (arrayIndex:GetTypeArgumentList ())
@@ -442,10 +488,6 @@ function self:ResolveAssignment (astNode)
 	elseif leftNodeType == "VariableDeclaration" then
 		-- Either namespace member or local variable
 		leftDefinition = left:GetVariableDefinition ()
-		
-		if left:IsAuto () then
-			left:SetType (rightType:UnwrapReference ())
-		end
 	elseif leftNodeType == "StaticMemberAccess" then
 		-- Global static variable
 		leftDefinition = left.ResolutionResults:GetFilteredResultObject (1)
@@ -454,6 +496,13 @@ function self:ResolveAssignment (astNode)
 	else
 		-- Either namespace member or member variable
 		GCompute.Error ("ResolveAssignment : Unhandled node type on left (" .. leftNodeType .. ", " .. left:ToString () .. ").")
+	end
+	
+	-- Assignment type inference
+	if leftDefinition and
+	   leftDefinition:GetType ():IsInferredType () then
+		leftDefinition:SetType (rightType:UnwrapReference ())
+		left:SetType (rightType:UnwrapReference ())
 	end
 	
 	local leftNamespace = leftDefinition:GetDeclaringObject ()
@@ -473,6 +522,9 @@ function self:ResolveAssignment (astNode)
 	
 	if astNode:Is ("BinaryOperator") then
 		local binaryAssignmentOperator = GCompute.AST.BinaryAssignmentOperator ()
+		binaryAssignmentOperator:SetStartToken (astNode:GetStartToken ())
+		binaryAssignmentOperator:SetEndToken (astNode:GetEndToken ())
+		
 		binaryAssignmentOperator:SetLeftExpression (astNode:GetLeftExpression ())
 		
 		if astNode:GetOperator ():sub (1, 1) == "=" then
@@ -482,6 +534,9 @@ function self:ResolveAssignment (astNode)
 			binaryAssignmentOperator:SetOperator ("=")
 		
 			local binaryOperator = GCompute.AST.BinaryOperator ()
+			binaryOperator:SetStartToken (astNode:GetStartToken ())
+			binaryOperator:SetEndToken (astNode:GetEndToken ())
+			
 			binaryOperator:SetLeftExpression (binaryAssignmentOperator:GetLeftExpression ())
 			binaryOperator:SetRightExpression (astNode:GetRightExpression ())
 			binaryOperator:SetOperator (astNode:GetOperator ():sub (1, 1))
@@ -496,7 +551,7 @@ function self:ResolveAssignment (astNode)
 	end
 end
 
-function self:ResolveOperatorCall (astNode, methodName, object, argumentList, typeArgumentList)
+function self:ResolveOperatorCall (operatorExpression, methodName, object, argumentList, typeArgumentList)
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Operator, object, argumentList)
 	
 	for _, rootNamespace in ipairs (self.RootNamespaces) do
@@ -504,10 +559,10 @@ function self:ResolveOperatorCall (astNode, methodName, object, argumentList, ty
 	end
 	
 	-- Resolve OverloadedFunctionResolver
-	astNode.FunctionCall = self:ResolveFunctionCall (astNode, overloadedFunctionResolver)
-	if astNode.FunctionCall then
-		if not astNode.FunctionCall:IsMemberFunctionCall () then
-			astNode.FunctionCall:SetLeftExpression (astNode.FunctionCall:GetMethodDefinition ():CreateStaticMemberAccessNode ())
+	operatorExpression.FunctionCall = self:ResolveFunctionCall (operatorExpression, overloadedFunctionResolver, methodName, typeArgumentList)
+	if operatorExpression.FunctionCall then
+		if not operatorExpression.FunctionCall:IsMemberFunctionCall () then
+			operatorExpression.FunctionCall:SetLeftExpression (operatorExpression.FunctionCall:GetMethodDefinition ():CreateStaticMemberAccessNode ())
 		end
 	end
 end
@@ -566,4 +621,16 @@ function self:GetMergedLocalScope (memberDefinition)
 		self.CompilationUnit:Error ("Failed to find MergedLocalScope for " .. memberDefinition:ToString ())
 	end
 	return mergedLocalScope
+end
+
+function self:GetFormattedArgumentTypes (argumentList)
+	local argumentTypes = "("
+	for i = 1, argumentList:GetArgumentCount () do
+		if i > 1 then
+			argumentTypes = argumentTypes .. ", "
+		end
+		argumentTypes = argumentTypes .. argumentList:GetArgument (i):GetType ():GetFullName ()
+	end
+	argumentTypes = argumentTypes ..")"
+	return argumentTypes
 end

@@ -90,6 +90,7 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 			if baseType:IsFailedResolution () then
 				GCompute.Error ("ClassType:ResolveTypes : Failed to resolve base type of " .. self:GetFullName () .. " : " .. baseType:GetFullName ())
 				baseType:GetAST ():GetMessages ():PipeToErrorReporter (GCompute.DefaultErrorReporter)
+				self.BaseTypes [k] = GCompute.ErrorType ()
 			else
 				baseType = baseType:GetObject ():ToType ()
 				if baseType:Equals (self) then

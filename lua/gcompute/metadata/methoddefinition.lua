@@ -297,7 +297,7 @@ end
 --- Gets the type of this function
 -- @return A FunctionType representing the type of this function
 function self:GetType ()
-	if self:IsMemberFunction () then
+	if self:IsMemberFunction () and not self:IsMemberStatic () then
 		local parameterList = GCompute.ParameterList ()
 		parameterList:AddParameter (self:GetDeclaringType (), "this")
 		parameterList:AddParameters (self:GetParameterList ())
@@ -339,7 +339,7 @@ end
 -- @return A string representation of this function
 function self:ToString ()
 	local methodDefinition = self.ReturnType and self.ReturnType:GetRelativeName (self) or "[Unknown Type]"
-	if self:IsMemberFunction () then
+	if self:IsMemberFunction () and not self:IsMemberStatic () then
 		methodDefinition = methodDefinition .. " " .. self:GetDeclaringObject ():GetRelativeName (self) .. ":" .. self:GetName ()
 	else
 		methodDefinition = methodDefinition .. " " .. self:GetName ()

@@ -32,6 +32,7 @@ function PANEL:Init ()
 	self.NextViewId = 0
 	
 	self.ActiveView = nil
+	self.SkipActiveViewThink = 0
 	
 	-- TabControl
 	self.LocalViewSet   = {}
@@ -471,6 +472,9 @@ function PANEL:SetActiveView (view)
 	
 	local oldSelectedView = self.ActiveView
 	self.ActiveView = view
+	
+	self.SkipActiveViewThink = 2
+	
 	self:DispatchEvent ("ActiveViewChanged", oldActiveView, view)
 end
 
@@ -1223,6 +1227,12 @@ function PANEL:Think ()
 	end
 	
 	if activeContainer and activeContainer:IsOurChild (activePanel) then return end
+	
+	if self.SkipActiveViewThink > 1 then
+		self.SkipActiveViewThink = self.SkipActiveViewThink - 1
+		return
+	end
+	
 	if vgui.FocusedHasParent (self) then
 		while activePanel and activePanel:IsValid () and activePanel.ClassName ~= self.ClassName do
 			activePanel = activePanel:GetParent ()

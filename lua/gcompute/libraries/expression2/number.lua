@@ -16,9 +16,11 @@ Number:AddConstructor ({ { "int", "n" } })
 	)
 
 Number:AddMethod ("ToString")
+	:SetReturnType ("String")
 	:SetNativeFunction (tostring)
 	
 Number:AddMethod ("toString")
+	:SetReturnType ("string")
 	:SetNativeFunction (tostring)
 
 Number:AddMethod ("toHex")

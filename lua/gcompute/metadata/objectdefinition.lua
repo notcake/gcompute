@@ -182,6 +182,7 @@ function self:GetFileStaticNamespace (fileId)
 	if not self.FileStaticNamespaces [fileId] then
 		local namespace = GCompute.Namespace ()
 		self.FileStaticNamespaces [fileId] = namespace
+		namespace:SetDefinition (self)
 		namespace:SetGlobalNamespace (self:GetGlobalNamespace ())
 		namespace:SetDeclaringMethod (self:GetDeclaringMethod ())
 		namespace:SetDeclaringNamespace (self:GetDeclaringNamespace ())
@@ -329,6 +330,9 @@ function self:GetCorrespondingDefinition (globalNamespace)
 	end
 	
 	local declaringObject = self:GetDeclaringObject ():GetCorrespondingDefinition (globalNamespace)
+	if not declaringObject then return nil end
+	if not declaringObject:GetNamespace () then return nil end
+	
 	return declaringObject:GetNamespace ():GetMember (self:GetName ())
 end
 

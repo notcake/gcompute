@@ -35,12 +35,6 @@ Expression2:AddMethod ("toChar", "number value")
 	:SetReturnType ("string")
 	:SetNativeFunction (string.char)
 
-String:AddMethod ("ToString")
-	:SetNativeFunction (tostring)
-	
-String:AddMethod ("toString")
-	:SetNativeFunction (tostring)
-
 String:AddMethod ("find", "string substring")
 	:SetReturnType ("number")
 	:SetNativeString ("string.find (%self%, %arg:substring%, 1, true)")
@@ -54,6 +48,16 @@ String:AddMethod ("length")
 	:SetReturnType ("number")
 	:SetNativeString ("#%self%")
 	:SetNativeFunction (string.len)
+
+String:AddMethod ("lower")
+	:SetReturnType ("string")
+	:SetNativeString ("string.lower (%self%)")
+	:SetNativeFunction (string.lower)
+
+String:AddMethod ("repeat", "number repetitionCount")
+	:SetReturnType ("string")
+	:SetNativeString ("string.rep (%self%, %arg:repetitionCount%)")
+	:SetNativeFunction (string.rep)
 
 String:AddMethod ("sub", "number start")
 	:SetReturnType ("string")
@@ -69,15 +73,10 @@ String:AddMethod ("upper")
 	:SetReturnType ("string")
 	:SetNativeString ("string.upper (%self%)")
 	:SetNativeFunction (string.upper)
-
-String:AddMethod ("lower")
-	:SetReturnType ("string")
-	:SetNativeString ("string.lower (%self%)")
-	:SetNativeFunction (string.lower)
 	
 String:AddMethod ("operator+", "string str")
 	:SetReturnType ("string")
-	:SetNativeString ("(%self% .. %str%)")
+	:SetNativeString ("%self% .. %arg:str%")
 	:SetNativeFunction (
 		function (self, str)
 			return self .. str
@@ -86,11 +85,28 @@ String:AddMethod ("operator+", "string str")
 	
 String:AddMethod ("operator+", "number n")
 	:SetReturnType ("string")
-	:SetNativeString ("(%self% .. %n%")
+	:SetNativeString ("%self% .. %arg:n%")
 	:SetNativeFunction (
 		function (self, n)
 			return self .. n
 		end
 	)
-	
+
+Expression2:AddMethod ("operator+", "number n, string str")
+	:SetReturnType ("string")
+	:SetNativeString ("%arg:n% .. %arg:str%")
+	:SetNativeFunction (
+		function (n, str)
+			return n .. str
+		end
+	)
+
 String:AddExplicitCast ("number", function (s) return tonumber (s) or 0 end)
+
+String:AddMethod ("ToString")
+	:SetReturnType ("String")
+	:SetNativeFunction (tostring)
+	
+String:AddMethod ("toString")
+	:SetReturnType ("string")
+	:SetNativeFunction (tostring)

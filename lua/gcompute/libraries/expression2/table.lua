@@ -15,7 +15,7 @@ Table:AddConstructor ()
 	)
 
 Table:AddMethod ("ToString")
-	:SetReturnType ("string")
+	:SetReturnType ("String")
 	:SetNativeFunction (
 		function (self)
 			local inToString = thread:GetThreadLocalStorage ().Expression2.InToString

@@ -9,6 +9,7 @@ Number:SetDefaultValueCreator (
 )
 
 Number:AddMethod ("ToString")
+	:SetReturnType ("string")
 	:SetNativeFunction (tostring)
 
 Number:AddMethod ("ToHex")

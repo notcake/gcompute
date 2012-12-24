@@ -77,19 +77,40 @@ function self:AddMemberOverloads (type, methodName, typeArgumentList)
 	end
 end
 
-function self:AddOperatorOverloads (globalNamespace, objectType, methodName, typeArgumentList)
-	local memberDefinition = globalNamespace and globalNamespace:GetMember (methodName) or nil
-	if not memberDefinition then
-	elseif memberDefinition:IsOverloadedMethod () then
-		self:AddOverloads (memberDefinition, typeArgumentList)
-	elseif memberDefinition:IsMethod () then
-		self:AddOverload (memberDefinition, typeArgumentList)
+function self:AddNamespaceMember (rootNamespaceSet, referenceNamespace, methodName, typeArgumentList)
+	for translatedNamespace in rootNamespaceSet:GetTranslatedEnumerator (referenceNamespace) do
+		local memberDefinition = translatedNamespace:GetMember (methodName)
+		if not memberDefinition then
+		elseif memberDefinition:IsOverloadedMethod () then
+			self:AddOverloads (memberDefinition, typeArgumentList)
+		elseif memberDefinition:IsMethod () then
+			self:AddOverload (memberDefinition, typeArgumentList)
+		end
+	end
+end
+
+function self:AddOperatorOverloads (rootNamespaceSet, usingSource, objectType, methodName, typeArgumentList)
+	while usingSource do
+		if usingSource:IsNamespace () or usingSource:IsClass () then
+			for i = 1, usingSource:GetUsingCount () do
+				local targetDefinition = usingSource:GetUsing (i):GetNamespace ()
+				if targetDefinition then
+					self:AddNamespaceMember (rootNamespaceSet, targetDefinition, methodName, typeArgumentList)
+				end
+			end
+		end
+		
+		usingSource = usingSource:GetDeclaringObject ()
 	end
 	
-	-- Translate objectType into the specified global namespace
-	objectType = objectType:GetCorrespondingDefinition (globalNamespace)
-	if not objectType then return end
-	self:AddMemberOverloads (objectType, methodName, typeArgumentList)
+	self:AddNamespaceMember (rootNamespaceSet, nil, methodName, typeArgumentList)
+	
+	for rootNamespace in rootNamespaceSet:GetEnumerator () do
+		-- Translate objectType into the specified root namespace
+		objectType = objectType:GetCorrespondingDefinition (rootNamespace)
+		if not objectType then return end
+		self:AddMemberOverloads (objectType, methodName, typeArgumentList)
+	end
 end
 
 --- Adds a MethodDefinition or ObjectDefinition whose type is a FunctionType
@@ -120,6 +141,22 @@ end
 
 function self:GetObject ()
 	return self.Object
+end
+
+function self:GetOverload (index)
+	return self.Overloads [index]
+end
+
+function self:GetOverloadCount ()
+	return #self.Overloads
+end
+
+function self:GetOverloadEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Overloads [i]
+	end
 end
 
 function self:HasNoResults ()
@@ -277,8 +314,8 @@ function self:IsBetterThan (leftCallPlan, rightCallPlan)
 	return false
 end
 
-function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overloadCallPlan)
-	-- objectDefinition may be an ObjectDefinition or an AST node whose type is a function
+function self:ResolveOverloadCallPlan (method, typeArgumentList, overloadCallPlan)
+	-- method may be an ObjectDefinition or an AST node whose type is a function
 	
 	overloadCallPlan.Incompatible = false
 	overloadCallPlan.TypeConversions = {}
@@ -288,19 +325,19 @@ function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overl
 	local typeParameterMap = {}
 	local typeParameterList = GCompute.EmptyTypeParameterList
 	
-	if objectDefinition:IsObjectDefinition () and objectDefinition:IsMethod () then
-		typeParameterList = objectDefinition:GetTypeParameterList ()
+	if method:IsObjectDefinition () and method:IsMethod () then
+		typeParameterList = method:GetTypeParameterList ()
 	end
 	
 	typeArgumentList = typeArgumentList or GCompute.EmptyTypeArgumentList
 	for i = 1, typeArgumentList:GetArgumentCount () do
-		local typeParameter = objectDefinition:GetNamespace ():GetMember (typeParameterList:GetParameterName (i))
+		local typeParameter = method:GetNamespace ():GetMember (typeParameterList:GetParameterName (i))
 		typeParameterMap [typeParameter] = typeArgumentList:GetArgument (i)
 	end
 	
 	local inferredTypeArgumentList = nil
 	
-	local functionType = objectDefinition:GetType ()
+	local functionType = method:GetType ()
 	local parameterList = functionType:GetParameterList ()
 	
 	local argumentTypes = self.ArgumentList:GetArgumentTypes ()
@@ -314,7 +351,7 @@ function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overl
 		destinationType = typeParameterMap [destinationType] or destinationType
 		
 		-- Check for type parameters and attempt to infer them
-		if destinationType:IsTypeParameter () and destinationType:GetDefinition ():GetDeclaringMethod () == objectDefinition then
+		if destinationType:IsTypeParameter () and destinationType:GetDefinition ():GetDeclaringMethod () == method then
 			if not inferredTypeArgumentList then
 				-- Create the inferred TypeArgumentList since it doesn't already exist
 				inferredTypeArgumentList = typeArgumentList:Clone ()
@@ -340,9 +377,14 @@ function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overl
 	if not typeParameterList:IsEmpty () then
 		overloadCallPlan.TypeArgumentList = inferredTypeArgumentList or typeArgumentList
 	end
+	
+	-- Count type conversions
 	overloadCallPlan.DowncastCount = 0
 	overloadCallPlan.ImplicitCastCount = 0
-	for i = (overloadCallPlan.IncludeObject and 2 or 1), #overloadCallPlan.TypeConversions do
+	
+	local isMemberFunction = method:IsObjectDefinition () and method:IsMethod () and method:IsMemberFunction () and not method:IsMemberStatic ()
+	
+	for i = (overloadCallPlan.IncludeObject and isMemberFunction and 2 or 1), #overloadCallPlan.TypeConversions do
 		local typeConversionMethod = overloadCallPlan.TypeConversions [i]
 		overloadCallPlan.Incompatible = overloadCallPlan.Incompatible or typeConversionMethod == GCompute.TypeConversionMethod.None
 		if typeConversionMethod == GCompute.TypeConversionMethod.None then
@@ -360,9 +402,9 @@ function self:ResolveOverloadCallPlan (objectDefinition, typeArgumentList, overl
 	return overloadCallPlan
 end
 
-function self:ShouldIncludeObjectInCall (objectDefinition)
+function self:ShouldIncludeObjectInCall (method)
 	if self.FunctionResolutionType == GCompute.FunctionResolutionType.Operator then return true end
-	if objectDefinition:IsMethod () and objectDefinition:IsMemberFunction () and not objectDefinition:IsMemberStatic () then return true end
-	if self.FunctionResolutionType == GCompute.FunctionResolutionType.Member and not objectDefinition:IsMethod () then return true end
+	if method:IsObjectDefinition () and method:IsMethod () and method:IsMemberFunction () and not method:IsMemberStatic () then return true end
+	if self.FunctionResolutionType == GCompute.FunctionResolutionType.Member and not method:IsMethod () then return true end
 	return false
 end

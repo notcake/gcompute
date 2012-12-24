@@ -72,7 +72,6 @@ include ("namespacevisitor.lua")
 -- compilation
 include ("compiler/compilationgroup.lua")
 include ("compiler/compilationunit.lua")
-include ("compiler/compilerpasstype.lua")
 
 -- lexing
 include ("lexer/keywordtype.lua")
@@ -88,7 +87,9 @@ include ("compiler/compilermessage.lua")
 include ("compiler/compilermessagecollection.lua")
 include ("compiler/compilermessagetype.lua")
 
--- compiler
+-- compiler passes
+include ("compiler/compilerpasstype.lua")
+
 include ("compiler/preprocessor.lua")
 include ("compiler/parserjobgenerator.lua")
 include ("compiler/parser.lua")
@@ -100,6 +101,7 @@ include ("compiler/typeinferer.lua")
 include ("compiler/typeinferer_typeassigner.lua")
 include ("compiler/localscopemerger.lua")
 
+include ("namespaceset.lua")
 include ("uniquenamemap.lua")
 
 include ("assignmenttype.lua")

@@ -174,6 +174,10 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	self:GetNamespace ():ResolveTypes (globalNamespace, errorReporter)
+	
+	for _, fileStaticNamespace in self:GetFileStaticNamespaceEnumerator () do
+		fileStaticNamespace:ResolveTypes (globalNamespace, errorReporter)
+	end
 end
 
 --- Returns a string representation of this namespace

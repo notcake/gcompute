@@ -318,6 +318,10 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	-- Resolve member types
 	self:GetNamespace ():ResolveTypes (globalNamespace, errorReporter)
 	
+	for _, fileStaticNamespace in self:GetFileStaticNamespaceEnumerator () do
+		fileStaticNamespace:ResolveTypes (globalNamespace, errorReporter)
+	end
+	
 	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
 		typeCurriedDefinition:ResolveTypes (globalNamespace, errorReporter)
 	end

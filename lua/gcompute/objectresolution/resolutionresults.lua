@@ -63,6 +63,19 @@ function self:FilterByType (objectType)
 	end
 end
 
+--- Filters results down to assignable ObjectDefinitions
+function self:FilterToAssignables ()
+	local filteredResults = {}
+	for i = 1, #self.FilteredResults do
+		local isAlias = self.FilteredResults [i]:GetObject ():IsAlias ()
+		local filteredObject = self.FilteredResults [i]:GetObject ():UnwrapAlias ()
+		if filteredObject:IsProperty () or filteredObject:IsVariable () then
+			filteredResults [#filteredResults + 1] = self.FilteredResults [i]
+		end
+	end
+	self.FilteredResults = filteredResults
+end
+
 --- Filters results down to concrete (non-parametric) types, whilst expanding OverloadedClassDefinitions which are non-aliased or contain more than one ClassDefinition
 function self:FilterToConcreteTypes ()
 	local filteredResults = {}

@@ -20,9 +20,11 @@ Entity:AddConstructor ({ { "number", "entIndex" } })
 	:SetNativeFunction (ents.GetByIndex)
 
 Entity:AddMethod ("ToString")
+	:SetReturnType ("String")
 	:SetNativeFunction (tostring)
 	
 Entity:AddMethod ("toString")
+	:SetReturnType ("string")
 	:SetNativeFunction (tostring)
 	
 Entity:AddMethod ("isPlayer")

@@ -19,31 +19,11 @@ Array:AddConstructor ({ { "object", "..." } })
 		end
 	)
 
-Array:AddMethod ("ToString")
-	:SetReturnType ("string")
+Array:AddMethod ("clear")
 	:SetNativeFunction (
 		function (self)
-			local inToString = thread:GetThreadLocalStorage ().Expression2.InToString
-			
-			if inToString [self] then
-				return "{array}"
-			end
-			
-			executionContext:GetThreadLocalStorage ()inToString [self] = true
-			
-			local str = "[" .. #self.Values .. "] {"
-			for i = 1, 16 do
-				if i > #self.Values then break end
-				if i > 1 then
-					str = str .. ", "
-				end
-				str = str .. self.Types [i]:GetFunctionTable ().Virtual.ToString (self.Values [i])
-			end
-			str = str .. "}"
-			
-			inToString [self] = false
-			
-			return str
+			self.Values = {}
+			self.Types  = {}
 		end
 	)
 
@@ -106,6 +86,7 @@ Array:AddMethod ("operator[]", "number index, T val", { "T" })
 					function (self, index, value)
 						self.Types [index] = typeArgumentList:GetArgument (1)
 						self.Values [index] = value
+						return value
 					end
 				)
 			else
@@ -113,8 +94,37 @@ Array:AddMethod ("operator[]", "number index, T val", { "T" })
 					function (self, index, value)
 						self.Types [index] = value:GetType ()
 						self.Values [index] = typeArgumentList:GetArgument (1):RuntimeUpcastTo (value:GetType (), value)
+						return value
 					end
 				)
 			end
+		end
+	)
+
+Array:AddMethod ("ToString")
+	:SetReturnType ("String")
+	:SetNativeFunction (
+		function (self)
+			local inToString = thread:GetThreadLocalStorage ().Expression2.InToString
+			
+			if inToString [self] then
+				return "{array}"
+			end
+			
+			executionContext:GetThreadLocalStorage ()inToString [self] = true
+			
+			local str = "[" .. #self.Values .. "] {"
+			for i = 1, 16 do
+				if i > #self.Values then break end
+				if i > 1 then
+					str = str .. ", "
+				end
+				str = str .. self.Types [i]:GetFunctionTable ().Virtual.ToString (self.Values [i])
+			end
+			str = str .. "}"
+			
+			inToString [self] = false
+			
+			return str
 		end
 	)

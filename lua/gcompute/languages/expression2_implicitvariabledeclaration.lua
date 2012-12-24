@@ -10,14 +10,22 @@ Pass = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
+	self.FileId = self.CompilationUnit:GetSourceFileId ()
 
 	self.Root = nil
 	self.RootNamespace = compilationUnit:GetCompilationGroup ():GetRootNamespace ()
+	
+	self.ObjectResolver = GCompute.ObjectResolver2 ()
+	for referencedModule in self.CompilationUnit:GetCompilationGroup ():GetModule ():GetReferencedModuleEnumerator () do
+		self.ObjectResolver:AddRootNamespace (referencedModule:GetRootNamespace ())
+	end
+	self.ObjectResolver:AddRootNamespace (self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ())
 end
 
 function self:VisitRoot (blockStatement)
 	self.Root = blockStatement
 	self.RootNamespace:AddUsing ("Expression2"):Resolve ()
+	self.RootNamespace:AddUsing ("Expression2.math"):Resolve ()
 end
 
 function self:VisitBlock (blockStatement)
@@ -56,14 +64,20 @@ end
 
 function self:ProcessIdentifier (identifier, type)
 	-- Attempt to resolve the identifier
-	local namespace = identifier:GetParentDefinition ()
 	local resolutionResults = GCompute.ResolutionResults ()
-	GCompute.ObjectResolver:ResolveUnqualifiedIdentifier (resolutionResults, identifier:GetName (), GCompute.GlobalNamespace, namespace)
+	self.ObjectResolver:ResolveUnqualifiedIdentifier (resolutionResults, identifier:GetName (), identifier:GetParentDefinition (), self.FileId)
 	
+	if identifier:GetParent ():Is ("BinaryOperator") and
+	   identifier:GetParent ():GetOperator () == "=" and
+	   identifier:GetParent ():GetLeftExpression () == identifier then
+		resolutionResults:FilterToAssignables ()
+	end
 	if resolutionResults:GetFilteredResultCount () == 0 then
-		-- Failed to resolve, add it as a variable
-		self.CompilationUnit:Debug ("Adding variable declaration for " .. identifier:GetName ())
-		self.RootNamespace:AddVariable (identifier:GetName (), type or GCompute.InferredType ())
-			:SetFileStatic (true)
+		-- Failed to resolve, add it as a file static variable
+		self.CompilationUnit:Debug ("Adding file static variable declaration for " .. identifier:GetName ())
+		
+		self.RootNamespace:GetFileStaticNamespace (self.FileId)
+			:AddVariable (identifier:GetName (), type or GCompute.InferredType ())
+				:SetFileStatic (true)
 	end
 end

@@ -15,8 +15,13 @@ String:AddProperty ("Length")
 		:SetNativeFunction (string.len)
 
 String:AddMethod ("ToUpper")
+	:SetReturnType ("string")
 	:SetNativeFunction (string.upper)
+	
 String:AddMethod ("ToLower")
+	:SetReturnType ("string")
 	:SetNativeFunction (string.lower)
+	
 String:AddMethod ("ToString")
+	:SetReturnType ("string")
 	:SetNativeFunction (tostring)

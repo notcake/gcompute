@@ -9,10 +9,13 @@ Boolean:SetDefaultValueCreator (
 )
 
 Boolean:AddMethod ("ToString")
+	:SetReturnType ("string")
 	:SetNativeFunction (tostring)
 
 Boolean:AddMethod ("operator||", "bool b")
+	:SetReturnType ("bool")
 	:SetNativeFunction (function (a, b) return a or b end)
 
 Boolean:AddMethod ("operator&&", "bool b")
+	:SetReturnType ("bool")
 	:SetNativeFunction (function (a, b) return a and b end)

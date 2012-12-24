@@ -57,23 +57,23 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 -- AST node resolution
-function self:ResolveASTNode (astNode, recursive, localDefinition)
+function self:ResolveASTNode (astNode, recursive, localDefinition, fileId)
 	if astNode:Is ("Identifier") then
-		self:ResolveIdentifier (astNode, recursive, localDefinition)
+		self:ResolveIdentifier (astNode, recursive, localDefinition, fileId)
 	elseif astNode:Is ("NameIndex") then
-		self:ResolveNameIndex (astNode, recursive, localDefinition)
+		self:ResolveNameIndex (astNode, recursive, localDefinition, fileId)
 	elseif astNode:Is ("FunctionType") then
-		self:ResolveFunctionType (astNode, recursive, localDefinition)
+		self:ResolveFunctionType (astNode, recursive, localDefinition, fileId)
 	end
 end
 
-function self:ResolveIdentifier (astNode, recursive, localDefinition)
-	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), localDefinition)
+function self:ResolveIdentifier (astNode, recursive, localDefinition, fileId)
+	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), localDefinition, fileId)
 end
 
-function self:ResolveNameIndex (astNode, recursive, localDefinition)
+function self:ResolveNameIndex (astNode, recursive, localDefinition, fileId)
 	if recursive then
-		self:ResolveASTNode (astNode:GetLeftExpression (), recursive, localDefinition)
+		self:ResolveASTNode (astNode:GetLeftExpression (), recursive, localDefinition, fileId)
 	end
 	
 	local leftResults = astNode:GetLeftExpression ():GetResolutionResults ()
@@ -92,7 +92,7 @@ function self:ResolveNameIndex (astNode, recursive, localDefinition)
 		for i = 1, leftResults:GetFilteredResultCount () do
 			local leftDefinition = leftResults:GetFilteredResult (i):GetObject ():UnwrapAlias ()
 			if leftDefinition:HasNamespace () then
-				self:ResolveMember (rightResults, right:GetName (), leftDefinition)
+				self:ResolveMember (rightResults, right:GetName (), leftDefinition, fileId)
 			end
 		end
 	else
@@ -100,12 +100,12 @@ function self:ResolveNameIndex (astNode, recursive, localDefinition)
 	end
 end
 
-function self:ResolveFunctionType (astNode, recursive, localDefinition)
+function self:ResolveFunctionType (astNode, recursive, localDefinition, fileId)
 	if recursive then
-		self:ResolveASTNode (astNode:GetReturnTypeExpression (), recursive, localDefinition)
+		self:ResolveASTNode (astNode:GetReturnTypeExpression (), recursive, localDefinition, fileId)
 		for i = 1, astNode:GetParameterList ():GetParameterCount () do
 			local parameterType = astNode:GetParameterList ():GetParameterType (i)
-			self:ResolveASTNode (parameterType, recursive, localDefinition)
+			self:ResolveASTNode (parameterType, recursive, localDefinition, fileId)
 		end
 	end
 	
@@ -147,7 +147,7 @@ function self:ResolveGlobal (resolutionResults, name, namespaceDefinition)
 	return resolutionResults
 end
 
-function self:ResolveLocal (resolutionResults, name, localDefinition)
+function self:ResolveLocal (resolutionResults, name, localDefinition, fileId)
 	local localDistance = 0
 	while localDefinition do
 		local member = localDefinition:GetNamespace ():GetMember (name)
@@ -180,14 +180,14 @@ function self:ResolveLocal (resolutionResults, name, localDefinition)
 	return resolutionResults
 end
 
-function self:ResolveMember (resolutionResults, name, objectDefinition)
+function self:ResolveMember (resolutionResults, name, objectDefinition, fileId)
 	if objectDefinition:GetNamespace ():MemberExists (name) then
 		resolutionResults:AddResult (GCompute.ResolutionResult (objectDefinition:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Other))
 	end
 end
 
-function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefinition)
-	self:ResolveLocal  (resolutionResults, name, localDefinition)
+function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefinition, fileId)
+	self:ResolveLocal  (resolutionResults, name, localDefinition, fileId)
 	
 	-- Check usings
 	local usingSource = localDefinition
@@ -196,7 +196,7 @@ function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefini
 			for i = 1, usingSource:GetUsingCount () do
 				local targetDefinition = usingSource:GetUsing (i):GetNamespace ()
 				if targetDefinition then
-					self:ResolveGlobal (resolutionResults, name, targetDefinition)
+					self:ResolveGlobal (resolutionResults, name, targetDefinition, fileId)
 				end
 			end
 		end
@@ -205,5 +205,5 @@ function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefini
 	end
 	
 	-- Check root
-	self:ResolveGlobal (resolutionResults, name, self.RootNamespaces [1])
+	self:ResolveGlobal (resolutionResults, name, self.RootNamespaces [1], fileId)
 end

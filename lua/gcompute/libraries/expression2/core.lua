@@ -15,3 +15,11 @@ Expression2:AddMethod ("owner")
 			return GCompute.Net.PlayerMonitor:GetUserEntity (executionContext:GetProcess ():GetOwnerId ())
 		end
 	)
+
+Expression2:AddMethod ("toString", "object obj")
+	:SetReturnType ("string")
+	:SetNativeFunction (
+		function (obj)
+			return obj:ToString ()
+		end
+	)

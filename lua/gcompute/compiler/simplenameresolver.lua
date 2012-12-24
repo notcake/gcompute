@@ -17,6 +17,8 @@ GCompute.SimpleNameResolver = GCompute.MakeConstructor (self, GCompute.ASTVisito
 
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
+	self.FileId = self.CompilationUnit:GetSourceFileId ()
+	
 	self.ObjectResolver = GCompute.ObjectResolver2 ()
 	for referencedModule in self.CompilationUnit:GetCompilationGroup ():GetModule ():GetReferencedModuleEnumerator () do
 		self.ObjectResolver:AddRootNamespace (referencedModule:GetRootNamespace ())
@@ -65,18 +67,18 @@ end
 
 function self:VisitExpression (expression, referenceNamespace)
 	if expression:Is ("Identifier") then
-		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition ())
+		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition (), self.FileId)
 		local resolutionResults = expression:GetResolutionResults ()
 		resolutionResults:FilterByLocality ()
 	elseif expression:Is ("NameIndex") then
-		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition ())
+		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition (), self.FileId)
 		local resolutionResults = expression:GetResolutionResults ()
 		
 		if resolutionResults:GetFilteredResultCount () == 0 then
 			expression:AddErrorMessage ("Cannot resolve " .. expression:ToString () .. ".")
 		end
 	elseif expression:Is ("FunctionType") then
-		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition ())
+		self.ObjectResolver:ResolveASTNode (expression, false, referenceNamespace or expression:GetParentDefinition (), self.FileId)
 	elseif expression:Is ("AnonymousFunction") then
 		self:VisitFunction (expression)
 	end

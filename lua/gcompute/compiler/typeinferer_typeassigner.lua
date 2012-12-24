@@ -5,11 +5,11 @@ function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.CompilationGroup = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ()
 	
-	self.RootNamespaces = {}
+	self.RootNamespaceSet = GCompute.NamespaceSet ()
 	for referencedModule in self.CompilationGroup:GetModule ():GetReferencedModuleEnumerator () do
-		self.RootNamespaces [#self.RootNamespaces + 1] = referencedModule:GetRootNamespace ()
+		self.RootNamespaceSet:AddNamespace (referencedModule:GetRootNamespace ())
 	end
-	self.RootNamespaces [#self.RootNamespaces + 1] = self.CompilationGroup:GetRootNamespace ()
+	self.RootNamespaceSet:AddNamespace (self.CompilationGroup:GetRootNamespace ())
 end
 
 function self:VisitStatement (statement)
@@ -221,10 +221,15 @@ end
 function self:VisitFunctionCall (functionCall)
 	local leftExpression = functionCall:GetLeftExpression ()
 	local leftDefinition = leftExpression:GetResolutionResult ()
+	leftDefinition = leftDefinition and leftDefinition:UnwrapAlias ()
 	
-	local leftType = leftExpression:GetType ():UnwrapReference ()
-	if leftType:IsInferredType () then
-	elseif leftType:IsFunctionType () then
+	local leftType = leftExpression:GetType ()
+	leftType = leftType and leftType:UnwrapReference ()
+	
+	-- Note: leftType will be nil if leftDefinition is an OverloadedMethodDefinition
+	
+	if (leftDefinition and (leftDefinition:IsOverloadedMethod () or leftDefinition:IsMethod ())) or
+	   (leftType and leftType:IsFunctionType ()) then
 		-- leftDefinition could be an OverloadedMethodDefinition or a VariableDefinition
 		
 		local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Static, nil, functionCall:GetArgumentList ())
@@ -249,7 +254,7 @@ function self:VisitFunctionCall (functionCall)
 				functionCall.FunctionCall:SetLeftExpression (leftExpression)
 			end
 		end
-	elseif leftDefinition and (leftDefinition:UnwrapAlias ():IsType () or leftDefinition:UnwrapAlias ():IsOverloadedClass ()) then
+	elseif leftDefinition and (leftDefinition:IsType () or leftDefinition:IsOverloadedClass ()) then
 		return self:ConvertFunctionCallToConstructor (functionCall)
 	else
 		functionCall:SetType (GCompute.ErrorType ())
@@ -350,14 +355,7 @@ function self:ResolveAccessType (astNode)
 	local result = resolutionResults:GetFilteredResultObject (1):UnwrapAlias ()
 	
 	if result:IsOverloadedMethod () then
-		if result:GetMethodCount () == 1 then
-			astNode:SetType (result:GetMethod (1):GetType ())
-		else
-			-- overload resolution
-			local inferredType = GCompute.InferredType ()
-			astNode:SetType (inferredType)
-			inferredType:ImportFunctionTypes (result)
-		end
+		-- Let overloaded function resolution handle this.
 	elseif result:IsOverloadedClass () or result:IsType () then
 		astNode:SetType (GCompute.TypeSystem:GetType ())
 	else
@@ -390,7 +388,9 @@ function self:ResolveFunctionCall (astNode, overloadedFunctionResolver, methodNa
 	
 	if overloadedFunctionResolver:HasNoResults () then
 		-- Build error message
-		errorMessage = "Cannot find method "
+		local overloadCount = overloadedFunctionResolver:GetOverloadCount ()
+		
+		errorMessage = overloadCount > 0 and "Cannot resolve method call " or "Cannot find method "
 		if overloadedFunctionResolver:GetObject () then
 			errorMessage = errorMessage .. overloadedFunctionResolver:GetObject ():GetType ():UnwrapReference ():GetFullName () .. ":"
 		end
@@ -398,7 +398,18 @@ function self:ResolveFunctionCall (astNode, overloadedFunctionResolver, methodNa
 		if typeArgumentList and not typeArgumentList:IsEmpty () then
 			errorMessage = errorMessage .. " " .. typeArgumentList:ToString ()
 		end
-		errorMessage = errorMessage .. " " .. self:GetFormattedArgumentTypes (overloadedFunctionResolver:GetArgumentList ()) .. ")"
+		errorMessage = errorMessage .. " " .. self:GetFormattedArgumentTypes (overloadedFunctionResolver:GetArgumentList ()) .. "."
+		
+		if overloadCount > 0 then
+			errorMessage = errorMessage .. " Methods found:"
+			for overload in overloadedFunctionResolver:GetOverloadEnumerator () do
+				if overload:IsMethod () or overload:IsASTNode () then
+					errorMessage = errorMessage .. "\n\t" .. overload:ToString ()
+				else
+					errorMessage = errorMessage .. "\n\t" .. overload:GetFullName ()
+				end
+			end
+		end
 		
 		astNode:SetType (GCompute.ErrorType ())
 	elseif overloadedFunctionResolver:IsAmbiguous () then
@@ -499,14 +510,17 @@ function self:ResolveAssignment (astNode)
 	end
 	
 	-- Assignment type inference
-	if leftDefinition and
-	   leftDefinition:GetType ():IsInferredType () then
-		leftDefinition:SetType (rightType:UnwrapReference ())
-		left:SetType (rightType:UnwrapReference ())
+	if leftDefinition then
+		if leftDefinition:IsVariable () or leftDefinition:IsProperty () then
+			if leftDefinition:GetType ():IsInferredType () then
+				leftDefinition:SetType (rightType:UnwrapReference ())
+				left:SetType (rightType:UnwrapReference ())
+			end
+		end
 	end
 	
-	local leftNamespace = leftDefinition:GetDeclaringObject ()
-	local leftNamespaceType = leftNamespace:GetNamespace ():GetNamespaceType ()
+	local leftNamespace = leftDefinition and leftDefinition:GetDeclaringObject ()
+	local leftNamespaceType = leftNamespace and leftNamespace:GetNamespace ():GetNamespaceType ()
 	
 	if leftNamespaceType == GCompute.NamespaceType.Global then
 		assignmentPlan:SetAssignmentType (GCompute.AssignmentType.NamespaceMember)
@@ -517,7 +531,7 @@ function self:ResolveAssignment (astNode)
 		assignmentPlan:SetAssignmentType (GCompute.AssignmentType.Local)
 		assignmentPlan:SetLeftRuntimeName (mergedLocalScope:GetRuntimeName (left))
 	else
-		astNode:AddErrorMessage ("TypeInfererTypeAssigner:ResolveAssignment : Cannot handle namespace type of " .. astNode:ToString () .."'s left hand side (" .. GCompute.NamespaceType [leftNamespaceType] .. ").")
+		astNode:AddErrorMessage ("TypeInfererTypeAssigner:ResolveAssignment : Cannot handle namespace type of " .. astNode:ToString () .."'s left hand side (" .. (GCompute.NamespaceType [leftNamespaceType] or tostring (leftNamespaceType)) .. ").")
 	end
 	
 	if astNode:Is ("BinaryOperator") then
@@ -554,9 +568,7 @@ end
 function self:ResolveOperatorCall (operatorExpression, methodName, object, argumentList, typeArgumentList)
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Operator, object, argumentList)
 	
-	for _, rootNamespace in ipairs (self.RootNamespaces) do
-		overloadedFunctionResolver:AddOperatorOverloads (rootNamespace, object:GetType (), methodName, typeArgumentList)
-	end
+	overloadedFunctionResolver:AddOperatorOverloads (self.RootNamespaceSet, operatorExpression:GetParentDefinition (), object:GetType (), methodName, typeArgumentList)
 	
 	-- Resolve OverloadedFunctionResolver
 	operatorExpression.FunctionCall = self:ResolveFunctionCall (operatorExpression, overloadedFunctionResolver, methodName, typeArgumentList)

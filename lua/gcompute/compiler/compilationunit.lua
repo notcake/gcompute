@@ -161,6 +161,10 @@ function self:GetSourceFile ()
 	return self.SourceFile
 end
 
+function self:GetSourceFileId ()
+	return self.SourceFile:GetId ()
+end
+
 function self:GetTokens ()
 	return self.Tokens
 end

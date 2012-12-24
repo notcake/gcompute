@@ -55,6 +55,23 @@ function self:ctor (functionResolutionType, objectOrArgumentList, argumentList)
 	self.Ambiguous = false
 end
 
+function self:AddImplicitCastOverloads (rootNamespaceSet, sourceType, destinationType)
+	for rootNamespace in rootNamespaceSet:GetEnumerator () do
+		-- Translate sourceType into the specified root namespace
+		local translatedType = sourceType:GetCorrespondingDefinition (rootNamespace)
+		if translatedType then
+			local namespace = translatedType:GetNamespace ()
+			if namespace then
+				for implicitCast in namespace:GetImplicitCastEnumerator () do
+					if implicitCast:GetReturnType ():Equals (destinationType) then
+						self:AddOverload (implicitCast)
+					end
+				end
+			end
+		end
+	end
+end
+
 function self:AddMemberOverloads (type, methodName, typeArgumentList)
 	type = type and type:UnwrapReference ()
 	if not type then return end
@@ -107,9 +124,10 @@ function self:AddOperatorOverloads (rootNamespaceSet, usingSource, objectType, m
 	
 	for rootNamespace in rootNamespaceSet:GetEnumerator () do
 		-- Translate objectType into the specified root namespace
-		objectType = objectType:GetCorrespondingDefinition (rootNamespace)
-		if not objectType then return end
-		self:AddMemberOverloads (objectType, methodName, typeArgumentList)
+		local translatedType = objectType:GetCorrespondingDefinition (rootNamespace)
+		if translatedType then
+			self:AddMemberOverloads (translatedType, methodName, typeArgumentList)
+		end
 	end
 end
 
@@ -331,7 +349,7 @@ function self:ResolveOverloadCallPlan (method, typeArgumentList, overloadCallPla
 	
 	typeArgumentList = typeArgumentList or GCompute.EmptyTypeArgumentList
 	for i = 1, typeArgumentList:GetArgumentCount () do
-		local typeParameter = method:GetNamespace ():GetMember (typeParameterList:GetParameterName (i))
+		local typeParameter = method:GetNamespace ():GetMember (typeParameterList:GetParameterName (i)):ToType ()
 		typeParameterMap [typeParameter] = typeArgumentList:GetArgument (i)
 	end
 	

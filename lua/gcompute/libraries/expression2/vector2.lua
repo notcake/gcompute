@@ -12,7 +12,7 @@ Vector2:AddConstructor ()
 		end
 	)
 
-Vector2:AddConstructor ({ { "number", "x" }, { "number", "y" } })
+Vector2:AddConstructor ("number x, number y")
 	:SetNativeString ("{ %arg:x%, %arg:y% }")
 	:SetNativeFunction (
 		function (x, y)

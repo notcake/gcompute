@@ -67,6 +67,7 @@ include ("ast/new.lua")
 -- type casts
 include ("ast/box.lua")
 include ("ast/unbox.lua")
+include ("ast/implicitcast.lua")
 
 -- types (these are also expressions)
 include ("ast/functiontype.lua")

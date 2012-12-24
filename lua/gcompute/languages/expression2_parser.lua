@@ -31,21 +31,21 @@ local self = Parser
 	 2 : e3 ? e1 : e1, e3 ?: e1
 	 3 : e1 | e2			-- (or)
 	 4 : e1 & e2			-- (and)
-	 5 : e1 || e2 			-- (bit or)
-	 6 : e1 && e1			-- (bit and)
-	 7 : e1 ^^ e2			-- (bit xor)
-	 6 : e5 == e6, e5 != e6
-	 7 : e6 < e7, e6 > e7, e6 <= e7, e6 >= e7
-	 8 : e1 << e2, e1 >> e2 -- (bit shift)
-	 9 : e7 + e8, e7 - e8
-	10 : e8 * e9, e8 / e9, e8 % e9
-	11 : e9 ^ e10
-	12 : +e11, -e11, !e10
-	13 : e11:fun([e1, ...]), e11[var,type]
-	14 : (e1), fun([e1, ...])
-	15 : string, num, ~var, $var, ->var
-	16 : var++, var-- [ERROR]
-	17 : var
+	 5 : e5 == e6, e5 != e6
+	 6 : e6 < e7, e6 > e7, e6 <= e7, e6 >= e7
+	 7 : e1 || e2 			-- (bit or)
+	 8 : e1 && e1			-- (bit and)
+	 9 : e1 ^^ e2			-- (bit xor)
+	10 : e1 << e2, e1 >> e2 -- (bit shift)
+	11 : e7 + e8, e7 - e8
+	12 : e8 * e9, e8 / e9, e8 % e9
+	13 : e9 ^ e10
+	14 : +e11, -e11, !e10
+	15 : e11:fun([e1, ...]), e11[var,type]
+	16 : (e1), fun([e1, ...])
+	17 : string, num, ~var, $var, ->var
+	18 : var++, var-- [ERROR]
+	19 : var
 ]]
 
 function self:ctor ()
@@ -738,7 +738,17 @@ end
 
 local booleanAnd = { ["&"] = true }
 function self:ExpressionBooleanAnd ()
-	return self:RecurseLeft (self.ExpressionBinaryOr, booleanAnd)
+	return self:RecurseLeft (self.ExpressionEquality, booleanAnd)
+end
+
+local equality = { ["=="] = true, ["!="] = true }
+function self:ExpressionEquality ()
+	return self:RecurseLeft (self.ExpressionComparison, equality)
+end
+
+local comparison = { ["<"] = true, [">"] = true, ["<="] = true, [">="] = true }
+function self:ExpressionComparison ()
+	return self:RecurseLeft (self.ExpressionBinaryOr, comparison)
 end
 
 local binaryOr = { ["||"] = true }
@@ -753,17 +763,7 @@ end
 
 local binaryXor = { ["^^"] = true }
 function self:ExpressionBinaryXor ()
-	return self:RecurseLeft (self.ExpressionEquality, binaryXor)
-end
-
-local equality = { ["=="] = true, ["!="] = true }
-function self:ExpressionEquality ()
-	return self:RecurseLeft (self.ExpressionComparison, equality)
-end
-
-local comparison = { ["<"] = true, [">"] = true, ["<="] = true, [">="] = true }
-function self:ExpressionComparison ()
-	return self:RecurseLeft (self.ExpressionBitShift, comparison)
+	return self:RecurseLeft (self.ExpressionBitShift, binaryXor)
 end
 
 local bitShift = { ["<<"] = true, [">>"] = true }

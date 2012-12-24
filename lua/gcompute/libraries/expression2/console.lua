@@ -7,7 +7,7 @@ Expression2:AddMethod ("concmd", "string consoleCommand")
 			if ownerId == GLib.GetLocalId () or CLIENT then
 				LocalPlayer ():ConCommand (consoleCommand)
 			else
-				local owner = GCompute.Net.PlayerMonitor:GetUserEntity (ownerId)
+				local owner = GCompute.PlayerMonitor:GetUserEntity (ownerId)
 				if owner and owner:IsValid () then
 					owner:ConCommand (consoleCommand)
 				end

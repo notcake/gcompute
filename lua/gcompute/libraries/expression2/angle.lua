@@ -12,7 +12,7 @@ Angle:AddConstructor ()
 		end
 	)
 
-Angle:AddConstructor ({ { "number", "p" }, { "number", "y" }, { "number", "r" } })
+Angle:AddConstructor ("number p, number y, number r")
 	:SetNativeString ("Angle (%arg:p%, %arg:y%, %arg:r%)")
 	:SetNativeFunction (
 		function (p, y, r)

@@ -7,13 +7,13 @@ function self:ctor (leftExpression, name, typeArgumentList)
 	self.Name = name
 	self.TypeArgumentList = nil
 	
-	self.MemberDefinition = nil
 	self.RuntimeName = nil
 	
 	self:SetLeftExpression (leftExpression)
 	self:SetTypeArgumentList (typeArgumentList)
 	
 	self.ResolutionResults = GCompute.ResolutionResults ()
+	self.ResolutionResult  = nil
 end
 
 function self:ExecuteAsAST (astRunner, state)
@@ -55,12 +55,12 @@ function self:GetLeftExpression ()
 	return self.LeftExpression
 end
 
-function self:GetMemberDefinition ()
-	return self.MemberDefinition
-end
-
 function self:GetName ()
 	return self.Name
+end
+
+function self:GetResolutionResult ()
+	return self.ResolutionResult or self.__base.GetResolutionResult (self)
 end
 
 function self:GetRuntimeName ()
@@ -71,42 +71,23 @@ function self:GetTypeArgumentList ()
 	return self.TypeArgumentList
 end
 
-function self:ResolveMemberDefinition (globalNamespace)
-	if self.MemberDefinition then return self.MemberDefinition end
-	
-	local leftNamespace = globalNamespace
-	if self.LeftExpression then
-		leftNamespace = self.LeftExpression:ResolveMemberDefinition (globalNamespace)
-	end
-	
-	if not leftNamespace then
-		GCompute.Error ("StaticMemberAccess:ResolveMemberDefinition : Left namespace is of " .. self:ToString () .. " is nil.")
-		return nil
-	end
-	self.MemberDefinition = leftNamespace:GetMember (self:GetName ())
-	
-	if self.TypeArgumentList and not self.TypeArgumentList:IsEmpty () then
-		GCompute.Error ("StaticMemberAccess:ResolveMemberDefinition : This StaticMemberAccess has a TypeArgumentList.")
-	end
-	
-	return self.MemberDefinition
-end
-
 function self:SetLeftExpression (leftExpression)
 	self.LeftExpression = leftExpression
 	if self.LeftExpression then self.LeftExpression:SetParent (self) end
-end
-
-function self:SetMemberDefinition (memberDefinition)
-	self.MemberDefinition = memberDefinition
 end
 
 function self:SetName (name)
 	self.Name = name
 end
 
+function self:SetResolutionResult (resolutionResult)
+	self.ResolutionResult = resolutionResult
+	return self
+end
+
 function self:SetResolutionResults (resolutionResults)
 	self.ResolutionResults = resolutionResults
+	return self
 end
 
 function self:SetRuntimeName (runtimeName)

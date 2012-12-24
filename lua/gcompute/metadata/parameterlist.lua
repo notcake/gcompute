@@ -175,7 +175,7 @@ end
 function self:SubstituteTypeParameters (substitutionMap)
 	local parameterList = self:Clone ()
 	for i = 1, parameterList:GetParameterCount () do
-		local parameterType = parameterList:GetParameterType ()
+		local parameterType = parameterList:GetParameterType (i)
 		parameterType = parameterType and parameterType:SubstituteTypeParameters (substitutionMap) or nil
 		if parameterType then
 			parameterList:SetParameterType (i, parameterType)

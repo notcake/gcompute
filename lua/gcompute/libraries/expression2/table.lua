@@ -4,26 +4,21 @@ Table:SetNullable (false)
 Table:SetNativelyAllocated (true)
 
 Table:AddConstructor ()
-	:SetNativeFunction (
-		function ()
-			return
-			{
-				Values = {},
-				Types  = {}
-			}
-		end
-	)
+	:SetNativeFunction (GCompute.Expression2.CreateContainer)
+
+GCompute.Expression2.AddContainerIndexer (Table, "number")
+GCompute.Expression2.AddContainerIndexer (Table, "string")
 
 Table:AddMethod ("ToString")
 	:SetReturnType ("String")
 	:SetNativeFunction (
 		function (self)
-			local inToString = thread:GetThreadLocalStorage ().Expression2.InToString
+			local tls = executionContext:GetThreadLocalStorage ()
+			local inToString = tls.Expression2.InToString
 			
 			if inToString [self] then
 				return "{table}"
 			end
-			
 			inToString [self] = true
 			
 			local str = "{table}"

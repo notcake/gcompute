@@ -45,6 +45,14 @@ function self:GetArgumentCount ()
 	return self.ArgumentCount
 end
 
+function self:GetEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.Arguments [i]
+	end
+end
+
 function self:GetFullName ()
 	return self:GetName ("GetFullName")
 end

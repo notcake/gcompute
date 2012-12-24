@@ -32,6 +32,10 @@ function self:GetType ()
 	return self.Type
 end
 
+function self:IsBox ()
+	return self.HasBoxedValue
+end
+
 function self:SetBoxedValue (boxedValue)
 	self.BoxedValue = boxedValue
 	self.HasBoxedValue = self.BoxedValue ~= nil

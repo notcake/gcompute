@@ -1,14 +1,13 @@
 local self = {}
-self.__Type = "LeftUnaryOperator"
-GCompute.AST.LeftUnaryOperator = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
+self.__Type = "ImplicitCast"
+GCompute.AST.ImplicitCast = GCompute.AST.MakeConstructor (self, GCompute.AST.Expression)
 
-function self:ctor ()
+function self:ctor (rightExpression, type)
 	self.RightExpression = nil
-	
-	self.Operator = "[Unknown Operator]"
-	self.Precedence = 0
-	
 	self.FunctionCall = nil
+	
+	self:SetRightExpression (rightExpression)
+	self:SetType (type)
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -21,23 +20,10 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 		self.RightExpression:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
-	memoryUsageReport:CreditString ("Syntax Trees", self.Operator)
-	
 	return memoryUsageReport
 end
 
-function self:Evaluate (executionContext)
-	local value, reference = self.RightExpression:Evaluate (executionContext)
-	
-	value = self:EvaluationFunction (executionContext, value, reference)
-	
-	return value
-end
-
 function self:ExecuteAsAST (astRunner, state)
-	if not self.FunctionCall then
-		ErrorNoHalt (self:ToString () .. "\n")
-	end
 	self.FunctionCall:ExecuteAsAST (astRunner, state)
 end
 
@@ -46,22 +32,14 @@ function self:GetChildEnumerator ()
 	return function ()
 		i = i + 1
 		if i == 1 then
-			return self.RightExpression
+			return self:GetRightExpression ()
 		end
 		return nil
 	end
 end
 
-function self:GetOperator ()
-	return self.Operator
-end
-
 function self:GetRightExpression ()
 	return self.RightExpression
-end
-
-function self:SetOperator (operator)
-	self.Operator = operator
 end
 
 function self:SetRightExpression (rightExpression)
@@ -70,15 +48,14 @@ function self:SetRightExpression (rightExpression)
 end
 
 function self:ToString ()
-	local rightExpression = self.RightExpression and self.RightExpression:ToString () or "[Unknown Expression]"
+	local rightExpression = self.RightExpression and self.RightExpression:ToString () or "[Nothing]"
+	local type = self:GetType () and self:GetType ():GetFullName () or "[Nothing]"
 	
-	return self.Operator .. rightExpression
+	return "([ImplicitCast] " .. type .. ") (" .. rightExpression .. ")"
 end
 
 function self:Visit (astVisitor, ...)
-	if self:GetRightExpression () then
-		self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
-	end
+	self:SetRightExpression (self:GetRightExpression ():Visit (astVisitor, ...) or self:GetRightExpression ())
 	
 	return astVisitor:VisitExpression (self, ...)
 end

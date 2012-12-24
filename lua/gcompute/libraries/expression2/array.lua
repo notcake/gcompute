@@ -3,14 +3,10 @@ local Array = Expression2:AddClass ("array")
 Array:SetNullable (false)
 Array:SetNativelyAllocated (true)
 
-Array:AddConstructor ({ { "object", "..." } })
+Array:AddConstructor ("object ...")
 	:SetNativeFunction (
 		function (...)
-			local array =
-			{
-				Values = {},
-				Types  = {}
-			}
+			local array = GCompute.Expression2.CreateContainer ()
 			for _, object in ipairs ({...}) do
 				array.Values [#array.Values + 1] = object:Unbox ()
 				array.Types  [#array.Types  + 1] = object:GetType ()
@@ -20,10 +16,10 @@ Array:AddConstructor ({ { "object", "..." } })
 	)
 
 Array:AddMethod ("clear")
+	:SetNativeString ("%self%:Clear ()")
 	:SetNativeFunction (
 		function (self)
-			self.Values = {}
-			self.Types  = {}
+			self:Clear ()
 		end
 	)
 
@@ -52,66 +48,19 @@ for _, typeName in ipairs (methodTypes) do
 		)
 end
 
-Array:AddMethod ("operator[]", "number index", { "T" })
-	:SetReturnType ("T")
-	:SetNativeString ("%self% [%arg:index%]")
-	:SetTypeCurryerFunction (
-		function (methodDefinition, typeArgumentList)
-			methodDefinition:SetNativeFunction (
-				function (self, index)
-					local sourceType = self.Types [index]
-					local destinationType = typeArgumentList:GetArgument (1):UnwrapAlias ()
-					if not sourceType then
-						return destinationType:CreateDefaultValue ()
-					end
-					if sourceType:Equals (destinationType) then
-						return self.Values [index]
-					end
-					if destinationType:IsBaseTypeOf (sourceType) then
-						return sourceType:RuntimeDowncastTo (destinationType, self.Values [index])
-					end
-					return destinationType:CreateDefaultValue ()
-				end
-			)
-		end
-	)
-
-Array:AddMethod ("operator[]", "number index, T val", { "T" })
-	:SetReturnType ("T")
-	:SetNativeString ("%self% [%arg:index%] = %arg:val%")
-	:SetTypeCurryerFunction (
-		function (methodDefinition, typeArgumentList)
-			if typeArgumentList:GetArgument (1):UnwrapAlias ():IsNativelyAllocated () then
-				methodDefinition:SetNativeFunction (
-					function (self, index, value)
-						self.Types [index] = typeArgumentList:GetArgument (1)
-						self.Values [index] = value
-						return value
-					end
-				)
-			else
-				methodDefinition:SetNativeFunction (
-					function (self, index, value)
-						self.Types [index] = value:GetType ()
-						self.Values [index] = typeArgumentList:GetArgument (1):RuntimeUpcastTo (value:GetType (), value)
-						return value
-					end
-				)
-			end
-		end
-	)
+GCompute.Expression2.AddContainerIndexer (Array, "number")
 
 Array:AddMethod ("ToString")
 	:SetReturnType ("String")
 	:SetNativeFunction (
 		function (self)
-			local inToString = thread:GetThreadLocalStorage ().Expression2.InToString
+			local tls = executionContext:GetThreadLocalStorage ()
+			local inToString = tls.Expression2.InToString
 			
 			if inToString [self] then
 				return "{array}"
 			end
-			
-			executionContext:GetThreadLocalStorage ()inToString [self] = true
+			inToString [self] = true
 			
 			local str = "[" .. #self.Values .. "] {"
 			for i = 1, 16 do

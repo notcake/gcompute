@@ -358,7 +358,7 @@ function self:BuildFunctionTable ()
 		
 		-- Add implicit casts
 		for implicitCast in definition:GetImplicitCastEnumerator () do
-			self.FunctionTable.Static [fullName] [implicitCast:GetRuntimeName ()] = explicitCast:GetNativeFunction () or implicitCast
+			self.FunctionTable.Static [fullName] [implicitCast:GetRuntimeName ()] = implicitCast:GetNativeFunction () or implicitCast
 		end
 	end
 	

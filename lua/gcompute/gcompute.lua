@@ -261,6 +261,8 @@ include ("nativegen/luaemitter.lua")
 
 GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 
+GCompute.PlayerMonitor = GCompute.PlayerMonitor ("GCompute")
+
 GCompute.System = GCompute.Module ()
 	:SetName ("System")
 	:SetFullName ("System")

@@ -20,6 +20,7 @@ end
 
 function self:GetResolutionResult ()
 	if not self:GetResolutionResults () then return nil end
+	if self:GetResolutionResults ():GetFilteredResultCount () > 1 then return nil end
 	return self:GetResolutionResults ():GetFilteredResultObject (1)
 end
 

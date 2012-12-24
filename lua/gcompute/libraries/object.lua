@@ -31,6 +31,9 @@ Object:AddMethod ("operator==", "Object other")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function (self, other)
+			if self:IsBox () and other:IsBox () then
+				return self:GetBoxedValue () == other:GetBoxedValue ()
+			end
 			return self == other
 		end
 	)
@@ -39,6 +42,9 @@ Object:AddMethod ("operator!=", "Object other")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function (self, other)
+			if self:IsBox () and other:IsBox () then
+				return self:GetBoxedValue () ~= other:GetBoxedValue ()
+			end
 			return self ~= other
 		end
 	)

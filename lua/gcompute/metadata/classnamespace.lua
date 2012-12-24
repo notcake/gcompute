@@ -50,7 +50,7 @@ end
 -- @param nativeFunction (Optional) A function that performs the cast
 function self:AddExplicitCast (destinationType, nativeFunction)
 	local explicitCast = GCompute.ExplicitCastDefinition ("explicit operator")
-	self:SetupMemberHierarchy (self)
+	self:SetupMemberHierarchy (explicitCast)
 	explicitCast:SetReturnType (destinationType)
 	explicitCast:SetNativeFunction (nativeFunction)
 	
@@ -64,7 +64,7 @@ end
 -- @param nativeFunction (Optional) A function that performs the cast
 function self:AddImplicitCast (destinationType, nativeFunction)
 	local implicitCast = GCompute.ImplicitCastDefinition ("implicit operator")
-	self:SetupMemberHierarchy (self)
+	self:SetupMemberHierarchy (implicitCast)
 	implicitCast:SetReturnType (destinationType)
 	implicitCast:SetNativeFunction (nativeFunction)
 	

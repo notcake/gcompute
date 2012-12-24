@@ -5,7 +5,6 @@ Pass = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 	Language: Expression 2
 	Purpose:
 		1. Set the types of number, string and boolean literals
-		2. Converts the 2nd argument of indexing expressions to a type argument
 ]]
 
 function self:ctor (compilationUnit)

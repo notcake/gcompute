@@ -104,6 +104,14 @@ function self:ExecuteAsAST (astRunner, state)
 	end
 end
 
+function self:GetArgument (index)
+	return self.ArgumentList:GetArgument (index)
+end
+
+function self:GetArgumentCount ()
+	return self.ArgumentList:GetArgumentCount ()
+end
+
 function self:GetArgumentList ()
 	return self.ArgumentList
 end

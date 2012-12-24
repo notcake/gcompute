@@ -8,7 +8,16 @@ Number:SetDefaultValueCreator (
 	end
 )
 
-Number:AddConstructor ({ { "int", "n" } })
+Number:AddConstructor ("bool b")
+	:SetNativeString ("%arg:b% and 1 or 0")
+	:SetNativeFunction (
+		function (b)
+			return b and 1 or 0
+		end
+	)
+
+Number:AddConstructor ("int n")
+	:SetNativeString ("%arg:n%")
 	:SetNativeFunction (
 		function (n)
 			return n
@@ -59,5 +68,5 @@ addComparisonOperator ("<=", function (a, b) return a <= b end)
 addComparisonOperator (">", function (a, b) return a > b end)
 addComparisonOperator (">=", function (a, b) return a >= b end)
 	
-Number:AddExplicitCast ("bool", function (n) return n ~= 0 end)
+Number:AddImplicitCast ("bool", function (n) return n ~= 0 end)
 Number:AddExplicitCast ("string", function (n) return tostring (n) end)

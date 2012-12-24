@@ -40,6 +40,17 @@ function self:ExecuteAsAST (astRunner, state)
 	end
 end
 
+function self:GetArgument (index)
+	if index == 1 then
+		return self.LeftExpression
+	end
+	return self.ArgumentList:GetArgument (index - 1)
+end
+
+function self:GetArgumentCount ()
+	return 1 + self.ArgumentList:GetArgumentCount ()
+end
+
 function self:GetTypeArgumentList ()
 	return self.TypeArgumentList
 end

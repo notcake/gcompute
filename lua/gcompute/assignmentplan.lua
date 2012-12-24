@@ -42,7 +42,7 @@ function self:ExecuteAsAST (astRunner, node, state)
 		astRunner:PopNode ()
 		
 		local right = astRunner:PopValue ()
-		if not right then
+		if right == nil then
 			executionContext:GetProcess ():GetStdErr ():WriteLine ("AssignmentPlan:ExecuteAsAST : right expression evaluated to nil! (" .. node:GetRightExpression ():ToString () .. ")")
 		end
 		

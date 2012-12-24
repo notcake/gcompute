@@ -49,10 +49,12 @@ function self:ctor (sourceFile)
 	self.Lexer = nil
 	self.LexingInProgress = false
 	self.LexingRevision = -1
+	self.LexingEndTime  = 0
 	self.Tokens = nil
 	
 	-- Preprocessing
 	self.PreprocessingRevision = -1
+	self.PreprocessingEndTime  = 0
 	
 	self.ParserJobQueue = nil
 	self.AST = nil
@@ -286,6 +288,7 @@ function self:Lex (callback)
 	self.Lexer:Process (self:GetCode (), self:GetLanguage (),
 		function (tokens)
 			self.LexingInProgress = false
+			self.LexingEndTime = SysTime ()
 			
 			self:DispatchEvent ("LexerFinished", self.Lexer)
 			self:AddPassDuration ("Lexer", SysTime () - startTime)
@@ -297,13 +300,18 @@ end
 function self:Preprocess (callback)
 	callback = callback or GCompute.NullCallback
 	
-	if self.PreprocessingRevision == self.LexingRevision then callback () return end
+	if self.PreprocessingEndTime > self.LexingEndTime and
+	   self.PreprocessingRevision == self.LexingRevision then
+		callback ()
+		return
+	end
 	
 	self.PreprocessingRevision = self.LexingRevision
 	
 	local startTime = SysTime ()
 	GCompute.Preprocessor:Process (self, self.Tokens)
 	self:AddPassDuration ("Preprocessor", SysTime () - startTime)
+	self.PreprocessingEndTime = SysTime ()
 	
 	callback ()
 end

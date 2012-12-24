@@ -14,6 +14,13 @@ function self:Evaluate ()
 	return self.Boolean
 end
 
+function self:ExecuteAsAST (astRunner, state)
+	-- Discard BooleanLiteral
+	astRunner:PopNode ()
+	
+	astRunner:PushValue (self.Boolean)
+end
+
 function self:GetBoolean ()
 	return self.Boolean
 end
@@ -28,4 +35,8 @@ end
 
 function self:ToString ()
 	return tostring (self.Boolean)
+end
+
+function self:Visit (astVisitor, ...)
+	return astVisitor:VisitExpression (self, ...)
 end

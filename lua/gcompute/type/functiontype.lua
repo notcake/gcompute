@@ -36,7 +36,6 @@ function self:CanAcceptArgumentTypes (argumentTypeArray)
 		local argumentType = argumentTypeArray [argumentTypeArrayIndex]:UnwrapAlias ()
 		local canConvert, conversionType = argumentType:CanConvertTo (parameterList:GetParameterType (i), GCompute.TypeConversionMethod.ImplicitConversion)
 		if not canConvert then
-			print ("Argument " .. argumentTypeArrayIndex .. ", " .. i .. ": " .. argumentTypeArray [argumentTypeArrayIndex]:GetFullName () .. " and " .. parameterList:GetParameterType (i):GetFullName ())
 			return false, -math.huge
 		end
 		

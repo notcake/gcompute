@@ -16,7 +16,7 @@ Expression2:AddMethod ("noentity")
 		end
 	)
 
-Entity:AddConstructor ({ { "number", "entIndex" } })
+Entity:AddConstructor ("number entIndex")
 	:SetNativeFunction (ents.GetByIndex)
 
 Entity:AddMethod ("ToString")

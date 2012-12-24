@@ -1,6 +1,15 @@
 local self = {}
 GCompute.TypeInfererTypeAssigner = GCompute.MakeConstructor (self, GCompute.ASTVisitor)
 
+--[[
+	TypeInfererTypeAssigner
+	
+	If an AST node's type is set to an ErrorType, it _must_
+	have an error added to it.
+	AST nodes encountered whose type is an ErrorType will not
+	have additional error messages added to them.
+]]
+
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.CompilationGroup = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ()
@@ -18,18 +27,20 @@ function self:VisitStatement (statement)
 			self:ResolveAssignment (statement)
 		end
 		
-		-- Replacing Identifiers and NameIndexes with *Accesses causes the
-		-- type of VariableDefinitions to be reset, so we have to set them
-		-- again here.
-		local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
-		local type = typeResults:GetFilteredResultObject (1)
-		statement:SetType (type or GCompute.ErrorType ())
-		statement:GetVariableDefinition ():SetType (type or GCompute.ErrorType ())
-		
-		if not statement:GetType () then
-			statement:AddErrorMessage (statement:ToString () .. " has no type.")
-		elseif statement:GetType ():UnwrapAlias ():IsErrorType () then
-			statement:AddErrorMessage ("Type of " .. statement:ToString () .. " is " .. statement:GetType ():GetFullName ())
+		-- Replacing Identifiers and NameIndexes with *Accesses in the type
+		-- expressions of VariableDefinitions causes their type to be reset,
+		-- so we have to set them again here.
+		if statement:GetTypeExpression () then
+			local typeResults = statement:GetTypeExpression ():GetResolutionResults ()
+			local type = typeResults:GetFilteredResultObject (1)
+			statement:SetType (type or GCompute.ErrorType ())
+			statement:GetVariableDefinition ():SetType (type or GCompute.ErrorType ())
+			
+			if not statement:GetType () then
+				statement:AddErrorMessage (statement:ToString () .. " has no type.")
+			elseif statement:GetType ():UnwrapAlias ():IsErrorType () then
+				statement:AddErrorMessage ("Type of " .. statement:ToString () .. " is " .. statement:GetType ():GetFullName ())
+			end
 		end
 	end
 end
@@ -56,7 +67,7 @@ function self:VisitExpression (expression)
 			if namespaceType == GCompute.NamespaceType.Global then
 				local staticMemberAccess = GCompute.AST.StaticMemberAccess ()
 				
-				staticMemberAccess:SetLeftExpression (resultNamespace:CreateStaticMemberAccessNode ())
+				staticMemberAccess:SetLeftExpression (self:CreateStaticMemberAccess (resultNamespace))
 				staticMemberAccess:SetName (expression:GetName ())
 				staticMemberAccess:SetRuntimeName (resultNamespace:GetMemberRuntimeName (result))
 				
@@ -85,7 +96,12 @@ function self:VisitExpression (expression)
 			-- as a function in a FunctionCall. VisitFunctionCall will produce
 			-- a better error.
 			if not expression:GetParent ():Is ("FunctionCall") or expression:GetParent ():GetLeftExpression () ~= expression then
-				expression:AddErrorMessage ("Cannot resolve unqualified name \"" .. expression:ToString () .. "\".")
+				if expression.ResolutionResults:GetResultCount () == 0 then
+					expression:AddErrorMessage ("Cannot resolve unqualified name \"" .. expression:ToString () .. "\".")
+				elseif expression.ResolutionResults:GetResultCount () == 1 then
+				else
+					expression:AddErrorMessage ("Cannot resolve unqualified name \"" .. expression:ToString () .. "\" - too many results.")
+				end
 			end
 		end
 	elseif expression:Is ("NameIndex") then
@@ -132,6 +148,8 @@ function self:VisitExpression (expression)
 		overrideExpression = self:VisitNew (expression)
 	elseif expression:Is ("BinaryOperator") then
 		overrideExpression = self:VisitBinaryOperator (expression)
+	elseif expression:Is ("LeftUnaryOperator") then
+		overrideExpression = self:VisitLeftUnaryOperator (expression)
 	elseif expression:Is ("BooleanLiteral") then
 		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Boolean", GCompute.ResolutionObjectType.Type):Resolve ())
 	elseif expression:Is ("NumericLiteral") then
@@ -156,13 +174,17 @@ function self:VisitExpression (expression)
 end
 
 function self:VisitArrayIndex (arrayIndex)
-	self:ResolveOperatorCall (arrayIndex, "operator[]", arrayIndex:GetLeftExpression (), arrayIndex:GetArgumentList (), arrayIndex:GetTypeArgumentList () and arrayIndex:GetTypeArgumentList ():ToTypeArgumentList ())
+	local functionCall = self:ResolveOperatorCall (arrayIndex, "operator[]", arrayIndex:GetLeftExpression (), arrayIndex:GetArgumentList (), arrayIndex:GetTypeArgumentList () and arrayIndex:GetTypeArgumentList ():ToTypeArgumentList ())
 end
 
 function self:VisitArrayIndexAssignment (arrayIndexAssignment)
 	local argumentList = arrayIndexAssignment:GetArgumentList ():Clone ()
 	argumentList:AddArgument (arrayIndexAssignment:GetRightExpression ())
-	self:ResolveOperatorCall (arrayIndexAssignment, "operator[]", arrayIndexAssignment:GetLeftExpression (), argumentList, arrayIndexAssignment:GetTypeArgumentList () and arrayIndexAssignment:GetTypeArgumentList ():ToTypeArgumentList ())
+	
+	local functionCall = self:ResolveOperatorCall (arrayIndexAssignment, "operator[]", arrayIndexAssignment:GetLeftExpression (), argumentList, arrayIndexAssignment:GetTypeArgumentList () and arrayIndexAssignment:GetTypeArgumentList ():ToTypeArgumentList ())
+	if functionCall then
+		arrayIndexAssignment:SetRightExpression (functionCall:GetArgument (functionCall:GetArgumentCount ()))
+	end
 end
 
 local comparisonOperators =
@@ -201,15 +223,10 @@ function self:VisitBinaryOperator (binaryOperator)
 		argumentList:SetEndToken (binaryOperator:GetEndToken ())
 		argumentList:AddArgument (binaryOperator:GetRightExpression ())
 		
-		self:ResolveOperatorCall (binaryOperator, "operator" .. operator, binaryOperator:GetLeftExpression (), argumentList)
-		if binaryOperator.FunctionCall then
-			if binaryOperator.FunctionCall:IsMemberFunctionCall () then
-				binaryOperator:SetLeftExpression (binaryOperator.FunctionCall:GetLeftExpression ())
-				binaryOperator:SetRightExpression (binaryOperator.FunctionCall:GetArgumentList ():GetArgument (1))
-			else
-				binaryOperator:SetLeftExpression (binaryOperator.FunctionCall:GetArgumentList ():GetArgument (1))
-				binaryOperator:SetRightExpression (binaryOperator.FunctionCall:GetArgumentList ():GetArgument (2))
-			end
+		local functionCall = self:ResolveOperatorCall (binaryOperator, "operator" .. operator, binaryOperator:GetLeftExpression (), argumentList)
+		if functionCall then
+			binaryOperator:SetLeftExpression (functionCall:GetArgument (1))
+			binaryOperator:SetRightExpression (functionCall:GetArgument (2))
 		end
 	else
 		-- Either binary operator, then assignment
@@ -266,6 +283,20 @@ function self:VisitFunctionCall (functionCall)
 	end
 end
 
+function self:VisitLeftUnaryOperator (leftUnaryOperator)
+	local operator = leftUnaryOperator:GetOperator ()
+	local rightExpression = leftUnaryOperator:GetRightExpression ()
+	
+	local argumentList = GCompute.AST.ArgumentList ()
+	argumentList:SetStartToken (rightExpression:GetStartToken ())
+	argumentList:SetEndToken (rightExpression:GetEndToken ())
+	
+	local functionCall = self:ResolveOperatorCall (leftUnaryOperator, "operator" .. operator, rightExpression, argumentList)
+	if functionCall then
+		leftUnaryOperator:SetRightExpression (functionCall:GetArgument (1))
+	end
+end
+
 function self:VisitMemberFunctionCall (memberFunctionCall)
 	local leftExpression = memberFunctionCall:GetLeftExpression ()
 	local leftType = leftExpression:GetType ()
@@ -289,44 +320,57 @@ end
 
 function self:VisitNew (new)
 	local leftExpression = new:GetLeftExpression ()
-	local leftResolutionResults = leftExpression:GetResolutionResults ()
+	local leftDefinition = leftExpression:GetResolutionResult ()
 	
-	-- Need to resolve leftExpression as a type
-	leftResolutionResults:FilterToConcreteTypes ()
-	
-	if leftResolutionResults:GetFilteredResultCount () == 0 then
-		leftExpression:AddErrorMessage (leftExpression:ToString () .. " is not a type.")
-		return
-	elseif leftResolutionResults:GetFilteredResultCount () > 1 then
-		leftExpression:AddErrorMessage (leftExpression:ToString () .. " is ambiguous as a type name.")
-		return
-	end
-	local leftDefinition = leftExpression:GetResolutionResults ():GetFilteredResultObject (1)
-	
-	if not leftDefinition:UnwrapAlias ():IsType () or leftDefinition:UnwrapAlias ():IsOverloadedClass () then
-		self.CompilationUnit:Error ("Left hand side of <new-expression> must be a type! (" .. leftExpression:ToString () .. " is not a type).", leftExpression:GetLocation ())
-		return
+	if not leftDefinition then
+		local leftResolutionResults = leftExpression:GetResolutionResults ()
+		if leftResolutionResults:GetFilteredResultCount () == 0 then
+			leftExpression:AddErrorMessage (leftExpression:ToString () .. " is not a type.")
+			return
+		elseif leftResolutionResults:GetFilteredResultCount () > 1 then
+			leftExpression:AddErrorMessage (leftExpression:ToString () .. " is ambiguous as a type name.")
+			return
+		end
 	end
 	
-	-- leftDefinition is (an alias to) a Type, ClassDefinition or OverloadedClassDefinition
-	local type = leftDefinition
-	if type:IsOverloadedClass () and type:GetClassCount () == 1 then
-		type = type:GetClass (1)
+	-- leftDefinition could be (an alias to) a Type, ClassDefinition or OverloadedClassDefinition
+	local unwrapped = leftDefinition:UnwrapAlias ()
+	local type
+	if unwrapped:IsClass () then
+		type = leftDefinition
+	elseif unwrapped:IsOverloadedClass () then
+		type = unwrapped:GetConcreteClass ()
+	elseif unwrapped:IsType () then
+		type = leftDefinition
 	end
-	type = type:ToType ()
+	type = type and type:ToType ()
+	
+	if not type then
+		local errorMessage = leftExpression:ToString () .. " is not a valid concrete type for use in a constructor call."
+		if unwrapped:IsOverloadedClass () then
+			errorMessage = errorMessage .. " Did you mean:"
+			for class in unwrapped:GetEnumerator () do
+				errorMessage = errorMessage .. "\n\t" .. class:GetShortName ()
+			end
+		end
+		new:AddErrorMessage (errorMessage)
+		return
+	end
 	new:SetType (type)
 	
 	-- Constructor resolution
 	local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Static, nil, new:GetArgumentList ())
 	
 	-- Populate OverloadedFunctionResolver
-	for constructor in leftDefinition:UnwrapAlias ():GetConstructorEnumerator () do
-		overloadedFunctionResolver:AddOverload (constructor)
+	if type:GetNamespace () then
+		for constructor in type:GetNamespace ():GetConstructorEnumerator () do
+			overloadedFunctionResolver:AddOverload (constructor)
+		end
 	end
 	
 	-- Resolve OverloadedFunctionResolver
 	new.FunctionCall = self:ResolveFunctionCall (new, overloadedFunctionResolver, leftDefinition:GetShortName ())
-	new:SetNativelyAllocated (leftDefinition:ToType ():IsNativelyAllocated ())
+	new:SetNativelyAllocated (type:IsNativelyAllocated ())
 	
 	if new.FunctionCall then
 		new.FunctionCall:SetLeftExpression (new:GetLeftExpression ())
@@ -383,6 +427,15 @@ function self:ResolveFunctionCall (astNode, overloadedFunctionResolver, methodNa
 			break
 		end
 	end
+	if typeArgumentList then
+		for typeArgument in typeArgumentList:GetEnumerator () do
+			if typeArgument:UnwrapReference ():IsErrorType () then
+				-- SimpleNameResolver should have reported the error already
+				suppressErrors = true
+				break
+			end
+		end
+	end
 	
 	local errorMessage = nil
 	
@@ -417,6 +470,9 @@ function self:ResolveFunctionCall (astNode, overloadedFunctionResolver, methodNa
 		astNode:SetType (GCompute.ErrorType ())
 	else
 		astNode:SetType (functionCall:GetFunctionType ():GetReturnType ())
+		if astNode:GetType ():IsErrorType () then
+			errorMessage = astNode:ToString () .. "'s type is <error-type> when it shouldn't be (compiler bug?)"
+		end
 	end
 	
 	if errorMessage and not suppressErrors then
@@ -431,7 +487,6 @@ end
 
 function self:ResolveFunctionCallTypeCasts (functionCall)
 	local functionType = functionCall:GetFunctionType ()
-	local parameterList = functionType:GetParameterList ()
 	local parameterList = functionType:GetParameterList ()
 	local argumentList = functionCall:GetArgumentList ()
 	
@@ -542,7 +597,12 @@ function self:ResolveAssignment (astNode)
 		binaryAssignmentOperator:SetLeftExpression (astNode:GetLeftExpression ())
 		
 		if astNode:GetOperator ():sub (1, 1) == "=" then
-			binaryAssignmentOperator:SetRightExpression (astNode:GetRightExpression ())
+			binaryAssignmentOperator:SetRightExpression (
+				self:ResolveTypeConversion (
+					astNode:GetRightExpression (),
+					astNode:GetLeftExpression ():GetType ():UnwrapReference ()
+				) or astNode:GetRightExpression ()
+			)
 			binaryAssignmentOperator:SetOperator (astNode:GetOperator ())
 		else
 			binaryAssignmentOperator:SetOperator ("=")
@@ -574,9 +634,11 @@ function self:ResolveOperatorCall (operatorExpression, methodName, object, argum
 	operatorExpression.FunctionCall = self:ResolveFunctionCall (operatorExpression, overloadedFunctionResolver, methodName, typeArgumentList)
 	if operatorExpression.FunctionCall then
 		if not operatorExpression.FunctionCall:IsMemberFunctionCall () then
-			operatorExpression.FunctionCall:SetLeftExpression (operatorExpression.FunctionCall:GetMethodDefinition ():CreateStaticMemberAccessNode ())
+			operatorExpression.FunctionCall:SetLeftExpression (self:CreateStaticMemberAccess (operatorExpression.FunctionCall:GetMethodDefinition ()))
 		end
 	end
+	
+	return operatorExpression.FunctionCall
 end
 
 function self:ResolveTypeConversion (astNode, destinationType)
@@ -599,20 +661,60 @@ function self:ResolveTypeConversion (astNode, destinationType)
 	sourceType      = sourceType     :UnwrapAliasAndReference ()
 	destinationType = destinationType:UnwrapAliasAndReference ()
 	
-	if destinationType:IsBaseTypeOf (sourceType) then
+	local _, conversionMethod = sourceType:CanConvertTo (destinationType, GCompute.TypeConversionMethod.ImplicitConversion)
+	if conversionMethod == GCompute.TypeConversionMethod.Downcast then
 		-- Downcast
 		if sourceType:IsNativelyAllocated () and destinationType:IsNativelyAllocated () then return nil, true end
 		if sourceType:IsNativelyAllocated () then
 			-- Box
-			print ("ResolveTypeConversion: Box " .. sourceType:GetFullName () .. " -> " .. destinationType:GetFullName ())
 			return GCompute.AST.Box (astNode, destinationType), true
 		elseif destinationType:IsNativelyAllocated () then
 			-- Unbox
-			print ("ResolveTypeConversion: Unbox " .. sourceType:GetFullName () .. " -> " .. destinationType:GetFullName ())
 			return GCompute.AST.Unbox (astNode, originalDestinationType:UnwrapAlias ()), true
 		end
+	elseif conversionMethod == GCompute.TypeConversionMethod.Constructor then
+		-- Constructor call
+		local new = GCompute.AST.New ()
+		new:SetStartToken (astNode:GetStartToken ())
+		new:SetEndToken (astNode:GetEndToken ())
+		
+		new:SetLeftExpression (self:CreateStaticMemberAccess (destinationType:GetDefinition ()))
+		new:GetArgumentList ():AddArgument (astNode)
+		new = self:VisitNew (new) or new
+		return new, true
+	elseif conversionMethod == GCompute.TypeConversionMethod.ImplicitCast then
+		-- Implicit cast method call
+		local implicitCast = GCompute.AST.ImplicitCast (astNode, destinationType)
+		implicitCast:SetStartToken (astNode:GetStartToken ())
+		implicitCast:SetEndToken (astNode:GetEndToken ())
+		
+		local argumentList = GCompute.AST.ArgumentList ()
+		local overloadedFunctionResolver = GCompute.OverloadedFunctionResolver (GCompute.FunctionResolutionType.Member, astNode, argumentList)
+		overloadedFunctionResolver:AddImplicitCastOverloads (self.RootNamespaceSet, sourceType, destinationType)
+		implicitCast.FunctionCall = self:ResolveFunctionCall (implicitCast, overloadedFunctionResolver, "implicit operator " .. originalDestinationType:UnwrapReference ():GetFullName ())
+		
+		return implicitCast, true
+	else
+		print (GCompute.TypeConversionMethod [conversionMethod] .. ": " .. sourceType:GetFullName () .. " -> " .. destinationType:GetFullName ())
+		local suppressErrors = sourceType:UnwrapReference ():IsErrorType () or destinationType:UnwrapReference ():IsErrorType ()
+		
+		if not suppressErrors then
+			astNode:AddErrorMessage ("Cannot implicitly cast a " .. astNode:GetType ():GetFullName () .. " to a " .. destinationType:GetFullName ())
+		end
 	end
-	print ("ResolveTypeConversion: " .. sourceType:GetFullName () .. " -> " .. destinationType:GetFullName ())
+	return nil, false
+end
+
+function self:CreateStaticMemberAccess (definition)
+	if not definition:GetDeclaringObject () then return nil end
+	local typeArgumentList = nil
+	if definition:IsClass () and not definition:GetTypeArgumentList ():IsEmpty () then
+		typeArgumentList = definition:GetTypeArgumentList ()
+	elseif definition:IsMethod () and not definition:GetTypeArgumentList ():IsEmpty () then
+		typeArgumentList = definition:GetTypeArgumentList ()
+	end
+	return GCompute.AST.StaticMemberAccess (self:CreateStaticMemberAccess (definition:GetDeclaringObject ()), definition:GetName (), typeArgumentList)
+		:SetResolutionResult (definition)
 end
 
 function self:GetMergedLocalScope (memberDefinition)

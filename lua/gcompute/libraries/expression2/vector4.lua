@@ -12,7 +12,7 @@ Vector4:AddConstructor ()
 		end
 	)
 
-Vector4:AddConstructor ({ { "number", "x" }, { "number", "y" }, { "number", "z" } })
+Vector4:AddConstructor ("number x, number y, number z")
 	:SetNativeString ("{ %arg:x%, %arg:y%, %arg:z%, 0 }")
 	:SetNativeFunction (
 		function (x, y, z)
@@ -20,7 +20,7 @@ Vector4:AddConstructor ({ { "number", "x" }, { "number", "y" }, { "number", "z" 
 		end
 	)
 
-Vector4:AddConstructor ({ { "number", "x" }, { "number", "y" }, { "number", "z" }, { "number", "w" } })
+Vector4:AddConstructor ("number x, number y, number z, number w")
 	:SetNativeString ("{ %arg:x%, %arg:y%, %arg:z%, %arg:w% }")
 	:SetNativeFunction (
 		function (x, y, z, w)

@@ -22,8 +22,11 @@ function self:VisitExpression (expression)
 		if parentNode:Is ("VariableDeclaration") or
 		   parentNode:Is ("FunctionDeclaration") or
 		   parentNode:Is ("FunctionType") or
-		   parentNode:Is ("ParameterList") then
+		   parentNode:Is ("ParameterList") or
+		   parentNode:Is ("TypeArgumentList") then
 			local nameIndex = GCompute.AST.NameIndex ()
+			nameIndex:SetStartToken (expression:GetStartToken ())
+			nameIndex:SetEndToken (expression:GetEndToken ())
 			nameIndex:SetLeftExpression (GCompute.AST.Identifier ("Expression2"))
 			nameIndex:SetIdentifier (expression)
 			return nameIndex

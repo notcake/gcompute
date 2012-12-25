@@ -1,13 +1,24 @@
 local Expression2 = GCompute.GlobalNamespace:AddNamespace ("Expression2")
+local Number = Expression2:AddClass ("number")
 
-Expression2:AddMethod ("operator>>", "number val, number bits")
+Number:AddMethod ("operator&", "number b")
 	:SetReturnType ("number")
-	:SetNativeString ("bit.rshift (%arg:val%, %arg:bits%)")
+	:SetNativeString ("bit.band (%self%, %arg:b%)")
+	:SetNativeFunction (bit.band)
+	
+Number:AddMethod ("operator|", "number b")
+	:SetReturnType ("number")
+	:SetNativeString ("bit.bor (%self%, %arg:b%)")
+	:SetNativeFunction (bit.bor)
+
+Number:AddMethod ("operator>>", "number bits")
+	:SetReturnType ("number")
+	:SetNativeString ("bit.rshift (%self%, %arg:bits%)")
 	:SetNativeFunction (bit.rshift)
 
-Expression2:AddMethod ("operator<<", "number val, number bits")
+Number:AddMethod ("operator<<", "number bits")
 	:SetReturnType ("number")
-	:SetNativeString ("bit.lshift (%arg:val%, %arg:bits%)")
+	:SetNativeString ("bit.lshift (%self%, %arg:bits%)")
 	:SetNativeFunction (bit.lshift)
 
 Expression2:AddMethod ("bXor", "number a, number b")

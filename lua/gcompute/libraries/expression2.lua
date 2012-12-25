@@ -23,18 +23,7 @@ function GCompute.Expression2.AddContainerIndexer (classDefinition, keyType)
 			function (methodDefinition, typeArgumentList)
 				methodDefinition:SetNativeFunction (
 					function (self, index)
-						local sourceType      = self.Types [index]
-						local destinationType = typeArgumentList:GetArgument (1)
-						if not sourceType then
-							return destinationType:CreateDefaultValue ()
-						end
-						if sourceType:Equals (destinationType) then
-							return self.Values [index]
-						end
-						if destinationType:IsBaseTypeOf (sourceType) then
-							return sourceType:RuntimeDowncastTo (destinationType, self.Values [index])
-						end
-						return destinationType:CreateDefaultValue ()
+						return self:Get (index, typeArgumentList:GetArgument (1))
 					end
 				)
 			end

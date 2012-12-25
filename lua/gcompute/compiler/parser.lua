@@ -4,7 +4,6 @@ GCompute.Parser = GCompute.MakeConstructor (self)
 function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.Language = compilationUnit:GetLanguage ()
-	self.DebugOutput = GCompute.NullOutputBuffer
 	
 	self.Tokens = nil
 	self.LastAcceptedToken      = nil
@@ -23,7 +22,6 @@ function self:Accept (token)
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:AdvanceToken ()
-		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAcceptedTokenValue .. ")")
 		return self.LastAcceptedTokenValue
 	end
 	return nil
@@ -35,7 +33,6 @@ function self:AcceptAndSave (token)
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:SavePosition ()
 		self:AdvanceToken ()
-		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAcceptedTokenValue .. ")")
 		return self.LastAcceptedTokenValue
 	end
 	return nil
@@ -60,15 +57,10 @@ function self:AcceptNewlines ()
 end
 
 function self:AcceptTokens (tokens)
-	-- debug
-	if #tokens > 0 then
-		self.DebugOutput:WriteLine ("Parser:AcceptTokens : Tokens should be a table of keys, not an array (" .. table.concat (tokens, ", ") .. ").")
-	end
 	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:AdvanceToken ()
-		self.DebugOutput:WriteLine ("Accepted token (" .. self.LastAcceptedTokenValue .. ")")
 		return self.LastAcceptedTokenValue
 	end
 	return nil
@@ -79,7 +71,6 @@ function self:AcceptTypes (tokenTypes)
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:AdvanceToken ()
-		self.DebugOutput:WriteLine ("Accepted type " .. tostring (GCompute.TokenType [self.LastAcceptedTokenType]) .. " (" .. GCompute.String.Escape (self.LastAcceptedTokenValue) .. ")")
 		return self.LastAcceptedTokenValue
 	end
 	return nil
@@ -90,7 +81,6 @@ function self:AcceptType (tokenType)
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:AdvanceToken ()
-		self.DebugOutput:WriteLine ("Accepted type " .. GCompute.TokenType [tokenType] .. " (" .. GCompute.String.Escape (self.LastAcceptedTokenValue) .. ")")
 		return self.LastAcceptedTokenValue
 	end
 	return nil
@@ -133,7 +123,6 @@ end
 
 function self:ChompModifiers ()
 	while self.CompilationUnit.Language:GetKeywordType (self.CurrentTokenValue) == GCompute.KeywordType.Modifier do
-		self.DebugOutput:WriteLine ("Nommed modifier (" .. self.CurrentTokenValue .. ")")
 		self.Modifiers [#self.Modifiers + 1] = self.CurrentTokenValue
 		self:AdvanceToken ()
 	end
@@ -311,7 +300,6 @@ function self:RecurseRightUnary (subParseFunction, tokens, subItemName)
 end
 
 function self:RestorePosition ()
-	self.DebugOutput:WriteLine ("Position restored.")
 	self.CurrentToken = self.TokenStack:Pop ()
 	if self.CurrentToken then
 		self.CurrentTokenValue = self.CurrentToken.Value

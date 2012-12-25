@@ -7,10 +7,20 @@ String:SetDefaultValueCreator (
 		return ""
 	end
 )
-	
+
+local function format (formatString, ...)
+	local args = {...}
+	for k, v in pairs (args) do
+		if v:IsBox () then
+			args [k] = v:Unbox ()
+		end
+	end
+	return string.format (formatString, unpack (args))
+end
+
 Expression2:AddMethod ("format", "string formatString, object ...")
 	:SetReturnType ("string")
-	:SetNativeFunction (string.format)
+	:SetNativeFunction (format)
 	
 Expression2:AddMethod ("print", "object ...")
 	:SetNativeFunction (
@@ -44,6 +54,19 @@ String:AddMethod ("find", "string substring")
 		end
 	)
 
+String:AddMethod ("format")
+	:SetReturnType ("string")
+	:SetNativeFunction (format)
+
+String:AddMethod ("left", "number byteCount")
+	:SetReturnType ("string")
+	:SetNativeString ("string.sub (%self%, 1, %arg:byteCount%)")
+	:SetNativeFunction (
+		function (self, byteCount)
+			return string.sub (self, 1, byteCount)
+		end
+	)
+
 String:AddMethod ("length")
 	:SetReturnType ("number")
 	:SetNativeString ("#%self%")
@@ -58,6 +81,24 @@ String:AddMethod ("repeat", "number repetitionCount")
 	:SetReturnType ("string")
 	:SetNativeString ("string.rep (%self%, %arg:repetitionCount%)")
 	:SetNativeFunction (string.rep)
+
+String:AddMethod ("replace", "string match, string replacement")
+	:SetReturnType ("string")
+	:SetNativeFunction (
+		function (self, match, replacement)
+			match = string.gsub (match, "([%^%$%(%)%[%]%.%%%?%-%+%*])", "%%%1")
+			return string.gsub (self, match, replacement)
+		end
+	)
+
+String:AddMethod ("right", "number byteCount")
+	:SetReturnType ("string")
+	:SetNativeString ("string.sub (%self%, -%arg:byteCount%)")
+	:SetNativeFunction (
+		function (self, byteCount)
+			return string.sub (self, -byteCount)
+		end
+	)
 
 String:AddMethod ("sub", "number start")
 	:SetReturnType ("string")

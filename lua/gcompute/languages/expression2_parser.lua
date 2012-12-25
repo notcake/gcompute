@@ -84,9 +84,6 @@ end
 
 -- Statement
 function self:Statement ()
-	self.DebugOutput:WriteLine ("Statement:")
-	self.DebugOutput:IncreaseIndent ()
-	
 	self:SavePosition ()
 	self:AcceptType (GCompute.TokenType.Newline)
 	
@@ -105,14 +102,12 @@ function self:Statement ()
 		self:StatementLabel () or
 		self:StatementExpression ()
 	if statement or accepted then
-		self.DebugOutput:DecreaseIndent ()
 		self:Accept (";")
 		self:CommitPosition ()
 		return statement, accepted
 	end
 	self:RestorePosition ()
 	
-	self.DebugOutput:DecreaseIndent ()
 	return nil
 end
 
@@ -418,8 +413,7 @@ end
 
 function Parser:StatementTypeDeclaration ()
 	if true then return nil end
-
-	self.DebugOutput:WriteLine ("Trying type declaration...")
+	
 	self:SavePosition ()
 	self:ChompModifiers ()
 	if self.Language:GetKeywordType (self:Peek ()) ~= GCompute.KeywordType.DataType then
@@ -470,9 +464,7 @@ function Parser:StatementTypeDeclaration ()
 		self:PushParseItem ("var")
 		self:AddParseItem (self.LastAccepted)
 		if self:Accept ("=") then
-			self.DebugOutput:IncreaseIndent ()
 			local Expression = self:Expression ()
-			self.DebugOutput:DecreaseIndent ()
 			if not Expression then
 				self:PopParseItem ()
 				break
@@ -518,9 +510,6 @@ function self:StatementFunctionDeclaration ()
 	-- functionName (
 	if not self:Accept ("function") then return nil end
 	
-	self.DebugOutput:WriteLine ("Function declaration:")
-	self.DebugOutput:IncreaseIndent ()
-	
 	self:SavePosition ()
 	local functionDeclaration = GCompute.AST.FunctionDeclaration ()
 	functionDeclaration:SetStartToken (self:GetLastToken ())
@@ -538,7 +527,6 @@ function self:StatementFunctionDeclaration ()
 		if self:Accept (":") then
 			-- type
 			--     :functionName (
-			self.DebugOutput:WriteLine ("type:functionName")
 			
 			typeExpression = returnType
 			returnType = nil
@@ -552,11 +540,9 @@ function self:StatementFunctionDeclaration ()
 			functionName = self:AcceptType (GCompute.TokenType.Identifier)
 			if self:Accept ("(") then
 				-- type functionName (
-				self.DebugOutput:WriteLine ("type functionName")
 				self:CommitPosition ()
 			else
 				-- type type:functionName (
-				self.DebugOutput:WriteLine ("type type:functionName")
 				self:RestorePosition ()
 				typeExpression = self:Type ()
 				self:Accept (":")
@@ -602,8 +588,6 @@ function self:StatementFunctionDeclaration ()
 		self:Accept (";")
 	end
 	functionDeclaration:SetBody (blockStatement)
-
-	self.DebugOutput:DecreaseIndent ()
 	
 	functionDeclaration:SetEndToken (self:GetLastToken ())
 	return functionDeclaration
@@ -800,17 +784,13 @@ function self:ExpressionTypeCast ()
 	if not self:AcceptAndSave ("(") then return self:ExpressionUnary () end
 	local startToken = self:GetLastToken ()
 	
-	self.DebugOutput:WriteLine ("Matching type cast:")
-	self.DebugOutput:IncreaseIndent ()
 	local typeExpression = self:Type ()
 	if not typeExpression then
 		self:RestorePosition ()
-		self.DebugOutput:DecreaseIndent ()
 		return self:ExpressionUnary ()
 	end
 	if not self:Accept (")") then
 		self:RestorePosition ()
-		self.DebugOutput:DecreaseIndent ()
 		return self:ExpressionUnary ()
 	end
 	
@@ -821,8 +801,6 @@ function self:ExpressionTypeCast ()
 	
 	local rightExpression = self:ExpressionTypeCast ()
 	if not rightExpression then
-		self.DebugOutput:WriteLine ("Type cast invalid: No right expression.")
-		self.DebugOutput:DecreaseIndent ()
 		self:RestorePosition ()
 		return self:ExpressionUnary ()
 	end
@@ -940,7 +918,7 @@ function self:ExpressionFunctionCall (leftExpression)
 		self:AcceptWhitespaceAndNewlines ()
 		
 		if not self:Accept (")") then
-			functionCallExpression:AddErrorMessage ("Expected ')' to close function call argument list.", self:GetCurrentToken ())
+			functionCallExpression:AddErrorMessage ("Expected ')' to close function call argument list, got " .. self:GetCurrentPretty () .. ".", self:GetCurrentToken ())
 		end
 	end
 	

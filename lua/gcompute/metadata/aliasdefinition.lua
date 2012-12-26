@@ -104,7 +104,7 @@ function self:ResolveAlias (objectResolver, errorReporter)
 	end
 end
 
-function self:ResolveTypes ()
+function self:ResolveTypes (objectResolver, errorReporter)
 end
 
 function self:ToString ()

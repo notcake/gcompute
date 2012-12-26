@@ -86,6 +86,12 @@ end
 function self:ResolveTypes (objectResolver, errorReporter)
 	for k, baseType in ipairs (self.BaseTypes) do
 		if baseType:IsDeferredObjectResolution () then
+			-- Set the local namespace to our definition, 
+			-- for resolution of type parameters
+			if self:GetDefinition () then
+				baseType:SetLocalNamespace (self:GetDefinition ())
+			end
+			
 			baseType:Resolve (objectResolver)
 			if baseType:IsFailedResolution () then
 				GCompute.Error ("ClassType:ResolveTypes : Failed to resolve base type of " .. self:GetFullName () .. " : " .. baseType:GetFullName ())

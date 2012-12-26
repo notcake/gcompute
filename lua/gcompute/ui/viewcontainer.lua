@@ -61,10 +61,41 @@ end
 
 function PANEL:SetTab (tab)
 	self.Tab = tab
+	
+	self:UpdateCloseButtonVisibility ()
 end
 
 function PANEL:SetView (view)
+	if self.View == view then return end
+	
+	self:UnhookView (self.View)
 	self.View = view
+	self:HookView (self.View)
+	
+	self:UpdateCloseButtonVisibility ()
+end
+
+-- Internal, do not call
+function PANEL:HookView (view)
+	if not view then return end
+	
+	view:AddEventListener ("CanCloseChanged", tostring (self:GetTable ()),
+		function ()
+			self:UpdateCloseButtonVisibility ()
+		end
+	)
+end
+
+function PANEL:UnhookView (view)
+	if not view then return end
+	
+	view:RemoveEventListener ("CanCloseChanged", tostring (self:GetTable ()))
+end
+
+function PANEL:UpdateCloseButtonVisibility ()
+	if self.Tab and self.View then
+		self.Tab:SetCloseButtonVisible (self.View:CanClose ())
+	end
 end
 
 -- Event handlers	

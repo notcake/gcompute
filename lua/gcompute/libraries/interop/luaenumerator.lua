@@ -1,6 +1,6 @@
 local Global = GCompute.GlobalNamespace
 local Interop = Global:AddNamespace ("Interop")
-local LuaEnumerator = Global:AddClass ("LuaEnumerator", "T")
+local LuaEnumerator = Interop:AddClass ("LuaEnumerator", "T")
 	:AddBaseType ("IEnumerator<T>")
 
 LuaEnumerator:AddConstructor ("object iterator")

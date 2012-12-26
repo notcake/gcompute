@@ -38,6 +38,18 @@ function self:SetGlobalNamespace (globalNamespace)
 end
 
 -- Hierarchy
+--- Gets the relative short name of this type
+-- @return The relative short name of this type
+function self:GetRelativeShortName (referenceDefinition)
+	if self:GetTypeParameterList ():IsEmpty () then
+		return self:GetName () or "[Unnamed]"
+	elseif self:GetTypeArgumentList ():IsEmpty () then
+		return (self:GetName () or "[Unnamed]") .. " " .. self:GetTypeParameterList ():ToString ()
+	else
+		return (self:GetName () or "[Unnamed]") .. " " .. self:GetTypeArgumentList ():GetRelativeName (referenceDefinition)
+	end
+end
+
 --- Gets the short name of this type
 -- @return The short name of this type
 function self:GetShortName ()

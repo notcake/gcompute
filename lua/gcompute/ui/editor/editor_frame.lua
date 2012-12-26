@@ -180,6 +180,7 @@ function self:Init ()
 	for _, viewType in ipairs (viewTypes) do
 		local view = GCompute.Editor.ViewTypes:Create (viewType)
 		view:SetId (viewType)
+		view:SetCanClose (false)
 		self [viewType .. "View"] = view
 		self.DockContainer:RegisterView (view)
 	end
@@ -246,15 +247,20 @@ end
 function self:CanCloseView (view)
 	if not view then return true end
 	
-	if view:GetType () ~= "Code" then return true end -- Can always close non-editor tabs.
+	-- No special checks for views that do not host documents
+	if not view:GetDocument () then
+		return view:CanClose ()
+	end
 	
 	if self.DocumentManager:GetDocumentCount () == 1 and
 	   view:GetDocument ():GetViewCount () == 1 and
+	   view:GetType () == "Code" and
 	   not view:GetSavable ():HasPath () and
 	   not view:GetSavable ():IsUnsaved () then
 		return false
 	end
-	return true
+	
+	return view:CanClose ()
 end
 
 --- Closes a view

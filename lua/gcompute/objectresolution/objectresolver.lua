@@ -52,6 +52,8 @@ function self:ResolveASTNode (astNode, recursive, localDefinition, fileId)
 		self:ResolveNameIndex (astNode, recursive, localDefinition, fileId)
 	elseif astNode:Is ("FunctionType") then
 		self:ResolveFunctionType (astNode, recursive, localDefinition, fileId)
+	elseif astNode:Is ("TypeArgumentList") then
+		self:ResolveTypeArgumentList (astNode, recursive, localDefinition, fileId)
 	end
 end
 
@@ -114,6 +116,12 @@ function self:ResolveFunctionType (astNode, recursive, localDefinition, fileId)
 		elseif parameterResults:GetFilteredResultCount () > 1 then
 			parameterType:AddErrorMessage ("Cannot resolve " .. parameterType:ToString () .. " - too many matching concrete types found.\n" .. parameterResults:ToString ())
 		end
+	end
+end
+
+function self:ResolveTypeArgumentList (astNode, recursive, localDefinition, fileId)
+	for argument in astNode:GetEnumerator () do
+		self:ResolveASTNode (argument, recursive, localDefinition, fileId)
 	end
 end
 
@@ -189,7 +197,10 @@ function self:ResolveUnqualifiedIdentifier (resolutionResults, identifier, local
 	
 	local name = identifier:GetName ()
 	local typeArgumentList = identifier:GetTypeArgumentList ()
-	typeArgumentList = typeArgumentList and typeArgumentList:ToTypeArgumentList ()
+	if typeArgumentList then
+		self:ResolveASTNode (typeArgumentList, true, localDefinition, fileId)
+		typeArgumentList = typeArgumentList:ToTypeArgumentList ()
+	end
 	
 	-- Check usings
 	local usingSource = localDefinition

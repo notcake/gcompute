@@ -96,19 +96,25 @@ function self:GetRelativeName (referenceDefinition)
 	local declaringObject = self:GetDeclaringObject ()
 	
 	if not declaringObject or declaringObject:IsGlobalNamespace () then
-		return self:GetShortName ()
+		return self:GetRelativeShortName (referenceDefinition)
 	end
 	
 	-- Check referenceDefinition's parents
 	local reference = referenceDefinition
 	while reference do
 		if declaringObject == reference then
-			return self:GetShortName ()
+			return self:GetRelativeShortName (referenceDefinition)
 		end
 		reference = reference:GetDeclaringObject ()
 	end
 	
-	return declaringObject:GetRelativeName (referenceDefinition) .. "." .. self:GetShortName ()
+	return declaringObject:GetRelativeName (referenceDefinition) .. "." .. self:GetRelativeShortName (referenceDefinition)
+end
+
+--- Gets the relative short name of this object
+-- @return The relative short name of this object
+function self:GetRelativeShortName (referenceDefinition)
+	return self:GetName () or "[Unnamed]"
 end
 
 --- Gets the short name of this object

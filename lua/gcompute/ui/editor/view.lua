@@ -3,6 +3,8 @@ GCompute.Editor.View = GCompute.MakeConstructor (self)
 
 --[[
 	Events:
+		CanCloseChanged (canClose)
+			Fired when the view's closability has changed.
 		DocumentChanged (oldDocument, newDocument)
 			Fired when the view's document has changed.
 		IconChanged (icon)
@@ -17,6 +19,7 @@ function self:ctor (container)
 	self.Id = nil
 	
 	self.Container = container
+	
 	self.DocumentManager = nil
 	
 	self.Closable = true
@@ -27,6 +30,7 @@ function self:ctor (container)
 	
 	GCompute.EventProvider (self)
 	
+	self.Container:SetView (self)
 	self.Container:AddEventListener ("Removed", tostring (self),
 		function ()
 			self:DispatchEvent ("Removed")
@@ -77,7 +81,10 @@ function self:Select ()
 end
 
 function self:SetCanClose (closable)
+	if self.Closable == closable then return end
+	
 	self.Closable = closable
+	self:DispatchEvent ("CanCloseChanged", self.Closable)
 end
 
 function self:SetDocumentManager (documentManager)

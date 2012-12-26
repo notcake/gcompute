@@ -1,10 +1,12 @@
 local self = {}
 GCompute.PropertyDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
 
-function self:ctor (name)
+function self:ctor (name, type)
 	self.Type   = nil
 	self.Getter = nil
 	self.Setter = nil
+	
+	self:SetType (type)
 end
 
 function self:AddGetter ()
@@ -43,7 +45,9 @@ end
 
 -- Definition
 function self:GetDisplayText ()
-	local displayText = self:GetType ():GetRelativeName (self) .. " " .. self:GetShortName () .. " { "
+	local displayText = ""
+	displayText = displayText .. (self:GetType () and self:GetType ():GetRelativeName (self) or "[Nothing]")
+	displayText = displayText .. " " .. self:GetShortName () .. " { "
 	if self.Getter then
 		displayText = displayText .. "get; "
 	end

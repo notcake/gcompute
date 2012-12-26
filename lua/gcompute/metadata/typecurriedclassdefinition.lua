@@ -1,7 +1,7 @@
 local self = {}
-GCompute.TypeCurriedMethodDefinition = GCompute.MakeConstructor (self, GCompute.MethodDefinition)
+GCompute.TypeCurriedClassDefinition = GCompute.MakeConstructor (self, GCompute.ClassDefinition)
 
-function self:ctor (name, parameterList, typeParameterList)
+function self:ctor (name, typeParameterList)
 end
 
 function self:InitializeTypeCurriedDefinition ()
@@ -14,17 +14,11 @@ function self:InitializeTypeCurriedDefinition ()
 		substitutionMap:Add (typeParameter, self.TypeArgumentList:GetArgument (i))
 	end
 	
-	self.ParameterList = typeParametricDefinition:GetParameterList ():SubstituteTypeParameters (substitutionMap)
-	
-	self.ReturnType = typeParametricDefinition:GetReturnType ()
-	self.ReturnType = self.ReturnType:SubstituteTypeParameters (substitutionMap) or self.ReturnType
-	
-	self:SetNativeString (typeParametricDefinition:GetNativeString ())
-	self:SetNativeFunction (typeParametricDefinition:GetNativeFunction ())
 	self:SetTypeCurryerFunction (typeParametricDefinition:GetTypeCurryerFunction ())
 	if self:GetTypeCurryerFunction () then
 		self:GetTypeCurryerFunction () (self, self:GetTypeArgumentList ())
 	end
 	
-	self:BuildNamespace ()
+	-- TODO: Build base types
+	-- TODO: Build namespace
 end

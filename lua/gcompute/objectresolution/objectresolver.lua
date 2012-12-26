@@ -56,7 +56,7 @@ function self:ResolveASTNode (astNode, recursive, localDefinition, fileId)
 end
 
 function self:ResolveIdentifier (astNode, recursive, localDefinition, fileId)
-	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), localDefinition, fileId)
+	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode, localDefinition, fileId)
 end
 
 function self:ResolveNameIndex (astNode, recursive, localDefinition, fileId)
@@ -121,12 +121,24 @@ end
 --- Looks up the member specified in the given namespace's corresponding namespace set
 -- @param resolutionResults The ResolutionResults in which to store results
 -- @param name The name of the member to look up
--- @param referenceDefinition The namespace whose location is used to look up the specified member
-function self:ResolveGlobal (resolutionResults, name, referenceDefinition, fileId)
+-- @param referenceDefinition The namespace whose location is used to look up the specified member (nil means the root namespace)
+function self:ResolveGlobal (resolutionResults, name, typeArgumentList, referenceDefinition, fileId)
+	local typeArgumentCount = typeArgumentList and typeArgumentList:GetArgumentCount () or 0
 	for translatedNamespace in self.RootNamespaceSet:GetTranslatedEnumerator (referenceDefinition) do
 		local member = translatedNamespace and translatedNamespace:GetMember (name)
 		if member then
-			resolutionResults:AddResult (GCompute.ResolutionResult (member, GCompute.ResolutionResultType.Global))
+			if typeArgumentList then
+				if member:IsOverloadedClass () or member:IsClass () or
+				   member:IsOverloadedMethod () or member:IsMethod () then
+					for definition in member:GetGroupEnumerator () do
+						if definition:GetTypeParameterList ():MatchesArgumentCount (typeArgumentCount) then
+							resolutionResults:AddResult (GCompute.ResolutionResult (definition:CreateTypeCurriedDefinition (typeArgumentList), GCompute.ResolutionResultType.Global))
+						end
+					end
+				end
+			else
+				resolutionResults:AddResult (GCompute.ResolutionResult (member, GCompute.ResolutionResultType.Global))
+			end
 		end
 	end
 	
@@ -172,8 +184,12 @@ function self:ResolveMember (resolutionResults, name, objectDefinition, fileId)
 	end
 end
 
-function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefinition, fileId)
-	self:ResolveLocal  (resolutionResults, name, localDefinition, fileId)
+function self:ResolveUnqualifiedIdentifier (resolutionResults, identifier, localDefinition, fileId)
+	self:ResolveLocal  (resolutionResults, identifier:GetName (), localDefinition, fileId)
+	
+	local name = identifier:GetName ()
+	local typeArgumentList = identifier:GetTypeArgumentList ()
+	typeArgumentList = typeArgumentList and typeArgumentList:ToTypeArgumentList ()
 	
 	-- Check usings
 	local usingSource = localDefinition
@@ -182,7 +198,7 @@ function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefini
 			for i = 1, usingSource:GetUsingCount () do
 				local targetDefinition = usingSource:GetUsing (i):GetNamespace ()
 				if targetDefinition then
-					self:ResolveGlobal (resolutionResults, name, targetDefinition, fileId)
+					self:ResolveGlobal (resolutionResults, name, typeArgumentList, targetDefinition, fileId)
 				end
 			end
 		end
@@ -191,5 +207,5 @@ function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefini
 	end
 	
 	-- Check root
-	self:ResolveGlobal (resolutionResults, name, nil, fileId)
+	self:ResolveGlobal (resolutionResults, name, typeArgumentList, nil, fileId)
 end

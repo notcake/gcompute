@@ -91,6 +91,10 @@ function self:IsEmpty ()
 	return self.ParameterCount == 0
 end
 
+function self:MatchesArgumentCount (argumentCount)
+	return argumentCount == self.ParameterCount
+end
+
 --- Sets the documentation string for the given parameter
 -- @param parameterId The id of the parameter
 -- @param documentation The documentation string for the parameter

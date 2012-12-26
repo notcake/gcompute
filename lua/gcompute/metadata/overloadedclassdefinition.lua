@@ -59,6 +59,7 @@ function self:GetEnumerator ()
 		return self.Classes [i]
 	end
 end
+self.GetGroupEnumerator = self.GetEnumerator
 
 -- Definition
 --- Gets whether this object is an OverloadedClassDefinition

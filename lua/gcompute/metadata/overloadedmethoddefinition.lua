@@ -29,6 +29,7 @@ function self:GetEnumerator ()
 		return self.Methods [i]
 	end
 end
+self.GetGroupEnumerator = self.GetEnumerator
 
 --- Gets the method with the given index in this method group
 -- @param index The index of the method to be retrieved

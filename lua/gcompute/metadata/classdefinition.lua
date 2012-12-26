@@ -16,9 +16,9 @@ function self:ctor (name, typeParameterList)
 	self.TypeParameterList = GCompute.ToTypeParameterList (typeParameterList)
 	self.TypeArgumentList = GCompute.EmptyTypeArgumentList
 	
-	self.TypeParametricClassDefinition = self
-	self.TypeCurriedDefinitions        = GCompute.WeakValueTable ()
-	self.TypeCurryerFunction           = GCompute.NullCallback
+	self.TypeParametricDefinition = self
+	self.TypeCurriedDefinitions   = GCompute.WeakValueTable ()
+	self.TypeCurryerFunction      = GCompute.NullCallback
 	
 	for i = 1, self:GetTypeParameterList ():GetParameterCount () do
 		self:AddTypeParameter (self:GetTypeParameterList ():GetParameterName (i))
@@ -47,6 +47,18 @@ function self:GetShortName ()
 		return (self:GetName () or "[Unnamed]") .. " " .. self:GetTypeParameterList ():ToString ()
 	else
 		return (self:GetName () or "[Unnamed]") .. " " .. self:GetTypeArgumentList ():ToString ()
+	end
+end
+
+-- Class Group
+function self:GetGroupEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self
+		end
+		return nil
 	end
 end
 
@@ -164,10 +176,38 @@ function self:SetDefaultValueCreator (defaultValueCreator)
 end
 
 -- Type Parameters
-function self:IsConcreteType ()
-	if self:GetDeclaringType () and not self:GetDeclaringType ():IsConcreteType () then return false end
-	if self.TypeParameterList:IsEmpty () then return true end
-	return self.TypeParameterList:GetParameterCount () <= self.TypeArgumentList:GetArgumentCount ()
+function self:CreateTypeCurriedDefinition (typeArgumentList)
+	if not self:HasUnboundLocalTypeParameters () then return self end
+	
+	if self.TypeArgumentList:GetArgumentCount () ~= 0 then
+		-- This is not the root type parametric MethodDefinition
+		-- Append the given TypeArgumentList to our TypeArgumentList
+		-- and ask the root type parametric MethodDefinition to
+		-- create the type curried MethodDefinition for us
+		local fullTypeArgumentList = self.TypeArgumentList:Clone ()
+		for i = 1, typeArgumentList:GetArgumentCount () do
+			fullTypeArgumentList:AddArgument (typeArgumentList:GetArgument (i))
+		end
+		fullTypeArgumentList:Truncate (self.TypeParameterList:GetParameterCount ())
+		
+		return self:GetTypeParametricDefinition ():CreateTypeCurriedDefinition (fullTypeArgumentList)
+	end
+	
+	-- Check for it in the cache of type curried definitions
+	local typeArgumentListId = typeArgumentList:ToString ()
+	if self.TypeCurriedDefinitions [typeArgumentListId] and
+	   self.TypeCurriedDefinitions [typeArgumentListId]:GetTypeArgumentList ():Equals (typeArgumentList) then
+		return self.TypeCurriedDefinitions [typeArgumentListId]
+	end
+	
+	local typeCurriedDefinition = GCompute.TypeCurriedClassDefinition (self:GetName (), self:GetTypeParameterList ())
+	self.TypeCurriedDefinitions [typeArgumentListId] = typeCurriedDefinition
+	self:GetDeclaringObject ():GetNamespace ():SetupMemberHierarchy (typeCurriedDefinition)
+	typeCurriedDefinition:SetTypeArgumentList (typeArgumentList)
+	typeCurriedDefinition:SetTypeParametricDefinition (self)
+	typeCurriedDefinition:InitializeTypeCurriedDefinition ()
+	
+	return typeCurriedDefinition
 end
 
 --- Gets the type argument list of this class
@@ -180,14 +220,14 @@ function self:GetTypeCurryerFunction ()
 	return self.TypeCurryerFunction
 end
 
+function self:GetTypeParametricDefinition ()
+	return self.TypeParametricDefinition
+end
+
 --- Gets the type parameter list of this class
 -- @return The type parameter list of this class
 function self:GetTypeParameterList ()
 	return self.TypeParameterList
-end
-
-function self:GetTypeParametricClassDefinition ()
-	return self.TypeParametricClassDefinition
 end
 
 --- Gets the number of unbound local type parameters of this ClassDefinition
@@ -205,6 +245,12 @@ function self:HasUnboundLocalTypeParameters ()
 	return self.TypeParameterList:GetParameterCount () > self.TypeArgumentList:GetArgumentCount ()
 end
 
+function self:IsConcreteType ()
+	if self:GetDeclaringType () and not self:GetDeclaringType ():IsConcreteType () then return false end
+	if self.TypeParameterList:IsEmpty () then return true end
+	return self.TypeParameterList:GetParameterCount () <= self.TypeArgumentList:GetArgumentCount ()
+end
+
 function self:SetTypeArgumentList (typeArgumentList)
 	self.TypeArgumentList = typeArgumentList
 end
@@ -213,8 +259,8 @@ function self:SetTypeCurryerFunction (typeCurryerFunction)
 	self.TypeCurryerFunction = typeCurryerFunction
 end
 
-function self:SetTypeParametricClassDefinition (typeParametricClassDefinition)
-	self.TypeParametricClassDefinition = typeParametricClassDefinition
+function self:SetTypeParametricDefinition (typeParametricDefinition)
+	self.TypeParametricDefinition = typeParametricDefinition
 end
 
 -- Definition

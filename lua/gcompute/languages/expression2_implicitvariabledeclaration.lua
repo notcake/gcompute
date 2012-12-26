@@ -60,7 +60,7 @@ end
 function self:ProcessIdentifier (identifier, type)
 	-- Attempt to resolve the identifier
 	local resolutionResults = GCompute.ResolutionResults ()
-	self.ObjectResolver:ResolveUnqualifiedIdentifier (resolutionResults, identifier:GetName (), identifier:GetParentDefinition (), self.FileId)
+	self.ObjectResolver:ResolveUnqualifiedIdentifier (resolutionResults, identifier, identifier:GetParentDefinition (), self.FileId)
 	
 	if identifier:GetParent ():Is ("BinaryOperator") and
 	   identifier:GetParent ():GetOperator () == "=" and

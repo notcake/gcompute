@@ -182,7 +182,7 @@ include ("metadata/propertyaccessordefinition.lua")
 include ("metadata/overloadedclassdefinition.lua")
 include ("metadata/overloadedmethoddefinition.lua")
 
--- include ("metadata/typecurriedclassdefinition.lua")
+include ("metadata/typecurriedclassdefinition.lua")
 include ("metadata/typecurriedmethoddefinition.lua")
 
 -- mirror

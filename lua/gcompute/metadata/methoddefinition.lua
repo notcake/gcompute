@@ -26,9 +26,9 @@ function self:ctor (name, parameterList, typeParameterList)
 	self.TypeParameterList = GCompute.ToTypeParameterList (typeParameterList)
 	self.TypeArgumentList = GCompute.EmptyTypeArgumentList
 	
-	self.TypeParametricMethodDefinition = self
-	self.TypeCurriedDefinitions         = GCompute.WeakValueTable ()
-	self.TypeCurryerFunction            = GCompute.NullCallback
+	self.TypeParametricDefinition = self
+	self.TypeCurriedDefinitions   = GCompute.WeakValueTable ()
+	self.TypeCurryerFunction      = GCompute.NullCallback
 	
 	-- Runtime
 	self.MergedLocalScope = nil
@@ -53,6 +53,18 @@ function self:GetNamespace ()
 		self:BuildNamespace ()
 	end
 	return self.Namespace
+end
+
+-- Method Group
+function self:GetGroupEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		if i == 1 then
+			return self
+		end
+		return nil
+	end
 end
 
 -- Method
@@ -154,7 +166,7 @@ function self:CreateTypeCurriedDefinition (typeArgumentList)
 		end
 		fullTypeArgumentList:Truncate (self.TypeParameterList:GetParameterCount ())
 		
-		return self:GetTypeParametricMethodDefinition ():CreateTypeCurriedDefinition (fullTypeArgumentList)
+		return self:GetTypeParametricDefinition ():CreateTypeCurriedDefinition (fullTypeArgumentList)
 	end
 	
 	-- Check for it in the cache of type curried definitions
@@ -168,8 +180,8 @@ function self:CreateTypeCurriedDefinition (typeArgumentList)
 	self.TypeCurriedDefinitions [typeArgumentListId] = typeCurriedDefinition
 	self:GetDeclaringObject ():GetNamespace ():SetupMemberHierarchy (typeCurriedDefinition)
 	typeCurriedDefinition:SetTypeArgumentList (typeArgumentList)
-	typeCurriedDefinition:SetTypeParametricMethodDefinition (self)
-	typeCurriedDefinition:InitializeTypeCurriedMethodDefinition ()
+	typeCurriedDefinition:SetTypeParametricDefinition (self)
+	typeCurriedDefinition:InitializeTypeCurriedDefinition ()
 	
 	return typeCurriedDefinition
 end
@@ -184,14 +196,14 @@ function self:GetTypeCurryerFunction ()
 	return self.TypeCurryerFunction
 end
 
+function self:GetTypeParametricDefinition ()
+	return self.TypeParametricDefinition
+end
+
 --- Gets the type parameter list of this function
 -- @return The type parameter list of this function
 function self:GetTypeParameterList ()
 	return self.TypeParameterList
-end
-
-function self:GetTypeParametricMethodDefinition ()
-	return self.TypeParametricMethodDefinition
 end
 
 --- Gets the number of unbound local type parameters of this MethodDefinition
@@ -209,6 +221,12 @@ function self:HasUnboundLocalTypeParameters ()
 	return self.TypeParameterList:GetParameterCount () > self.TypeArgumentList:GetArgumentCount ()
 end
 
+function self:IsConcreteMethod ()
+	if self:GetDeclaringType () and not self:GetDeclaringType ():IsConcreteType () then return false end
+	if self.TypeParameterList:IsEmpty () then return true end
+	return self.TypeParameterList:GetParameterCount () <= self.TypeArgumentList:GetArgumentCount ()
+end
+
 function self:SetTypeArgumentList (typeArgumentList)
 	self.TypeArgumentList = typeArgumentList
 end
@@ -217,8 +235,8 @@ function self:SetTypeCurryerFunction (typeCurryerFunction)
 	self.TypeCurryerFunction = typeCurryerFunction
 end
 
-function self:SetTypeParametricMethodDefinition (typeParametricMethodDefinition)
-	self.TypeParametricMethodDefinition = typeParametricMethodDefinition
+function self:SetTypeParametricDefinition (typeParametricDefinition)
+	self.TypeParametricDefinition = typeParametricDefinition
 end
 
 -- Runtime

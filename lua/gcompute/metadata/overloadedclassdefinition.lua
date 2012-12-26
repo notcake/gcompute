@@ -11,6 +11,8 @@ end
 -- @param typeParamterList A TypeParameterList describing the parameters the type takes or nil if the class is non-parametric
 -- @return The new ClassDefinition
 function self:AddClass (typeParameterList)
+	typeParameterList = GCompute.ToTypeParameterList (typeParameterList)
+	
 	for class in self:GetEnumerator () do
 		if class:GetTypeParameterList ():Equals (typeParameterList) then
 			return class
@@ -66,11 +68,11 @@ function self:IsOverloadedClass ()
 end
 
 --- Resolves the types of all types in this class group
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	for class in self:GetEnumerator () do
-		class:ResolveTypes (globalNamespace, errorReporter)
+		class:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -88,4 +90,12 @@ function self:ToString ()
 	end
 	typeGroup = typeGroup .. "}"
 	return typeGroup
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitOverloadedClass (self, ...)
+	
+	for class in self:GetEnumerator () do
+		class:Visit (namespaceVisitor, ...)
+	end
 end

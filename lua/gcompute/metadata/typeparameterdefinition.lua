@@ -37,7 +37,7 @@ function self:IsType ()
 	return true
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 end
 
 function self:ToString ()
@@ -46,4 +46,8 @@ end
 
 function self:ToType ()
 	return self.TypeParameterType
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitTypeParameter (self, ...)
 end

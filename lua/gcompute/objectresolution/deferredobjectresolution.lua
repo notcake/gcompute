@@ -1,12 +1,11 @@
 local self = {}
 GCompute.DeferredObjectResolution = GCompute.MakeConstructor (self, GCompute.IObject)
 
-function self:ctor (name, objectType, globalNamespace, localNamespace)
+function self:ctor (name, objectType, localNamespace)
 	self.Name = name
 	self.AST  = name
 	self.DesiredObjectType = objectType or GCompute.ResolutionObjectType.All
 	
-	self.GlobalNamespace = globalNamespace or GCompute.GlobalNamespace
 	self.LocalNamespace  = localNamespace
 	
 	self.Resolved = false
@@ -60,10 +59,6 @@ function self:GetFullName ()
 	return self:ToString ()
 end
 
-function self:GetGlobalNamespace ()
-	return self.GlobalNamespace
-end
-
 function self:GetObject ()
 	if not self:IsResolved () then
 		GCompute.Error ("DeferredObjectResolution:GetObject : " .. self.AST:ToString () .. " has not been resolved yet.")
@@ -95,12 +90,12 @@ function self:IsResolved ()
 	return self.Resolved
 end
 
-function self:Resolve ()
+function self:Resolve (objectResolver)
 	if self.Resolved then
 		return self.Object
 	end
 	
-	GCompute.ObjectResolver:ResolveASTNode (self.AST, true, self.GlobalNamespace, self.LocalNamespace)
+	objectResolver:ResolveASTNode (self.AST, true, self.LocalNamespace)
 	
 	local results = self.AST:GetResolutionResults ()
 	results:FilterByType (self.DesiredObjectType)
@@ -127,10 +122,6 @@ function self:Resolve ()
 	end
 	
 	return self.Object
-end
-
-function self:SetGlobalNamespace (globalNamespace)
-	self.GlobalNamespace = globalNamespace
 end
 
 function self:SetLocalNamespace (localNamespace)

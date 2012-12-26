@@ -69,6 +69,15 @@ function self:GetRootNamespace ()
 	return self.RootNamespace
 end
 
+function self:GetRootNamespaceSet ()
+	local rootNamespaceSet = GCompute.NamespaceSet ()
+	for referencedModule in self:GetModule ():GetReferencedModuleEnumerator () do
+		rootNamespaceSet:AddNamespace (referencedModule:GetRootNamespace ())
+	end
+	rootNamespaceSet:AddNamespace (self:GetRootNamespace ())
+	return rootNamespaceSet
+end
+
 -- Compilation
 --- Starts compilation of this CompilationGroup.
 -- @param callback A callback function (success)

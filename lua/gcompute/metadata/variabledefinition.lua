@@ -13,7 +13,7 @@ end
 --- Sets the type of this object
 -- @param type The Type of this object as a string or DeferredObjectResolution or Type
 function self:SetType (type)
-	self.Type = GCompute.ToDeferredTypeResolution (type, self:GetGlobalNamespace (), self:GetDeclaringObject ())
+	self.Type = GCompute.ToDeferredTypeResolution (type, self:GetDeclaringObject ())
 	return self
 end
 
@@ -33,13 +33,13 @@ function self:IsVariable ()
 end
 
 --- Resolves the type of this variable
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	if not self.Type then return end
 	
 	if self.Type:IsDeferredObjectResolution () then
-		self.Type:Resolve (globalNamespace, self:GetDeclaringObject ())
+		self.Type:Resolve (objectResolver)
 		if self.Type:IsFailedResolution () then
 			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 			self.Type = GCompute.ErrorType ()
@@ -54,4 +54,8 @@ end
 function self:ToString ()
 	local type = self.Type and self.Type:GetFullName () or "[Unknown Type]"
 	return "[Variable] " .. type .. " " .. (self:GetName () or "[Unnamed]")
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitVariable (self, ...)
 end

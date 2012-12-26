@@ -75,8 +75,14 @@ function self:RunSome (timeLimit)
 	timeLimit = timeLimit or 0.001
 	
 	-- Set up execution environment
-	local _executionContext = _G.executionContext
-	_G.executionContext = self:GetExecutionContext ()
+	local _executionContext    = _G.executionContext
+	local ___                  = _G.__
+	local _processLocalStorage = _G.processLocalStorage
+	local _threadLocalStorage  = _G.threadLocalStorage
+	_G.executionContext    = self:GetExecutionContext ()
+	_G.__                  = self:GetExecutionContext ():GetEnvironment ()
+	_G.processLocalStorage = self:GetExecutionContext ():GetProcessLocalStorage ()
+	_G.threadLocalStorage  = self:GetExecutionContext ():GetThreadLocalStorage ()
 	
 	-- Execute for 1 ms
 	local startTime = SysTime ()
@@ -90,7 +96,10 @@ function self:RunSome (timeLimit)
 	self.LastExecutionTime = SysTime ()
 	
 	-- Tear down execution environment
-	_G.executionContext = _executionContext
+	_G.executionContext    = _executionContext
+	_G.__                  = ___
+	_G.processLocalStorage = _processLocalStorage
+	_G.threadLocalStorage  = _threadLocalStorage
 end
 
 function self:SetFunction (threadFunction)

@@ -247,9 +247,9 @@ function self:MemberExists (name)
 	return self.Members [name] and true or false
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	for _, member in self:GetEnumerator () do
-		member:ResolveTypes (globalNamespace, errorReporter)
+		member:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -276,4 +276,10 @@ function self:ToString ()
 	namespace = namespace .. "\n}"
 	
 	return namespace
+end
+
+function self:Visit (namespaceVisitor, ...)
+	for _, member in self:GetEnumerator () do
+		member:Visit (namespaceVisitor, ...)
+	end
 end

@@ -16,6 +16,23 @@ function self:ctor (leftExpression, name, typeArgumentList)
 	self.ResolutionResult  = nil
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Syntax Trees", self)
+	
+	if self.LeftExpression then
+		self.LeftExpression:ComputeMemoryUsage (memoryUsageReport)
+	end
+	if self.TypeArgumentList then
+		self.TypeArgumentList:ComputeMemoryUsage (memoryUsageReport)
+	end
+	
+	self.ResolutionResults:ComputeMemoryUsage (memoryUsageReport)
+	return memoryUsageReport
+end
+
 function self:ExecuteAsAST (astRunner, state)
 	-- State 0: Evaluate left
 	-- State 1: Lookup member
@@ -28,7 +45,7 @@ function self:ExecuteAsAST (astRunner, state)
 			astRunner:PushNode (self:GetLeftExpression ())
 			astRunner:PushState (0)
 		else
-			astRunner:PushValue (executionContext:GetEnvironment ())
+			astRunner:PushValue (__)
 		end
 	elseif state == 1 then
 		-- Discard StaticMemberAccess
@@ -114,6 +131,10 @@ function self:Visit (astVisitor, ...)
 	if self:GetLeftExpression () then
 		self:SetLeftExpression (self:GetLeftExpression ():Visit (astVisitor, ...) or self:GetLeftExpression ())
 	end
+	if self:GetTypeArgumentList () then
+		self:SetTypeArgumentList (self:GetTypeArgumentList ():Visit (astVisitor, ...) or self:GetTypeArgumentList ())
+	end
+	
 
 	return astVisitor:VisitExpression (self, ...)
 end

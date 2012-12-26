@@ -54,15 +54,19 @@ function self:SetResultType (resultType)
 end
 
 function self:ToString ()
-	local object = "[Nothing]"
+	local object = ""
 	if self.Object then
 		if self.Object:IsObjectDefinition () then
 			if self.Object:IsNamespace () then
 				object = "[Namespace] " .. self.Object:GetFullName ()
 			elseif self.Object:IsOverloadedClass () then
-				object = "[Type Group] " .. self.Object:GetFullName ()
+				object = "[Type Group] " .. (self.Object:GetClassCount () == 1 and self.Object:GetClass (1):GetFullName () or self.Object:GetFullName ())
 			elseif self.Object:IsClass () then
 				object = "[Class] " .. self.Object:GetFullName ()
+			elseif self.Object:IsOverloadedMethod () then
+				object = "[Method Group] " .. (self.Object:GetMethodCount () == 1 and self.Object:GetMethod (1):GetFullName () or self.Object:GetFullName ())
+			elseif self.Object:IsMethod () then
+				object = "[Method] " .. self.Object:GetFullName ()
 			else
 				object = self.Object:ToString ()
 			end
@@ -71,6 +75,8 @@ function self:ToString ()
 		else
 			object = self.Object:ToString ()
 		end
+	else
+		object = "[Nothing]"
 	end
 	if self.ResultType == GCompute.ResolutionResultType.Local then
 		return "[" .. GCompute.ResolutionResultType [self.ResultType] .. ":" .. tostring (self.LocalDistance) .. "] " .. object

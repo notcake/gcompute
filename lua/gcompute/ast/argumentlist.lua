@@ -18,6 +18,12 @@ function self:AddArguments (arguments)
 	end
 end
 
+function self:AppendArgumentList (argumentList)
+	for argument in argumentList:GetEnumerator () do
+		self:AddArgument (argument)
+	end
+end
+
 function self:Clone ()
 	local argumentList = GCompute.AST.ArgumentList ()
 	argumentList:SetStartToken (self:GetStartToken ())

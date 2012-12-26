@@ -35,7 +35,7 @@ function self:GetSetter ()
 end
 
 function self:SetType (type)
-	self.Type = GCompute.ToDeferredTypeResolution (type, self:GetGlobalNamespace (), self:GetDeclaringObject ())
+	self.Type = GCompute.ToDeferredTypeResolution (type, self:GetDeclaringObject ())
 	if self.Getter then self.Getter:SetReturnType (self.Type) end
 	if self.Setter then self.Setter:GetParameterList ():SetParameterType (1, self.Type) end
 	return self
@@ -58,11 +58,11 @@ function self:GetType ()
 	return self.Type
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	if self.Type and self.Type:IsDeferredObjectResolution () then
-		self.Type:Resolve (globalNamespace, self:GetDeclaringObject ())
+		self.Type:Resolve (objectResolver)
 		if self.Type:IsFailedResolution () then
 			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 			self.Type = GCompute.ErrorType ()
@@ -72,13 +72,23 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	end
 	
 	if self.Getter then
-		self.Getter:ResolveTypes (globalNamespace, errorReporter)
+		self.Getter:ResolveTypes (objectResolver, errorReporter)
 	end
 	if self.Setter then
-		self.Setter:ResolveTypes (globalNamespace, errorReporter)
+		self.Setter:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
 function self:ToString ()
 	return self:GetDisplayText ()
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitProperty (self, ...)
+	if self.Getter then
+		self.Getter:Visit (namespaceVisitor, ...)
+	end
+	if self.Setter then
+		self.Setter:Visit (namespaceVisitor, ...)
+	end
 end

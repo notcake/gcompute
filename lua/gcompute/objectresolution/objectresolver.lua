@@ -20,7 +20,18 @@ GCompute.ObjectResolver = GCompute.MakeConstructor (self)
 		Type (Type ...)
 ]]
 
-function self:ctor ()
+function self:ctor (rootNamespaceSet)
+	-- Root Namespaces
+	self.RootNamespaceSet = rootNamespaceSet
+end
+
+-- Root Namespaces
+function self:GetRootNamespaceSet ()
+	return self.RootNamespaceSet
+end
+
+function self:SetRootNamespaceSet (rootNamespaceSet)
+	self.RootNamespaceSet = rootNamespaceSet
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -28,34 +39,101 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if memoryUsageReport:IsCounted (self) then return end
 	
 	memoryUsageReport:CreditTableStructure ("Object Resolvers", self)
+	memoryUsageReport:CreditTableStructure ("Object Resolvers", self.RootNamespaces)
+	
 	return memoryUsageReport
 end
 
-function self:ResolveGlobal (resolutionResults, name, globalDefinition, usingDefinition)
-	local currentUsingSource = usingDefinition
-	while currentUsingSource do
-		if currentUsingSource:IsNamespace () or currentUsingSource:IsClass () then
-			for i = 1, currentUsingSource:GetUsingCount () do
-				local usingDirective = currentUsingSource:GetUsing (i)
-				local targetDefinition = usingDirective:GetNamespace ()
-				local targetNamespace  = targetDefinition and targetDefinition:GetNamespace ()
-				if targetNamespace:MemberExists (name) then
-					resolutionResults:AddResult (GCompute.ResolutionResult (targetNamespace:GetMember (name), GCompute.ResolutionResultType.Global))
-				end
-			end
-		end
-	
-		currentUsingSource = currentUsingSource:GetDeclaringObject ()
+-- AST node resolution
+function self:ResolveASTNode (astNode, recursive, localDefinition, fileId)
+	if astNode:Is ("Identifier") then
+		self:ResolveIdentifier (astNode, recursive, localDefinition, fileId)
+	elseif astNode:Is ("NameIndex") then
+		self:ResolveNameIndex (astNode, recursive, localDefinition, fileId)
+	elseif astNode:Is ("FunctionType") then
+		self:ResolveFunctionType (astNode, recursive, localDefinition, fileId)
+	end
+end
+
+function self:ResolveIdentifier (astNode, recursive, localDefinition, fileId)
+	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), localDefinition, fileId)
+end
+
+function self:ResolveNameIndex (astNode, recursive, localDefinition, fileId)
+	if recursive then
+		self:ResolveASTNode (astNode:GetLeftExpression (), recursive, localDefinition, fileId)
 	end
 	
-	if globalDefinition:GetNamespace ():MemberExists (name) then
-		resolutionResults:AddResult (GCompute.ResolutionResult (globalDefinition:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Global))
+	local leftResults = astNode:GetLeftExpression ():GetResolutionResults ()
+	if not leftResults then
+		astNode:AddErrorMessage ("NameIndex's left expression has not been resolved! (" .. astNode:ToString () .. ")")
+		leftResults = GCompute.ResolutionResults ()
+	end
+	
+	leftResults:FilterByLocality ()
+	
+	local right = astNode:GetIdentifier ()
+	local rightResults = astNode:GetResolutionResults ()
+	if not right then
+		astNode:AddErrorMessage ("NameIndex is missing an Identifier (" .. astNode:ToString () .. ")")
+	elseif right:Is ("Identifier") then
+		for i = 1, leftResults:GetFilteredResultCount () do
+			local leftDefinition = leftResults:GetFilteredResult (i):GetObject ():UnwrapAlias ()
+			if leftDefinition:HasNamespace () then
+				self:ResolveMember (rightResults, right:GetName (), leftDefinition, fileId)
+			end
+		end
+	else
+		astNode:AddErrorMessage ("Unknown AST node on right of NameIndex (" .. right:GetNodeType () .. ")")
+	end
+end
+
+function self:ResolveFunctionType (astNode, recursive, localDefinition, fileId)
+	if recursive then
+		self:ResolveASTNode (astNode:GetReturnTypeExpression (), recursive, localDefinition, fileId)
+		for i = 1, astNode:GetParameterList ():GetParameterCount () do
+			local parameterType = astNode:GetParameterList ():GetParameterType (i)
+			self:ResolveASTNode (parameterType, recursive, localDefinition, fileId)
+		end
+	end
+	
+	local returnResults = astNode:GetReturnTypeExpression ():GetResolutionResults ()
+	returnResults:FilterToConcreteTypes ()
+	if returnResults:GetFilteredResultCount () == 0 then
+		astNode:GetReturnTypeExpression ():AddErrorMessage ("Cannot resolve " .. astNode:GetReturnTypeExpression ():ToString () .. " - no matching concrete types found.\n" .. returnResults:ToString ())
+	elseif returnResults:GetFilteredResultCount () > 1 then
+		astNode:GetReturnTypeExpression ():AddErrorMessage ("Cannot resolve " .. astNode:GetReturnTypeExpression ():ToString () .. " - too many matching concrete types found.\n" .. returnResults:ToString ())
+	end
+	
+	for i = 1, astNode:GetParameterList ():GetParameterCount () do
+		local parameterType = astNode:GetParameterList ():GetParameterType (i)
+		local parameterResults = parameterType:GetResolutionResults ()
+		parameterResults:FilterToConcreteTypes ()
+		if parameterResults:GetFilteredResultCount () == 0 then
+			parameterType:AddErrorMessage ("Cannot resolve " .. parameterType:ToString () .. " - no matching concrete types found.\n" .. parameterResults:ToString ())
+		elseif parameterResults:GetFilteredResultCount () > 1 then
+			parameterType:AddErrorMessage ("Cannot resolve " .. parameterType:ToString () .. " - too many matching concrete types found.\n" .. parameterResults:ToString ())
+		end
+	end
+end
+
+-- Internal, do not call
+--- Looks up the member specified in the given namespace's corresponding namespace set
+-- @param resolutionResults The ResolutionResults in which to store results
+-- @param name The name of the member to look up
+-- @param referenceDefinition The namespace whose location is used to look up the specified member
+function self:ResolveGlobal (resolutionResults, name, referenceDefinition, fileId)
+	for translatedNamespace in self.RootNamespaceSet:GetTranslatedEnumerator (referenceDefinition) do
+		local member = translatedNamespace and translatedNamespace:GetMember (name)
+		if member then
+			resolutionResults:AddResult (GCompute.ResolutionResult (member, GCompute.ResolutionResultType.Global))
+		end
 	end
 	
 	return resolutionResults
 end
 
-function self:ResolveLocal (resolutionResults, name, localDefinition)
+function self:ResolveLocal (resolutionResults, name, localDefinition, fileId)
 	local localDistance = 0
 	while localDefinition do
 		local member = localDefinition:GetNamespace ():GetMember (name)
@@ -88,88 +166,30 @@ function self:ResolveLocal (resolutionResults, name, localDefinition)
 	return resolutionResults
 end
 
-function self:ResolveMember (resolutionResults, name, objectDefinition)
+function self:ResolveMember (resolutionResults, name, objectDefinition, fileId)
 	if objectDefinition:GetNamespace ():MemberExists (name) then
 		resolutionResults:AddResult (GCompute.ResolutionResult (objectDefinition:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Other))
 	end
 end
 
-function self:ResolveUnqualifiedIdentifier (resolutionResults, name, globalDefinition, localDefinition)
-	self:ResolveLocal  (resolutionResults, name, localDefinition)
-	self:ResolveGlobal (resolutionResults, name, globalDefinition, localDefinition)
-end
-
--- AST node resolution
-function self:ResolveASTNode (astNode, recursive, globalDefinition, localDefinition)
-	if astNode:Is ("Identifier") then
-		self:ResolveIdentifier (astNode, recursive, globalDefinition, localDefinition)
-	elseif astNode:Is ("NameIndex") then
-		self:ResolveNameIndex (astNode, recursive, globalDefinition, localDefinition)
-	elseif astNode:Is ("FunctionType") then
-		self:ResolveFunctionType (astNode, recursive, globalDefinition, localDefinition)
-	end
-end
-
-function self:ResolveIdentifier (astNode, recursive, globalDefinition, localDefinition)
-	self:ResolveUnqualifiedIdentifier (astNode:GetResolutionResults (), astNode:GetName (), globalDefinition, localDefinition)
-end
-
-function self:ResolveNameIndex (astNode, recursive, globalDefinition, localDefinition)
-	if recursive then
-		self:ResolveASTNode (astNode:GetLeftExpression (), recursive, globalDefinition, localDefinition)
-	end
+function self:ResolveUnqualifiedIdentifier (resolutionResults, name, localDefinition, fileId)
+	self:ResolveLocal  (resolutionResults, name, localDefinition, fileId)
 	
-	local leftResults = astNode:GetLeftExpression ():GetResolutionResults ()
-	if not leftResults then
-		astNode:AddErrorMessage ("NameIndex's left expression has not been resolved! (" .. astNode:ToString () .. ")")
-		leftResults = GCompute.ResolutionResults ()
-	end
-	
-	leftResults:FilterByLocality ()
-	
-	local right = astNode:GetIdentifier ()
-	local rightResults = astNode:GetResolutionResults ()
-	if not right then
-		astNode:AddErrorMessage ("NameIndex is missing an Identifier (" .. astNode:ToString () .. ")")
-	elseif right:Is ("Identifier") then
-		for i = 1, leftResults:GetFilteredResultCount () do
-			local leftDefinition = leftResults:GetFilteredResult (i):GetObject ():UnwrapAlias ()
-			if leftDefinition:HasNamespace () then
-				self:ResolveMember (rightResults, right:GetName (), leftDefinition)
+	-- Check usings
+	local usingSource = localDefinition
+	while usingSource do
+		if usingSource:IsNamespace () or usingSource:IsClass () then
+			for i = 1, usingSource:GetUsingCount () do
+				local targetDefinition = usingSource:GetUsing (i):GetNamespace ()
+				if targetDefinition then
+					self:ResolveGlobal (resolutionResults, name, targetDefinition, fileId)
+				end
 			end
 		end
-	else
-		astNode:AddErrorMessage ("Unknown AST node on right of NameIndex (" .. right:GetNodeType () .. ")")
-	end
-end
-
-function self:ResolveFunctionType (astNode, recursive, globalDefinition, localDefinition)
-	if recursive then
-		self:ResolveASTNode (astNode:GetReturnTypeExpression (), recursive, globalDefinition, localDefinition)
-		for i = 1, astNode:GetParameterList ():GetParameterCount () do
-			local parameterType = astNode:GetParameterList ():GetParameterType (i)
-			self:ResolveASTNode (parameterType, recursive, globalDefinition, localDefinition)
-		end
+	
+		usingSource = usingSource:GetDeclaringObject ()
 	end
 	
-	local returnResults = astNode:GetReturnTypeExpression ():GetResolutionResults ()
-	returnResults:FilterToConcreteTypes ()
-	if returnResults:GetFilteredResultCount () == 0 then
-		astNode:GetReturnTypeExpression ():AddErrorMessage ("Cannot resolve " .. astNode:GetReturnTypeExpression ():ToString () .. " - no matching concrete types found.\n" .. returnResults:ToString ())
-	elseif returnResults:GetFilteredResultCount () > 1 then
-		astNode:GetReturnTypeExpression ():AddErrorMessage ("Cannot resolve " .. astNode:GetReturnTypeExpression ():ToString () .. " - too many matching concrete types found.\n" .. returnResults:ToString ())
-	end
-	
-	for i = 1, astNode:GetParameterList ():GetParameterCount () do
-		local parameterType = astNode:GetParameterList ():GetParameterType (i)
-		local parameterResults = parameterType:GetResolutionResults ()
-		parameterResults:FilterToConcreteTypes ()
-		if parameterResults:GetFilteredResultCount () == 0 then
-			parameterType:AddErrorMessage ("Cannot resolve " .. parameterType:ToString () .. " - no matching concrete types found.\n" .. parameterResults:ToString ())
-		elseif parameterResults:GetFilteredResultCount () > 1 then
-			parameterType:AddErrorMessage ("Cannot resolve " .. parameterType:ToString () .. " - too many matching concrete types found.\n" .. parameterResults:ToString ())
-		end
-	end
+	-- Check root
+	self:ResolveGlobal (resolutionResults, name, nil, fileId)
 end
-
-GCompute.ObjectResolver = GCompute.ObjectResolver ()

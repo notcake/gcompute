@@ -9,8 +9,8 @@ function self:GetCorrespondingDefinition (globalNamespace)
 	GCompute.Error ("ImplicitCastDefinition:GetCorrespondingDefinition : Not implemented.")
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
-	self.__base.ResolveTypes (self, globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
+	self.__base.ResolveTypes (self, objectResolver, errorReporter)
 	
 	self.Name = "implicit operator " .. self:GetReturnType ():GetFullName ()
 end

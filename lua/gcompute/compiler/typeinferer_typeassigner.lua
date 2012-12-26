@@ -14,11 +14,8 @@ function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.CompilationGroup = self.CompilationUnit and self.CompilationUnit:GetCompilationGroup ()
 	
-	self.RootNamespaceSet = GCompute.NamespaceSet ()
-	for referencedModule in self.CompilationGroup:GetModule ():GetReferencedModuleEnumerator () do
-		self.RootNamespaceSet:AddNamespace (referencedModule:GetRootNamespace ())
-	end
-	self.RootNamespaceSet:AddNamespace (self.CompilationGroup:GetRootNamespace ())
+	self.RootNamespaceSet = self.CompilationGroup:GetRootNamespaceSet ()
+	self.ObjectResolver = GCompute.ObjectResolver (self.RootNamespaceSet)
 end
 
 function self:VisitStatement (statement)
@@ -151,11 +148,11 @@ function self:VisitExpression (expression)
 	elseif expression:Is ("LeftUnaryOperator") then
 		overrideExpression = self:VisitLeftUnaryOperator (expression)
 	elseif expression:Is ("BooleanLiteral") then
-		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Boolean", GCompute.ResolutionObjectType.Type):Resolve ())
+		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Boolean", GCompute.ResolutionObjectType.Type):Resolve (self.ObjectResolver))
 	elseif expression:Is ("NumericLiteral") then
-		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Number",  GCompute.ResolutionObjectType.Type):Resolve ())
+		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("Number",  GCompute.ResolutionObjectType.Type):Resolve (self.ObjectResolver))
 	elseif expression:Is ("StringLiteral") then
-		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("String",  GCompute.ResolutionObjectType.Type):Resolve ())
+		expression:SetType (expression:GetType () or GCompute.DeferredObjectResolution ("String",  GCompute.ResolutionObjectType.Type):Resolve (self.ObjectResolver))
 	elseif expression:Is ("FunctionType") then
 		expression:SetType (GCompute.TypeSystem:GetType ())
 	elseif expression:Is ("AnonymousFunction") then

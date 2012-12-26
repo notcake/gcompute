@@ -16,7 +16,7 @@ end
 function GCompute.Expression2.AddContainerIndexer (classDefinition, keyType)
 	keyType = keyType or "number"
 	
-	classDefinition:AddMethod ("operator[]", keyType .. " index", { "T" })
+	classDefinition:AddMethod ("operator[]", keyType .. " index", "T")
 		:SetReturnType ("T")
 		:SetNativeString ("%self% [%arg:index%]")
 		:SetTypeCurryerFunction (
@@ -29,7 +29,7 @@ function GCompute.Expression2.AddContainerIndexer (classDefinition, keyType)
 			end
 		)
 
-	classDefinition:AddMethod ("operator[]", keyType .. " index, T val", { "T" })
+	classDefinition:AddMethod ("operator[]", keyType .. " index, T val", "T")
 		:SetReturnType ("T")
 		:SetNativeString ("%self% [%arg:index%] = %arg:val%")
 		:SetTypeCurryerFunction (

@@ -1,6 +1,22 @@
 local self = {}
 GCompute.ParameterList = GCompute.MakeConstructor (self)
 
+function GCompute.ToParameterList (parameterList)
+	parameterList = parameterList or GCompute.EmptyParameterList
+	if type (parameterList) == "string" then
+		local originalParameterList = parameterList
+		parameterList = GCompute.TypeParser (parameterList):ParameterList ()
+		local messages = parameterList:GetMessages ()
+		if messages then
+			ErrorNoHalt ("In \"" .. originalParameterList .. "\":\n" .. messages:ToString () .. "\n")
+		end
+		parameterList = parameterList:ToParameterList ()
+	elseif #parameterList > 0 then
+		parameterList = GCompute.ParameterList (parameterList)
+	end
+	return parameterList
+end
+
 function self:ctor (parameters)
 	self.ParameterCount = 0
 	self.ParameterTypes = {}
@@ -132,14 +148,13 @@ function self:MatchesArgumentCount (argumentCount)
 end
 
 --- Resolves the types of all parameters in this parameter list
-function self:ResolveTypes (globalNamespace, localNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, localNamespace, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	for i = 1, #self.ParameterTypes do
 		if self.ParameterTypes [i]:IsDeferredObjectResolution () then
-			self.ParameterTypes [i]:SetGlobalNamespace (globalNamespace)
 			self.ParameterTypes [i]:SetLocalNamespace (localNamespace)
-			self.ParameterTypes [i]:Resolve ()
+			self.ParameterTypes [i]:Resolve (objectResolver)
 			if self.ParameterTypes [i]:IsFailedResolution () then
 				self.ParameterTypes [i]:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 				self.ParameterTypes [i] = GCompute.ErrorType ()

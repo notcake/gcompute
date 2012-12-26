@@ -50,7 +50,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 		if nextSymbol == "." then
 			local nameIndex = GCompute.AST.NameIndex ()
 			nameIndex:SetLeftExpression (leftExpression)
-			local identifier = self:Identifier (pos, str)
+			local identifier = self:Identifier ()
 			if not identifier then
 				identifier = GCompute.AST.Identifier ()
 				identifier:AddErrorMessage ("Expected <identifier> after '.', got " .. self:PeekFormatted () .. ".")
@@ -62,7 +62,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			local functionType = GCompute.AST.FunctionType ()
 			functionType:SetReturnTypeExpression (leftExpression)
 			
-			local parameterList = self:ParameterList (pos, str)
+			local parameterList = self:ParameterList ()
 			functionType:SetParameterList (parameterList)
 			if not self:Accept (")") then
 				functionType:AddErrorMessage ("Expected ')' to close function parameter list, got " .. self:PeekFormatted () .. ".")
@@ -70,8 +70,26 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 			end
 			
 			leftExpression = functionType
+		elseif nextSymbol == "<" then
+			local typeArgumentList = self:TypeArgumentList ()
+			typeArgumentList:SetStartCharacter (self.Position - 2)
+			if leftExpression:Is ("NameIndex") or leftExpression:Is ("Identifier") then
+				if leftExpression:GetTypeArgumentList () then
+					leftExpression:GetTypeArgumentList ():AppendArgumentList (typeArgumentList)
+				else
+					leftExpression:SetTypeArgumentList (typeArgumentList)
+				end
+			else
+				typeArgumentList:AddErrorMessage ("Type argument lists can only be applied to qualified or unqualified names.")
+			end
+			if not self:Accept (">") then
+				leftExpression:AddErrorMessage ("Expected '>' to close type argument list, got " .. self:PeekFormatted () .. ".")
+					:SetStartCharacter (self.Position - 1)
+			end
+			typeArgumentList:SetEndCharacter (self.Position - 2)
 		else
-			self:Error (pos, str, "Unhandled operator " .. self:PeekFormatted (pos, str))
+			leftExpression:AddErrorMessage ("Unhandled operator '" .. nextSymbol .. "'")
+				:SetStartCharacter (self.Position - 2)
 		end
 		self:AcceptWhitespace ()
 		
@@ -81,7 +99,7 @@ function self:IndexOrParametricIndexOrArrayOrFunction ()
 	return leftExpression
 end
 
-function self:ParameterList (pos, str)
+function self:ParameterList ()
 	local parameterList = GCompute.AST.ParameterList ()
 	local type, name = self:Parameter ()
 	if not type then
@@ -111,7 +129,59 @@ function self:Parameter ()
 	return type, name
 end
 
-function self:Identifier (pos, str)
+function self:TypeParameterList ()
+	local typeParameterList = GCompute.AST.TypeParameterList ()
+	local name = self:TypeParameter ()
+	if not name then
+		return typeParameterList
+	end
+	
+	typeParameterList:AddParameter (name)
+	
+	self:AcceptWhitespace ()
+	while self:Accept (",") do
+		self:AcceptWhitespace ()
+		
+		name = self:TypeParameter ()
+		if not name then break end
+		typeParameterList:AddParameter (name)
+		
+		self:AcceptWhitespace ()
+	end
+	
+	return typeParameterList
+end
+
+function self:TypeParameter ()
+	-- Must return a string, not an AST node
+	return self:AcceptPattern ("[a-zA-Z_][a-zA-Z0-9_]*")
+end
+
+function self:TypeArgumentList ()
+	local typeArgumentList = GCompute.AST.TypeArgumentList ()
+	
+	local type = self:Type ()
+	if not type then
+		return typeArgumentList
+	end
+	
+	typeArgumentList:AddArgument (type)
+	
+	self:AcceptWhitespace ()
+	while self:Accept (",") do
+		self:AcceptWhitespace ()
+		
+		type = self:Type ()
+		if not type then break end
+		typeArgumentList:AddArgument (type)
+		
+		self:AcceptWhitespace ()
+	end
+	
+	return typeArgumentList
+end
+
+function self:Identifier ()
 	local name = self:AcceptPattern ("[a-zA-Z_][a-zA-Z0-9_]*")
 	if not name then return nil end
 	
@@ -158,7 +228,7 @@ function self:Peek ()
 end
 
 function self:PeekFormatted ()
-	local nextSymbol = self:Peek (pos, str)
+	local nextSymbol = self:Peek ()
 	if nextSymbol then
 		if nextSymbol:len () == 0 then
 			return "<eof>"

@@ -52,7 +52,7 @@ for _, typeName in ipairs (methodTypes) do
 		:SetNativeFunction (
 			function (self, val)
 				self.Values [#self.Types + 1] = val
-				self.Types  [#self.Types + 1] = executionContext:GetEnvironment ().Expression2 [typeName] [".Type"]
+				self.Types  [#self.Types + 1] = __.Expression2 [typeName] [".Type"]
 			end
 		)
 	
@@ -60,7 +60,7 @@ for _, typeName in ipairs (methodTypes) do
 		:SetReturnType (typeName)
 		:SetNativeFunction (
 			function (self, index)
-				local value = self:Get (index, executionContext:GetEnvironment ().Expression2 [typeName] [".Type"])
+				local value = self:Get (index, __.Expression2 [typeName] [".Type"])
 				self:Remove (index)
 				return value
 			end
@@ -88,8 +88,7 @@ Array:AddMethod ("ToString")
 	:SetReturnType ("String")
 	:SetNativeFunction (
 		function (self)
-			local tls = executionContext:GetThreadLocalStorage ()
-			local inToString = tls.Expression2.InToString
+			local inToString = threadLocalStorage.Expression2.InToString
 			
 			if inToString [self] then
 				return "{array}"

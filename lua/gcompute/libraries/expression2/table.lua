@@ -13,8 +13,7 @@ Table:AddMethod ("ToString")
 	:SetReturnType ("String")
 	:SetNativeFunction (
 		function (self)
-			local tls = executionContext:GetThreadLocalStorage ()
-			local inToString = tls.Expression2.InToString
+			local inToString = threadLocalStorage.Expression2.InToString
 			
 			if inToString [self] then
 				return "{table}"

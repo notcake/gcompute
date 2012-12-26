@@ -21,11 +21,11 @@ function GCompute.PrintDebug (message)
 	Msg (message .. "\n")
 end
 
-function GCompute.ToDeferredTypeResolution (typeName, globalDefinition, localDefinition)
+function GCompute.ToDeferredTypeResolution (typeName, localDefinition)
 	if typeName == nil then
 		return nil
 	elseif type (typeName) == "string" or typeName:IsASTNode () then
-		return GCompute.DeferredObjectResolution (typeName, GCompute.ResolutionObjectType.Type, globalDefinition, localDefinition)
+		return GCompute.DeferredObjectResolution (typeName, GCompute.ResolutionObjectType.Type, localDefinition)
 	elseif typeName:IsDeferredObjectResolution () then
 		typeName:SetLocalNamespace (typeName:GetLocalNamespace () or localDefinition)
 		return typeName
@@ -66,6 +66,9 @@ include ("epoe.lua")
 -- syntax trees
 include ("astnode.lua")
 include ("ast.lua")
+
+-- visitors
+include ("visitor.lua")
 include ("astvisitor.lua")
 include ("namespacevisitor.lua")
 
@@ -96,6 +99,7 @@ include ("compiler/parser.lua")
 include ("compiler/blockstatementinserter.lua")
 include ("compiler/namespacebuilder.lua")
 include ("compiler/uniquenameassigner.lua")
+include ("compiler/aliasresolver.lua")
 include ("compiler/simplenameresolver.lua")
 include ("compiler/typeinferer.lua")
 include ("compiler/typeinferer_typeassigner.lua")
@@ -145,8 +149,6 @@ include ("objectresolution/resolutionresult.lua")
 include ("objectresolution/resolutionresults.lua")
 include ("objectresolution/deferredobjectresolution.lua")
 include ("objectresolution/objectresolver.lua")
--- TODO: Replace ObjectResolver with ObjectResolver2
-include ("objectresolution/objectresolver2.lua")
 
 -- text output
 include ("textoutputbuffer.lua")
@@ -193,12 +195,13 @@ include ("metadata/mirror/mirroroverloadedclassdefinition.lua")
 include ("metadata/mirror/mirroroverloadedmethoddefinition.lua")
 
 -- parameters and arguments
-include ("metadata/typeparameterlist.lua")
 include ("metadata/parameterlist.lua")
+GCompute.EmptyParameterList = GCompute.ParameterList ()
 
+include ("metadata/typeparameterlist.lua")
 include ("metadata/typeargumentlist.lua")
 include ("metadata/typeargumentlistlist.lua")
-
+include ("metadata/emptytypeparameterlist.lua")
 include ("metadata/emptytypeargumentlist.lua")
 
 include ("metadata/usingdirective.lua")
@@ -218,9 +221,6 @@ include ("metadata/lua/tablenamespace.lua")
 GCompute.Other = {}
 include ("metadata/other/expression2.lua")
 include ("metadata/other/lemongate.lua")
-
-GCompute.EmptyTypeParameterList = GCompute.TypeParameterList ()
-GCompute.EmptyParameterList = GCompute.ParameterList ()
 
 -- runtime function calls
 include ("functioncalls/functionresolutiontype.lua")
@@ -276,7 +276,12 @@ GCompute.GlobalNamespace:SetNamespaceType (GCompute.NamespaceType.Global)
 
 include ("corelibrary.lua")
 GCompute.IncludeDirectory ("gcompute/libraries", true)
-GCompute.GlobalNamespace:ResolveTypes (GCompute.GlobalNamespace)
+GCompute.GlobalNamespace:ResolveNames (
+	GCompute.ObjectResolver (
+		GCompute.NamespaceSet ()
+			:AddNamespace (GCompute.GlobalNamespace)
+	)
+)
 
 if CLIENT then
 	include ("gooey/gooey.lua")

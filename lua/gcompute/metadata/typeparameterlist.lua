@@ -1,6 +1,22 @@
 local self = {}
 GCompute.TypeParameterList = GCompute.MakeConstructor (self)
 
+function GCompute.ToTypeParameterList (typeParameterList)
+	typeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
+	if type (typeParameterList) == "string" then
+		local originalTypeParameterList = typeParameterList
+		typeParameterList = GCompute.TypeParser (typeParameterList):TypeParameterList ()
+		local messages = typeParameterList:GetMessages ()
+		if messages then
+			ErrorNoHalt ("In \"" .. originalTypeParameterList .. "\":\n" .. messages:ToString () .. "\n")
+		end
+		typeParameterList = typeParameterList:ToTypeParameterList ()
+	elseif #typeParameterList > 0 then
+		typeParameterList = GCompute.TypeParameterList (typeParameterList)
+	end
+	return typeParameterList
+end
+
 function self:ctor (parameters)
 	self.ParameterCount = 0
 	self.ParameterNames = {}

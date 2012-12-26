@@ -1,7 +1,11 @@
 local self = {}
-GCompute.ASTVisitor = GCompute.MakeConstructor (self)
+GCompute.ASTVisitor = GCompute.MakeConstructor (self, GCompute.Visitor)
 
 function self:ctor ()
+end
+
+function self:IsASTVisitor ()
+	return true
 end
 
 function self:Process (blockStatement, callback)

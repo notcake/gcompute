@@ -23,17 +23,13 @@ function self:ctor (compilationUnit)
 	self.CompilationUnit = compilationUnit
 	self.FileId = self.CompilationUnit:GetSourceFileId ()
 	
-	self.ObjectResolver = GCompute.ObjectResolver2 ()
-	for referencedModule in self.CompilationUnit:GetCompilationGroup ():GetModule ():GetReferencedModuleEnumerator () do
-		self.ObjectResolver:AddRootNamespace (referencedModule:GetRootNamespace ())
-	end
-	self.ObjectResolver:AddRootNamespace (self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ())
+	self.ObjectResolver = GCompute.ObjectResolver (self.CompilationUnit:GetCompilationGroup ():GetRootNamespaceSet ())
 end
 
 function self:Process (blockStatement, callback)
 	self:ProcessRoot (blockStatement,
 		function ()
-			self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ():ResolveTypes (self.CompilationUnit:GetCompilationGroup ():GetRootNamespace (), self.CompilationUnit)
+			self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ():ResolveTypes (self.ObjectResolver, self.CompilationUnit)
 			callback ()
 		end
 	)
@@ -142,5 +138,5 @@ function self:ResolveUsings (statement)
 	if not definition then return end
 	if not definition:IsNamespace () or not definition:IsClass () then return end
 	
-	definition:ResolveUsings (self.GlobalNamespace)
+	definition:ResolveUsings (self.ObjectResolver)
 end

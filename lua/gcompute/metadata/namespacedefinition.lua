@@ -127,9 +127,9 @@ function self:GetUsingCount ()
 	return #self.Usings
 end
 
-function self:ResolveUsings (globalNamespace)
+function self:ResolveUsings (objectResolver)
 	for i = 1, self:GetUsingCount () do
-		self:GetUsing (i):Resolve (globalNamespace)
+		self:GetUsing (i):Resolve (objectResolver)
 	end
 end
 
@@ -164,13 +164,13 @@ function self:IsNamespace ()
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
-	self:GetNamespace ():ResolveTypes (globalNamespace, errorReporter)
+	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
 	
 	for _, fileStaticNamespace in self:GetFileStaticNamespaceEnumerator () do
-		fileStaticNamespace:ResolveTypes (globalNamespace, errorReporter)
+		fileStaticNamespace:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -206,4 +206,9 @@ function self:ToString ()
 	end
 	
 	return namespaceDefinition
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitNamespace (self, ...)
+	self:GetNamespace ():Visit (namespaceVisitor, ...)
 end

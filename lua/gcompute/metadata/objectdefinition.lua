@@ -427,12 +427,21 @@ function self:IsVariable ()
 end
 
 --- Resolves all types
-function self:ResolveTypes (globalNamespace, errorReporter)
-	ErrorNoHalt (self:GetLocation () .. ":ResolveTypes : Not implemented.\n")
+function self:ResolveNames (objectResolver, errorReporter)
+	GCompute.AliasResolver (objectResolver, errorReporter):Process (self)
+	self:ResolveTypes (objectResolver, errorReporter)
+end
+
+function self:ResolveTypes (objectResolver, errorReporter)
+	GCompute.Error (self:GetFullName () .. ":ResolveTypes : Not implemented.")
 end
 
 --- Returns a string representing this ObjectDefinition
 -- @return A string representing this ObjectDefinition
 function self:ToString ()
 	return self:GetName ()
+end
+
+function self:Visit (namespaceVisitor, ...)
+	GCompute.Error (self:GetFullName () .. ":Visit : Not implemented.")
 end

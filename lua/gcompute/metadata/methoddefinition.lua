@@ -13,18 +13,7 @@ function self:ctor (name, parameterList, typeParameterList)
 	
 	-- Method
 	self.ReturnType = GCompute.DeferredObjectResolution ("void", GCompute.ResolutionObjectType.Type)
-	self.ParameterList = parameterList or GCompute.EmptyParameterList
-	
-	if type (self.ParameterList) == "string" then
-		self.ParameterList = GCompute.TypeParser (self.ParameterList):ParameterList ()
-		local messages = self.ParameterList:GetMessages ()
-		if messages then
-			ErrorNoHalt ("In \"" .. parameterList .. "\":\n" .. messages:ToString () .. "\n")
-		end
-		self.ParameterList = self.ParameterList:ToParameterList ()
-	elseif #self.ParameterList > 0 then
-		self.ParameterList = GCompute.ParameterList (self.ParameterList)
-	end
+	self.ParameterList = GCompute.ToParameterList (parameterList)
 	
 	-- AST
 	self.FunctionDeclaration = nil
@@ -34,10 +23,7 @@ function self:ctor (name, parameterList, typeParameterList)
 	self.NativeFunction = nil
 	
 	-- Type Parameters
-	self.TypeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
-	if #self.TypeParameterList > 0 then
-		self.TypeParameterList = GCompute.TypeParameterList (self.TypeParameterList)
-	end
+	self.TypeParameterList = GCompute.ToTypeParameterList (typeParameterList)
 	self.TypeArgumentList = GCompute.EmptyTypeArgumentList
 	
 	self.TypeParametricMethodDefinition = self
@@ -127,7 +113,7 @@ end
 --- Sets the return type of this function
 -- @param returnType The return type as a string or DeferredObjectResolution or Type
 function self:SetReturnType (returnType)
-	self.ReturnType = GCompute.ToDeferredTypeResolution (returnType, self:GetGlobalNamespace (), self)
+	self.ReturnType = GCompute.ToDeferredTypeResolution (returnType, self)
 	return self
 end
 
@@ -312,14 +298,14 @@ function self:IsMethod ()
 end
 
 --- Resolves the return type and paremeter types of this function
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	self:BuildNamespace ()
 	
 	local returnType = self:GetReturnType ()
 	if returnType and returnType:IsDeferredObjectResolution () then
-		returnType:Resolve ()
+		returnType:Resolve (objectResolver)
 		if returnType:IsFailedResolution () then
 			returnType:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 			self:SetReturnType (GCompute.ErrorType ())
@@ -327,11 +313,11 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 			self:SetReturnType (returnType:GetObject ())
 		end
 	end
-	self:GetParameterList ():ResolveTypes (globalNamespace, self, errorReporter)
-	self:GetNamespace ():ResolveTypes (globalNamespace, errorReporter)
+	self:GetParameterList ():ResolveTypes (objectResolver, self, errorReporter)
+	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
 	
 	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
-		typeCurriedDefinition:ResolveTypes (globalNamespace, errorReporter)
+		typeCurriedDefinition:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -353,6 +339,17 @@ function self:ToString ()
 	end
 	methodDefinition = methodDefinition .. " " .. self:GetParameterList ():GetRelativeName (self)
 	return methodDefinition
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitMethod (self, ...)
+	if self:GetNamespace () then
+		self:GetNamespace ():Visit (namespaceVisitor, ...)
+	end
+	
+	for _, typeCurriedMethod in pairs (self.TypeCurriedDefinitions) do
+		typeCurriedMethod:Visit (namespaceVisitor)
+	end
 end
 
 -- Internal, do not call

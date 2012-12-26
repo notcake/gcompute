@@ -33,7 +33,7 @@ end
 --- Adds a base type to this class
 -- @param baseType The base type to be added, as a string, DeferredObjectResolution or Type
 function self:AddBaseType (baseType)
-	baseType = GCompute.ToDeferredTypeResolution (baseType, self:GetGlobalNamespace (), self:GetDefinition ())
+	baseType = GCompute.ToDeferredTypeResolution (baseType, self:GetDefinition ())
 	
 	-- Check for cycles, duplicate base types
 	if not baseType:IsDeferredObjectResolution () then
@@ -83,10 +83,10 @@ function self:GetCorrespondingDefinition (globalNamespace)
 	return correspondingDefinition:GetClassType ()
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	for k, baseType in ipairs (self.BaseTypes) do
 		if baseType:IsDeferredObjectResolution () then
-			baseType:Resolve ()
+			baseType:Resolve (objectResolver)
 			if baseType:IsFailedResolution () then
 				GCompute.Error ("ClassType:ResolveTypes : Failed to resolve base type of " .. self:GetFullName () .. " : " .. baseType:GetFullName ())
 				baseType:GetAST ():GetMessages ():PipeToErrorReporter (GCompute.DefaultErrorReporter)

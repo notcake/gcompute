@@ -79,6 +79,22 @@ function self:IsBaseTypeOf (subtype)
 	return subtype:IsBaseType (self)
 end
 
+-- Type Parameters
+--- Returns true if this Type has unbound type parameters
+-- @return A boolean indicating whether this Type has unbound type parameters
+function self:ContainsUnboundTypeParameters ()
+	GCompute.Error ("Type:ContainsTypeParameterUsage : Not implemented (" .. self:GetFullName () .. ")")
+end
+
+function self:GetTypeArgument (argumentId)
+	if not self:GetDefinition () then return nil end
+	return self:GetDefinition ():GetTypeArgumentList ():GetArgument (argumentId)
+end
+
+function self:SubstituteTypeParameters (substitutionMap)
+	return substitutionMap:GetReplacement (self) or self
+end
+
 -- Type
 --- Returns a boolean indicating whether this type can be converted to destinationType
 -- @param destinationType The Type to be converted to
@@ -129,12 +145,6 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	
 	memoryUsageReport:CreditTableStructure ("Types", self)
 	return memoryUsageReport
-end
-
---- Returns true if this Type has unbound type parameters
--- @return A boolean indicating whether this Type has unbound type parameters
-function self:ContainsUnboundTypeParameters ()
-	GCompute.Error ("Type:ContainsTypeParameterUsage : Not implemented (" .. self:GetFullName () .. ")")
 end
 
 function self:CreateDefaultValue ()
@@ -288,10 +298,6 @@ end
 
 function self:SetTop (isTop)
 	self.Top = isTop
-end
-
-function self:SubstituteTypeParameters (substitutionMap)
-	return substitutionMap:GetReplacement (self) or self
 end
 
 function self:ToString ()

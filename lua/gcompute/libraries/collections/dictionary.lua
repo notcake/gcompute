@@ -1,7 +1,7 @@
 local Global = GCompute.GlobalNamespace
 local Collections = Global:AddNamespace ("Collections")
 
-local Dictionary = Collections:AddClass ("Dictionary", { "TKey", "TValue" })
+local Dictionary = Collections:AddClass ("Dictionary", "TKey, TValue")
 local Function = nil
 
 Dictionary:AddMethod ("Dictionary")
@@ -12,10 +12,10 @@ Dictionary:AddMethod ("Dictionary")
 		end
 	)
 
-Dictionary:AddMethod ("Add", { { "TKey", "key" } , { "TValue", "value" } })
+Dictionary:AddMethod ("Add", "TKey key, TValue value")
 	:SetNativeFunction (
 		function (self, key, value)
-			if not self.KeyValues [key] then
+			if self.KeyValues [key] == nil then
 				self.Count = self.Count + 1
 			end
 			self.KeyValues [key] = value
@@ -30,13 +30,10 @@ Dictionary:AddMethod ("Clear")
 		end
 	)
 
-Dictionary:AddMethod ("ContainsKey", { { "TKey", "key" } })
+Dictionary:AddMethod ("ContainsKey", "TKey key")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function (self, key)
-			if self.KeyValues [key] then
-				return true
-			end
-			return false
+			return self.KeyValues [key] ~= nil
 		end
 	)

@@ -131,25 +131,25 @@ function self:IsEmpty ()
 	return #self.Constructors == 0 and next (self.Members) == nil and #self.ImplicitCasts == 0 and #self.ExplicitCasts == 0
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	-- Resolve constructor types
 	for constructor in self:GetConstructorEnumerator () do
-		constructor:ResolveTypes (globalNamespace, errorReporter)
+		constructor:ResolveTypes (objectResolver, errorReporter)
 	end
 	
 	-- Resolve members
 	for _, member in self:GetEnumerator () do
-		member:ResolveTypes (globalNamespace, errorReporter)
+		member:ResolveTypes (objectResolver, errorReporter)
 	end
 	
 	-- Resolve implicit cast destination types
 	for implicitCast in self:GetImplicitCastEnumerator () do
-		implicitCast:ResolveTypes (globalNamespace, errorReporter)
+		implicitCast:ResolveTypes (objectResolver, errorReporter)
 	end
 	
 	-- Resolve explicit cast destination types
 	for explicitCast in self:GetExplicitCastEnumerator () do
-		explicitCast:ResolveTypes (globalNamespace, errorReporter)
+		explicitCast:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -163,4 +163,19 @@ function self:ToString ()
 	namespace = namespace .. "\n}"
 	
 	return namespace
+end
+
+function self:Visit (namespaceVisitor, ...)
+	for constructor in self:GetConstructorEnumerator () do
+		constructor:Visit (namespaceVisitor, ...)
+	end
+	for _, member in self:GetEnumerator () do
+		member:Visit (namespaceVisitor, ...)
+	end
+	for implicitCast in self:GetImplicitCastEnumerator () do
+		implicitCast:Visit (namespaceVisitor, ...)
+	end
+	for explicitCast in self:GetExplicitCastEnumerator () do
+		explicitCast:Visit (namespaceVisitor, ...)
+	end
 end

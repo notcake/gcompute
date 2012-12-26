@@ -13,10 +13,7 @@ function self:ctor (name, typeParameterList)
 	self.ClassType:SetNullable (true)
 	
 	-- Type Parameters
-	self.TypeParameterList = typeParameterList or GCompute.EmptyTypeParameterList
-	if #self.TypeParameterList > 0 then
-		self.TypeParameterList = GCompute.TypeParameterList (self.TypeParameterList)
-	end
+	self.TypeParameterList = GCompute.ToTypeParameterList (typeParameterList)
 	self.TypeArgumentList = GCompute.EmptyTypeArgumentList
 	
 	self.TypeParametricClassDefinition = self
@@ -79,7 +76,6 @@ end
 
 local typeForwardedFunctions =
 {
-	"AddBaseType",
 	"GetBaseType",
 	"GetBaseTypeCount",
 	"GetBaseTypeEnumerator",
@@ -95,6 +91,11 @@ for _, functionName in ipairs (typeForwardedFunctions) do
 		local classType = self:GetClassType ()
 		return classType [functionName] (classType, ...)
 	end
+end
+
+function self:AddBaseType (baseType)
+	self:GetClassType ():AddBaseType (baseType)
+	return self
 end
 
 function self:CanConstructFrom (sourceType)
@@ -239,10 +240,16 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 function self:CreateRuntimeObject ()
-	return
-	{
-		[".Type"] = self
-	}
+	local metatable = {}
+	metatable.__call = function (class)
+		error ("Not implemented.")
+	end
+	
+	local class = {}
+	setmetatable (class, metatable)
+	class [".Type"] = self
+	
+	return class
 end
 
 function self:GetCorrespondingDefinition (globalNamespace)
@@ -309,21 +316,21 @@ function self:IsType ()
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	-- Resolve base types
-	self:GetClassType ():ResolveTypes (globalNamespace, errorReporter)
+	self:GetClassType ():ResolveTypes (objectResolver, errorReporter)
 	
 	-- Resolve member types
-	self:GetNamespace ():ResolveTypes (globalNamespace, errorReporter)
+	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
 	
 	for _, fileStaticNamespace in self:GetFileStaticNamespaceEnumerator () do
-		fileStaticNamespace:ResolveTypes (globalNamespace, errorReporter)
+		fileStaticNamespace:ResolveTypes (objectResolver, errorReporter)
 	end
 	
 	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
-		typeCurriedDefinition:ResolveTypes (globalNamespace, errorReporter)
+		typeCurriedDefinition:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -390,4 +397,13 @@ end
 
 function self:ToType ()
 	return self:GetClassType ()
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitClass (self, ...)
+	self:GetNamespace ():Visit (namespaceVisitor, ...)
+	
+	for _, typeCurriedClass in pairs (self.TypeCurriedDefinitions) do
+		typeCurriedClass:Visit (namespaceVisitor)
+	end
 end

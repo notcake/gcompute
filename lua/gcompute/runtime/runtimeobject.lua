@@ -7,7 +7,9 @@ function self:ctor ()
 	self.HasBoxedValue = false
 	
 	self.FunctionTable = {}
-	self.MemberTables = {}
+	self.MemberTables  = {}
+	self.NativeStorage = {}
+	self._             = self.NativeStorage
 end
 
 function self:Box (value, type)
@@ -15,8 +17,8 @@ function self:Box (value, type)
 		GCompute.Error ("RuntimeObject:Box : This RuntimeObject is already initialized!\n")
 	end
 	
-	self.Type = type
-	self.BoxedValue = value
+	self.Type          = type
+	self.BoxedValue    = value
 	self.HasBoxedValue = true
 	
 	self.FunctionTable = self.Type:GetFunctionTable ()
@@ -28,6 +30,10 @@ function self:GetBoxedValue ()
 	return self.BoxedValue
 end
 
+function self:GetNativeStorage ()
+	return self.NativeStorage
+end
+
 function self:GetType ()
 	return self.Type
 end
@@ -37,8 +43,8 @@ function self:IsBox ()
 end
 
 function self:SetBoxedValue (boxedValue)
-	self.BoxedValue = boxedValue
-	self.HasBoxedValue = self.BoxedValue ~= nil
+	self.BoxedValue    = boxedValue
+	self.HasBoxedValue = true
 end
 
 function self:SetType (type)

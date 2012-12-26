@@ -15,21 +15,16 @@ function self:ctor (compilationUnit)
 	self.Root = nil
 	self.RootNamespace = compilationUnit:GetCompilationGroup ():GetRootNamespace ()
 	
-	self.ObjectResolver = GCompute.ObjectResolver2 ()
-	for referencedModule in self.CompilationUnit:GetCompilationGroup ():GetModule ():GetReferencedModuleEnumerator () do
-		self.ObjectResolver:AddRootNamespace (referencedModule:GetRootNamespace ())
-	end
-	self.ObjectResolver:AddRootNamespace (self.CompilationUnit:GetCompilationGroup ():GetRootNamespace ())
+	self.ObjectResolver = GCompute.ObjectResolver (self.CompilationUnit:GetCompilationGroup ():GetRootNamespaceSet ())
 end
 
 function self:VisitRoot (blockStatement)
 	self.Root = blockStatement
-	self.RootNamespace:AddUsing ("Expression2"):Resolve ()
-	self.RootNamespace:AddUsing ("Expression2.math"):Resolve ()
+	self.RootNamespace:AddUsing ("Expression2"):Resolve (self.ObjectResolver)
+	self.RootNamespace:AddUsing ("Expression2.math"):Resolve (self.ObjectResolver)
 end
 
 function self:VisitBlock (blockStatement)
-	
 end
 
 function self:VisitStatement (statement)

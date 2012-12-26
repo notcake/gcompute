@@ -51,11 +51,11 @@ function self:IsOverloadedMethod ()
 end
 
 --- Resolves the types of all methods in this method group
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	for method in self:GetEnumerator () do
-		method:ResolveTypes (globalNamespace, errorReporter)
+		method:ResolveTypes (objectResolver, errorReporter)
 	end
 end
 
@@ -73,4 +73,12 @@ function self:ToString ()
 	end
 	methodGroup = methodGroup .. "}"
 	return methodGroup
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitOverloadedMethod (self, ...)
+	
+	for method in self:GetEnumerator () do
+		method:Visit (namespaceVisitor, ...)
+	end
 end

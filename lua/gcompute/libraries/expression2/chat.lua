@@ -54,8 +54,7 @@ Expression2:AddMethod ("chatClk")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function ()
-			local tls = executionContext:GetThreadLocalStorage ()
-			return tls.Expression2.ChatClk or false
+			return threadLocalStorage.Expression2.ChatClk or false
 		end
 	)
 

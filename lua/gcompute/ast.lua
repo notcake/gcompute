@@ -46,6 +46,7 @@ include ("ast/error.lua")
 
 include ("ast/parameterlist.lua")
 include ("ast/argumentlist.lua")
+include ("ast/typeparameterlist.lua")
 include ("ast/typeargumentlist.lua")
 
 -- expressions

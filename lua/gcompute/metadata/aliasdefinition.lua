@@ -52,7 +52,11 @@ function self:UnwrapAlias ()
 		return nil
 	end
 
-	self:ResolveTypes ()
+	if not self:IsResolved () then
+		GCompute.Error ("AliasDefinition:UnwrapAlias : This alias has not been resolved yet (" .. self:ToString () .. ")!")
+		return nil
+	end
+	
 	local ret = self:GetObject ()
 	if ret and ret:IsAlias () then
 		unwrapAlias [self] = true
@@ -60,14 +64,6 @@ function self:UnwrapAlias ()
 		unwrapAlias [self] = nil
 	end
 	return ret
-end
-
--- System
-function self:SetGlobalNamespace (globalNamespace)
-	self.__base.SetGlobalNamespace (self, globalNamespace)
-	if self.DeferredObjectResolution then
-		self.DeferredObjectResolution:SetGlobalNamespace (globalNamespace)
-	end
 end
 
 -- Definition
@@ -88,7 +84,7 @@ function self:IsAlias ()
 	return true
 end
 
-function self:ResolveTypes (globalNamespace, errorReporter)
+function self:ResolveAlias (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	
 	if self:IsResolved () then return end
@@ -97,10 +93,7 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 	if deferredObjectResolution:IsResolved () then return end
 	
 	deferredObjectResolution:SetLocalNamespace (self:GetDeclaringObject ())
-	if globalNamespace then
-		deferredObjectResolution:SetGlobalNamespace (globalNamespace)
-	end
-	deferredObjectResolution:Resolve ()
+	deferredObjectResolution:Resolve (objectResolver)
 	if deferredObjectResolution:IsFailedResolution () then
 		deferredObjectResolution:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
 	else
@@ -109,6 +102,9 @@ function self:ResolveTypes (globalNamespace, errorReporter)
 			self.Object = self.Object:UnwrapAlias ()
 		end
 	end
+end
+
+function self:ResolveTypes ()
 end
 
 function self:ToString ()
@@ -129,4 +125,8 @@ function self:ToType ()
 		self.AliasedType = GCompute.AliasedType (self, innerType)
 	end
 	return self.AliasedType
+end
+
+function self:Visit (namespaceVisitor, ...)
+	namespaceVisitor:VisitAlias (self, ...)
 end

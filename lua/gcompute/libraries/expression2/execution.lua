@@ -27,8 +27,7 @@ Expression2:AddMethod ("first")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function ()
-			local tls = executionContext:GetThreadLocalStorage ()
-			return tls.Expression2.First or false
+			return threadLocalStorage.Expression2.First or false
 		end
 	)
 
@@ -36,8 +35,7 @@ Expression2:AddMethod ("duped")
 	:SetReturnType ("bool")
 	:SetNativeFunction (
 		function ()
-			local tls = executionContext:GetThreadLocalStorage ()
-			return tls.Expression2.Duped or false
+			return threadLocalStorage.Expression2.Duped or false
 		end
 	)
 
@@ -46,8 +44,7 @@ Expression2:AddMethod ("interval", "number milliseconds")
 		function (executionInterval)
 			executionContext:GetProcess ():AddHold ("Expression2.Interval")
 			
-			local tls = executionContext:GetThreadLocalStorage ()
-			tls.Expression2.ExecutionInterval = executionInterval
+			threadLocalStorage.Expression2.ExecutionInterval = executionInterval
 		end
 	)
 

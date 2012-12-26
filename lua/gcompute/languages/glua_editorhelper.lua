@@ -67,15 +67,16 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				local _ErrorNoHalt = ErrorNoHalt
 				local _Msg         = Msg
 				local _MsgN        = MsgN
+				local _MsgC        = MsgC
 				local _print       = print
 				
-				local function makeOutputter (outputFunction)
+				local function makeOutputter (outputFunction, separator)
 					return function (...)
 						local args = {...}
 						for i = 1, table.maxn (args) do
 							args [i] = tostring (args [i])
 						end
-						outputFunction (table.concat (args, "\t"))
+						outputFunction (table.concat (args, separator))
 					end
 				end
 				ErrorNoHalt = makeOutputter (
@@ -94,10 +95,27 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 						stdOut:WriteColor (text .. "\n", GLib.Colors.SandyBrown)
 					end
 				)
+				MsgC = function (color, ...)
+					local args = {...}
+					for i = 1, table.maxn (args) do
+						args [i] = tostring (args [i])
+					end
+					
+					stdOut:WriteColor (
+						table.concat (args),
+						type (color) == "table" and
+						type (color.r) == "number" and
+						type (color.g) == "number" and
+						type (color.b) == "number" and
+						type (color.a) == "number" and
+						color or GLib.Colors.White
+					)
+				end
 				print = makeOutputter (
 					function (text)
 						stdOut:WriteLine (text)
-					end
+					end,
+					"\t"
 				)
 				
 				xpcall (f,
@@ -107,9 +125,10 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				)
 				
 				ErrorNoHalt = _ErrorNoHalt
-				print       = _print
 				Msg         = _Msg
 				MsgN        = _MsgN
+				MsgC        = _MsgC
+				print       = _print
 			end
 		)
 	menu:AddOption ("Run on server")

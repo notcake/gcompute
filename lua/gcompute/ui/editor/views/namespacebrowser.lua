@@ -23,14 +23,6 @@ function self:ctor (container)
 	
 	self:SetNamespaceDefinition (GCompute.GlobalNamespace)
 	
-	function container.PerformLayout ()
-		local w, h = container:GetSize ()
-		self.ComboBox:SetPos (0, 0)
-		self.ComboBox:SetWide (w)
-		self.NamespaceBrowser:SetPos (0, self.ComboBox:GetTall () + 4)
-		self.NamespaceBrowser:SetSize (w, h - self.ComboBox:GetTall () - 4)
-	end
-	
 	self:SetTitle ("Namespace Browser")
 	self:SetIcon ("icon16/application_side_list.png")
 	
@@ -46,4 +38,12 @@ function self:LoadSession (inBuffer)
 end
 
 function self:SaveSession (outBuffer)
+end
+
+-- Event handlers
+function self:PerformLayout (w, h)
+	self.ComboBox:SetPos (0, 0)
+	self.ComboBox:SetWide (w)
+	self.NamespaceBrowser:SetPos (0, self.ComboBox:GetTall () + 4)
+	self.NamespaceBrowser:SetSize (w, h - self.ComboBox:GetTall () - 4)
 end

@@ -36,9 +36,15 @@ include ("editor/tabcontextmenu.lua")
 include ("editor/toolbar.lua")
 include ("editor/undoredostackproxy.lua")
 
+-- Keyboard Shortcuts and Plugins
 GCompute.IncludeDirectory ("gcompute/ui/editor/keyboardmap")
 GCompute.IncludeDirectory ("gcompute/ui/editor/plugins")
 
+-- Notification Bars
+include ("editor/notificationbars/notificationbar.lua")
+include ("editor/notificationbars/filechangenotificationbar.lua")
+
+-- Undo / Redo
 include ("editor/undoredo/undoredostack.lua")
 include ("editor/undoredo/undoredoitem.lua")
 

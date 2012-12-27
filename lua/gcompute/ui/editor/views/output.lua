@@ -75,23 +75,53 @@ function self:ctor (container)
 	)
 	
 	self.ClipboardTarget = GCompute.Editor.EditorClipboardTarget (self.CodeEditor)
+	
+	-- Buffering
+	self.BufferText         = {}
+	self.BufferColor        = nil
+	self.BufferDocumentId   = nil
+	self.BufferDocumentPath = nil
 end
 
 function self:Append (text, color, sourceDocumentId, sourceDocumentPath)
-	local codeEditor = self:GetEditor ()
-	local document = codeEditor:GetDocument ()
-	local startPos = document:GetEnd ()
-	codeEditor:Append (text)
-	local endPos = document:GetEnd ()
-	if color then
-		document:SetColor (color, startPos, endPos)
+	if not text then return end
+	
+	if self.BufferDocumentId ~= sourceDocumentId or
+	   self.BufferDocumentPath ~= sourceDocumentPath or
+	   not self:ColorEquals (self.BufferColor, color) then
+		self:Flush ()
+		
+		self.BufferColor        = color
+		self.BufferDocumentId   = sourceDocumentId
+		self.BufferDocumentPath = sourceDocumentPath
 	end
-	document:SetAttribute ("SourceDocumentId", sourceDocumentId, startPos, endPos)
-	document:SetAttribute ("SourceDocumentPath", sourceDocumentPath, startPos, endPos)
+	
+	self.BufferText [#self.BufferText + 1] = text
 end
 
 function self:Clear ()
+	self:Flush ()
 	self:GetEditor ():Clear ()
+end
+
+function self:Flush ()
+	if #self.BufferText > 0 then
+		local codeEditor = self:GetEditor ()
+		local document = codeEditor:GetDocument ()
+		local startPos = document:GetEnd ()
+		codeEditor:Append (table.concat (self.BufferText))
+		local endPos = document:GetEnd ()
+		if self.BufferColor then
+			document:SetColor (self.BufferColor, startPos, endPos)
+		end
+		document:SetAttribute ("SourceDocumentId", self.BufferDocumentId, startPos, endPos)
+		document:SetAttribute ("SourceDocumentPath", self.BufferDocumentPath, startPos, endPos)
+	end
+	
+	self.BufferText         = {}
+	self.BufferColor        = nil
+	self.BufferDocumentId   = nil
+	self.BufferDocumentPath = nil
 end
 
 function self:GetEditor ()
@@ -114,4 +144,20 @@ function self:BringUpView (view, line, char)
 	location = view:GetEditor ():GetDocument ():CharacterToColumn (location, view:GetEditor ():GetTextRenderer ())
 	view:GetEditor ():SetCaretPos (location)
 	view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
+end
+
+function self:ColorEquals (a, b)
+	if a == nil and b == nil then return true end
+	if     a and not b then return false end
+	if not a and     b then return false end
+	if a.r ~= b.r then return false end
+	if a.g ~= b.g then return false end
+	if a.b ~= b.b then return false end
+	if a.a ~= b.a then return false end
+	return true
+end
+
+-- Event handlers
+function self:Think ()
+	self:Flush ()
 end

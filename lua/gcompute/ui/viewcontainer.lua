@@ -37,12 +37,18 @@ function PANEL:Paint (w, h)
 end
 
 function PANEL:PerformLayout ()
-	if not self:GetContents () then return end
+	if self.View and type (self.View.PerformLayout) == "function" then
+		self.View:PerformLayout (self:GetSize ())
+		return
+	end
 	
-	self:GetContents ():SetPos (0, 0)
-	self:GetContents ():SetSize (self:GetSize ())
+	local contents = self:GetContents ()
+	if not contents then return end
 	
-	self:GetContents ():PerformLayout ()
+	contents:SetPos (0, 0)
+	contents:SetSize (self:GetSize ())
+	
+	contents:PerformLayout ()
 end
 
 function PANEL:RequestFocus ()
@@ -73,6 +79,12 @@ function PANEL:SetView (view)
 	self:HookView (self.View)
 	
 	self:UpdateCloseButtonVisibility ()
+end
+
+function PANEL:Think ()
+	if not self.View then return end
+	if type (self.View.Think) ~= "function" then return end
+	self.View:Think ()
 end
 
 -- Internal, do not call

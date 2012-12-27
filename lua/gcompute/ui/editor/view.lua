@@ -121,6 +121,11 @@ function self:GetContainer ()
 	return self.Container
 end
 
+function self:InvalidateLayout ()
+	if not self.Container then return end
+	self.Container:InvalidateLayout ()
+end
+
 function self:Select ()
 	if not self.Container then return end
 	self.Container:Select ()

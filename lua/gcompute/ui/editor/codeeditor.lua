@@ -1111,6 +1111,9 @@ function PANEL:HookDocument (document)
 	)
 	document:AddEventListener ("TextCleared", tostring (self:GetTable ()),
 		function (_)
+			self:SetCaretPos (GCompute.Editor.LineColumnLocation (0, 0))
+			self:SetSelection (self:GetCaretPos (), self:GetCaretPos ())
+			
 			self:SetMaximumColumnCount (1)
 			
 			self.DocumentChangeUnhandled = true

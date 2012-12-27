@@ -9,8 +9,14 @@ GCompute.ISavable = GCompute.MakeConstructor (self)
 			Fired when the file has changed.
 		PathChanged (oldPath, path)
 			Fired when the path has changed.
+		Reloaded ()
+			Fired when the copy from disk is about to be reloaded.
+		Reloading ()
+			Fired when the copy from disk has been reloaded.
 		Saved ()
 			Fired when this object has been marked as saved.
+		Saving ()
+			Fired when this object is about to be saved.
 		UnsavedChanged (unsaved)
 			Fired when this object's unsaved status has changed.
 ]]
@@ -44,6 +50,9 @@ end
 
 function self:IsUnsaved ()
 	return false
+end
+
+function self:Reload ()
 end
 
 function self:Save ()

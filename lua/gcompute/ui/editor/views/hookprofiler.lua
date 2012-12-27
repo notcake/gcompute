@@ -44,21 +44,6 @@ function self:ctor (container)
 		end
 	)
 	
-	function container.PerformLayout ()
-		local w, h = container:GetSize ()
-		self.Toolbar:SetWide (w)
-		self.ListView:SetPos (0, self.Toolbar:GetTall ())
-		self.ListView:SetSize (w, h - self.Toolbar:GetTall ())
-	end
-	
-	function container.Think ()
-		for eventName, hookTable in pairs (self.Hooks) do
-			for hookName, hookData in pairs (hookTable) do
-				self:UpdateHookData (hookData)
-			end
-		end
-	end
-	
 	self.Hooks = {}
 	self.LastSortTime = SysTime ()
 end
@@ -129,6 +114,7 @@ function self:Stop ()
 	end
 end
 
+-- Internal, do not call
 function self:UpdateHookData (hookData)
 	if not hookData.ListViewItem then
 		local listViewItem = self.ListView:AddLine (tostring (hookData))
@@ -146,4 +132,19 @@ function self:UpdateHookData (hookData)
 	local higherFPS = 1 / (FrameTime () - hookData.LastFrameTime)
 	hookData.DeltaFPS = higherFPS - currentFPS
 	hookData.ListViewItem:SetColumnText (5, string.format ("%.3f", hookData.DeltaFPS))
+end
+
+-- Event handlers
+function self:PerformLayout (w, h)
+	self.Toolbar:SetWide (w)
+	self.ListView:SetPos (0, self.Toolbar:GetTall ())
+	self.ListView:SetSize (w, h - self.Toolbar:GetTall ())
+end
+
+function self:Think ()
+	for eventName, hookTable in pairs (self.Hooks) do
+		for hookName, hookData in pairs (hookTable) do
+			self:UpdateHookData (hookData)
+		end
+	end
 end

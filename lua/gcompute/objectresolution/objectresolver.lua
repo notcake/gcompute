@@ -122,6 +122,12 @@ end
 function self:ResolveTypeArgumentList (astNode, recursive, localDefinition, fileId)
 	for argument in astNode:GetEnumerator () do
 		self:ResolveASTNode (argument, recursive, localDefinition, fileId)
+		
+		local resolutionResults = argument:GetResolutionResults ()
+		if resolutionResults then
+			resolutionResults:FilterToConcreteTypes ()
+			resolutionResults:FilterByLocality ()
+		end
 	end
 end
 

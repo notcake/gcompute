@@ -214,7 +214,7 @@ end
 function self:ProcessEPOELine (lineData)
 	if not self.LastStdErr then return end
 	
-	local localSteamId = LocalPlayer ():SteamID ():sub (string.len ("STEAM_") + 1)
+	local localSteamId = GLib.GetLocalId ():sub (string.len ("STEAM_") + 1)
 	if lineData.Text:find (localSteamId) then
 		for _, segmentData in ipairs (lineData) do
 			self.LastStdErr:WriteColor (segmentData.Text, segmentData.Color)

@@ -363,13 +363,6 @@ function self:InsertWithinLine (location, text)
 	return self.InsertionNewLocation
 end
 
-function self:SaveToStream (fileStream, callback)
-	callback = callback or GCompute.NullCallback ()
-	
-	local code = self:GetText ()
-	fileStream:Write (code:len (), code, callback)
-end
-
 function self:SetAttribute (attributeName, attributeValue, startLocation, endLocation)
 	if not startLocation then startLocation = self:GetStart () end
 	if not endLocation   then endLocation   = self:GetEnd ()   end
@@ -469,22 +462,16 @@ function self:LoadSession (inBuffer)
 	local hasPath = inBuffer:Boolean ()
 	if hasPath then
 		local path = inBuffer:String ()
-		VFS.Root:OpenFile (GAuth.GetLocalId (), path, VFS.OpenFlags.Read,
+		VFS.Root:OpenFile (GLib.GetLocalId (), path, VFS.OpenFlags.Read,
 			function (returnCode, fileStream)
 				if returnCode ~= VFS.ReturnCode.Success then
 					self:SetPath (path)
 					return
 				end
 				self:SetFile (fileStream:GetFile ())
-				fileStream:Read (fileStream:GetLength (),
-					function (returnCode, data)
-						if returnCode == VFS.ReturnCode.Progress then return end
+				self:LoadFromStream (fileStream,
+					function ()
 						fileStream:Close ()
-						
-						if returnCode ~= VFS.ReturnCode.Success then
-							GCompute.Error (VFS.ReturnCode [returnCode])
-						end
-						self:SetText (data)
 					end
 				)
 			end
@@ -505,4 +492,30 @@ function self:SaveSession (outBuffer)
 		outBuffer:Boolean (self:IsUnsaved ())
 		outBuffer:LongString (self:GetText ())
 	end
+end
+
+-- ISavable
+function self:LoadFromStream (fileStream, callback)
+	callback = callback or GCompute.NullCallback ()
+	
+	fileStream:Read (fileStream:GetLength (),
+		function (returnCode, data)
+			if returnCode == VFS.ReturnCode.Progress then return end
+			
+			if returnCode ~= VFS.ReturnCode.Success then
+				callback ()
+				GCompute.Error (VFS.ReturnCode [returnCode])
+			end
+			self:SetText (data)
+			
+			callback ()
+		end
+	)
+end
+
+function self:SaveToStream (fileStream, callback)
+	callback = callback or GCompute.NullCallback ()
+	
+	local code = self:GetText ()
+	fileStream:Write (#code, code, callback)
 end

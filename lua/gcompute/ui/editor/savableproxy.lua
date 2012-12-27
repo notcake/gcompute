@@ -31,6 +31,11 @@ function self:IsUnsaved ()
 	return self.Savable and self.Savable:IsUnsaved () or false
 end
 
+function self:Reload (...)
+	if not self.Savable then return end
+	return self.Savable:Reload (...)
+end
+
 function self:Save (...)
 	if not self.Savable then return end
 	self.Savable:Save (...)
@@ -68,7 +73,10 @@ local events =
 	"CanSaveChanged",
 	"FileChanged",
 	"PathChanged",
+	"Reloaded",
+	"Reloading",
 	"Saved",
+	"Saving",
 	"UnsavedChanged",
 }
 function self:HookSavable (savable)

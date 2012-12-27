@@ -5,6 +5,10 @@ GCompute.Editor.Document = GCompute.MakeConstructor (self, GCompute.ISavable)
 	Events:
 		PathChanged (oldPath, path)
 			Fired when this document's path has changed.
+		Reloaded ()
+			Fired when this document has finished reloading the copy from disk.
+		Reloading ()
+			Fired when this document is about to reload the copy from disk.
 		ViewAdded (IView view)
 			Fired when this document is opened in an IView.
 		ViewRemoved (IView view)
@@ -64,6 +68,11 @@ function self:IsUnsaved ()
 	return self.SavePoint ~= self:GetUndoRedoStack ():GetUndoItem ()
 end
 
+function self:LoadFromStream (fileStream, callback)
+	callback = callback or GCompute.NullCallback ()
+	callback ()
+end
+
 function self:MarkSaved ()
 	if not self:IsUnsaved () then return end
 	self.SavePoint = self:GetUndoRedoStack ():GetUndoItem ()
@@ -80,6 +89,29 @@ function self:MarkUnsaved ()
 	self:DispatchEvent ("UnsavedChanged", self:IsUnsaved ())
 end
 
+function self:Reload ()
+	if not self:GetFile () then return end
+	
+	self:GetFile ():Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
+		function (returnCode, fileStream)
+			if returnCode ~= VFS.ReturnCode.Success then return end
+			
+			self:DispatchEvent ("Reloading")
+			
+			self:Clear ()
+			self.UndoRedoStack:Clear ()
+			
+			self:LoadFromStream (fileStream,
+				function ()
+					fileStream:Close ()
+					self:MarkSaved ()
+					self:DispatchEvent ("Reloaded")
+				end
+			)
+		end
+	)
+end
+
 function self:Save (callback)
 	callback = callback or GCompute.NullCallback
 	
@@ -90,15 +122,22 @@ function self:Save (callback)
 				if returnCode ~= VFS.ReturnCode.Success then callback (false) return end
 				if not file then callback (false) return end
 				self:SetFile (file)
-				self:Save ()
+				self:Save (callback)
 			end
 		)
 		return
 	end
 	
+	self:DispatchEvent ("Saving")
+	
 	self:GetFile ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
-			if returnCode ~= VFS.ReturnCode.Success then callback (false) return end
+			if returnCode ~= VFS.ReturnCode.Success then
+				self:DispatchEvent ("Saved")
+				callback (false)
+				return
+			end
+			
 			self:SaveToStream (fileStream,
 				function ()
 					fileStream:Close ()

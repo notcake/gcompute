@@ -23,6 +23,7 @@ function self:ctor (container)
 			-- line %d, char %d
 			
 			local lowercaseLineText = lineText:lower ()
+			local pathMatch = nil
 			local lineMatch, charMatch = lowercaseLineText:match ("line[ \t]*([0-9]+),?[ \t]*char[ \t]*([0-9]+)")
 			if not lineMatch then
 				lineMatch, charMatch = lowercaseLineText:match ("line[ \t]*([0-9]+),?[ \t]*character[ \t]*([0-9]+)")
@@ -31,12 +32,25 @@ function self:ctor (container)
 				lineMatch = lowercaseLineText:match ("line[ \t]*([0-9]+)")
 			end
 			if not lineMatch then
+				-- debug.Trace style stack trace
+				pathMatch, lineMatch = lowercaseLineText:match ("lua/(.*):([0-9]+): ")
+			end
+			if not lineMatch then
+				-- GLib style stack trace
+				pathMatch, lineMatch = lowercaseLineText:match ("lua/(.*): ([0-9]+)%)")
+			end
+			if not lineMatch then
 				lineMatch = lowercaseLineText:match (":([0-9]+): ")
 			end
 			
 			local line = tonumber (lineMatch)
 			local char = tonumber (charMatch)
 			if not line then return end
+			
+			if pathMatch then
+				sourceDocumentId = nil
+				sourceDocumentPath = "luacl/" .. pathMatch
+			end
 			
 			local document = self:GetDocumentManager ():GetDocumentById (sourceDocumentId)
 			local view = nil

@@ -2,6 +2,7 @@ if GCompute then return end
 GCompute = GCompute or {}
 
 include ("glib/glib.lua")
+include ("gooey/gooey.lua")
 include ("vfs/vfs.lua")
 
 GLib.Initialize ("GCompute", GCompute)

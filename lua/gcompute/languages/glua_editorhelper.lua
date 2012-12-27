@@ -121,6 +121,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				xpcall (f,
 					function (message)
 						stdErr:WriteLine (message)
+						stdErr:WriteLine (GLib.StackTrace (nil, 3))
 					end
 				)
 				

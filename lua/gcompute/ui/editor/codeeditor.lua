@@ -558,6 +558,11 @@ end
 function PANEL:FixupColumn (line, column)
 	-- Round to nearest column
 	local line = self.Document:GetLine (line)
+	
+	if not line then
+		return line, column
+	end
+	
 	local character, leftColumn = line:CharacterFromColumn (column, self.TextRenderer)
 	local rightColumn = leftColumn + self.TextRenderer:GetCharacterColumnCount (line:GetCharacter (character), leftColumn)
 	
@@ -718,7 +723,8 @@ function PANEL:ScrollToCaretLine ()
 	if caretLine < topViewLine then
 		self:SetVerticalScrollPos (caretLine)
 	else
-		self:SetVerticalScrollPos (caretLine - self.ViewLineCount + 1)
+		-- Note: This must work even if the CodeEditor has 0 height.
+		self:SetVerticalScrollPos (caretLine - math.max (self.ViewLineCount, 1) + 1)
 	end
 end
 
@@ -726,7 +732,10 @@ end
 -- @param caretLocation The new caret location
 -- @param scrollToCaret Whether the view should be scrolled to make the caret visible
 function PANEL:SetCaretPos (caretLocation, scrollToCaret)
-	caretLocation = GCompute.Editor.LineColumnLocation (caretLocation:GetLine (), self:FixupColumn (caretLocation:GetLine (), caretLocation:GetColumn ()))
+	local line = caretLocation:GetLine ()
+	line = math.max (line, 0)
+	line = math.min (line, self:GetDocument ():GetLineCount () - 1)
+	caretLocation = GCompute.Editor.LineColumnLocation (line, self:FixupColumn (line, caretLocation:GetColumn ()))
 	self:SetRawCaretPos (caretLocation, scrollToCaret)
 end
 

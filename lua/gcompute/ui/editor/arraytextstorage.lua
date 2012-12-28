@@ -128,16 +128,6 @@ function self:GetCharacter (character)
 	return GLib.UTF8.Sub (self.Text, character + 1, character + 1)
 end
 
-function self:GetCharacterColor (character)
-	local segment = self.Segments [self:SegmentIndexFromCharacter (character)]
-	return segment and segment.Color or nil
-end
-
-function self:GetCharacterObject (character)
-	local segment = self.Segments [self:SegmentIndexFromCharacter (character)]
-	return segment and segment.Object or nil
-end
-
 function self:GetColor (character)
 	return self:GetAttribute ("Color", character)
 end
@@ -191,6 +181,16 @@ end
 
 function self:GetSegment (index)
 	return self.Segments [index]
+end
+
+function self:GetSegmentAttribute (index, attributeName)
+	if not self.Segments [index] then return nil end
+	return self.Segments [index] [attributeName]
+end
+
+function self:GetSegmentColor (index)
+	if not self.Segments [index] then return nil end
+	return self.Segments [index].Color
 end
 
 function self:GetSegmentColumnCount (segmentIndex, textRenderer)
@@ -350,28 +350,6 @@ function self:SetColor (color, startCharacter, endCharacter)
 	end
 end
 
-function self:SetObject (object, startCharacter, endCharacter)
-	startCharacter = startCharacter or 0
-	if endCharacter and endCharacter < startCharacter then
-		local temp = startCharacter
-		startCharacter = endCharacter
-		endCharacter = temp
-	end
-	
-	local startIndex = self:SplitSegment (startCharacter)
-	local afterEndIndex = endCharacter and self:SplitSegment (endCharacter) or #self.Segments + 1
-	
-	if startIndex > #self.Segments then return end
-	
-	for i = startIndex, afterEndIndex - 1 do
-		self.Segments [i].Object = object
-	end
-	
-	for i = afterEndIndex - 1, startIndex - 1, -1 do
-		self:CheckMerge (i)
-	end
-end
-
 function self:Split (character)
 	local before, after = GLib.UTF8.SplitAt (self.Text, character + 1)
 	before = before or ""
@@ -445,6 +423,7 @@ function self:CanMergeSegments (segment1, segment2)
 	if segment1.TextType ~= segment2.TextType then return false end
 	if segment1.TextType == "utf8" then return false end
 	if segment1.Object ~= segment2.Object then return false end
+	if segment1.Token  ~= segment2.Token  then return false end
 	if segment1.Color.r ~= segment2.Color.r then return false end
 	if segment1.Color.g ~= segment2.Color.g then return false end
 	if segment1.Color.b ~= segment2.Color.b then return false end

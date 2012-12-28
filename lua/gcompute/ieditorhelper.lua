@@ -4,6 +4,23 @@ GCompute.IEditorHelper = GCompute.MakeConstructor (self)
 function self:ctor ()
 end
 
+function self:CanBlockComment ()
+	local _, blockStart, blockEnd = self:GetCommentFormat ()
+	return blockStart ~= nil and blockEnd ~= nil
+end
+
+function self:CanLineComment ()
+	return self:GetCommentFormat () ~= nil
+end
+
+--- Returns the comment format of the language
+-- @return The string used to start line comments
+-- @return The string used to start block comments
+-- @return The string used to end block comments
+function self:GetCommentFormat ()
+	return nil, nil, nil
+end
+
 function self:GetNewLineIndentation (codeEditor, location)
 	return string.match (codeEditor:GetDocument ():GetLine (location:GetLine ()):GetText (), "^[ \t]*")
 end

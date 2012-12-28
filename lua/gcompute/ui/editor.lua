@@ -27,6 +27,8 @@ include ("editor/textrenderer.lua")
 include ("editor/textselection.lua")
 include ("editor/textselectioncontroller.lua")
 
+include ("editor/brackethighlighter.lua")
+
 -- IDE
 include ("editor/editor.lua")
 include ("editor/editor_frame.lua")

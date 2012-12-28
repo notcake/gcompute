@@ -39,14 +39,6 @@ function self:GetCharacter (character)
 	return self:GetTextStorage ():GetCharacter (character)
 end
 
-function self:GetCharacterColor (character)
-	return self:GetTextStorage ():GetCharacterColor (character)
-end
-
-function self:GetCharacterObject (character)
-	return self:GetTextStorage ():GetCharacterObject (character)
-end
-
 function self:GetColor (character)
 	return self:GetTextStorage ():GetColor (character)
 end
@@ -111,10 +103,6 @@ end
 
 function self:SetColor (color, startCharacter, endCharacter)
 	self:GetTextStorage ():SetColor (color, startCharacter, endCharacter)
-end
-
-function self:SetObject (object, startCharacter, endCharacter)
-	self:GetTextStorage ():SetObject (object, startCharacter, endCharacter)
 end
 
 -- Should only be called by Document member functions

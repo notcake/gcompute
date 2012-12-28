@@ -134,6 +134,7 @@ end
 
 -- Internal, do not call
 function self:CreateFileChangeNotificationBar ()
+	GLib.PrintStackTrace ()
 	if self.FileChangeNotificationBar then return end
 	self.FileChangeNotificationBar = vgui.Create ("GComputeFileChangeNotificationBar", self:GetContainer ())
 	self.FileChangeNotificationBar:SetVisible (false)

@@ -7,6 +7,14 @@ surface.CreateFont (
 		weight = 400
 	}
 )
+surface.CreateFont (
+	"GComputeMonospaceBold",
+	{
+		font   = "Courier New",
+		size   = 16,
+		weight = 1000
+	}
+)
 
 --[[
 	Events:
@@ -78,6 +86,9 @@ function PANEL:Init ()
 			self:DispatchEvent ("SelectionChanged", selectionStart, selectionEnd)
 		end
 	)
+	
+	-- Bracket Highlighting
+	self.BracketHighlighter = GCompute.Editor.BracketHighlighter (self)
 	
 	-- Settings
 	self.TextRenderer = GCompute.Editor.TextRenderer ()
@@ -247,17 +258,10 @@ function PANEL:DrawLine (lineOffset)
 	local x = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
 	local w = self:GetWide ()
 	
-	surface.SetFont ("GComputeMonospace")
-	
 	-- Localize values used in loop
 	local surface              = surface
-	local surface_DrawLine     = surface.DrawLine
-	local surface_DrawText     = surface.DrawText
 	local surface_SetDrawColor = surface.SetDrawColor
-	local surface_SetTextColor = surface.SetTextColor
-	local surface_SetTextPos   = surface.SetTextPos
-	local defaultColor         = GLib.Colors.White
-	local viewColumnCount      = self.ViewColumnCount
+	local surface_DrawLine     = surface.DrawLine
 	local viewLocationColumn   = self.ViewLocation:GetColumn ()
 	local characterWidth       = self.Settings.CharacterWidth
 	
@@ -268,23 +272,137 @@ function PANEL:DrawLine (lineOffset)
 		surface_DrawLine (x + (i - viewLocationColumn) * characterWidth, lineOffset * self.Settings.LineHeight, x + (i - viewLocationColumn) * characterWidth, (lineOffset + 1) * self.Settings.LineHeight)
 	end
 	
+	-- Localize values used in loop
+	local surface_DrawText     = surface.DrawText
+	local surface_SetFont      = surface.SetFont
+	local surface_SetTextColor = surface.SetTextColor
+	local surface_SetTextPos   = surface.SetTextPos
+	local defaultColor         = GLib.Colors.White
+	local viewColumnCount      = self.ViewColumnCount
+	local textStorage          = line:GetTextStorage ()
+	
+	-- Bracket highlighting
+	local openSegmentIndex      = nil
+	local openSegmentCharacter  = nil
+	local closeSegmentIndex     = nil
+	local closeSegmentCharacter = nil
+	local bracketLine, bracketCharacter = self.BracketHighlighter:GetOpenLocation ()
+	if bracketLine == lineNumber then
+		openSegmentIndex, openSegmentCharacter = textStorage:SegmentIndexFromCharacter (bracketCharacter)
+	end
+	bracketLine, bracketCharacter = self.BracketHighlighter:GetCloseLocation ()
+	if bracketLine == lineNumber then
+		closeSegmentIndex, closeSegmentCharacter = textStorage:SegmentIndexFromCharacter (bracketCharacter)
+	end
+	
 	-- Draw text
-	local textStorage = line:GetTextStorage ()
-	local index, currentColumn = textStorage:SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
+	surface_SetFont ("GComputeMonospace")
+	
+	local segmentIndex, currentColumn = textStorage:SegmentIndexFromColumn (viewLocationColumn, self.TextRenderer)
 	local columnCount
 	x = x - currentColumn * characterWidth
 	currentColumn = viewLocationColumn - currentColumn
-	local segment = textStorage:GetSegment (index)
+	local segment = textStorage:GetSegment (segmentIndex)
 	while segment and x <= w do
+		-- Draw segment text
 		surface_SetTextColor (segment.Color)
 		surface_SetTextPos (x, y)
-		surface_DrawText (segment.Text)
 		
-		columnCount = textStorage:GetSegmentColumnCount (index, self.TextRenderer)
+		if segmentIndex == openSegmentIndex or
+		   segmentIndex == closeSegmentIndex then
+			-- This segment has one or two highlighted characters
+			local after
+			local columnCount
+			if openSegmentIndex == closeSegmentIndex then
+				-- Two highlighted characters in the same segment
+				local before, firstHighlighted, middle, secondHighlighted = GLib.UTF8.SplitAt (segment.Text, openSegmentCharacter + 1)
+				firstHighlighted, middle = GLib.UTF8.SplitAt (firstHighlighted, 2)
+				middle, secondHighlighted = GLib.UTF8.SplitAt (middle, closeSegmentCharacter - openSegmentCharacter)
+				secondHighlighted, after = GLib.UTF8.SplitAt (secondHighlighted, 2)
+				
+				columnCount = self:DrawLineTextHighlighted (x, y, currentColumn, before, firstHighlighted)
+				
+				surface_SetTextColor (segment.Color)
+				columnCount = columnCount + self:DrawLineTextHighlighted (x + columnCount * characterWidth, y, currentColumn + columnCount, middle, secondHighlighted)
+			else
+				-- Only 1 highlighted character
+				local splitCharacter = segmentIndex == openSegmentIndex and openSegmentCharacter or closeSegmentCharacter
+				local before, highlighted = GLib.UTF8.SplitAt (segment.Text, splitCharacter + 1)
+				highlighted, after = GLib.UTF8.SplitAt (highlighted, 2)
+				
+				columnCount = self:DrawLineTextHighlighted (x, y, currentColumn, before, highlighted)
+			end
+			
+			-- Draw after
+			surface_SetFont ("GComputeMonospace")
+			surface_SetTextColor (segment.Color)
+			surface_SetTextPos (x + columnCount * characterWidth, y)
+			surface_DrawText (after)
+		else
+			-- This segment has no highlighted characters
+			surface_DrawText (segment.Text)
+		end
+		
+		-- Update location
+		columnCount = textStorage:GetSegmentColumnCount (segmentIndex, self.TextRenderer)
 		currentColumn = currentColumn + columnCount
 		x = x + columnCount * characterWidth
 		
+		segmentIndex = segmentIndex + 1
+		segment = textStorage:GetSegment (segmentIndex)
+	end
+end
+
+function PANEL:DrawLineTextHighlighted (x, y, currentColumn, first, second)
+	surface.SetFont ("GComputeMonospace")
+	surface.SetTextPos (x, y)
+	surface.DrawText (first)
+	local columnCount = self.TextRenderer:GetStringColumnCount (first, currentColumn)
+	
+	surface.SetFont ("GComputeMonospaceBold")
+	surface.SetTextColor (GLib.Colors.Red)
+	surface.SetTextPos (x + columnCount * self.Settings.CharacterWidth, y)
+	surface.DrawText (second)
+	columnCount = columnCount + self.TextRenderer:GetStringColumnCount (second, currentColumn + columnCount)
+	return columnCount
+end
+
+function PANEL:DrawLineSection (lineNumber, startCharacter, endCharacter)
+	local relativeLineNumber = lineNumber - self.ViewLocation:GetLine ()
+	local line = self.Document:GetLine (lineNumber)
+	if relativeLineNumber < 0 then return end
+	if relativeLineNumber > self.ViewLineCount then return end
+	
+	local y = relativeLineNumber * self.Settings.LineHeight + 0.5 * (self.Settings.LineHeight - self.Settings.FontHeight)
+	local x = self:AreLineNumbersVisible () and self.Settings.LineNumberWidth or 0
+	local w = self:GetWide ()
+	
+	local characterCount = endCharacter - startCharacter
+	local characterWidth = self.Settings.CharacterWidth
+	
+	-- Draw text
+	local textStorage = line:GetTextStorage ()
+	local startColumn = line:ColumnFromCharacter (startCharacter, self.TextRenderer)
+	local index, segmentCharacter = textStorage:SegmentIndexFromCharacter (startCharacter, self.TextRenderer)
+	
+	x = x + characterWidth * (startColumn - self.ViewLocation:GetColumn ())
+	
+	local segment = textStorage:GetSegment (index)
+	local currentColumn = startColumn
+	local deltaColumn = 0
+	while segment and x <= w and characterCount > 0 do
+		surface.SetTextPos (x, y)
+		local text = GLib.UTF8.Sub (segment.Text, 1 + segmentCharacter, segmentCharacter + characterCount)
+		surface.DrawText (text)
+		
+		deltaColumn = self.TextRenderer:GetStringColumnCount (text, currentColumn)
+		currentColumn = currentColumn + deltaColumn
+		x = x + characterWidth * deltaColumn
+		
+		characterCount = characterCount - segment.Length + segmentCharacter
+		
 		index = index + 1
+		segmentCharacter = 0
 		segment = textStorage:GetSegment (index)
 	end
 end
@@ -380,6 +498,8 @@ function PANEL:Paint (w, h)
 	self:DrawSelection ()
 	
 	if not self.Document then return end
+	
+	self.BracketHighlighter:Think ()
 	
 	-- Draw ViewLineCount lines and then the one that's partially out of view.
 	for i = 0, self.ViewLineCount + 1 do
@@ -1051,7 +1171,7 @@ function PANEL:TokenFromLocation (lineColumnLocation)
 	local line = self.Document:GetLine (lineCharacterLocation:GetLine ())
 	if not line then return nil end
 	
-	return line:GetCharacterObject (lineCharacterLocation:GetCharacter ())
+	return line:GetAttribute ("Token", lineCharacterLocation:GetCharacter ())
 end
 
 -- Internal, do not call
@@ -1256,10 +1376,12 @@ end
 function PANEL:OnRemoved ()
 	self:UnhookDocument (self.Document)
 	if self:GetDocument () then
-		if self:GetDocument ():GetViewCount () == 1 then
+		if self:GetDocument ():GetViewCount () == 0 then
 			self:GetSyntaxHighlighter ():dtor ()
 		end
 	end
+	
+	self.BracketHighlighter:dtor ()
 end
 
 function PANEL:OnVScroll (viewOffset)

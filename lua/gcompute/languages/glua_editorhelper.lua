@@ -15,6 +15,10 @@ function self:dtor ()
 	GCompute.EPOE:RemoveEventListener ("LineReceived", tostring (self))
 end
 
+function self:GetCommentFormat ()
+	return "--", "--[[", "]]"
+end
+
 function self:GetNewLineIndentation (codeEditor, location)
 	local line = codeEditor:GetDocument ():GetLine (location:GetLine ())
 	local baseIndentation = string.match (line:GetText (), "^[ \t]*")
@@ -122,6 +126,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 					function (message)
 						stdErr:WriteLine (message)
 						stdErr:WriteLine (GLib.StackTrace (nil, 3))
+						_ErrorNoHalt (message)
 					end
 				)
 				

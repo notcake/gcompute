@@ -101,7 +101,6 @@ function self:SetLanguage (language)
 end
 
 function self:SetSourceFile (sourceFile)
-	if not sourceFile then return end
 	if self.SourceFile == sourceFile then return end
 	
 	local oldSourceFile = self.SourceFile
@@ -132,19 +131,19 @@ function self:ApplyToken (token)
 	if not startLine then return end
 	
 	if tokenStartLine == tokenEndLine then
-		startLine:SetObject (token, token.Character, token.EndCharacter)
+		startLine:SetAttribute ("Token", token, token.Character, token.EndCharacter)
 		startLine:SetColor (color, token.Character, token.EndCharacter)
 	else
-		startLine:SetObject (token, token.Character, nil)
+		startLine:SetAttribute ("Token", token, token.Character, nil)
 		startLine:SetColor (color, token.Character, nil)
 		if self.Document:GetLine (tokenEndLine) then
-			self.Document:GetLine (tokenEndLine):SetObject (token, 0, token.EndCharacter)
+			self.Document:GetLine (tokenEndLine):SetAttribute ("Token", token, 0, token.EndCharacter)
 			self.Document:GetLine (tokenEndLine):SetColor (color, 0, token.EndCharacter)
 		end
 		
 		for i = tokenStartLine + 1, tokenEndLine - 1 do
 			if not self.Document:GetLine (i) then break end
-			self.Document:GetLine (i):SetObject (token)
+			self.Document:GetLine (i):SetAttribute ("Token", token)
 			self.Document:GetLine (i):SetColor (color)
 		end
 	end

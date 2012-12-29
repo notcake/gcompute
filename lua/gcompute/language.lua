@@ -1,6 +1,12 @@
 local self = {}
 GCompute.Languages.Language = GCompute.MakeConstructor (self)
 
+--[[
+	Events:
+		NamespaceChanged ()
+			Fired when the language's environment namespace has changed.
+]]
+
 function self:ctor (name)
 	self.Name = name
 	
@@ -21,6 +27,8 @@ function self:ctor (name)
 	self.ParserTable = {}
 	
 	self.Passes = {}
+	
+	GCompute.EventProvider (self)
 end
 
 function self:dtor ()

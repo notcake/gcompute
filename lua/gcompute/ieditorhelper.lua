@@ -22,6 +22,10 @@ function self:GetCommentFormat ()
 	return nil, nil, nil
 end
 
+function self:GetLanguage ()
+	return self.Language
+end
+
 function self:GetNewLineIndentation (codeEditor, location)
 	return string.match (codeEditor:GetDocument ():GetLine (location:GetLine ()):GetText (), "^[ \t]*")
 end
@@ -39,6 +43,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	sourceFile:SetCode (code)
 
 	local compilationUnit = sourceFile:GetCompilationUnit ()
+	compilationUnit:SetLanguage (self:GetLanguage ())
 	compilationUnit:ClearPassDurations ()
 	compilationUnit:ClearMessages ()
 	

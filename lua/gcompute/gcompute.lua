@@ -247,6 +247,7 @@ include ("languages/csharp.lua")
 include ("languages/derpscript.lua")
 include ("languages/expression2.lua")
 include ("languages/glua.lua")
+include ("languages/lemongate.lua")
 include ("languages/lua.lua")
 
 -- runtime

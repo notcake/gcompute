@@ -38,6 +38,8 @@ function self:ctor (document, syntaxHighlighter)
 end
 
 function self:dtor ()
+	self:UnhookLanguage (self.Language)
+	
 	self.Document:RemoveEventListener ("LanguageChanged", tostring (self))
 	self.SyntaxHighlighter:RemoveEventListener ("LineHighlighted", tostring (self))
 end
@@ -104,9 +106,16 @@ function self:HandleLanguageChange (language)
 	
 	self.RootNamespaceSet:RemoveNamespace (self.RootNamespace)
 	
+	self:UnhookLanguage (self.Language)
 	self.Language = language
+	self:HookLanguage (self.Language)
 	self.LanguageName = self.Language and self.Language:GetName () or nil
 	self.EditorHelper = self.Language and self.Language:GetEditorHelper ()
+	
+	self:HandleNamespaceChange ()
+end
+
+function self:HandleNamespaceChange ()
 	self.RootNamespace = self.EditorHelper and self.EditorHelper:GetRootNamespace ()
 	
 	self.RootNamespaceSet:AddNamespace (self.RootNamespace)
@@ -118,6 +127,10 @@ function self:HandleLanguageChange (language)
 		end
 	end
 	self.UsingSource:ResolveUsings (self.ObjectResolver)
+	
+	for i = 0, self.Document:GetLineCount () - 1 do
+		self.UnprocessedLines [i] = self.Document:GetLine (i).Tokens
+	end
 end
 
 function self:ProcessLine (lineNumber, tokens)
@@ -156,4 +169,20 @@ function self:ProcessLine (lineNumber, tokens)
 		
 		previousTokenType = token.TokenType
 	end
+end
+
+function self:HookLanguage (language)
+	if not language then return end
+	
+	language:AddEventListener ("NamespaceChanged", tostring (self),
+		function ()
+			self:HandleNamespaceChange ()
+		end
+	)
+end
+
+function self:UnhookLanguage (language)
+	if not language then return end
+	
+	language:RemoveEventListener ("NamespaceChanged", tostring (self))
 end

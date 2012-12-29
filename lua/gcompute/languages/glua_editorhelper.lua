@@ -1,6 +1,8 @@
 local self = EditorHelper
 
 function self:ctor (language)
+	self.RootNamespace = nil
+	
 	self.LastStdOut = nil
 	self.LastStdErr = nil
 	

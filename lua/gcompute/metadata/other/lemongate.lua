@@ -3,9 +3,18 @@ GCompute.Other.LemonGateNamespace = GCompute.MakeConstructor (self, GCompute.Nam
 
 function self:ctor ()
 	if not LemonGate then return end
-	if not LemonGate.TypeTable then return end
-	if not LemonGate.FunctionTable then return end
 	
+	local language = GCompute.Languages.Get ("Lemon Gate")
+	if not language:IsDataAvailable () then
+		language:RequestData (self)
+		return
+	end
+	
+	self:ImportData ()
+end
+
+-- Internal, do not call
+function self:ImportData ()
 	-- Types
 	local types = {}
 	for name, data in pairs (LemonGate.TypeTable) do

@@ -1,6 +1,6 @@
 local self = EditorHelper
 
-function self:ctor ()
+function self:ctor (language)
 	self.LastStdOut = nil
 	self.LastStdErr = nil
 	

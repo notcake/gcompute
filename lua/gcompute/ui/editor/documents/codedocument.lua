@@ -2,6 +2,8 @@ local self = GCompute.Editor.DocumentTypes:CreateType ("CodeDocument")
 
 --[[
 	Events:
+		LanguageChanged (oldLanguage, language)
+			Fired when this document's language has been changed.
 		LinesShifted (startLine, endLine, shift)
 			Fired when lines of this document have been shifted up or down.
 		TextChanged ()
@@ -9,18 +11,27 @@ local self = GCompute.Editor.DocumentTypes:CreateType ("CodeDocument")
 		TextCleared ()
 			Fired when this document has been cleared.
 		TextDeleted (LineCharacterLocation deletionStartLocation, LineCharacterLocation deletionEndLocation)
-			Fired when text has been deleted.
+			Fired when text has been deleted. deletionStartLocation will always be before deletionEndLocation.
 		TextInserted (LineCharacterLocation insertionLocation, text, LineCharacterLocation newLocation)
 			Fired when text has been inserted.
 ]]
 
 function self:ctor ()
+	self.Language = nil
+	
 	self.Lines = {}
 	
 	-- Reusable LineCharacterLocations for events
 	self.InsertionNewLocation = GCompute.Editor.LineCharacterLocation ()
 	
 	self:Clear ()
+	
+	self:DetectLanguage ()
+	self:AddEventListener ("PathChanged",
+		function ()
+			self:DetectLanguage ()
+		end
+	)
 end
 
 function self:CharacterToColumn (characterLocation, textRenderer)
@@ -455,6 +466,33 @@ function self:ShiftLines (startLine, endLine, shift)
 	
 	self:DispatchEvent ("LinesShifted", startLine, endLine, shift)
 	self:DispatchEvent ("TextChanged")
+end
+
+-- Language
+function self:DetectLanguage ()
+	local language = nil
+	if self:HasPath () then
+		language = GCompute.LanguageDetector:DetectLanguageByPath (self:GetPath ())
+	end
+	if not language then
+		language = GCompute.LanguageDetector:DetectLanguageByContents (self:GetText ())
+	end
+	if language then
+		self:SetLanguage (language)
+	end
+end
+
+function self:GetLanguage ()
+	return self.Language
+end
+
+function self:SetLanguage (language)
+	if self.Language == language then return end
+	
+	local oldLanguage = self.Language
+	self.Language = language
+	
+	self:DispatchEvent ("LanguageChanged", oldLanguage, self.Language)
 end
 
 -- Persistance

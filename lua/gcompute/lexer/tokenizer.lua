@@ -109,7 +109,6 @@ function self:Compile ()
 	
 	local lookupLocalCreated = false
 	
-	upvalueTable ["string_len"]   = string.len
 	upvalueTable ["string_match"] = string.match
 	upvalueTable ["string_sub"]   = string.sub
 	
@@ -148,7 +147,7 @@ function self:Compile ()
 			nextLookupId = nextLookupId + 1
 		elseif symbolMatchType == SymbolMatchType.Pattern then
 			code = code .. "\tmatch = string_match (code, \"" .. GLib.String.Escape (symbolMatcher.String) .. "\", offset)\n"
-			code = code .. "\tif match then return match, string_len (match), " .. tostring (symbolMatcher.TokenType) .. " end\n"
+			code = code .. "\tif match then return match, #match, " .. tostring (symbolMatcher.TokenType) .. " end\n"
 			code = code .. "\t\n"
 		else
 			upvalueTable ["customMatcher" .. tostring (nextCustomMatcherId)] = symbolMatcher.Matcher
@@ -162,7 +161,8 @@ function self:Compile ()
 			nextCustomMatcherId = nextCustomMatcherId + 1
 		end
 	end
-	code = code .. "\treturn nil, 0, GCompute.TokenType.Unknown\n"
+	code = code .. "\tmatch = GLib.UTF8.NextChar (code, offset)\n"
+	code = code .. "\treturn match, #match, GCompute.TokenType.Unknown\n"
 	code = code .. "end\n"
 	
 	local upvalues = ""
@@ -201,9 +201,9 @@ function self:MatchSymbolSlow (code, offset)
 		local matchLength = 0
 		local tokenType = symbolMatcher.TokenType
 		if symbolMatchType == SymbolMatchType.Plain then
-			if string.sub (code, offset, offset + string.len (symbolMatcher.String) - 1) == symbolMatcher.String then
+			if string.sub (code, offset, offset + #symbolMatcher.String - 1) == symbolMatcher.String then
 				match = symbolMatcher.String
-				matchLength = string.len (match)
+				matchLength = #match
 			end
 		elseif symbolMatchType == SymbolMatchType.Lookup then
 			local lookup = symbolMatcher.Lookup
@@ -218,9 +218,9 @@ function self:MatchSymbolSlow (code, offset)
 			if lookup [lookupSymbol] then return lookupSymbol, 1, lookup [lookupSymbol] end
 		elseif symbolMatchType == SymbolMatchType.Pattern then
 			match = string.match (code, symbolMatcher.String, offset)
-			if match then matchLength = string.len (match) end
+			if match then matchLength = #match end
 		else
-			if string.sub (code, offset, offset + string.len (symbolMatcher.String) - 1) == symbolMatcher.String then
+			if string.sub (code, offset, offset + #symbolMatcher.String - 1) == symbolMatcher.String then
 				match, matchLength = symbolMatcher.Matcher (code, offset)
 			end
 		end
@@ -229,5 +229,6 @@ function self:MatchSymbolSlow (code, offset)
 		end
 	end
 	
-	return nil, 0
+	local match = GLib.UTF8.NextChar (code, offset)
+	return match, #match, GCompute.TokenType.Unknown
 end

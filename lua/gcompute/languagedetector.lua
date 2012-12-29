@@ -27,17 +27,22 @@ function self:DetectLanguage (sourceFile)
 	if not sourceFile:HasPath () then
 		return self:DetectLanguageByContents (sourceFile)
 	end
-	local path = sourceFile:GetPath ():lower ()
+	return self:DetectLanguageByPath (sourceFile:GetPath ()) or
+	       self:DetectLanguageByContents (sourceFile)
+end
+
+function self:DetectLanguageByPath (path)
+	path = path:lower ()
+	
 	local extension = path:match ("%.([^%.]*)$") or ""
 	if self.Extensions [extension:lower ()] then
 		return self.Extensions [extension:lower ()]
 	end
 	for i = 1, #self.PathPatterns do
-		if string.find(path, self.PathPatterns [i].Pattern) then
+		if string.find (path, self.PathPatterns [i].Pattern) then
 			return self.PathPatterns [i].Language
 		end
 	end
-	return self:DetectLanguageByContents (sourceFile)
 end
 
 function self:DetectLanguageByContents (sourceFile)

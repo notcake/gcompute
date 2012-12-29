@@ -22,12 +22,13 @@ include ("editor/codeeditorcontextmenu.lua")
 include ("editor/editorclipboardtarget.lua")
 include ("editor/selectionmode.lua")
 include ("editor/selectionsnapshot.lua")
-include ("editor/syntaxhighlighter.lua")
 include ("editor/textrenderer.lua")
 include ("editor/textselection.lua")
 include ("editor/textselectioncontroller.lua")
 
+include ("editor/itokensink.lua")
 include ("editor/brackethighlighter.lua")
+include ("editor/syntaxhighlighter.lua")
 
 -- IDE
 include ("editor/editor.lua")

@@ -121,16 +121,14 @@ function self:Init ()
 			)
 			
 			local codeEditor = self:GetActiveCodeEditor ()
-			local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
-			local currentLanguage = syntaxHighlighter and syntaxHighlighter:GetLanguage ()
+			local currentLanguage = codeEditor and codeEditor:GetLanguage ()
 			for _, language in ipairs (languages) do
 				local option = menu:AddOption (language:GetName ())
 				option:AddEventListener ("Click",
 					function ()
 						local codeEditor = self:GetActiveCodeEditor ()
-						local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
-						if not syntaxHighlighter then return end
-						syntaxHighlighter:SetLanguage (language)
+						if not codeEditor then return end
+						codeEditor:SetLanguage (language)
 						GCompute.LanguageDetector:SetDefaultLanguage (language)
 					end
 				)
@@ -598,8 +596,7 @@ end
 
 function self:UpdateLanguageText ()
 	local codeEditor = self:GetActiveCodeEditor ()
-	local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
-	local language = syntaxHighlighter and syntaxHighlighter:GetLanguage ()
+	local language = codeEditor and codeEditor:GetLanguage ()
 	if language then
 		self.LanguagePanel:SetText (language:GetName () .. " code")
 	elseif codeEditor then
@@ -612,10 +609,11 @@ end
 function self:UpdateProgressBar ()
 	local codeEditor = self:GetActiveCodeEditor ()
 	local syntaxHighlighter = codeEditor and codeEditor:GetSyntaxHighlighter ()
-	local compilationUnit = syntaxHighlighter and syntaxHighlighter:GetCompilationUnit ()
-	if compilationUnit then
-		if compilationUnit:IsLexing () then
-			self.ProgressPanel:SetProgress (compilationUnit:GetLexer ():GetProgress () * 100)
+	local progress = syntaxHighlighter and syntaxHighlighter:GetProgress ()
+	if progress then
+		self.ProgressPanel:SetProgress (progress * 100)
+		
+		if progress < 1 then
 			self.ProgressPanel:CancelFade ()
 			self.ProgressPanel:SetAlpha (255)
 			self.ProgressPanel:SetVisible (true)
@@ -631,6 +629,11 @@ end
 function self:HookDocument (document)
 	if not document then return end
 	
+	document:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+		function (_)
+			self:UpdateLanguageText ()
+		end
+	)
 	document:AddEventListener ("ViewRemoved", tostring (self:GetTable ()),
 		function (_)
 			if document:GetViewCount () == 0 then
@@ -643,7 +646,8 @@ end
 function self:UnhookDocument (document)
 	if not document then return end
 	
-	document:RemoveEventListener ("ViewRemoved", tostring (self:GetTable ()))
+	document:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
+	document:RemoveEventListener ("ViewRemoved",     tostring (self:GetTable ()))
 end
 
 function self:HookSelectedCodeEditor (codeEditor)
@@ -675,23 +679,21 @@ end
 function self:HookSyntaxHighlighter (syntaxHighlighter)
 	if not syntaxHighlighter then return end
 	
-	syntaxHighlighter:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
-		function (_, language)
-			self:UpdateLanguageText ()
-		end
-	)
-	syntaxHighlighter:AddEventListener ("LexerFinished", tostring (self:GetTable ()),
-		function (_, lexer)
+	syntaxHighlighter:AddEventListener ("HighlightingFinished", tostring (self:GetTable ()),
+		function (_)
+			print ("HighlightingFinished")
 			self:UpdateProgressBar ()
 		end
 	)
-	syntaxHighlighter:AddEventListener ("LexerProgress", tostring (self:GetTable ()),
-		function (_, lexer, bytesProcessed, totalBytes)
+	syntaxHighlighter:AddEventListener ("HighlightingProgress", tostring (self:GetTable ()),
+		function (_, linesProcessed, totalLines)
+			print ("HighlightingProgress")
 			self:UpdateProgressBar ()
 		end
 	)
-	syntaxHighlighter:AddEventListener ("LexerStarted", tostring (self:GetTable ()),
-		function (_, lexer)
+	syntaxHighlighter:AddEventListener ("HighlightingStarted", tostring (self:GetTable ()),
+		function (_)
+			print ("HighlightingStarted")
 			self:UpdateProgressBar ()
 		end
 	)
@@ -699,10 +701,9 @@ end
 
 function self:UnhookSyntaxHighlighter (syntaxHighlighter)
 	if not syntaxHighlighter then return end
-	syntaxHighlighter:RemoveEventListener ("LanguageChanged",   tostring (self:GetTable ()))
-	syntaxHighlighter:RemoveEventListener ("LexerFinished",     tostring (self:GetTable ()))
-	syntaxHighlighter:RemoveEventListener ("LexerStarted",      tostring (self:GetTable ()))
-	syntaxHighlighter:RemoveEventListener ("SourceFileChanged", tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("HighlightingFinished", tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("HighlightingProgress", tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("HighlightingStarted",  tostring (self:GetTable ()))
 end
 
 function self:HookTabContents (tab, contents)

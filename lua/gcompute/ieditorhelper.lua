@@ -1,7 +1,8 @@
 local self = {}
 GCompute.IEditorHelper = GCompute.MakeConstructor (self)
 
-function self:ctor ()
+function self:ctor (language)
+	self.Language = language
 end
 
 function self:CanBlockComment ()
@@ -26,13 +27,16 @@ function self:GetNewLineIndentation (codeEditor, location)
 end
 
 function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
+	local document = codeEditor:GetDocument ()
 	local code = codeEditor:GetText ()
-	local sourceFile = codeEditor:GetSyntaxHighlighter ():GetSourceFile ()
-	local compilationUnit = codeEditor:GetSyntaxHighlighter ():GetCompilationUnit ()
+	
+	local sourceFile = document:HasPath () and GCompute.SourceFileCache:CreateSourceFileFromPath (document:GetPath ()) or nil
+	sourceFile = sourceFile or GCompute.SourceFileCache:CreateAnonymousSourceFile ()
+	sourceFile:SetCode (code)
+
+	local compilationUnit = sourceFile:GetCompilationUnit ()
 	compilationUnit:ClearPassDurations ()
 	compilationUnit:ClearMessages ()
-	
-	sourceFile:SetCode (code)
 	
 	local compilationGroup = GCompute.CompilationGroup (sourceFile:GetId (), GLib.GetLocalId ())
 	compilationGroup:AddSourceFile (sourceFile)
@@ -93,4 +97,49 @@ end
 
 function self:ShouldOutdent (codeEditor, location)
 	return false
+end
+
+function self:TokenizeLine (line, tokenSink, inState, outState)
+	local GLib_UTF8_Length             = GLib.UTF8.Length
+	local GCompute_KeywordType_Unknown = GCompute.KeywordType.Unknown
+	local GCompute_TokenType_Keyword   = GCompute.TokenType.Keyword
+	local math_max   = math.max
+	local string_sub = string.sub
+	
+	local language  = self.Language
+	local tokenizer = self.Language:GetTokenizer ()
+	local offset = 1
+	
+	local currentCharacter = 0
+	if inState.Prefix then
+		line = inState.Prefix .. line
+		currentCharacter = -GLib_UTF8_Length (inState.Prefix)
+	end
+	
+	local token, tokenLength, tokenType
+	local lastToken = nil
+	local characterCount
+	
+	while offset <= #line do
+		token, tokenLength, tokenType = tokenizer:MatchSymbol (line, offset)
+		lastToken = string_sub (line, offset, offset + tokenLength - 1)
+		characterCount = GLib_UTF8_Length (lastToken)
+		
+		if language:GetKeywordType (token) ~= GCompute_KeywordType_Unknown then
+			tokenType = GCompute_TokenType_Keyword
+		end
+		tokenSink:Token (math_max (0, currentCharacter), currentCharacter + characterCount, tokenType)
+		
+		offset = offset + tokenLength
+		currentCharacter = currentCharacter + characterCount
+	end
+	
+	outState.Prefix = nil
+	
+	if lastToken then
+		local _, probedLength, probedTokenType = tokenizer:MatchSymbol (lastToken .. string.rep (string.char (255), 8), 1)
+		if probedLength > tokenLength and tokenType == probedTokenType then
+			outState.Prefix = GLib.UTF8.Sub (lastToken, 1, 8) .. " "
+		end
+	end
 end

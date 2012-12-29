@@ -122,50 +122,33 @@ function self:ProcessSome ()
 				end
 			end
 			
+			-- Check for tokenizer bugs
 			if match == "" then
 				ErrorNoHalt ("Lexer: Matched a zero-length string! (" .. GCompute.TokenType [tokenType] .. ")\n")
 				match = nil
 			end
 			
-			if match then
-				-- Symbol successfully matched
-				local token = tokens:AddLast (match)
-				
-				-- Check if the token is a key word that has been classed as an identifier
-				if language:GetKeywordType (match) ~= GCompute_KeywordType_Unknown then
-					tokenType = GCompute_TokenType_Keyword
-				end
-				
-				token.TokenType    = tokenType
-				token.Line         = line
-				token.Character    = character
-				token.EndLine      = line + lineCount
-				if lineCount > 0 then
-					character = GLib_UTF8_Length (string_sub (code, lastNewlineEnd, offset + matchLength - 1))
-				else
-					character = character + GLib_UTF8_Length (match)
-				end
-				token.EndCharacter = character
-			else
-				-- Unable to match symbol, take one character and mark it as unknown
-				local token        = tokens:AddLast (GLib_UTF8_NextChar (code, offset))
-				token.TokenType    = GCompute_TokenType_Unknown
-				token.Line         = line
-				token.Character    = character
-				token.EndLine      = line
-				if token.Value == "\r" or token.Value == "\n" then
-					token.EndLine      = token.EndLine + 1
-					lineCount = 1
-					character = 0
-				else
-					character = character + 1
-				end
-				token.EndCharacter = character
-				matchLength = string_len (token.Value)
+			-- Build up the token
+			local token = tokens:AddLast (match)
+			
+			-- Check if the token is a key word that has been classed as an identifier
+			if language:GetKeywordType (match) ~= GCompute_KeywordType_Unknown then
+				tokenType = GCompute_TokenType_Keyword
 			end
 			
-			offset = offset + matchLength
+			token.TokenType    = tokenType
+			token.Line         = line
+			token.Character    = character
+			token.EndLine      = line + lineCount
+			if lineCount > 0 then
+				character = GLib_UTF8_Length (string_sub (code, lastNewlineEnd, offset + matchLength - 1))
+			else
+				character = character + GLib_UTF8_Length (match)
+			end
+			token.EndCharacter = character
 			
+			-- Advance position in the input string
+			offset = offset + matchLength
 			line = line + lineCount
 		end
 	end

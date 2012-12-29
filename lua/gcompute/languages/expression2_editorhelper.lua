@@ -1,5 +1,8 @@
 local self = EditorHelper
 
+function self:ctor (language)
+end
+
 function self:GetCommentFormat ()
 	return "#", "#[", "]#"
 end

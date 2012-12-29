@@ -568,9 +568,7 @@ function PANEL:SetDocument (document)
 			self.Document.SyntaxHighlighter = GCompute.Editor.SyntaxHighlighter (self.Document)
 			self:GetSyntaxHighlighter ():SetEnabled (self:IsCompilationEnabled ())
 		end
-		if self.Document.SyntaxHighlighter:GetLanguage () then
-			self.EditorHelper = self.Document.SyntaxHighlighter:GetLanguage ():GetEditorHelper ()
-		end
+		self.EditorHelper = self.Document:GetLanguage () and self.Document:GetLanguage ():GetEditorHelper ()
 	end
 	
 	self:HookDocument (self.Document)
@@ -1160,8 +1158,13 @@ function PANEL:GetEditorHelper ()
 	return self.EditorHelper
 end
 
+function PANEL:GetLanguage ()
+	if not self:GetDocument () then return nil end
+	return self:GetDocument ():GetLanguage ()
+end
+
 function PANEL:GetSyntaxHighlighter ()
-	if not self:GetDocument () then return end
+	if not self:GetDocument () then return nil end
 	return self:GetDocument ().SyntaxHighlighter
 end
 
@@ -1174,6 +1177,11 @@ function PANEL:SetCompilationEnabled (compilationEnabled)
 	if self:GetSyntaxHighlighter () then
 		self:GetSyntaxHighlighter ():SetEnabled (self.CompilationEnabled)
 	end
+end
+
+function PANEL:SetLanguage (language)
+	if not self:GetDocument () then return nil end
+	self:GetDocument ():SetLanguage (language)
 end
 
 function PANEL:TokenFromLocation (lineColumnLocation)
@@ -1213,13 +1221,9 @@ end
 function PANEL:HookDocument (document)
 	if not document then return end
 	
-	document.SyntaxHighlighter:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+	document:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
 		function (_, _, language)
-			if language then
-				self.EditorHelper = language:GetEditorHelper ()
-			else
-				self.EditorHelper = nil
-			end
+			self.EditorHelper = language and language:GetEditorHelper ()
 		end
 	)
 	document:AddEventListener ("LinesShifted", tostring (self:GetTable ()),
@@ -1299,12 +1303,12 @@ end
 function PANEL:UnhookDocument (document)
 	if not document then return end
 	
-	document.SyntaxHighlighter:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
-	document:RemoveEventListener ("LinesShifted", tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextCleared",  tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextChanged",  tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextDeleted",  tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextInserted", tostring (self:GetTable ()))
+	document:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
+	document:RemoveEventListener ("LinesShifted",    tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextCleared",     tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextChanged",     tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextDeleted",     tostring (self:GetTable ()))
+	document:RemoveEventListener ("TextInserted",    tostring (self:GetTable ()))
 end
 
 -- Event handlers

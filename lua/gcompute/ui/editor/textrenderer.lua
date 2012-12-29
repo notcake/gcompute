@@ -1,8 +1,6 @@
 local self = {}
 GCompute.Editor.TextRenderer = GCompute.MakeConstructor (self)
 
-local string_len = string.len
-
 function self:ctor ()
 	self.NextHashId = 0
 	self.StateHash = ""
@@ -42,7 +40,7 @@ function self:GetCharacterColumnCount (character, currentColumn)
 	if character == "" then return 0 end
 	if character == "\t" then return self.TabWidth - currentColumn % self.TabWidth end
 	if character == "\r" or character == "\n" then return 0 end
-	if string_len (character) > 1 then return 2 end
+	if #character > 1 then return 2 end
 	return 1
 end
 

@@ -33,7 +33,7 @@ end
 -- Editor
 function self:GetEditorHelper ()
 	if not self.EditorHelper then
-		self.EditorHelper = GCompute.MakeConstructor (self.EditorHelperTable, GCompute.IEditorHelper) ()
+		self.EditorHelper = GCompute.MakeConstructor (self.EditorHelperTable, GCompute.IEditorHelper) (self)
 	end
 	return self.EditorHelper
 end

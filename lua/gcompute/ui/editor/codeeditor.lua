@@ -265,10 +265,19 @@ function PANEL:DrawLine (lineOffset)
 	local viewLocationColumn   = self.ViewLocation:GetColumn ()
 	local characterWidth       = self.Settings.CharacterWidth
 	
+	-- Bracket highlighting
+	local openLine,  openColumn  = self.BracketHighlighter:GetOpenLineColumn  (self.TextRenderer)
+	local closeLine, closeColumn = self.BracketHighlighter:GetCloseLineColumn (self.TextRenderer)
+	local bracketColumn = math.min (openColumn or math.huge, closeColumn or math.huge)
+	
+	-- Do not render identation highlighting outside of the bracket range.
+	-- If no brackets are found, bracketColumn would be math.huge anyway.
+	if lineNumber < (openLine or 0) or lineNumber > (closeLine or self.Document:GetLineCount ()) then bracketColumn = math.huge end
+	
 	-- Draw indentation guides
 	local preceedingWhitespaceColumnCount = self.TextRenderer:GetStringColumnCount (line:GetText ():match ("^[ \t]*"), 0)
 	for i = self.TextRenderer:GetTabWidth (), preceedingWhitespaceColumnCount - 1, self.TextRenderer:GetTabWidth () do
-		surface_SetDrawColor (indentationGuideColor)
+		surface_SetDrawColor (i == bracketColumn and GLib.Colors.Red or indentationGuideColor)
 		surface_DrawLine (x + (i - viewLocationColumn) * characterWidth, lineOffset * self.Settings.LineHeight, x + (i - viewLocationColumn) * characterWidth, (lineOffset + 1) * self.Settings.LineHeight)
 	end
 	
@@ -367,6 +376,7 @@ function PANEL:DrawLineTextHighlighted (x, y, currentColumn, first, second)
 	return columnCount
 end
 
+-- This function is unused.
 function PANEL:DrawLineSection (lineNumber, startCharacter, endCharacter)
 	local relativeLineNumber = lineNumber - self.ViewLocation:GetLine ()
 	local line = self.Document:GetLine (lineNumber)

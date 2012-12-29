@@ -85,23 +85,31 @@ end
 function self:ctor (codeEditor)
 	self.Editor = codeEditor
 	
-	self.FoundInvalid = true
-	self.FoundOpen  = false
-	self.FoundClose = false
-	self.OpenLine = 0
-	self.OpenCharacter = 0
-	self.CloseLine = 0
-	self.CloseCharacter = 0
+	self.FoundInvalid         = true
+	self.FoundOpen            = false
+	self.FoundClose           = false
+	self.OpenLine             = 0
+	self.OpenCharacter        = 0
+	self.OpenColumn           = nil
+	self.OpenColumnStateHash  = nil
+	self.CloseLine            = 0
+	self.CloseCharacter       = 0
+	self.CloseColumn          = nil
+	self.CloseColumnStateHash = nil
 	
 	self.Editor:AddEventListener ("CaretMoved", self:GetId (),
 		function ()
 			self.FoundInvalid = true
+			self.OpenColumn   = nil
+			self.CloseColumn  = nil
 		end
 	)
 	
 	self.Editor:AddEventListener ("TextChanged", self:GetId (),
 		function ()
 			self.FoundInvalid = true
+			self.OpenColumn   = nil
+			self.CloseColumn  = nil
 		end
 	)
 	
@@ -123,10 +131,28 @@ function self:dtor ()
 	self.Editor:RemoveEventListener ("TextChanged", self:GetId ())
 end
 
+function self:GetCloseLineColumn (textRenderer)
+	if not self.FoundClose then return nil, nil end
+	if not self.SearchInProgress and not self.FoundOpen then return nil, nil end
+	if not self.CloseColumn or self.CloseColumnStateHash ~= textRenderer:GetStateHash () then
+		self.CloseColumn = self.Editor:GetDocument ():GetLine (self.CloseLine):CharacterToColumn (self.CloseCharacter, textRenderer)
+	end
+	return self.CloseLine, self.CloseColumn
+end
+
 function self:GetCloseLocation ()
 	if not self.FoundClose then return nil, nil end
 	if not self.SearchInProgress and not self.FoundOpen then return nil, nil end
 	return self.CloseLine, self.CloseCharacter
+end
+
+function self:GetOpenLineColumn (textRenderer)
+	if not self.FoundOpen then return nil, nil end
+	if not self.SearchInProgress and not self.FoundClose then return nil, nil end
+	if not self.OpenColumn or self.OpenColumnStateHash ~= textRenderer:GetStateHash () then
+		self.OpenColumn = self.Editor:GetDocument ():GetLine (self.OpenLine):CharacterToColumn (self.OpenCharacter, textRenderer)
+	end
+	return self.OpenLine, self.OpenColumn
 end
 
 function self:GetOpenLocation ()

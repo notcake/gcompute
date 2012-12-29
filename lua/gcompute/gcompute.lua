@@ -77,6 +77,9 @@ include ("namespacevisitor.lua")
 include ("compiler/compilationgroup.lua")
 include ("compiler/compilationunit.lua")
 
+-- regex
+include ("regex/regex.lua")
+
 -- lexing
 include ("lexer/keywordtype.lua")
 include ("lexer/tokentype.lua")

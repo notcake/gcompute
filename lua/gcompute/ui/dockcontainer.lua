@@ -83,6 +83,9 @@ function PANEL:Init ()
 			
 			local w = 256
 			local h = 256
+			render.PushFilterMin (TEXFILTER.LINEAR)
+			render.PushFilterMag (TEXFILTER.LINEAR)
+			
 			render.SetScissorRect (x, y, x + viewContainer:GetWide () / ScrW () * w, y + viewContainer:GetTall () / ScrH () * h, true)
 			Gooey.RenderContext:PushViewPort (x, y, w, h)
 			surface.SetAlphaMultiplier (0.9)
@@ -90,6 +93,9 @@ function PANEL:Init ()
 			surface.SetAlphaMultiplier (1)
 			Gooey.RenderContext:PopViewPort ()
 			render.SetScissorRect (0, 0, 0, 0, false)
+			
+			render.PopFilterMin ()
+			render.PopFilterMag ()
 		end
 	)
 	self.DragDropController:SetDropRenderer (

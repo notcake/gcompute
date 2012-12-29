@@ -13,6 +13,8 @@ function PANEL:Init ()
 	
 	self.VPanelContainer:AddControl (self.CloseButton)
 	
+	self:SetBackgroundColor (GLib.Colors.SandyBrown)
+	
 	self:SetTall (28)
 end
 
@@ -21,7 +23,7 @@ function PANEL:IsCloseButtonVisible ()
 end
 
 function PANEL:Paint (w, h)
-	surface.SetDrawColor (GLib.Colors.SandyBrown)
+	surface.SetDrawColor (self:GetBackgroundColor ())
 	surface.DrawRect (0, 0, w, h)
 	
 	self.VPanelContainer:Paint (Gooey.RenderContext)

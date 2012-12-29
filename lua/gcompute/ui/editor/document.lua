@@ -133,7 +133,7 @@ function self:Save (callback)
 	self:GetFile ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then
-				self:DispatchEvent ("Saved")
+				self:DispatchEvent ("Saved", false)
 				callback (false)
 				return
 			end
@@ -142,7 +142,7 @@ function self:Save (callback)
 				function ()
 					fileStream:Close ()
 					self:MarkSaved ()
-					self:DispatchEvent ("Saved")
+					self:DispatchEvent ("Saved", true)
 					callback (true)
 				end
 			)

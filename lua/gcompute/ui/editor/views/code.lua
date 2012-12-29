@@ -22,9 +22,13 @@ function self:ctor (container)
 		end
 	)
 	
+	-- Save failure
+	self.SaveFailureNotificationBar = nil
+	
 	-- Document events
 	self:GetSavable ():AddEventListener ("FileChanged",
 		function (_, oldFile, file)
+			if self.FileChangeNotificationBar then self.FileChangeNotificationBar:SetVisible (false) end
 			self.FileSystemWatcher:RemoveFile (oldFile)
 			self.FileSystemWatcher:AddFile (file)
 			
@@ -44,8 +48,16 @@ function self:ctor (container)
 		end
 	)
 	self:GetSavable ():AddEventListener ("Saved",
-		function (_)
+		function (_, success)
 			self.IgnoreFileChanges = false
+			if success then
+				if self.FileChangeNotificationBar  then self.FileChangeNotificationBar :SetVisible (false) end
+				if self.SaveFailureNotificationBar then self.SaveFailureNotificationBar:SetVisible (false) end
+			else
+				self:CreateSaveFailureNotificationBar ()
+				self.SaveFailureNotificationBar:SetVisible (true)
+				self.SaveFailureNotificationBar:SetText ("Cannot save to " .. self:GetSavable ():GetFile ():GetDisplayPath () .. ". (Is it not a .txt file or outside the garrysmod/data/ directory?)")
+			end
 		end
 	)
 	self:GetSavable ():AddEventListener ("UnsavedChanged",
@@ -134,7 +146,6 @@ end
 
 -- Internal, do not call
 function self:CreateFileChangeNotificationBar ()
-	GLib.PrintStackTrace ()
 	if self.FileChangeNotificationBar then return end
 	self.FileChangeNotificationBar = vgui.Create ("GComputeFileChangeNotificationBar", self:GetContainer ())
 	self.FileChangeNotificationBar:SetVisible (false)
@@ -151,15 +162,40 @@ function self:CreateFileChangeNotificationBar ()
 	self:InvalidateLayout ()
 end
 
+function self:CreateSaveFailureNotificationBar ()
+	if self.SaveFailureNotificationBar then return end
+	self.SaveFailureNotificationBar = vgui.Create ("GComputeSaveFailureNotificationBar", self:GetContainer ())
+	self.SaveFailureNotificationBar:SetVisible (false)
+	self.SaveFailureNotificationBar:AddEventListener ("VisibleChanged",
+		function ()
+			self:InvalidateLayout ()
+		end
+	)
+	self.SaveFailureNotificationBar:AddEventListener ("SaveAsRequested",
+		function ()
+			local editorFrame = self:GetContainer ():GetDockContainer ():GetRootDockContainer ():GetParent ()
+			editorFrame:SaveAsView (self)
+		end
+	)
+	self:InvalidateLayout ()
+end
+
 -- Event handlers
 function self:PerformLayout (w, h)
 	local y = 0
 	
 	if self.FileChangeNotificationBar and
 	   self.FileChangeNotificationBar:IsVisible () then
-		self.FileChangeNotificationBar:SetPos (0, 0)
+		self.FileChangeNotificationBar:SetPos (0, y)
 		self.FileChangeNotificationBar:SetWide (w)
 		y = y + self.FileChangeNotificationBar:GetTall ()
+	end
+	
+	if self.SaveFailureNotificationBar and
+	   self.SaveFailureNotificationBar:IsVisible () then
+		self.SaveFailureNotificationBar:SetPos (0, y)
+		self.SaveFailureNotificationBar:SetWide (w)
+		y = y + self.SaveFailureNotificationBar:GetTall ()
 	end
 	
 	self:GetEditor ():SetPos (0, y)

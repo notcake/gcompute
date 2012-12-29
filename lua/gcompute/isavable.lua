@@ -3,7 +3,7 @@ GCompute.ISavable = GCompute.MakeConstructor (self)
 
 --[[
 	Events:
-		CanSaveChanged (canSave)
+		CanSaveChanged (bool canSave)
 			Fired when the presence of savable changes has changed.
 		FileChanged (IFile oldFile, IFile file)
 			Fired when the file has changed.
@@ -13,11 +13,11 @@ GCompute.ISavable = GCompute.MakeConstructor (self)
 			Fired when the copy from disk is about to be reloaded.
 		Reloading ()
 			Fired when the copy from disk has been reloaded.
-		Saved ()
-			Fired when this object has been marked as saved.
+		Saved (bool success)
+			Fired when this object has been attempted to be saved.
 		Saving ()
 			Fired when this object is about to be saved.
-		UnsavedChanged (unsaved)
+		UnsavedChanged (bool unsaved)
 			Fired when this object's unsaved status has changed.
 ]]
 
@@ -56,7 +56,7 @@ function self:Reload ()
 end
 
 function self:Save ()
-	self:DispatchEvent ("Saved")
+	self:DispatchEvent ("Saved", true)
 end
 
 function self:SetFile (file)

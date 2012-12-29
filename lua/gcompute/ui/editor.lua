@@ -45,6 +45,7 @@ GCompute.IncludeDirectory ("gcompute/ui/editor/plugins")
 -- Notification Bars
 include ("editor/notificationbars/notificationbar.lua")
 include ("editor/notificationbars/filechangenotificationbar.lua")
+include ("editor/notificationbars/savefailurenotificationbar.lua")
 
 -- Undo / Redo
 include ("editor/undoredo/undoredostack.lua")

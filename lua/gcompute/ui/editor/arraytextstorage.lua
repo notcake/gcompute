@@ -420,14 +420,15 @@ end
 function self:CanMergeSegments (segment1, segment2)
 	if not segment2 then return false end
 	
-	if segment1.TextType ~= segment2.TextType then return false end
-	if segment1.TextType == "utf8" then return false end
-	if segment1.Object ~= segment2.Object then return false end
-	if segment1.Token  ~= segment2.Token  then return false end
-	if segment1.Color.r ~= segment2.Color.r then return false end
-	if segment1.Color.g ~= segment2.Color.g then return false end
-	if segment1.Color.b ~= segment2.Color.b then return false end
-	if segment1.Color.a ~= segment2.Color.a then return false end
+	if segment1.TextType  ~= segment2.TextType  then return false end
+	if segment1.TextType  == "utf8"             then return false end
+	if segment1.Object    ~= segment2.Object    then return false end
+	if segment1.Token     ~= segment2.Token     then return false end
+	if segment1.TokenType ~= segment2.TokenType then return false end
+	if segment1.Color.r   ~= segment2.Color.r   then return false end
+	if segment1.Color.g   ~= segment2.Color.g   then return false end
+	if segment1.Color.b   ~= segment2.Color.b   then return false end
+	if segment1.Color.a   ~= segment2.Color.a   then return false end
 	
 	return true
 end

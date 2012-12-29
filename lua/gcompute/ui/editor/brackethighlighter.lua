@@ -209,8 +209,7 @@ end
 function self:FindMatchingBracket (line, char, bracket)
 	local document = self.Editor:GetDocument ()
 	
-	local token = document:GetLine (line):GetAttribute ("Token", char)
-	self.TokenType = token and token.TokenType
+	self.TokenType = document:GetLine (line):GetAttribute ("TokenType", char)
 	
 	if openingToClosing [bracket] then
 		self.OpeningCharacter = bracket
@@ -364,7 +363,7 @@ function self:ProcessLineBackwards (textStorage, segmentIndex)
 	for i = segmentIndex, 1, -1 do
 		local segment = textStorage:GetSegment (i)
 		segmentStartCharacter = segmentStartCharacter - segment.Length
-		local tokenType = segment.Token and segment.Token.TokenType
+		local tokenType = segment.TokenType
 		
 		-- Token type must match
 		if not tokenType or not self.TokenType or tokenType == self.TokenType then
@@ -397,7 +396,7 @@ function self:ProcessLineForwards (textStorage, segmentIndex)
 	
 	for i = segmentIndex, textStorage:GetSegmentCount () do
 		local segment = textStorage:GetSegment (i)
-		local tokenType = segment.Token and segment.Token.TokenType
+		local tokenType = segment.TokenType
 		
 		-- Token type must match
 		if not tokenType or not self.TokenType or tokenType == self.TokenType then

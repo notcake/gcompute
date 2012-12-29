@@ -133,6 +133,7 @@ function self:Token (startCharacter, endCharacter, tokenType)
 	local color = self:GetTokenColor (tokenType)
 	
 	line:SetColor (color, startCharacter, endCharacter)
+	line:SetAttribute ("TokenType", tokenType, startCharacter, endCharacter)
 end
 
 function self:GetTokenColor (tokenType)

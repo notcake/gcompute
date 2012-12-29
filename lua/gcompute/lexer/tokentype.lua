@@ -4,14 +4,15 @@ GCompute.TokenType = GCompute.Enum (
 		Whitespace          =  1,
 		Newline             =  2,
 		Preprocessor        =  3,
-		Number              =  4,
-		Operator            =  5,
-		Identifier          =  6,
+		Comment             =  4,
+		Number              =  5,
+		String              =  6,
 		Keyword             =  7,
-		String              =  8,
-		Comment             =  9,
-		StatementTerminator = 10,
-		EndOfFile           = 11,
-		AST                 = 12  -- Blob of already-parsed data
+		Identifier          =  8,
+		Operator            =  9,
+		MemberIndexer       = 10,
+		StatementTerminator = 11,
+		EndOfFile           = 12,
+		AST                 = 13  -- Blob of already-parsed data
 	}
 )

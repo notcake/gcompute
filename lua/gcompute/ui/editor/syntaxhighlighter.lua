@@ -9,6 +9,8 @@ GCompute.Editor.SyntaxHighlighter = GCompute.MakeConstructor (self, GCompute.Edi
 			Fired when syntax highlighting has advanced.
 		HighlightingStarted ()
 			Fired when syntax highlighting has started.
+		LineHighlighted (lineNumber, tokenArray)
+			Fired when a line has been syntax highlighted.
 ]]
 
 function self:ctor (document)
@@ -23,6 +25,7 @@ function self:ctor (document)
 	self.LastThinkTime = CurTime ()
 	
 	self.CurrentLine = 0
+	self.CurrentLineTokens = {}
 	self.TokenizationStartTime = SysTime ()
 	
 	self.Document:AddEventListener ("LanguageChanged", tostring (self),
@@ -62,6 +65,10 @@ function self:dtor ()
 	self.Document:RemoveEventListener ("TextChanged",     tostring (self))
 end
 
+function self:GetDocument ()
+	return self.Document
+end
+
 function self:GetEditorHelper ()
 	return self.EditorHelper
 end
@@ -97,6 +104,7 @@ function self:Think ()
 		local previousLine = self.Document:GetLine (self.CurrentLine - 1)
 		local previousOutState = previousLine and previousLine.TokenizationOutState
 		local line
+		
 		while self.CurrentLine < self.Document:GetLineCount () do
 			if SysTime () - startTime > 0.010 then break end
 			
@@ -108,7 +116,11 @@ function self:Think ()
 				line.TokenizationLanguage = self.LanguageName
 				line.TokenizationInState  = previousOutState or {}
 				line.TokenizationOutState = {}
+				self.CurrentLineTokens = {}
 				self.EditorHelper:TokenizeLine (line:GetText (), self, line.TokenizationInState, line.TokenizationOutState)
+				line.Tokens = self.CurrentLineTokens
+				
+				self:DispatchEvent ("LineHighlighted", self.CurrentLine, line.Tokens)
 			end
 			
 			previousLine = line
@@ -134,6 +146,13 @@ function self:Token (startCharacter, endCharacter, tokenType)
 	
 	line:SetColor (color, startCharacter, endCharacter)
 	line:SetAttribute ("TokenType", tokenType, startCharacter, endCharacter)
+	
+	self.CurrentLineTokens [#self.CurrentLineTokens + 1] =
+	{
+		StartCharacter = startCharacter,
+		EndCharacter   = endCharacter,
+		TokenType      = tokenType
+	}
 end
 
 function self:GetTokenColor (tokenType)

@@ -498,6 +498,7 @@ end
 -- Persistance
 function self:LoadSession (inBuffer)
 	local hasPath = inBuffer:Boolean ()
+	local languageName
 	if hasPath then
 		local path = inBuffer:String ()
 		VFS.Root:OpenFile (GLib.GetLocalId (), path, VFS.OpenFlags.Read,
@@ -507,6 +508,9 @@ function self:LoadSession (inBuffer)
 					return
 				end
 				self:SetFile (fileStream:GetFile ())
+				if GCompute.Languages.Get (languageName) then
+					self:SetLanguage (GCompute.Languages.Get (languageName))
+				end
 				self:LoadFromStream (fileStream,
 					function ()
 						fileStream:Close ()
@@ -520,6 +524,11 @@ function self:LoadSession (inBuffer)
 		end
 		self:SetText (inBuffer:LongString ())
 	end
+	
+	languageName = inBuffer:String ()
+	if GCompute.Languages.Get (languageName) then
+		self:SetLanguage (GCompute.Languages.Get (languageName))
+	end
 end
 
 function self:SaveSession (outBuffer)
@@ -530,6 +539,7 @@ function self:SaveSession (outBuffer)
 		outBuffer:Boolean (self:IsUnsaved ())
 		outBuffer:LongString (self:GetText ())
 	end
+	outBuffer:String (self:GetLanguage () and self:GetLanguage ():GetName () or "")
 end
 
 -- ISavable

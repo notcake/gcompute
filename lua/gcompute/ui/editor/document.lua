@@ -16,7 +16,6 @@ GCompute.Editor.Document = GCompute.MakeConstructor (self, GCompute.ISavable)
 ]]
 
 function self:ctor ()
-	self.Title = nil
 	self.Id = nil
 	
 	-- ISavable

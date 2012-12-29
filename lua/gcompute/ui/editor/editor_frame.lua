@@ -681,19 +681,16 @@ function self:HookSyntaxHighlighter (syntaxHighlighter)
 	
 	syntaxHighlighter:AddEventListener ("HighlightingFinished", tostring (self:GetTable ()),
 		function (_)
-			print ("HighlightingFinished")
 			self:UpdateProgressBar ()
 		end
 	)
 	syntaxHighlighter:AddEventListener ("HighlightingProgress", tostring (self:GetTable ()),
 		function (_, linesProcessed, totalLines)
-			print ("HighlightingProgress")
 			self:UpdateProgressBar ()
 		end
 	)
 	syntaxHighlighter:AddEventListener ("HighlightingStarted", tostring (self:GetTable ()),
 		function (_)
-			print ("HighlightingStarted")
 			self:UpdateProgressBar ()
 		end
 	)

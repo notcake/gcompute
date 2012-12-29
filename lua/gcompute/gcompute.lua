@@ -164,6 +164,9 @@ include ("metadata/membervisibility.lua")
 
 include ("metadata/module.lua")
 
+include ("metadata/usingdirective.lua")
+include ("metadata/usingcollection.lua")
+
 include ("metadata/objectdefinition.lua")
 include ("metadata/namespace.lua")
 include ("metadata/classnamespace.lua")
@@ -207,8 +210,6 @@ include ("metadata/typeargumentlist.lua")
 include ("metadata/typeargumentlistlist.lua")
 include ("metadata/emptytypeparameterlist.lua")
 include ("metadata/emptytypeargumentlist.lua")
-
-include ("metadata/usingdirective.lua")
 
 include ("metadata/mergedlocalscope.lua")
 

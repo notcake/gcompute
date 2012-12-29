@@ -6,7 +6,11 @@ function self:ctor (name, table)
 	self.Value = table
 	if self.Value == nil then
 	elseif type (self.Value) ~= "table" then
-		self.Table = self.Value:GetTable ()
+		if type (self.Value.IsValid) == "function" then
+			self.Table = self.Value:IsValid () and self.Value:GetTable () or {}
+		else
+			self.Table = self.Value:GetTable ()
+		end
 	else
 		self.Table = table
 	end

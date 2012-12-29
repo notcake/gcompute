@@ -8,6 +8,10 @@
 local LANGUAGE = GCompute.Languages.Create ("Expression 2")
 GCompute.LanguageDetector:AddPathPattern (LANGUAGE, "/expression2/.*")
 
+-- Usings
+LANGUAGE:AddIntrinsicUsing ("Expression2")
+LANGUAGE:AddIntrinsicUsing ("Expression2.math")
+
 -- Lexer
 LANGUAGE:GetTokenizer ()
 	:AddCustomSymbols (GCompute.TokenType.String, {"\"", "'"},
@@ -66,7 +70,8 @@ LANGUAGE:GetTokenizer ()
 	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+")
 	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"##", "++", "--", "==", "!=", "<=", ">=", "<<=", ">>=", "+=", "-=", "*=", "/=", "^=", "||", "&&", "^^", ">>", "<<"})
 	:AddPlainSymbols  (GCompute.TokenType.MemberIndexer,       {".", ":"})
-	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"@", "!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ","})
+	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ","})
+	:AddPlainSymbol   (GCompute.TokenType.Preprocessor,         "@")
 	:AddPlainSymbol   (GCompute.TokenType.StatementTerminator,  ";")
 	:AddPlainSymbols  (GCompute.TokenType.Newline,             {"\r\n", "\r", "\n"})
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")

@@ -21,6 +21,16 @@ for _, functionName in ipairs (forwardedFunctions) do
 	end
 end
 
+function self:GetMember (name)
+	self:ResolveMember (name)
+	return self.Members [name]
+end
+
+function self:MemberExists (name)
+	self:ResolveMember (name)
+	return self.Members [name] and true or false
+end
+
 function self:SetDefinition (objectDefinition)
 	self.Definition = objectDefinition
 	
@@ -59,22 +69,48 @@ function self:PopulateFromTable (t, limit)
 		if not self.Members [name] then
 			count = count + 1
 			
-			local t = type (v)
-			local metatable = debug.getmetatable (v)
-			if type (metatable) ~= "table" then metatable = nil end
-			
-			local objectDefinition
-			if t == "function" then
-				objectDefinition = GCompute.Lua.Function (name, v)
-			elseif t == "table" or (metatable and metatable.GetTable) then
-				objectDefinition = GCompute.Lua.Table (name, v)
-			else
-				objectDefinition = GCompute.Lua.Variable (name, v)
-			end
-			if objectDefinition then
-				self:SetupMemberHierarchy (objectDefinition)
-			end
-			self.Members [name] = objectDefinition
+			self:ResolveMemberFromTable (t, name)
 		end
 	end
+end
+
+function self:ResolveMember (name)
+	if self.Members [name] then return end
+	
+	if not self.Table then return end
+	
+	local explored = {}
+	local t = self.Table
+	while t and not explored [t] and type (t) == "table" do
+		if self:ResolveMemberFromTable (t, name) then return end
+		explored [t] = true
+		
+		t = t and getmetatable (t)
+		t = t and t.__index
+	end
+end
+
+function self:ResolveMemberFromTable (t, name)
+	local member = t [name]
+	if not member then return false end
+	
+	local memberType = type (member)
+	
+	local metatable = debug.getmetatable (member)
+	if type (metatable) ~= "table" then metatable = nil end
+	
+	local objectDefinition
+	if memberType == "function" then
+		objectDefinition = GCompute.Lua.Function (name, member)
+	elseif memberType == "table" or (metatable and metatable.GetTable) then
+		objectDefinition = GCompute.Lua.Table (name, member)
+	else
+		objectDefinition = GCompute.Lua.Variable (name, member)
+	end
+	if objectDefinition then
+		self:SetupMemberHierarchy (objectDefinition)
+	end
+	self.Members [name] = objectDefinition
+	
+	return true
 end

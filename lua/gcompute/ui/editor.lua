@@ -28,6 +28,7 @@ include ("editor/textselectioncontroller.lua")
 
 include ("editor/itokensink.lua")
 include ("editor/brackethighlighter.lua")
+include ("editor/identifierhighlighter.lua")
 include ("editor/syntaxhighlighter.lua")
 
 -- IDE

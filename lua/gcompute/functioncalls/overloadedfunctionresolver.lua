@@ -107,10 +107,11 @@ function self:AddNamespaceMember (rootNamespaceSet, referenceNamespace, methodNa
 end
 
 function self:AddOperatorOverloads (rootNamespaceSet, usingSource, objectType, methodName, typeArgumentList)
+	-- Check usings
 	while usingSource do
 		if usingSource:IsNamespace () or usingSource:IsClass () then
-			for i = 1, usingSource:GetUsingCount () do
-				local targetDefinition = usingSource:GetUsing (i):GetNamespace ()
+			for usingDirective in usingSource:GetUsings ():GetEnumerator () do
+				local targetDefinition = usingDirective:GetNamespace ()
 				if targetDefinition then
 					self:AddNamespaceMember (rootNamespaceSet, targetDefinition, methodName, typeArgumentList)
 				end

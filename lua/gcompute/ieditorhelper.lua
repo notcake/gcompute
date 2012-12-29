@@ -26,6 +26,10 @@ function self:GetNewLineIndentation (codeEditor, location)
 	return string.match (codeEditor:GetDocument ():GetLine (location:GetLine ()):GetText (), "^[ \t]*")
 end
 
+function self:GetRootNamespace ()
+	return GCompute.GlobalNamespace
+end
+
 function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	local document = codeEditor:GetDocument ()
 	local code = codeEditor:GetText ()
@@ -128,7 +132,8 @@ function self:TokenizeLine (line, tokenSink, inState, outState)
 		if language:GetKeywordType (token) ~= GCompute_KeywordType_Unknown then
 			tokenType = GCompute_TokenType_Keyword
 		end
-		tokenSink:Token (math_max (0, currentCharacter), currentCharacter + characterCount, tokenType)
+		if currentCharacter < 0 then token = GLib.UTF8.Sub (token, 1 - currentCharacter) end
+		tokenSink:Token (math_max (0, currentCharacter), currentCharacter + characterCount, tokenType, token)
 		
 		offset = offset + tokenLength
 		currentCharacter = currentCharacter + characterCount

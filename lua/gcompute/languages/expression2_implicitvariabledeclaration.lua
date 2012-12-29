@@ -20,8 +20,6 @@ end
 
 function self:VisitRoot (blockStatement)
 	self.Root = blockStatement
-	self.RootNamespace:AddUsing ("Expression2"):Resolve (self.ObjectResolver)
-	self.RootNamespace:AddUsing ("Expression2.math"):Resolve (self.ObjectResolver)
 end
 
 function self:VisitBlock (blockStatement)

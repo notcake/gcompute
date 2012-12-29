@@ -106,7 +106,13 @@ function self:Compile (callback)
 	end
 	callbackChain:Then (
 		function (callback, errorCallback)
-			GCompute.UniqueNameAssigner ():Process (self.NamespaceDefinition)
+			GCompute.UniqueNameAssigner ():Process (self.RootNamespace)
+			
+			local objectResolver = GCompute.ObjectResolver (self:GetRootNamespaceSet ())
+			local language = self:GetSourceFile (1):GetCompilationUnit ():GetLanguage ()
+			for usingDirective in language:GetIntrinsicUsings ():GetEnumerator () do
+				self.RootNamespace:AddUsing (usingDirective:GetQualifiedName ()):Resolve (objectResolver)
+			end
 			callback ()
 		end
 	)

@@ -22,6 +22,8 @@ surface.CreateFont (
 			Fired when the caret has moved.
 		DocumentChanged (Document oldDocument, Document newDocument)
 			Fired when this editor's document has changed.
+		IdentifierHighlighterChanged (IdentifierHighlighter oldIdentifierHighlighter, IdentifierHighlighter identifierHighlighter)
+			Fired when the identifier highlighter has changed.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
 			Fired when the selection has changed.
 		SyntaxHighlighterChanged (SyntaxHighlighter oldSyntaxHighlighter, SyntaxHighlighter syntaxHighlighter)
@@ -564,11 +566,15 @@ function PANEL:SetDocument (document)
 	
 	self.EditorHelper = nil
 	if self.Document then
+		self.EditorHelper = self.Document:GetLanguage () and self.Document:GetLanguage ():GetEditorHelper ()
 		if not self.Document.SyntaxHighlighter then
 			self.Document.SyntaxHighlighter = GCompute.Editor.SyntaxHighlighter (self.Document)
 			self:GetSyntaxHighlighter ():SetEnabled (self:IsCompilationEnabled ())
 		end
-		self.EditorHelper = self.Document:GetLanguage () and self.Document:GetLanguage ():GetEditorHelper ()
+		if not self.Document.IdentifierHighlighter then
+			self.Document.IdentifierHighlighter = GCompute.Editor.IdentifierHighlighter (self.Document, self.Document.SyntaxHighlighter)
+			self:GetIdentifierHighlighter ():SetEnabled (self:IsCompilationEnabled ())
+		end
 	end
 	
 	self:HookDocument (self.Document)
@@ -587,6 +593,7 @@ function PANEL:SetDocument (document)
 	
 	self:DispatchEvent ("DocumentChanged", oldDocument, self.Document)
 	self:DispatchEvent ("SyntaxHighlighterChanged", oldDocument and oldDocument.SyntaxHighlighter, self.Document.SyntaxHighlighter)
+	self:DispatchEvent ("IdentifierHighlighterChanged", oldDocument and oldDocument.IdentifierHighlighter, self.Document.IdentifierHighlighter)
 end
 
 function PANEL:SetReadOnly (readOnly)
@@ -1158,6 +1165,11 @@ function PANEL:GetEditorHelper ()
 	return self.EditorHelper
 end
 
+function PANEL:GetIdentifierHighlighter ()
+	if not self:GetDocument () then return nil end
+	return self:GetDocument ().IdentifierHighlighter
+end
+
 function PANEL:GetLanguage ()
 	if not self:GetDocument () then return nil end
 	return self:GetDocument ():GetLanguage ()
@@ -1176,6 +1188,9 @@ function PANEL:SetCompilationEnabled (compilationEnabled)
 	self.CompilationEnabled = compilationEnabled
 	if self:GetSyntaxHighlighter () then
 		self:GetSyntaxHighlighter ():SetEnabled (self.CompilationEnabled)
+	end
+	if self:GetIdentifierHighlighter () then
+		self:GetIdentifierHighlighter ():SetEnabled (self.CompilationEnabled)
 	end
 end
 
@@ -1391,6 +1406,7 @@ function PANEL:OnRemoved ()
 	self:UnhookDocument (self.Document)
 	if self:GetDocument () then
 		if self:GetDocument ():GetViewCount () == 0 then
+			self:GetIdentifierHighlighter ():dtor ()
 			self:GetSyntaxHighlighter ():dtor ()
 		end
 	end
@@ -1411,6 +1427,9 @@ function PANEL:Think ()
 	
 	if self:GetSyntaxHighlighter () then
 		self:GetSyntaxHighlighter ():Think ()
+	end
+	if self:GetIdentifierHighlighter () then
+		self:GetIdentifierHighlighter ():Think ()
 	end
 	
 	self:DocumentUpdateThink ()
@@ -1445,7 +1464,7 @@ function PANEL:HoverThink ()
 	if self.ToolTipController:IsToolTipVisible () then return end
 	
 	if SysTime () - self.HoverStartTime > 0.5 then
-		self.ToolTipController:ShowToolTip (self.HoveredToken:ToString ())
+		self.ToolTipController:ShowToolTip ("\"" .. GLib.String.Escape (self.HoveredToken.Value) .. "\"")
 	end
 end
 

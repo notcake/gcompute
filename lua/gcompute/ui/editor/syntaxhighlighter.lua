@@ -24,6 +24,7 @@ function self:ctor (document)
 	
 	self.LastThinkTime = CurTime ()
 	
+	self.InProgress = true
 	self.CurrentLine = 0
 	self.CurrentLineTokens = {}
 	self.TokenizationStartTime = SysTime ()
@@ -120,6 +121,8 @@ function self:Think ()
 				self.EditorHelper:TokenizeLine (line:GetText (), self, line.TokenizationInState, line.TokenizationOutState)
 				line.Tokens = self.CurrentLineTokens
 				
+				self:ProcessLineTokens (line, line.Tokens)
+				
 				self:DispatchEvent ("LineHighlighted", self.CurrentLine, line.Tokens)
 			end
 			
@@ -131,6 +134,8 @@ function self:Think ()
 		self:DispatchEvent ("HighlightingProgress", self.CurrentLine, self.Document:GetLineCount ())
 		
 		if self.CurrentLine >= self.Document:GetLineCount () then
+			self.InProgress = false
+			
 			self:DispatchEvent ("HighlightingFinished")
 			self.TokenizationStartTime = nil
 		end
@@ -138,21 +143,18 @@ function self:Think ()
 end
 
 -- ITokenSink
-function self:Token (startCharacter, endCharacter, tokenType)
+function self:Token (startCharacter, endCharacter, tokenType, tokenValue)
 	if endCharacter <= 0 then return end
 	
-	local line = self.Document:GetLine (self.CurrentLine)
-	local color = self:GetTokenColor (tokenType)
-	
-	line:SetColor (color, startCharacter, endCharacter)
-	line:SetAttribute ("TokenType", tokenType, startCharacter, endCharacter)
-	
-	self.CurrentLineTokens [#self.CurrentLineTokens + 1] =
+	local token =
 	{
 		StartCharacter = startCharacter,
 		EndCharacter   = endCharacter,
-		TokenType      = tokenType
+		TokenType      = tokenType,
+		Value          = tokenValue
 	}
+	
+	self.CurrentLineTokens [#self.CurrentLineTokens + 1] = token
 end
 
 function self:GetTokenColor (tokenType)
@@ -165,9 +167,9 @@ function self:GetTokenColor (tokenType)
 	elseif tokenType == GCompute.TokenType.Keyword then
 		return GLib.Colors.RoyalBlue
 	elseif tokenType == GCompute.TokenType.Preprocessor then
-		return GLib.Colors.Yellow
+		return GLib.Colors.Wheat
 	elseif tokenType == GCompute.TokenType.Identifier then
-		return GLib.Colors.LightSkyBlue
+		return GLib.Colors.PaleGreen
 	elseif tokenType == GCompute.TokenType.Unknown then
 		return GLib.Colors.Tomato
 	end
@@ -187,12 +189,31 @@ function self:InvalidateLine (line)
 	if line < 0 then return end
 	if line >= self.Document:GetLineCount () then return end
 	
-	if self.CurrentLine >= self.Document:GetLineCount () then
+	if not self.InProgress then
 		self.TokenizationStartTime = SysTime ()
 		self:DispatchEvent ("HighlightingStarted")
 	end
 	self.Document:GetLine (line).TokenizationOutState = nil
 	self.CurrentLine = math.min (self.CurrentLine, line)
+end
+
+function self:ProcessLineTokens (line, tokens)
+	local startCharacter
+	local endCharacter
+	local previousTokenType
+	local tokenType
+	for _, token in ipairs (tokens) do
+		local startCharacter = token.StartCharacter
+		local endCharacter   = token.EndCharacter
+		local tokenType      = token.TokenType
+		local color = self:GetTokenColor (previousTokenType == GCompute.TokenType.Preprocessor and previousTokenType or token.TokenType)
+		
+		line:SetColor (color, startCharacter, endCharacter)
+		line:SetAttribute ("Token",     token,     startCharacter, endCharacter)
+		line:SetAttribute ("TokenType", tokenType, startCharacter, endCharacter)
+		
+		previousTokenType = tokenType
+	end
 end
 
 function self:StateEquals (s1, s2)

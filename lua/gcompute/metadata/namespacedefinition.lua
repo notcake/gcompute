@@ -3,7 +3,7 @@ GCompute.NamespaceDefinition = GCompute.MakeConstructor (self, GCompute.ObjectDe
 
 --- @param name The name of this namespace
 function self:ctor (name)
-	self.Usings = {}
+	self.Usings = GCompute.UsingCollection ()
 	
 	self.Namespace = GCompute.Namespace ()
 	self.Namespace:SetDefinition (self)
@@ -62,9 +62,7 @@ end
 --- Adds a using directive to this namespace definition
 -- @param qualifiedName The name of the namespace to be used
 function self:AddUsing (qualifiedName)
-	local usingDirective = GCompute.UsingDirective (qualifiedName)
-	self.Usings [#self.Usings + 1] = usingDirective
-	return usingDirective
+	return self.Usings:AddUsing (qualifiedName)
 end
 
 function self:Clear ()
@@ -114,23 +112,14 @@ function self:GetUniqueNameMap ()
 	return self.UniqueNameMap
 end
 
---- Returns the UsingDirective identified by the given index
--- @param index The index of the UsingDirective
--- @return The UsingDirective with the given index or nil
-function self:GetUsing (index)
-	return self.Usings [index]
+--- Returns the UsingCollection of this namespace definition
+-- @return The UsingCollection of this namespace definition
+function self:GetUsings ()
+	return self.Usings
 end
 
---- Returns the number of using directives this namespace definition has
--- @return The number of using directives this namespace definition has
-function self:GetUsingCount ()
-	return #self.Usings
-end
-
-function self:ResolveUsings (objectResolver)
-	for i = 1, self:GetUsingCount () do
-		self:GetUsing (i):Resolve (objectResolver)
-	end
+function self:ResolveUsings (objectResolver, errorReporter)
+	self.Usings:Resolve (objectResolver, errorReporter)
 end
 
 function self:SetMergedLocalScope (mergedLocalScope)
@@ -179,12 +168,12 @@ end
 function self:ToString ()
 	local namespaceDefinition = "[Namespace (" .. GCompute.NamespaceType [self:GetNamespace ():GetNamespaceType ()] .. ")] " .. (self:GetName () or "[Unnamed]")
 	
-	if not self:IsEmpty () or self:GetUsingCount () > 0 then
+	if not self:IsEmpty () or not self:GetUsings ():IsEmpty () then
 		namespaceDefinition = namespaceDefinition .. "\n{"
 		
-		local newlineRequired = self:GetUsingCount () > 0
-		for i = 1, self:GetUsingCount () do
-			namespaceDefinition = namespaceDefinition .. "\n    " .. self:GetUsing (i):ToString ()
+		local newlineRequired = not self:GetUsings ():IsEmpty ()
+		for usingDirective in self:GetUsings ():GetEnumerator () do
+			namespaceDefinition = namespaceDefinition .. "\n    " .. usingDirective:ToString ()
 		end
 		
 		if self.MergedLocalScope and not self.MergedLocalScope:IsEmpty () then

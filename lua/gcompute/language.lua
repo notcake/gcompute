@@ -12,6 +12,9 @@ function self:ctor (name)
 	self.Tokenizer = GCompute.Tokenizer (self)
 	self.Keywords = {}
 	
+	-- Usings
+	self.IntrinsicUsings = GCompute.UsingCollection ()
+	
 	self.DirectivesCaseSensitive = true
 	self.Directives = {}
 	
@@ -47,6 +50,15 @@ function self:LoadEditorHelper (file)
 end
 
 -- Compilation
+-- Usings
+function self:AddIntrinsicUsing (qualifiedName)
+	self.IntrinsicUsings:AddUsing (qualifiedName)
+end
+
+function self:GetIntrinsicUsings ()
+	return self.IntrinsicUsings
+end
+
 -- Lexing
 function self:AddKeyword (keywordType, keyword)
 	self.Keywords [keyword] = keywordType

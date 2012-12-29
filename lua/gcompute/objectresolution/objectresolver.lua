@@ -193,16 +193,35 @@ function self:ResolveLocal (resolutionResults, name, localDefinition, fileId)
 end
 
 function self:ResolveMember (resolutionResults, name, objectDefinition, fileId)
-	if objectDefinition:GetNamespace ():MemberExists (name) then
-		resolutionResults:AddResult (GCompute.ResolutionResult (objectDefinition:GetNamespace ():GetMember (name), GCompute.ResolutionResultType.Other))
+	local namespace = objectDefinition:GetNamespace ()
+	if not namespace then return end
+	
+	local member = namespace:GetMember (name)
+	if member then
+		resolutionResults:AddResult (GCompute.ResolutionResult (member, GCompute.ResolutionResultType.Other))
+	end
+end
+
+function self:ResolveQualifiedIdentifier (resolutionResults, leftResolutionResults, identifier, localDefinition, fileId)
+	local name = type (identifier) == "string" and identifier or identifier:GetName ()
+	
+	local typeArgumentList = type (identifier) == "table" and identifier:GetTypeArgumentList ()
+	if typeArgumentList then
+		self:ResolveASTNode (typeArgumentList, true, localDefinition, fileId)
+		typeArgumentList = typeArgumentList:ToTypeArgumentList ()
+	end
+	
+	for i = 1, leftResolutionResults:GetFilteredResultCount () do
+		self:ResolveMember (resolutionResults, name, leftResolutionResults:GetFilteredResultObject (i), fileId)
 	end
 end
 
 function self:ResolveUnqualifiedIdentifier (resolutionResults, identifier, localDefinition, fileId)
-	self:ResolveLocal  (resolutionResults, identifier:GetName (), localDefinition, fileId)
+	local name = type (identifier) == "string" and identifier or identifier:GetName ()
 	
-	local name = identifier:GetName ()
-	local typeArgumentList = identifier:GetTypeArgumentList ()
+	self:ResolveLocal (resolutionResults, name, localDefinition, fileId)
+	
+	local typeArgumentList = type (identifier) == "table" and identifier:GetTypeArgumentList ()
 	if typeArgumentList then
 		self:ResolveASTNode (typeArgumentList, true, localDefinition, fileId)
 		typeArgumentList = typeArgumentList:ToTypeArgumentList ()
@@ -212,8 +231,8 @@ function self:ResolveUnqualifiedIdentifier (resolutionResults, identifier, local
 	local usingSource = localDefinition
 	while usingSource do
 		if usingSource:IsNamespace () or usingSource:IsClass () then
-			for i = 1, usingSource:GetUsingCount () do
-				local targetDefinition = usingSource:GetUsing (i):GetNamespace ()
+			for usingDirective in usingSource:GetUsings ():GetEnumerator () do
+				local targetDefinition = usingDirective:GetNamespace ()
 				if targetDefinition then
 					self:ResolveGlobal (resolutionResults, name, typeArgumentList, targetDefinition, fileId)
 				end

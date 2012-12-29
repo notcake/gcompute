@@ -55,6 +55,13 @@ function self:GetNewLineIndentation (codeEditor, location)
 	return baseIndentation
 end
 
+function self:GetRootNamespace ()
+	if not self.RootNamespace then
+		self.RootNamespace = GCompute.Lua.Table (nil, _G)
+	end
+	return self.RootNamespace
+end
+
 function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	self.LastStdOut = stdOut
 	self.LastStdErr = stdErr

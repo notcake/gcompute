@@ -786,7 +786,8 @@ function self:Think ()
 	DFrame.Think (self)
 	
 	if self:HasFocus () and not Gooey.IsMenuOpen () then
-		if self:GetActiveView () then
+		if self:GetActiveView () and
+		   not self:GetActiveView ():GetContainer ():HasHierarchicalFocus () then
 			self:GetActiveView ():GetContainer ():RequestFocus ()
 		end
 	end

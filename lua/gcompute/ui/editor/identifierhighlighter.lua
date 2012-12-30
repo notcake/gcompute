@@ -1,10 +1,6 @@
 local self = {}
 GCompute.Editor.IdentifierHighlighter = GCompute.MakeConstructor (self)
 
---[[
-	Events:
-]]
-
 function self:ctor (document, syntaxHighlighter)
 	self.Document = document
 	self.SyntaxHighlighter = syntaxHighlighter
@@ -13,13 +9,13 @@ function self:ctor (document, syntaxHighlighter)
 	
 	self.Enabled = true
 	
-	self.Language = nil
+	self.Language     = nil
 	self.EditorHelper = nil
 	
-	self.RootNamespace = nil
-	self.RootNamespaceSet = GCompute.NamespaceSet ()
-	self.UsingSource = nil
-	self.ObjectResolver = GCompute.ObjectResolver (self.RootNamespaceSet)
+	self.RootNamespace    = nil
+	self.RootNamespaceSet = nil
+	self.UsingSource      = nil
+	self.ObjectResolver   = nil
 	
 	self.Document:AddEventListener ("LanguageChanged", tostring (self),
 		function (_, oldLanguage, language)
@@ -33,8 +29,6 @@ function self:ctor (document, syntaxHighlighter)
 	)
 	
 	self:HandleLanguageChange (self.Document:GetLanguage ())
-	
-	GCompute.EventProvider (self)
 end
 
 function self:dtor ()
@@ -64,27 +58,11 @@ function self:SetEnabled (enabled)
 	self.Enabled = enabled
 end
 
-function self:GetTokenColor (tokenType)
-	if tokenType == GCompute.TokenType.String then
-		return GLib.Colors.Gray
-	elseif tokenType == GCompute.TokenType.Number then
-		return GLib.Colors.SandyBrown
-	elseif tokenType == GCompute.TokenType.Comment then
-		return GLib.Colors.ForestGreen
-	elseif tokenType == GCompute.TokenType.Keyword then
-		return GLib.Colors.RoyalBlue
-	elseif tokenType == GCompute.TokenType.Preprocessor then
-		return GLib.Colors.Yellow
-	elseif tokenType == GCompute.TokenType.Identifier then
-		return GLib.Colors.LightSkyBlue
-	elseif tokenType == GCompute.TokenType.Unknown then
-		return GLib.Colors.Tomato
-	end
-	return GLib.Colors.White
-end
-
 function self:Think ()
 	if not next (self.UnprocessedLines) then return end
+	
+	self:CreateObjectResolver ()
+	self:CreateUsingSource ()
 	
 	local startTime = SysTime ()
 	local lineNumber
@@ -101,10 +79,32 @@ function self:Think ()
 end
 
 -- Internal, do not call
+function self:CreateObjectResolver ()
+	if self.ObjectResolver then return end
+	
+	self.RootNamespaceSet = GCompute.NamespaceSet ()
+	self.RootNamespaceSet:AddNamespace (self.RootNamespace)
+	self.ObjectResolver = GCompute.ObjectResolver (self.RootNamespaceSet)
+	
+	return self.ObjectResolver
+end
+
+function self:CreateUsingSource ()
+	if self.UsingSource then return end
+	
+	self:CreateObjectResolver ()
+	
+	self.UsingSource = GCompute.NamespaceDefinition ()
+	if self.Language then
+		for usingDirective in self.Language:GetIntrinsicUsings ():GetEnumerator () do
+			self.UsingSource:AddUsing (usingDirective:GetQualifiedName ())
+		end
+	end
+	self.UsingSource:ResolveUsings (self.ObjectResolver)
+end
+
 function self:HandleLanguageChange (language)
 	if self.Language == language then return end
-	
-	self.RootNamespaceSet:RemoveNamespace (self.RootNamespace)
 	
 	self:UnhookLanguage (self.Language)
 	self.Language = language
@@ -116,17 +116,15 @@ function self:HandleLanguageChange (language)
 end
 
 function self:HandleNamespaceChange ()
+	local oldRootNamespace = self.RootNamespace
 	self.RootNamespace = self.EditorHelper and self.EditorHelper:GetRootNamespace ()
-	
-	self.RootNamespaceSet:AddNamespace (self.RootNamespace)
-	
-	self.UsingSource = GCompute.NamespaceDefinition ()
-	if self.Language then
-		for usingDirective in self.Language:GetIntrinsicUsings ():GetEnumerator () do
-			self.UsingSource:AddUsing (usingDirective:GetQualifiedName ())
-		end
+	if self.RootNamespaceSet then
+		self.RootNamespaceSet:RemoveNamespace (self.RootNamespace)
+		self.RootNamespaceSet:AddNamespace (self.RootNamespace)
 	end
-	self.UsingSource:ResolveUsings (self.ObjectResolver)
+	
+	self.UsingSource = nil
+	self:CreateUsingSource ()
 	
 	for i = 0, self.Document:GetLineCount () - 1 do
 		self.UnprocessedLines [i] = self.Document:GetLine (i).Tokens

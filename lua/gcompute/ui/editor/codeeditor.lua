@@ -24,6 +24,8 @@ surface.CreateFont (
 			Fired when this editor's document has changed.
 		IdentifierHighlighterChanged (IdentifierHighlighter oldIdentifierHighlighter, IdentifierHighlighter identifierHighlighter)
 			Fired when the identifier highlighter has changed.
+		LanguageChanged (Language oldLanguage, Language language)
+			Fired when the document's language has changed.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
 			Fired when the selection has changed.
 		SyntaxHighlighterChanged (SyntaxHighlighter oldSyntaxHighlighter, SyntaxHighlighter syntaxHighlighter)
@@ -51,6 +53,7 @@ function PANEL:Init ()
 		self.TextEntry:SetText ("")
 		if text == "" then return end
 		if not pasted then
+			if ctrl then return end
 			if text == "\r" or text == "\n" then return end
 		end
 		
@@ -114,13 +117,13 @@ function PANEL:Init ()
 	self.EditorHelper = GCompute.IEditorHelper ()
 	
 	-- Autocomplete
+	self.CodeCompletionProvider = GCompute.Editor.CodeCompletionProvider (self)
+	
 	self.ToolTipController = Gooey.ToolTipController (self)
 	self.ToolTipController:SetManual (true)
 	
 	self.HoveredToken = nil
 	self.HoverStartTime = 0
-	
-	self.TokenApplicationQueue = GCompute.Containers.Queue ()
 	
 	-- Profiling
 	self.LastRenderTime = 0
@@ -560,6 +563,7 @@ function PANEL:SetDocument (document)
 	if self.Document == document then return end
 	
 	local oldDocument = self.Document
+	local oldLanguage = self.Document and self.Document:GetLanguage ()
 	self.Document = document
 	
 	self:UnhookDocument (oldDocument)
@@ -592,6 +596,7 @@ function PANEL:SetDocument (document)
 	end
 	
 	self:DispatchEvent ("DocumentChanged", oldDocument, self.Document)
+	self:DispatchEvent ("LanguageChanged", oldLanguage, self:GetLanguage ())
 	self:DispatchEvent ("SyntaxHighlighterChanged", oldDocument and oldDocument.SyntaxHighlighter, self.Document.SyntaxHighlighter)
 	self:DispatchEvent ("IdentifierHighlighterChanged", oldDocument and oldDocument.IdentifierHighlighter, self.Document.IdentifierHighlighter)
 end
@@ -661,27 +666,32 @@ function PANEL:ReplaceSelectionText (text, pasted)
 	undoRedoItem:Redo ()
 	self:GetUndoRedoStack ():Push (undoRedoItem)
 	
-	if pasted then return end
-	local autoOutdentationAction
-	if self:GetEditorHelper ():ShouldOutdent (self, self.Document:ColumnToCharacter (self:GetCaretPos (), self.TextRenderer)) then
-		autoOutdentationAction = autoOutdentationAction or GCompute.Editor.AutoOutdentationAction (self)
-		autoOutdentationAction:AddLine (self:GetCaretPos ():GetLine ())
-	end
-	
-	if autoOutdentationAction then
-		autoOutdentationAction:Redo ()
-		undoRedoItem:ChainItem (autoOutdentationAction)
+	if not pasted then
+		-- Auto-outdentation
+		local autoOutdentationAction
+		if self:GetEditorHelper ():ShouldOutdent (self, self.Document:ColumnToCharacter (self:GetCaretPos (), self.TextRenderer)) then
+			autoOutdentationAction = autoOutdentationAction or GCompute.Editor.AutoOutdentationAction (self)
+			autoOutdentationAction:AddLine (self:GetCaretPos ():GetLine ())
+		end
 		
-		-- Update caret
-		if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
-			local deltaColumns = self.TextRenderer:GetStringColumnCount (autoOutdentationAction:GetLineIndentation (self.Selection:GetSelectionEnd ():GetLine ()), 0)
-			self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
-				self.Selection:GetSelectionEnd ():GetLine (),
-				self.Selection:GetSelectionEnd ():GetColumn () - deltaColumns
-			))
-			self.Selection:SetSelection (self:GetCaretPos ())
+		if autoOutdentationAction then
+			autoOutdentationAction:Redo ()
+			undoRedoItem:ChainItem (autoOutdentationAction)
+			
+			-- Update caret
+			if self.Selection:GetSelectionMode () == GCompute.Editor.SelectionMode.Regular then
+				local deltaColumns = self.TextRenderer:GetStringColumnCount (autoOutdentationAction:GetLineIndentation (self.Selection:GetSelectionEnd ():GetLine ()), 0)
+				self:SetRawCaretPos (GCompute.Editor.LineColumnLocation (
+					self.Selection:GetSelectionEnd ():GetLine (),
+					self.Selection:GetSelectionEnd ():GetColumn () - deltaColumns
+				))
+				self.Selection:SetSelection (self:GetCaretPos ())
+			end
 		end
 	end
+	
+	-- Autocomplete
+	self.CodeCompletionProvider:Trigger ()
 end
 
 function PANEL:SetText (text)
@@ -989,6 +999,18 @@ function PANEL:IsLineVisible (line)
 	return line >= self.ViewLocation:GetLine () and line <= self.ViewLocation:GetLine () + self.ViewLineCount
 end
 
+function PANEL:LocationToPoint (line, column)
+	line   = line   - self.ViewLocation:GetLine ()
+	column = column - self.ViewLocation:GetColumn ()
+	
+	local x = column * self.Settings.CharacterWidth
+	local y = line   * self.Settings.LineHeight
+	if self:AreLineNumbersVisible () then
+		x = x + self.Settings.LineNumberWidth
+	end
+	return x, y
+end
+
 --- Converts a position in the editor control to a line-column location.
 -- If a block selection is in progress, the returned location is not clamped to the end of its line.
 -- @param x The x coordinate of the position in the editor control
@@ -1161,6 +1183,10 @@ function PANEL:Paste ()
 end
 
 -- Compiler
+function PANEL:GetCodeCompletionProvider ()
+	return self.CodeCompletionProvider
+end
+
 function PANEL:GetEditorHelper ()
 	return self.EditorHelper
 end
@@ -1237,8 +1263,10 @@ function PANEL:HookDocument (document)
 	if not document then return end
 	
 	document:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
-		function (_, _, language)
+		function (_, oldLanguage, language)
 			self.EditorHelper = language and language:GetEditorHelper ()
+			
+			self:DispatchEvent ("LanguageChanged", oldLanguage, language)
 		end
 	)
 	document:AddEventListener ("LinesShifted", tostring (self:GetTable ()),
@@ -1411,6 +1439,7 @@ function PANEL:OnRemoved ()
 		end
 	end
 	
+	self.CodeCompletionProvider:dtor ()
 	self.BracketHighlighter:dtor ()
 end
 

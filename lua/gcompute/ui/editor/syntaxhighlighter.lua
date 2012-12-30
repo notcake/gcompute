@@ -66,6 +66,30 @@ function self:dtor ()
 	self.Document:RemoveEventListener ("TextChanged",     tostring (self))
 end
 
+function self:ForceHighlightLine (lineNumber)
+	if self.CurrentLine > lineNumber then return end
+	
+	local previousLine = self.Document:GetLine (lineNumber - 1)
+	local previousOutState = previousLine and previousLine.TokenizationOutState
+	local line = self.Document:GetLine (lineNumber)
+	
+	line.TokenizationLanguage = self.LanguageName
+	line.TokenizationInState  = previousOutState or {}
+	line.TokenizationOutState = {}
+	self.CurrentLineTokens = {}
+	self.EditorHelper:TokenizeLine (line:GetText (), self, line.TokenizationInState, line.TokenizationOutState)
+	line.Tokens = self.CurrentLineTokens
+	
+	self:ProcessLineTokens (line, line.Tokens)
+		
+	self:DispatchEvent ("LineHighlighted", lineNumber, line.Tokens)
+	
+	if self.CurrentLine == lineNumber then
+		self.CurrentLine = self.CurrentLine + 1
+		self:DispatchEvent ("HighlightingProgress", self.CurrentLine, self.Document:GetLineCount ())
+	end
+end
+
 function self:GetDocument ()
 	return self.Document
 end
@@ -98,7 +122,7 @@ function self:Think ()
 	if not self.EditorHelper then return end
 	
 	if self:IsEnabled () then
-		if self.CurrentLine >= self.Document:GetLineCount () then return end
+		if not self.InProgress then return end
 		
 		local startTime = SysTime ()
 		
@@ -148,12 +172,17 @@ function self:Token (startCharacter, endCharacter, tokenType, tokenValue)
 	
 	local token =
 	{
+		Previous       = self.CurrentLineTokens [#self.CurrentLineTokens],
+		Next           = nil,
+		
 		StartCharacter = startCharacter,
 		EndCharacter   = endCharacter,
 		TokenType      = tokenType,
 		Value          = tokenValue
 	}
-	
+	if #self.CurrentLineTokens > 0 then
+		self.CurrentLineTokens [#self.CurrentLineTokens].Next = token
+	end
 	self.CurrentLineTokens [#self.CurrentLineTokens + 1] = token
 end
 
@@ -190,6 +219,7 @@ function self:InvalidateLine (line)
 	if line >= self.Document:GetLineCount () then return end
 	
 	if not self.InProgress then
+		self.InProgress = true
 		self.TokenizationStartTime = SysTime ()
 		self:DispatchEvent ("HighlightingStarted")
 	end

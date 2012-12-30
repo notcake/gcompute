@@ -48,7 +48,7 @@ function self:Populate (objectDefinition, treeViewNode)
 			childNode.Definition = constructor
 			
 			childNode:SetText (constructor:GetDisplayText ())
-			childNode:SetIcon ("gui/codeicons/method")
+			childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (definition))
 		end
 	end
 	for name, definition in namespace:GetEnumerator () do
@@ -61,17 +61,7 @@ function self:Populate (objectDefinition, treeViewNode)
 			childNode.Definition = definition
 			childNode:SetText (definition:GetDisplayText ())
 			
-			if definition:IsNamespace () then
-				childNode:SetIcon ("gui/codeicons/namespace")
-			elseif definition:IsVariable () then
-				childNode:SetIcon ("gui/codeicons/field")
-			elseif definition:IsAlias () then
-				childNode:SetIcon ("icon16/link_go.png")
-			elseif definition:IsMethod () then
-				childNode:SetIcon ("gui/codeicons/method")
-			else
-				childNode:SetIcon ("icon16/exclamation.png")
-			end
+			childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (definition))
 			childNode:SetExpandable (definition:IsNamespace () and not definition:IsEmpty ())
 		end
 	end
@@ -85,7 +75,7 @@ function self:PopulateOverloadedClassDefinition (overloadedClassDefinition, tree
 		childNode.Definition = definition
 		
 		childNode:SetText (definition:GetDisplayText ())
-		childNode:SetIcon (definition:GetTypeParameterList ():GetParameterCount () > 0 and "gui/codeicons/parametrictype" or "gui/codeicons/class")
+		childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (definition))
 		childNode:SetExpandable (not definition:IsEmpty ())
 	end
 end
@@ -96,7 +86,7 @@ function self:PopulateOverloadedMethodDefinition (overloadedMethodDefinition, tr
 		childNode.Definition = definition
 		
 		childNode:SetText (definition:GetDisplayText ())
-		childNode:SetIcon ("gui/codeicons/method")
+		childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (definition))
 	end
 end
 

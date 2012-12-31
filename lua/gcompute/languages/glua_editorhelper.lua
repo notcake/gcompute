@@ -204,7 +204,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	)
 	for _, v in ipairs (players) do
 		playerMenu:AddOption (v:Name ())
-			:SetEnabled (luadev ~= nil and v == LocalPlayer ())
+			:SetEnabled (luadev ~= nil)
 			:SetIcon (v:IsAdmin () and "icon16/shield_go.png" or "icon16/user_go.png")
 			:AddEventListener ("Click",
 				function ()

@@ -150,6 +150,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			end
 		)
 	menu:AddOption ("Run on server")
+		:SetEnabled (luadev and true or false)
 		:SetIcon ("icon16/server_go.png")
 		:AddEventListener ("Click",
 			function ()
@@ -161,9 +162,11 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			end
 		)
 	menu:AddOption ("Run on client")
+		:SetEnabled (luadev and true or false)
 		:SetIcon ("icon16/user_go.png")
 		:SetSubMenu (playerMenu)
 	menu:AddOption ("Run on clients")
+		:SetEnabled (luadev and true or false)
 		:SetIcon ("icon16/group_go.png")
 		:AddEventListener ("Click",
 			function ()
@@ -175,6 +178,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			end
 		)
 	menu:AddOption ("Run on shared")
+		:SetEnabled (luadev and true or false)
 		:SetIcon ("icon16/world_go.png")
 		:AddEventListener ("Click",
 			function ()

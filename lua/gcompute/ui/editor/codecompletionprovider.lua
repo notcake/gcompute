@@ -171,10 +171,9 @@ function self:HandleText (text, pasted)
 	if pasted then return end
 	
 	if GLib.Unicode.IsLetterOrDigit (text) then return end
-	if text == "_" then return end
-	self:CommitSuggestion ()
-	
-	return text == "\r" or text == "\n"
+	if text == "." or text == ":" then
+		self:CommitSuggestion ()
+	end
 end
 
 function self:IsVisible ()

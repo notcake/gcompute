@@ -1,5 +1,9 @@
 GCompute.Editor = {}
 
+if not file.Exists ("data/luapad", "GAME") then
+	file.CreateDir ("luapad")
+end
+
 -- Documents
 include ("editor/document.lua")
 include ("editor/documenttypes.lua")

@@ -10,7 +10,7 @@ end
 
 function self:GetDisplayText ()
 	local displayText = ""
-	if debug.getlocal (self.Function, 1) == "self" then
+	if not self:IsConstructor () and debug.getlocal (self.Function, 1) == "self" then
 		displayText = displayText .. ":"
 	end
 	displayText = displayText .. self:GetShortName () .. " " .. self:GetParameterList ():GetRelativeName (self)

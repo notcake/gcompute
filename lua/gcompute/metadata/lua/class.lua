@@ -8,11 +8,18 @@ function self:ctor (name, table)
 	
 	self.Namespace = GCompute.Lua.ClassNamespace (self.Table)
 	self.Namespace:SetDefinition (self)
+	
+	if type (self.Table.ctor) == "function" then
+		self.Namespace:AddConstructor (GCompute.Lua.Constructor (self:GetName (), self.Table.ctor))
+	end
 end
 
 -- Class
 local forwardedFunctions =
 {
+	"GetConstructor",
+	"GetConstructorCount",
+	"GetConstructorEnumerator",
 	"GetEnumerator",
 	"GetMember",
 	"IsEmpty",

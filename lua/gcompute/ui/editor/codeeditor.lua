@@ -24,6 +24,10 @@ surface.CreateFont (
 			Fired when this editor's document has changed.
 		IdentifierHighlighterChanged (IdentifierHighlighter oldIdentifierHighlighter, IdentifierHighlighter identifierHighlighter)
 			Fired when the identifier highlighter has changed.
+		ItemRedone (UndoRedoItem undoRedoItem)
+			Fired when an UndoRedoItem has been redone.
+		ItemUndone (UndoRedoItem undoRedoItem)
+			Fired when an UndoRedoItem has been undone.
 		LanguageChanged (Language oldLanguage, Language language)
 			Fired when the document's language has changed.
 		SelectionChanged (LineColumnLocation selectionStart, LineColumnLocation selectionEnd)
@@ -60,7 +64,12 @@ function PANEL:Init ()
 		end
 		
 		if not self:IsReadOnly () then
-			self:ReplaceSelectionText (text, pasted)
+			-- Autocompletion
+			local suppressText = self.CodeCompletionProvider:HandleText (text, pasted)
+			
+			if not suppressText then
+				self:ReplaceSelectionText (text, pasted)
+			end
 			self:ScrollToCaret ()
 		end
 	end
@@ -1287,6 +1296,17 @@ end
 function PANEL:HookDocument (document)
 	if not document then return end
 	
+	document:GetUndoRedoStack ():AddEventListener ("ItemRedone", tostring (self:GetTable ()),
+		function (_, undoRedoItem)
+			self:DispatchEvent ("ItemRedone")
+		end
+	)
+	document:GetUndoRedoStack ():AddEventListener ("ItemUndone", tostring (self:GetTable ()),
+		function (_, undoRedoItem)
+			self:DispatchEvent ("ItemUndone")
+		end
+	)
+	
 	document:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
 		function (_, oldLanguage, language)
 			self.EditorHelper = language and language:GetEditorHelper ()
@@ -1371,6 +1391,8 @@ end
 function PANEL:UnhookDocument (document)
 	if not document then return end
 	
+	document:GetUndoRedoStack ():RemoveEventListener ("ItemRedone", tostring (self:GetTable ()))
+	document:GetUndoRedoStack ():RemoveEventListener ("ItemUndone", tostring (self:GetTable ()))
 	document:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
 	document:RemoveEventListener ("LinesShifted",    tostring (self:GetTable ()))
 	document:RemoveEventListener ("TextCleared",     tostring (self:GetTable ()))
@@ -1413,11 +1435,16 @@ function PANEL:OnKeyCodeTyped (keyCode)
 		end
 	elseif keyCode == KEY_ENTER then
 		if not self:IsReadOnly () then
-			self.Selection:Flatten ()
+			-- Autocompletion
+			local suppressText = self.CodeCompletionProvider:HandleText ("\n", false)
 			
-			local replacementLocation = self.Selection:GetSelectionEndPoints ()
-			replacementLocation = self.Document:ColumnToCharacter (replacementLocation, self.TextRenderer)
-			self:ReplaceSelectionText ("\n" .. self.EditorHelper:GetNewLineIndentation (self, replacementLocation))
+			if not suppressText then
+				self.Selection:Flatten ()
+				
+				local replacementLocation = self.Selection:GetSelectionEndPoints ()
+				replacementLocation = self.Document:ColumnToCharacter (replacementLocation, self.TextRenderer)
+				self:ReplaceSelectionText ("\n" .. self.EditorHelper:GetNewLineIndentation (self, replacementLocation))
+			end
 		end
 	elseif keyCode == KEY_A then
 		if ctrl then
@@ -1426,6 +1453,10 @@ function PANEL:OnKeyCodeTyped (keyCode)
 	end
 	
 	self:GetKeyboardMap ():Execute (self, keyCode, ctrl, shift, alt)
+	
+	if self:GetCodeCompletionProvider () then
+		self:GetCodeCompletionProvider ():HandlePostKey (keyCode, ctrl, shift, alt)
+	end
 end
 
 function PANEL:OnMouseDown (mouseCode, x, y)
@@ -1525,7 +1556,7 @@ function PANEL:HoverThink ()
 	if self.ToolTipController:IsToolTipVisible () then return end
 	
 	if SysTime () - self.HoverStartTime > 0.5 then
-		self.ToolTipController:ShowToolTip ("\"" .. GLib.String.Escape (self.HoveredToken.Value) .. "\"")
+		-- self.ToolTipController:ShowToolTip ("\"" .. GLib.String.Escape (self.HoveredToken.Value) .. "\"")
 	end
 end
 

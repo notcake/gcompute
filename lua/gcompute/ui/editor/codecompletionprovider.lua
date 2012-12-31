@@ -32,18 +32,23 @@ function self:ctor (codeEditor)
 			   caretLocation:GetLine () ~= self.NameLine then
 				return
 			end
+			self:SetVisible (false)
+			self:SetToolTipVisible (false)
+		end
+	)
+	self.Editor:AddEventListener ("ItemRedone", tostring (self),
+		function (_)
+			self:Trigger ()
+		end
+	)
+	self.Editor:AddEventListener ("ItemUndone", tostring (self),
+		function (_)
 			self:Trigger ()
 		end
 	)
 	self.Editor:AddEventListener ("LanguageChanged", tostring (self),
 		function (_, oldLanguage, language)
 			self:HandleLanguageChange (language)
-		end
-	)
-	self.Editor:AddEventListener ("MouseUp", tostring (self),
-		function (_, mouseCode)
-			if mouseCode ~= MOUSE_LEFT then return end
-			self:Trigger ()
 		end
 	)
 	self.Editor:AddEventListener ("SizeChanged", tostring (self),
@@ -77,6 +82,8 @@ end
 
 function self:dtor ()
 	self.Editor:RemoveEventListener ("CaretMoved",          tostring (self))
+	self.Editor:RemoveEventListener ("ItemRedone",          tostring (self))
+	self.Editor:RemoveEventListener ("ItemUndone",          tostring (self))
 	self.Editor:RemoveEventListener ("LanguageChanged",     tostring (self))
 	self.Editor:RemoveEventListener ("MouseUp",             tostring (self))
 	self.Editor:RemoveEventListener ("SizeChanged",         tostring (self))
@@ -86,6 +93,33 @@ function self:dtor ()
 	if self.SuggestionFrame then
 		self.SuggestionFrame:Remove ()
 	end
+end
+
+function self:CommitSuggestion (objectDefinition)
+	objectDefinition = objectDefinition or self.SuggestionFrame:GetSelectedItem ()
+	if not objectDefinition then return end
+	
+	local replacementName = objectDefinition:GetShortName ()
+	if replacementName == self.FullName then
+		self.Editor:SetCaretPos (
+			self.Editor:GetDocument ():CharacterToColumn (
+				GCompute.Editor.LineCharacterLocation (
+					self.NameLine,
+					self.NameEndCharacter
+				),
+				self.Editor:GetTextRenderer ()
+			)
+		)
+		self.Editor:SetSelection (self.Editor:GetCaretPos (), self.Editor:GetCaretPos ())
+	else
+		self.Editor:ReplaceText (
+			GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameStartCharacter),
+			GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameEndCharacter),
+			self.SuggestionFrame:GetSelectedItem ():GetShortName ()
+		)
+	end
+	self.SuggestionFrame:SetVisible (false)
+	self.SuggestionFrame:SetToolTipVisible (true)
 end
 
 function self:GetDocument ()
@@ -116,29 +150,31 @@ function self:HandleKey (keyCode, ctrl, shift, alt)
 		self.SuggestionFrame:SelectNext ()
 		return true
 	elseif keyCode == KEY_TAB then
-		local replacementName = self.SuggestionFrame:GetSelectedItem ():GetShortName ()
-		print (self.FullName)
-		if replacementName == self.FullName then
-			self.Editor:SetCaretPos (
-				self.Editor:GetDocument ():CharacterToColumn (
-					GCompute.Editor.LineCharacterLocation (
-						self.NameLine,
-						self.NameEndCharacter
-					),
-					self.Editor:GetTextRenderer ()
-				)
-			)
-			self.Editor:SetSelection (self.Editor:GetCaretPos (), self.Editor:GetCaretPos ())
-		else
-			self.Editor:ReplaceText (
-				GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameStartCharacter),
-				GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameEndCharacter),
-				self.SuggestionFrame:GetSelectedItem ():GetShortName ()
-			)
-		end
-		self.SuggestionFrame:SetVisible (false)
+		self:CommitSuggestion ()
+		return true
+	elseif keyCode == KEY_ESCAPE then
+		self:SetToolTipVisible (false)
+		self:SetVisible (false)
+		gui.HideGameUI ()
 		return true
 	end
+end
+
+function self:HandlePostKey (keyCode, ctrl, shift, alt)
+	if keyCode == KEY_BACKSPACE then
+		self:Trigger ()
+	end
+end
+
+function self:HandleText (text, pasted)
+	if not self:IsVisible () then return end
+	if pasted then return end
+	
+	if GLib.Unicode.IsLetterOrDigit (text) then return end
+	if text == "_" then return end
+	self:CommitSuggestion ()
+	
+	return text == "\r" or text == "\n"
 end
 
 function self:IsVisible ()
@@ -146,11 +182,26 @@ function self:IsVisible ()
 	return self.SuggestionFrame:IsVisible ()
 end
 
+function self:SetToolTipVisible (toolTipVisible)
+	if not self.SuggestionFrame then return end
+	self.SuggestionFrame:SetToolTipVisible (toolTipVisible)
+end
+
+function self:SetVisible (visible)
+	if not self.SuggestionFrame then return end
+	self.SuggestionFrame:SetVisible (visible)
+end
+
 function self:Trigger (forceShow)
 	local lineNumber = self.Editor:GetCaretPos ():GetLine ()
 	local column     = self.Editor:GetCaretPos ():GetColumn ()
 	local line       = self:GetDocument ():GetLine (lineNumber)
 	
+	if self.Editor:IsSelectionMultiline () then
+		self:SetVisible (false)
+		self:SetToolTipVisible (false)
+		return
+	end
 	self.Editor:GetSyntaxHighlighter ():ForceHighlightLine (lineNumber)
 	
 	local character  = line:ColumnToCharacter (column, self.Editor:GetTextRenderer ())
@@ -196,14 +247,27 @@ function self:Trigger (forceShow)
 			fullName                 = previousToken.Value
 			previousToken            = previousToken.Previous
 		end
-	else
-		-- Caret is mid-way through a token
+	elseif token then
+		-- Caret is mid-way through a token OR at the start of the first token
+		local isIdentifierToken = token and tokenType == GCompute.TokenType.Identifier
+		isIdentifierToken = isIdentifierToken or acceptKeywords and tokenType == GCompute.TokenType.Keyword
+		shouldShowCodeCompletion = isIdentifierToken
 		
-		shouldShowCodeCompletion = token and tokenType == GCompute.TokenType.Identifier
-		shouldShowCodeCompletion = shouldShowCodeCompletion or acceptKeywords and tokenType == GCompute.TokenType.Keyword
 		nameStartCharacter = token and token.StartCharacter or 0
 		nameEndCharacter   = token and token.EndCharacter   or 0
 		fullName           = token and token.Value or fullName
+		
+		if not previousToken then
+			-- Caret is at the start of the first token
+			shouldShowCodeCompletion = false
+			nameEndCharacter = isIdentifierToken and token.EndCharacter or nameStartCharacter
+			fullName         = isIdentifierToken and token.Value        or ""
+		end
+	else
+		-- Line is empty
+		nameStartCharacter = 0
+		nameEndCharacter   = 0
+		fullName           = ""
 	end
 	shouldShowCodeCompletion = shouldShowCodeCompletion or forceShow
 	
@@ -211,15 +275,21 @@ function self:Trigger (forceShow)
 	-- it does not make sense to search for a name
 	if not shouldShowCodeCompletion or
 	   not self.Editor:IsCaretVisible () then
-		if self.SuggestionFrame then
-			self.SuggestionFrame:SetVisible (false)
-		end
+		self:SetVisible (false)
 		return
 	end
 	
 	self:CreateObjectResolver ()
 	self:CreateSuggestionFrame ()
 	self:CreateUsingSource ()
+	
+	if self:IsVisible () and
+	   self.NameLine == lineNumber and
+	   self.NameStartCharacter == nameStartCharacter and
+	   self.NamePrefix == namePrefix then
+		-- The suggestion box is already open, do not regenerate it
+		return
+	end
 	
 	-- Remember parameters
 	self.NameLine           = lineNumber
@@ -253,6 +323,7 @@ function self:Trigger (forceShow)
 	
 	-- Generate suggestions
 	local lowercaseNamePrefix = namePrefix:lower ()
+	local preferredItem = nil
 	
 	for definition in resolutionResults:GetFilteredResultObjectEnumerator () do
 		definition = definition:UnwrapAlias ()
@@ -262,8 +333,8 @@ function self:Trigger (forceShow)
 		
 		if definition:HasNamespace () and not definition:IsMethod () then
 			-- Probe names of interest so that they show up in lazily-resolved namespaces
-			self.SuggestionFrame:AddObjectDefinition (definition:GetNamespace ():GetMember (namePrefix))
-			self.SuggestionFrame:AddObjectDefinition (definition:GetNamespace ():GetMember (fullName))
+			preferredItem = preferredItem or self.SuggestionFrame:AddObjectDefinition (definition:GetNamespace ():GetMember (fullName))
+			preferredItem = preferredItem or self.SuggestionFrame:AddObjectDefinition (definition:GetNamespace ():GetMember (namePrefix))
 			
 			for name, member in definition:GetNamespace ():GetEnumerator () do
 				if self.SuggestionFrame:GetItemCount () >= 20 then break end
@@ -280,8 +351,8 @@ function self:Trigger (forceShow)
 			local targetDefinition = usingDirective:GetNamespace ()
 			if targetDefinition and targetDefinition:HasNamespace () then
 				-- Probe names of interest so that they show up in lazily-resolved namespaces
-				self.SuggestionFrame:AddObjectDefinition (targetDefinition:GetNamespace ():GetMember (namePrefix))
-				self.SuggestionFrame:AddObjectDefinition (targetDefinition:GetNamespace ():GetMember (fullName))
+				preferredItem = preferredItem or self.SuggestionFrame:AddObjectDefinition (targetDefinition:GetNamespace ():GetMember (namePrefix))
+				preferredItem = preferredItem or self.SuggestionFrame:AddObjectDefinition (targetDefinition:GetNamespace ():GetMember (fullName))
 				
 				for name, member in targetDefinition:GetNamespace ():GetEnumerator () do
 					if self.SuggestionFrame:GetItemCount () >= 20 then break end
@@ -294,10 +365,20 @@ function self:Trigger (forceShow)
 	end
 	
 	self.SuggestionFrame:Sort ()
-	self.SuggestionFrame:SelectById (1)
+	if preferredItem then
+		self.SuggestionFrame:SelectItem (preferredItem)
+		timer.Simple (0.001,
+			function ()
+				self.SuggestionFrame:EnsureVisible (preferredItem)
+			end
+		)
+	else
+		self.SuggestionFrame:SelectById (1)
+	end
 	
 	self.TriggerOnBackspace = true
-	self.SuggestionFrame:SetVisible (not self.SuggestionFrame:IsEmpty ())
+	self:SetVisible (not self.SuggestionFrame:IsEmpty ())
+	self:SetToolTipVisible (not self.SuggestionFrame:IsEmpty ())
 	self.AnchorLine      = lineNumber
 	self.AnchorCharacter = nameStartCharacter
 	self:UpdateSuggestionFramePosition ()
@@ -355,6 +436,12 @@ function self:CreateSuggestionFrame ()
 	self.SuggestionFrame = vgui.Create ("GComputeCodeSuggestionFrame")
 	self.SuggestionFrame:SetControl (self.Editor)
 	self.SuggestionFrame:SetFont (self.Editor.Settings.Font)
+	
+	self.SuggestionFrame:AddEventListener ("ItemChosen",
+		function (_, objectDefinition)
+			self:CommitSuggestion (objectDefinition)
+		end
+	)
 	
 	return self.SuggestionFrame
 end

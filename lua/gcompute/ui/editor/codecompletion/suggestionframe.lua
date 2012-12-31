@@ -12,9 +12,60 @@ function self:Init ()
 	self.ListBox:SetKeyboardInputEnabled (false)
 	self.ListBox:SetSelectionMode (Gooey.SelectionMode.One)
 	
+	self.ListBox:AddEventListener ("DoubleClick",
+		function (_, item)
+			if not self:GetSelectedItem () then return end
+			self:DispatchEvent ("ItemChosen", self:GetSelectedItem ())
+		end
+	)
+	
+	self.ListBox:AddEventListener ("Scroll",
+		function (_, scrollOffset)
+			self:UpdateToolTip ()
+		end
+	)
+	
 	self.ListBox:AddEventListener ("SelectionChanged",
 		function (_, listBoxItem)
+			self:UnhookSelectedItem (self.SelectedItem)
 			self.ListBox:EnsureVisible (listBoxItem)
+			self.SelectedItem = listBoxItem
+			self:HookSelectedItem (self.SelectedItem)
+			
+			self:UpdateToolTip ()
+		end
+	)
+	
+	self.SelectedItem = nil
+	
+	self.ToolTip = vgui.Create ("GToolTip")
+	self.ToolTip.ShouldHideFrameCount = 0
+	self.ToolTip.Think = function ()
+		-- Hide the ToolTip if our control is not visible
+		local parent = self.Control
+		while parent do
+			if not parent:IsVisible () then
+				self.ToolTip:SetVisible (false)
+				return
+			end
+			parent = parent:GetParent ()
+		end
+		
+		if self:ShouldHide (self.LastToolTipShowTime) then
+			self.ToolTip.ShouldHideFrameCount = self.ToolTip.ShouldHideFrameCount + 1
+		else
+			self.ToolTip.ShouldHideFrameCount = 0
+		end
+		if self.ToolTip.ShouldHideFrameCount >= 5 then
+			self.ToolTip:SetVisible (false)
+		end
+	end
+	
+	self.ToolTip:AddEventListener ("VisibleChanged",
+		function (_, visible)
+			if visible then
+				self.LastToolTipShowTime = CurTime ()
+			end
 		end
 	)
 	
@@ -32,6 +83,7 @@ function self:Init ()
 				self:SetKeyboardInputEnabled (false)
 				self.LastShowTime = CurTime ()
 			end
+			self:UpdateToolTip ()
 		end
 	)
 	
@@ -71,6 +123,10 @@ function self:Clear ()
 	self.ListBox:Clear ()
 end
 
+function self:EnsureVisible (listBoxItem)
+	self.ListBox:EnsureVisible (listBoxItem)
+end
+
 function self:GetBorderThickness ()
 	return 6
 end
@@ -97,6 +153,9 @@ function self:PerformLayout ()
 	local w, h = self:GetSize ()
 	self.ListBox:SetPos (self:GetBorderThickness (), self:GetBorderThickness ())
 	self.ListBox:SetSize (w - self:GetBorderThickness () * 2, h - self:GetBorderThickness () * 2)
+	self.ListBox:InvalidateLayout ()
+	
+	self:UpdateToolTip ()
 end
 
 function self:SelectById (id)
@@ -105,8 +164,12 @@ function self:SelectById (id)
 	listBoxItem:Select ()
 end
 
+function self:SelectItem (listBoxItem)
+	if not listBoxItem then return end
+	self.ListBox:SetSelectedItem (listBoxItem)
+end
+
 function self:SelectPrevious ()
-	A = self.ListBox
 	local selectedItem = self.ListBox:GetSelectedItem ()
 	local selectedSortedId = 0
 	if selectedItem then
@@ -119,7 +182,6 @@ function self:SelectPrevious ()
 end
 
 function self:SelectNext ()
-	A = self.ListBox
 	local selectedItem = self.ListBox:GetSelectedItem ()
 	local selectedSortedId = 1
 	if selectedItem then
@@ -143,6 +205,30 @@ function self:SetControl (control)
 	self.Control = control
 end
 
+function self:SetSelectedItem (listBoxItem)
+	self.ListBox:SetSelectedItem (listBoxItem)
+end
+
+function self:SetToolTipVisible (toolTipVisible)
+	self.ToolTip:SetVisible (toolTipVisible)
+end
+
+function self:ShouldHide (lastShowTime)
+	local x, y = self:CursorPos ()
+	local containsMouse = x >= 0 and x < self:GetWide () and
+	                      y >= 0 and y < self:GetTall ()
+	containsMouse = containsMouse or self.ResizeGrip:IsPressed ()
+	if self.Control:IsVisible () and
+	   not self.Control:HasFocus () and
+	   not self.Control:HasHierarchicalFocus () and
+	   not self:HasHierarchicalFocus () and
+	   not containsMouse and
+	   CurTime () > lastShowTime then
+		return true
+	end
+	return false
+end
+
 function self:Sort ()
 	self.ListBox:Sort (
 		function (a, b)
@@ -151,23 +237,65 @@ function self:Sort ()
 	)
 end
 
+-- Internal, do not call
+function self:HookSelectedItem (listBoxItem)
+	if not listBoxItem then return end
+	
+	listBoxItem:AddEventListener ("PositionChanged", tostring (self:GetTable ()),
+		function (_)
+			self:UpdateToolTip ()
+		end
+	)
+	listBoxItem:AddEventListener ("SizeChanged", tostring (self:GetTable ()),
+		function (_)
+			self:UpdateToolTip ()
+		end
+	)
+end
+
+function self:UnhookSelectedItem (listBoxItem)
+	if not listBoxItem then return end
+	
+	listBoxItem:RemoveEventListener ("PositionChanged", tostring (self:GetTable ()))
+	listBoxItem:RemoveEventListener ("SizeChanged",     tostring (self:GetTable ()))
+end
+
+function self:UpdateToolTip ()
+	local selectedItem = self.ListBox:GetSelectedItem ()
+	
+	self.ToolTip:SetVisible (
+		self:IsVisible () and
+		selectedItem and
+		self.ListBox:IsItemVisible (selectedItem)
+	)
+	
+	if not self:IsVisible () then return end
+	if not selectedItem      then return end
+	if not self.ListBox:IsItemVisible (selectedItem) then return end
+	
+	local _, y = selectedItem:LocalToScreen (selectedItem:GetWide (), 0)
+	local x = self:GetPos () + self:GetWide () + 8
+	self.ToolTip:SetPos (x, y)
+	
+	local objectDefinition = selectedItem.ObjectDefinition
+	if objectDefinition:IsClass () and objectDefinition:GetConstructorCount () > 0 then
+		objectDefinition = objectDefinition:GetConstructor (1)
+	end
+	if objectDefinition then
+		self.ToolTip:SetText (objectDefinition:GetDisplayText ())
+	end
+end
+
 -- Event handlers
-function self:OnRemove ()
+function self:OnRemoved ()
+	self.ToolTip:Remove ()
 	GCompute:RemoveEventListener ("Unloaded", tostring (self:GetTable ()))
 end
 
 function self:Think ()
 	if not self.Control then return end
 	
-	local x, y = self:CursorPos ()
-	local containsMouse = x >= 0 and x < self:GetWide () and
-	                      y >= 0 and y < self:GetTall ()
-	containsMouse = containsMouse or self.ResizeGrip:IsPressed ()
-	if self.Control:IsVisible () and
-	   not self.Control:HasHierarchicalFocus () and
-	   not self:HasHierarchicalFocus () and
-	   not containsMouse and
-	   CurTime () ~= self.LastShowTime then
+	if self:ShouldHide (self.LastShowTime) then
 		self:SetVisible (false)
 	else
 		self:MoveToFront ()

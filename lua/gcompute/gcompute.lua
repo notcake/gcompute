@@ -218,6 +218,7 @@ GCompute.Lua = {}
 include ("metadata/lua/table.lua")
 include ("metadata/lua/class.lua")
 include ("metadata/lua/function.lua")
+include ("metadata/lua/constructor.lua")
 include ("metadata/lua/variable.lua")
 
 include ("metadata/lua/functionparameterlist.lua")

@@ -1,5 +1,6 @@
 local self = {}
-GCompute.Lua.TableNamespace = GCompute.MakeConstructor (self, GCompute.Namespace)
+GCompute.Lua.TableNamespace = GCompute.MakeConstructor (self, GCompute.ClassNamespace)
+local base = GCompute.GetMetaTable (GCompute.ClassNamespace)
 
 function self:ctor (table)
 	self.Table = table
@@ -10,20 +11,28 @@ local forwardedFunctions =
 {
 	"GetEnumerator",
 	"GetMember",
-	"IsEmpty",
 	"MemberExists"
 }
 
 for _, functionName in ipairs (forwardedFunctions) do
 	self [functionName] = function (self, ...)
 		self:Populate ()
-		return self.__base [functionName] (self, ...)
+		return base [functionName] (self, ...)
 	end
 end
 
 function self:GetMember (name)
 	self:ResolveMember (name)
 	return self.Members [name]
+end
+
+function self:IsClassNamespace ()
+	return false
+end
+
+function self:IsEmpty ()
+	if not self.Table then return true end
+	return next (self.Table) == nil
 end
 
 function self:MemberExists (name)
@@ -40,11 +49,30 @@ function self:SetDefinition (objectDefinition)
 end
 
 -- Internal, do not call
+function self:CheckParent (name, table)
+	local declaringObject = self:GetDefinition ()
+	while declaringObject do
+		if declaringObject:GetNamespace ().Table == table and
+		   declaringObject:GetName () == name then
+			return declaringObject
+		end
+		declaringObject = declaringObject:GetDeclaringObject ()
+	end
+end
+
 function self:Populate ()
 	if self.Populated then return end
 	self.Populated = true
 	
 	if not self.Table then return end
+	
+	if self.Table == _G then
+		for k, v in pairs (self.Table) do
+			if type (v) == "table" then
+				self:ResolveMember (k)
+			end
+		end
+	end
 	
 	local explored = {}
 	local t = self.Table
@@ -64,18 +92,20 @@ function self:PopulateFromTable (t, limit)
 	for k, v in pairs (t) do
 		if count >= limit then break end
 		
-		local name = tostring (k)
+		local cleanName = tostring (k)
 		
-		if not self.Members [name] then
+		if not self.Members [cleanName] then
 			count = count + 1
 			
-			self:ResolveMemberFromTable (t, name)
+			self:ResolveMemberFromTable (t, k)
 		end
 	end
 end
 
 function self:ResolveMember (name)
-	if self.Members [name] then return end
+	local cleanName = tostring (name)
+	
+	if self.Members [cleanName] then return end
 	
 	if not self.Table then return end
 	
@@ -91,26 +121,49 @@ function self:ResolveMember (name)
 end
 
 function self:ResolveMemberFromTable (t, name)
+	local cleanName = tostring (name)
+	
 	local member = t [name]
 	if not member then return false end
 	
 	local memberType = type (member)
 	
-	local metatable = debug.getmetatable (member)
+	local metatable = getmetatable (member)
 	if type (metatable) ~= "table" then metatable = nil end
 	
 	local objectDefinition
 	if memberType == "function" then
-		objectDefinition = GCompute.Lua.Function (name, member)
+		local firstUpvalueName, firstUpvalue = debug.getupvalue (member, 1)
+		if firstUpvalueName == "metatable" and
+		   type (firstUpvalue) == "table" and
+		   not debug.getupvalue (member, 2) then
+			objectDefinition = self:CheckParent (cleanName, firstUpvalue)
+			objectDefinition = objectDefinition or GCompute.Lua.Class (cleanName, firstUpvalue)
+		else
+			objectDefinition = GCompute.Lua.Function (cleanName, member)
+		end
 	elseif memberType == "table" or (metatable and metatable.GetTable) then
-		objectDefinition = GCompute.Lua.Table (name, member)
+		objectDefinition = self:CheckParent (cleanName, member)
+		objectDefinition = objectDefinition or GCompute.Lua.Table (cleanName, member)
 	else
-		objectDefinition = GCompute.Lua.Variable (name, member)
+		objectDefinition = GCompute.Lua.Variable (cleanName, member)
 	end
 	if objectDefinition then
 		self:SetupMemberHierarchy (objectDefinition)
 	end
-	self.Members [name] = objectDefinition
+	self.Members [cleanName] = objectDefinition
 	
 	return true
+end
+
+function self:SetupMemberHierarchy (objectDefinition)
+	if not objectDefinition then return end
+	if objectDefinition == self:GetDefinition () then return end
+	local declaringObject = self:GetDefinition ()
+	while declaringObject do
+		if declaringObject == objectDefinition then return end
+		declaringObject = declaringObject:GetDeclaringObject ()
+	end
+	
+	base.SetupMemberHierarchy (self, objectDefinition)
 end

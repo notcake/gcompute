@@ -336,7 +336,7 @@ function self:VisitNew (new)
 	if unwrapped:IsClass () then
 		type = leftDefinition
 	elseif unwrapped:IsOverloadedClass () then
-		type = unwrapped:GetConcreteClass ()
+		type = unwrapped:GetDefaultClass ()
 	elseif unwrapped:IsType () then
 		type = leftDefinition
 	end

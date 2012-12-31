@@ -119,12 +119,12 @@ function self:HandleNamespaceChange ()
 	local oldRootNamespace = self.RootNamespace
 	self.RootNamespace = self.EditorHelper and self.EditorHelper:GetRootNamespace ()
 	if self.RootNamespaceSet then
-		self.RootNamespaceSet:RemoveNamespace (self.RootNamespace)
+		self.RootNamespaceSet:RemoveNamespace (oldRootNamespace)
 		self.RootNamespaceSet:AddNamespace (self.RootNamespace)
 	end
 	
+	-- Invalidate using source
 	self.UsingSource = nil
-	self:CreateUsingSource ()
 	
 	for i = 0, self.Document:GetLineCount () - 1 do
 		self.UnprocessedLines [i] = self.Document:GetLine (i).Tokens

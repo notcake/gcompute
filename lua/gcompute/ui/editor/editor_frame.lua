@@ -8,7 +8,7 @@ local self = {}
 
 function self:Init ()
 	xpcall (function ()
-	self:SetTitle ("Editor (WIP, not working)")
+	self:SetTitle ("Editor")
 
 	self:SetSize (ScrW () * 0.85, ScrH () * 0.85)
 	self:Center ()
@@ -762,7 +762,7 @@ end
 
 function self:UnhookView (view)
 	if not view then return end
-	view:RemoveEventListener ("DocumentChanged",    tostring (self:GetTable ()))
+	view:RemoveEventListener ("DocumentChanged", tostring (self:GetTable ()))
 	if view:GetSavable () then
 		view:GetSavable ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
 	end

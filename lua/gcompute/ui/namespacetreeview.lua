@@ -62,7 +62,7 @@ function self:Populate (objectDefinition, treeViewNode)
 			childNode:SetText (definition:GetDisplayText ())
 			
 			childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (definition))
-			childNode:SetExpandable (definition:IsNamespace () and not definition:IsEmpty ())
+			childNode:SetExpandable ((definition:IsNamespace () or definition:IsClass ()) and not definition:IsEmpty ())
 		end
 	end
 	

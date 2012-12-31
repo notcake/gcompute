@@ -50,6 +50,14 @@ function self:GetConcreteClass ()
 	return nil
 end
 
+--- Returns the only class in this OverloadedClassDefinition or the class which takes 0 type parameters
+function self:GetDefaultClass ()
+	if self:GetClassCount () == 1 then
+		return self:GetClass (1)
+	end
+	return self:GetConcreteClass ()
+end
+
 --- Gets an iterator for this class group
 -- @return An iterator function returning the ClassDefinitions in this class group
 function self:GetEnumerator ()

@@ -12,10 +12,26 @@ function self:ctor (codeEditor)
 	self.UsingSource      = nil
 	self.ObjectResolver   = nil
 	
+	self.TriggerOnBackspace = false
+	
+	self.SuggestionFrame = nil
+	self.AnchorLine      = 0
+	self.AnchorCharacter = 0
+	
+	self.NameLine = 0
+	self.NameStartCharacter = 0
+	self.NameEndCharacter   = 0
+	self.NamePrefix = ""
+	self.FullName   = ""
+	
 	self.Editor:AddEventListener ("CaretMoved", tostring (self),
-		function (_, mouseCode)
+		function (_, caretLocation)
 			if not self.SuggestionFrame then return end
-			if not self.SuggestionFrame:IsVisible () then return end
+			if not self.TriggerOnBackspace and
+			   not self.SuggestionFrame:IsVisible () and
+			   caretLocation:GetLine () ~= self.NameLine then
+				return
+			end
 			self:Trigger ()
 		end
 	)
@@ -30,23 +46,41 @@ function self:ctor (codeEditor)
 			self:Trigger ()
 		end
 	)
+	self.Editor:AddEventListener ("SizeChanged", tostring (self),
+		function (_)
+			if not self.SuggestionFrame then return end
+			if self.Editor:IsCaretVisible () then return end
+			self.SuggestionFrame:SetVisible (false)
+		end
+	)
+	self.Editor:AddEventListener ("ViewLocationChanged", tostring (self),
+		function (_)
+			if not self.SuggestionFrame then return end
+			if self.Editor:IsCaretVisible () then
+				self:UpdateSuggestionFramePosition ()
+			else
+				self.SuggestionFrame:SetVisible (false)
+			end
+		end
+	)
 	self.Editor:GetParent ():AddEventListener ("VisibleChanged", tostring (self),
 		function (_, visible)
 			if visible then return end
 			if not self.SuggestionFrame then return end
 			self.SuggestionFrame:SetVisible (false)
+			self.TriggerOnBackspace = false
 		end
 	)
-	
-	self.SuggestionFrame = nil
 	
 	self:HandleLanguageChange (self.Editor:GetLanguage ())
 end
 
 function self:dtor ()
-	self.Editor:RemoveEventListener ("CaretMoved",      tostring (self))
-	self.Editor:RemoveEventListener ("LanguageChanged", tostring (self))
-	self.Editor:RemoveEventListener ("MouseUp",         tostring (self))
+	self.Editor:RemoveEventListener ("CaretMoved",          tostring (self))
+	self.Editor:RemoveEventListener ("LanguageChanged",     tostring (self))
+	self.Editor:RemoveEventListener ("MouseUp",             tostring (self))
+	self.Editor:RemoveEventListener ("SizeChanged",         tostring (self))
+	self.Editor:RemoveEventListener ("ViewLocationChanged", tostring (self))
 	self.Editor:GetParent ():RemoveEventListener ("VisibleChanged",  tostring (self))
 	
 	if self.SuggestionFrame then
@@ -71,12 +105,48 @@ function self:GetLanguage ()
 	return self.Language
 end
 
+function self:HandleKey (keyCode, ctrl, shift, alt)
+	if not self:IsVisible () then return false end
+	if ctrl or shift or alt then return false end
+	
+	if keyCode == KEY_UP then
+		self.SuggestionFrame:SelectPrevious ()
+		return true
+	elseif keyCode == KEY_DOWN then
+		self.SuggestionFrame:SelectNext ()
+		return true
+	elseif keyCode == KEY_TAB then
+		local replacementName = self.SuggestionFrame:GetSelectedItem ():GetShortName ()
+		print (self.FullName)
+		if replacementName == self.FullName then
+			self.Editor:SetCaretPos (
+				self.Editor:GetDocument ():CharacterToColumn (
+					GCompute.Editor.LineCharacterLocation (
+						self.NameLine,
+						self.NameEndCharacter
+					),
+					self.Editor:GetTextRenderer ()
+				)
+			)
+			self.Editor:SetSelection (self.Editor:GetCaretPos (), self.Editor:GetCaretPos ())
+		else
+			self.Editor:ReplaceText (
+				GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameStartCharacter),
+				GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameEndCharacter),
+				self.SuggestionFrame:GetSelectedItem ():GetShortName ()
+			)
+		end
+		self.SuggestionFrame:SetVisible (false)
+		return true
+	end
+end
+
 function self:IsVisible ()
 	if not self.SuggestionFrame then return false end
 	return self.SuggestionFrame:IsVisible ()
 end
 
-function self:Trigger ()
+function self:Trigger (forceShow)
 	local lineNumber = self.Editor:GetCaretPos ():GetLine ()
 	local column     = self.Editor:GetCaretPos ():GetColumn ()
 	local line       = self:GetDocument ():GetLine (lineNumber)
@@ -86,36 +156,61 @@ function self:Trigger ()
 	local character  = line:ColumnToCharacter (column, self.Editor:GetTextRenderer ())
 	local tokens = line.Tokens
 	local token = tokens and tokens [1]
-	if not token then
-		if self.SuggestionFrame then
-			self.SuggestionFrame:SetVisible (false)
-		end
-		return
-	end
 	
-	local previousToken = token.Previous
+	local previousToken = token and token.Previous
 	while token and token.EndCharacter <= character do
 		previousToken = token
-		print (token.Value, token.StartCharacter, token.EndCharacter)
 		token = token.Next
 	end
 	
+	-- Work out the parameters for name completion
+	local nameStartCharacter
+	local nameEndCharacter
 	local namePrefix = token and GLib.UTF8.Sub (token.Value or "", 1, character - token.StartCharacter) or ""
+	local fullName   = namePrefix
 	local shouldShowCodeCompletion = false
 	
+	local acceptKeywords = forceShow
+	local tokenType = token and token.TokenType
 	if previousToken and previousToken.EndCharacter == character then
+		-- Caret is at the end of a token
+		
+		nameStartCharacter = previousToken.EndCharacter
+		nameEndCharacter   = previousToken.EndCharacter
+		fullName           = ""
+		
 		if previousToken.TokenType == GCompute.TokenType.MemberIndexer then
 			shouldShowCodeCompletion = true
-		elseif previousToken.TokenType == GCompute.TokenType.Identifier then
+			if tokenType == GCompute.TokenType.Identifier or
+			   tokenType == GCompute.TokenType.Keyword then
+				-- The caret is also at the start of an identifier
+				nameEndCharacter   = token.EndCharacter
+				fullName           = token.Value
+			end
+		elseif previousToken.TokenType == GCompute.TokenType.Identifier or
+		       acceptKeywords and previousToken.TokenType == GCompute.TokenType.Keyword then
 			shouldShowCodeCompletion = true
-			namePrefix = previousToken.Value
-			previousToken = previousToken.Previous
+			nameStartCharacter       = previousToken.StartCharacter
+			nameEndCharacter         = previousToken.EndCharacter
+			namePrefix               = previousToken.Value
+			fullName                 = previousToken.Value
+			previousToken            = previousToken.Previous
 		end
 	else
-		shouldShowCodeCompletion = token.TokenType == GCompute.TokenType.Identifier
+		-- Caret is mid-way through a token
+		
+		shouldShowCodeCompletion = token and tokenType == GCompute.TokenType.Identifier
+		shouldShowCodeCompletion = shouldShowCodeCompletion or acceptKeywords and tokenType == GCompute.TokenType.Keyword
+		nameStartCharacter = token and token.StartCharacter or 0
+		nameEndCharacter   = token and token.EndCharacter   or 0
+		fullName           = token and token.Value or fullName
 	end
-	print (namePrefix, GCompute.TokenType [token and token.TokenType])
-	if not shouldShowCodeCompletion then
+	shouldShowCodeCompletion = shouldShowCodeCompletion or forceShow
+	
+	-- Abort if the caret is not visible or
+	-- it does not make sense to search for a name
+	if not shouldShowCodeCompletion or
+	   not self.Editor:IsCaretVisible () then
 		if self.SuggestionFrame then
 			self.SuggestionFrame:SetVisible (false)
 		end
@@ -126,35 +221,124 @@ function self:Trigger ()
 	self:CreateSuggestionFrame ()
 	self:CreateUsingSource ()
 	
+	-- Remember parameters
+	self.NameLine           = lineNumber
+	self.NameStartCharacter = nameStartCharacter
+	self.NameEndCharacter   = nameEndCharacter
+	self.NamePrefix         = namePrefix
+	self.FullName           = fullName
+	
+	-- Build chain of member indexes
+	local resolutionResults = GCompute.ResolutionResults ()
+	resolutionResults:AddResult (GCompute.ResolutionResult (self.RootNamespace))
+	local nameTokenChain = self:BuildPreviousIndexingTokenChain (previousToken)
+	
+	-- Resolve member chain
+	if #nameTokenChain > 0 then
+		local newResolutionResults = GCompute.ResolutionResults ()
+		self.ObjectResolver:ResolveUnqualifiedIdentifier (newResolutionResults, nameTokenChain [1].Value, self.UsingSource)
+		newResolutionResults:FilterByLocality ()
+		resolutionResults = newResolutionResults
+		
+		for i = 2, #nameTokenChain do
+			newResolutionResults = GCompute.ResolutionResults ()
+			self.ObjectResolver:ResolveQualifiedIdentifier (newResolutionResults, resolutionResults, nameTokenChain [i].Value, self.UsingSource)
+			newResolutionResults:FilterByLocality ()
+			resolutionResults = newResolutionResults
+			if resolutionResults:GetFilteredResultCount () == 0 then break end
+		end
+	end
+	
 	self.SuggestionFrame:Clear ()
 	
 	-- Generate suggestions
-	namePrefix = namePrefix:lower ()
-	for name, member in self.RootNamespace:GetEnumerator () do
-		if string.sub (name, 1, #namePrefix):lower () == namePrefix then
-			self.SuggestionFrame:AddObjectDefinition (member)
+	local lowercaseNamePrefix = namePrefix:lower ()
+	
+	for definition in resolutionResults:GetFilteredResultObjectEnumerator () do
+		definition = definition:UnwrapAlias ()
+		if definition:IsOverloadedClass () then
+			definition = definition:GetDefaultClass ()
 		end
-	end
-	for usingDirective in self.UsingSource:GetUsings ():GetEnumerator () do
-		local targetDefinition = usingDirective:GetNamespace ()
-		if targetDefinition and targetDefinition:HasNamespace () then
-			for name, member in targetDefinition:GetNamespace ():GetEnumerator () do
-				if string.sub (name, 1, #namePrefix):lower () == namePrefix then
+		
+		if definition:HasNamespace () and not definition:IsMethod () then
+			-- Probe names of interest so that they show up in lazily-resolved namespaces
+			self.SuggestionFrame:AddObjectDefinition (definition:GetNamespace ():GetMember (namePrefix))
+			self.SuggestionFrame:AddObjectDefinition (definition:GetNamespace ():GetMember (fullName))
+			
+			for name, member in definition:GetNamespace ():GetEnumerator () do
+				if self.SuggestionFrame:GetItemCount () >= 20 then break end
+				if string.sub (name, 1, #lowercaseNamePrefix):lower () == lowercaseNamePrefix then
 					self.SuggestionFrame:AddObjectDefinition (member)
 				end
 			end
 		end
 	end
 	
-	self.SuggestionFrame:Sort ()
+	if #nameTokenChain == 0 then
+		-- Global lookup, we have to take usings into account
+		for usingDirective in self.UsingSource:GetUsings ():GetEnumerator () do
+			local targetDefinition = usingDirective:GetNamespace ()
+			if targetDefinition and targetDefinition:HasNamespace () then
+				-- Probe names of interest so that they show up in lazily-resolved namespaces
+				self.SuggestionFrame:AddObjectDefinition (targetDefinition:GetNamespace ():GetMember (namePrefix))
+				self.SuggestionFrame:AddObjectDefinition (targetDefinition:GetNamespace ():GetMember (fullName))
+				
+				for name, member in targetDefinition:GetNamespace ():GetEnumerator () do
+					if self.SuggestionFrame:GetItemCount () >= 20 then break end
+					if string.sub (name, 1, #lowercaseNamePrefix):lower () == lowercaseNamePrefix then
+						self.SuggestionFrame:AddObjectDefinition (member)
+					end
+				end
+			end
+		end
+	end
 	
-	self.SuggestionFrame:SetVisible (true)
-	self.SuggestionFrame:SetPos (
-		self.Editor:LocalToScreen (self.Editor:LocationToPoint (lineNumber + 1, column))
-	)
+	self.SuggestionFrame:Sort ()
+	self.SuggestionFrame:SelectById (1)
+	
+	self.TriggerOnBackspace = true
+	self.SuggestionFrame:SetVisible (not self.SuggestionFrame:IsEmpty ())
+	self.AnchorLine      = lineNumber
+	self.AnchorCharacter = nameStartCharacter
+	self:UpdateSuggestionFramePosition ()
 end
 
 -- Internal, do not call
+function self:BuildPreviousIndexingTokenChain (token)
+	local expectingIndexer = true
+	local reverseTokens = {}
+	while token do
+		if expectingIndexer then
+			if token.TokenType == GCompute.TokenType.MemberIndexer then
+				expectingIndexer = false
+			elseif token.TokenType == GCompute.TokenType.Whitespace or
+			       token.TokenType == GCompute.TokenType.Newline then
+			else
+				break
+			end
+		else
+			if token.TokenType == GCompute.TokenType.Identifier or
+			   token.TokenType == GCompute.TokenType.Keyword then
+				reverseTokens [#reverseTokens + 1] = token
+				expectingIndexer = true
+			elseif token.TokenType == GCompute.TokenType.Whitespace or
+			       token.TokenType == GCompute.TokenType.Newline then
+			else
+				break
+			end
+		end
+		
+		token = token.Previous
+	end
+	
+	-- Reverse the array
+	local tokens = {}
+	for i = #reverseTokens, 1, -1 do
+		tokens [#tokens + 1] = reverseTokens [i]
+	end
+	return tokens
+end
+
 function self:CreateObjectResolver ()
 	if self.ObjectResolver then return end
 	
@@ -170,6 +354,7 @@ function self:CreateSuggestionFrame ()
 	
 	self.SuggestionFrame = vgui.Create ("GComputeCodeSuggestionFrame")
 	self.SuggestionFrame:SetControl (self.Editor)
+	self.SuggestionFrame:SetFont (self.Editor.Settings.Font)
 	
 	return self.SuggestionFrame
 end
@@ -197,7 +382,21 @@ function self:HandleLanguageChange (language)
 	local oldRootNamespace = self.RootNamespace
 	self.RootNamespace = self.EditorHelper and self.EditorHelper:GetRootNamespace ()
 	if self.RootNamespaceSet then
-		self.RootNamespaceSet:RemoveNamespace (self.RootNamespace)
+		self.RootNamespaceSet:RemoveNamespace (oldRootNamespace)
 		self.RootNamespaceSet:AddNamespace (self.RootNamespace)
 	end
+	
+	-- Invalidate using source
+	self.UsingSource = nil
+end
+
+function self:UpdateSuggestionFramePosition ()
+	self.SuggestionFrame:SetAlignedPos (
+		self.Editor:LocalToScreen (
+			self.Editor:LocationToPoint (
+				self.AnchorLine + 1,
+				self.Editor:GetDocument ():GetLine (self.AnchorLine):CharacterToColumn (self.AnchorCharacter, self.Editor:GetTextRenderer ())
+			)
+		)
+	)
 end

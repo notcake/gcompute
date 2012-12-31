@@ -3,6 +3,7 @@ GCompute.Editor.ReplacementAction = GCompute.MakeConstructor (self, GCompute.Und
 
 function self:ctor (codeEditor, selectionStartLocation, selectionEndLocation, originalText, finalText)
 	self.CodeEditor = codeEditor
+	self.SelectionSnapshot = self.CodeEditor:CreateSelectionSnapshot ()
 	
 	self.SelectionStartLocation = GCompute.Editor.LineCharacterLocation (selectionStartLocation)
 	self.SelectionEndLocation   = GCompute.Editor.LineCharacterLocation (selectionEndLocation)
@@ -35,8 +36,5 @@ function self:Undo ()
 	self.CodeEditor.Document:Delete (self.InsertionLocation, self.FinalLocation)
 	self.CodeEditor.Document:Insert (self.InsertionLocation, self.OriginalText)
 	
-	self.CodeEditor:SetRawCaretPos (self.CodeEditor.Document:CharacterToColumn (self.SelectionEndLocation, self.CodeEditor.TextRenderer))
-	self.CodeEditor:SetSelection (self.CodeEditor.Document:CharacterToColumn (self.SelectionStartLocation, self.CodeEditor.TextRenderer), self.CodeEditor.CaretLocation)
-	
-	self.CodeEditor:ScrollToCaret ()
+	self.CodeEditor:RestoreSelectionSnapshot (self.SelectionSnapshot)
 end

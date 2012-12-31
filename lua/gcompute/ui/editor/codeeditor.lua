@@ -32,6 +32,8 @@ surface.CreateFont (
 			Fired when the syntax highlighter has changed.
 		TextChanged ()
 			Fired when this document's text has changed.
+		ViewLocationChanged (LineColumnLocation viewLocation)
+			Fired when the editor's view location has changed.
 ]]
 
 function PANEL:Init ()
@@ -101,6 +103,7 @@ function PANEL:Init ()
 	self.Settings = {}
 	
 	surface.SetFont ("GComputeMonospace")
+	self.Settings.Font = "GComputeMonospace"
 	self.Settings.CharacterWidth, self.Settings.FontHeight = surface.GetTextSize ("W")
 	self.Settings.LineHeight = self.Settings.FontHeight + 2
 	
@@ -694,6 +697,17 @@ function PANEL:ReplaceSelectionText (text, pasted)
 	self.CodeCompletionProvider:Trigger ()
 end
 
+--- Replaces a range of text in the document
+-- @param startLocation The LineCharacterLocation specifying the start of the text range to be replaced
+-- @param endLocation The LineCharacterLocation specifying the end of the text range to be replaced
+-- @param text The text with which to replace the specified text range
+function PANEL:ReplaceText (startLocation, endLocation, text)
+	local originalText = self.Document:GetText (startLocation, endLocation)
+	local undoRedoItem = GCompute.Editor.ReplacementAction (self, startLocation, endLocation, originalText, text)
+	undoRedoItem:Redo ()
+	self:GetUndoRedoStack ():Push (undoRedoItem)
+end
+
 function PANEL:SetText (text)
 	self.Document:SetText (text)
 	self:UpdateScrollBars ()
@@ -960,6 +974,8 @@ function PANEL:RestoreSelectionSnapshot (selectionSnapshot)
 	self.Selection:CopyFrom (selectionSnapshot:GetSelection ())
 	self.CaretLocation:CopyFrom (selectionSnapshot:GetCaretPosition ())
 	self.PreferredCaretLocation:CopyFrom (selectionSnapshot:GetPreferredCaretPosition ())
+	
+	self:DispatchEvent ("CaretMoved", self.CaretLocation)
 end
 
 function PANEL:SelectAll ()
@@ -989,6 +1005,15 @@ end
 -- View
 function PANEL:AreLineNumbersVisible ()
 	return self.LineNumbersVisible
+end
+
+function PANEL:IsCaretVisible ()
+	return self:IsLocationVisible (self.CaretLocation:GetLine (), self.CaretLocation:GetColumn ())
+end
+
+function PANEL:IsLocationVisible (line, column)
+	return line   >= self.ViewLocation:GetLine ()   and line   < self.ViewLocation:GetLine   () + self.ViewLineCount   and
+	       column >= self.ViewLocation:GetColumn () and column < self.ViewLocation:GetColumn () + self.ViewColumnCount
 end
 
 function PANEL:IsLineFullyVisible (line)
@@ -1369,6 +1394,11 @@ function PANEL:OnKeyCodeTyped (keyCode)
 	local shift   = input.IsKeyDown (KEY_LSHIFT)   or input.IsKeyDown (KEY_RSHIFT)
 	local alt     = input.IsKeyDown (KEY_LALT)     or input.IsKeyDown (KEY_RALT)
 	
+	if self:GetCodeCompletionProvider () and
+	   self:GetCodeCompletionProvider ():HandleKey (keyCode, ctrl, shift, alt) then
+		return
+	end
+	
 	if keyCode == KEY_TAB then
 		if not ctrl and not self:IsReadOnly () then
 			if shift then
@@ -1428,6 +1458,7 @@ function PANEL:OnHScroll (viewOffset)
 	else
 		self.ViewLocation:SetColumn (0)
 	end
+	self:DispatchEvent ("ViewLocationChanged", self.ViewLocation)
 end
 
 function PANEL:OnRemoved ()
@@ -1449,6 +1480,7 @@ function PANEL:OnVScroll (viewOffset)
 	else
 		self.ViewLocation:SetLine (0)
 	end
+	self:DispatchEvent ("ViewLocationChanged", self.ViewLocation)
 end
 
 function PANEL:Think ()

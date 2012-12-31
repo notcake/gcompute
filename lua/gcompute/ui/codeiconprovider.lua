@@ -11,9 +11,7 @@ function self:GetIconForObjectDefinition (objectDefinition)
 		return "icon16/link_go.png"
 	end
 	
-	if objectDefinition:IsNamespace () then
-		return "gui/codeicons/namespace"
-	elseif objectDefinition:IsClass () then
+	if objectDefinition:IsClass () then
 		if objectDefinition:GetTypeParameterList ():IsEmpty () then
 			return "gui/codeicons/class"
 		else
@@ -24,11 +22,19 @@ function self:GetIconForObjectDefinition (objectDefinition)
 			return self:GetIconForObjectDefinition (objectDefinition:GetClass (1))
 		end
 		return "gui/codeicons/class"
-	elseif objectDefinition:IsVariable () then
-		return "gui/codeicons/field"
+	elseif objectDefinition:IsEvent () then
+		return "icon16/lightning.png"
 	elseif objectDefinition:IsMethod () or
 	       objectDefinition:IsOverloadedMethod () then
 		return "gui/codeicons/method"
+	elseif objectDefinition:IsNamespace () then
+		return "gui/codeicons/namespace"
+	elseif objectDefinition:IsProperty () then
+		return "gui/codeicons/application_double"
+	elseif objectDefinition:IsTypeParameter () then
+		return "gui/codeicons/parametrictype"
+	elseif objectDefinition:IsVariable () then
+		return "gui/codeicons/field"
 	end
 	return "icon16/exclamation.png"
 end

@@ -212,7 +212,13 @@ function self:ResolveQualifiedIdentifier (resolutionResults, leftResolutionResul
 	end
 	
 	for i = 1, leftResolutionResults:GetFilteredResultCount () do
-		self:ResolveMember (resolutionResults, name, leftResolutionResults:GetFilteredResultObject (i), fileId)
+		local leftDefinition = leftResolutionResults:GetFilteredResultObject (i):UnwrapAlias ()
+		if leftDefinition:IsOverloadedClass () then
+			leftDefinition = leftDefinition:GetDefaultClass ()
+		end
+		if leftDefinition then
+			self:ResolveMember (resolutionResults, name, leftDefinition, fileId)
+		end
 	end
 end
 

@@ -59,7 +59,7 @@ end
 
 function self:GetRootNamespace ()
 	if not self.RootNamespace then
-		self.RootNamespace = GCompute.Lua.Table (nil, _G)
+		self.RootNamespace = GCompute.Lua.Table ("_G", _G)
 	end
 	return self.RootNamespace
 end

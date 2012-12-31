@@ -1,25 +1,16 @@
 local self = {}
-GCompute.Lua.Table = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
+GCompute.Lua.Class = GCompute.MakeConstructor (self, GCompute.ObjectDefinition)
 
---- @param name The name of this namespace
+--- @param name The name of this class
 function self:ctor (name, table)
 	self.Value = table
-	if self.Value == nil then
-	elseif type (self.Value) ~= "table" then
-		if type (self.Value.IsValid) == "function" then
-			self.Table = self.Value:IsValid () and self.Value:GetTable () or {}
-		else
-			self.Table = self.Value:GetTable ()
-		end
-	else
-		self.Table = table
-	end
+	self.Table = table
 	
-	self.Namespace = GCompute.Lua.TableNamespace (self.Table)
+	self.Namespace = GCompute.Lua.ClassNamespace (self.Table)
 	self.Namespace:SetDefinition (self)
 end
 
--- Table
+-- Class
 local forwardedFunctions =
 {
 	"GetEnumerator",
@@ -34,6 +25,14 @@ for _, functionName in ipairs (forwardedFunctions) do
 	end
 end
 
+function self:GetTypeArgumentList ()
+	return GCompute.EmptyTypeArgumentList
+end
+
+function self:GetTypeParameterList ()
+	return GCompute.EmptyTypeParameterList
+end
+
 -- Definition
 function self:ComputeMemoryUsage (memoryUsageReport)
 	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
@@ -45,20 +44,17 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 function self:GetDisplayText ()
-	if type (self.Value.ClassName) == "string" then
-		return self:GetName () .. " (" .. type (self.Value) .. ":" .. tostring (self.Value.ClassName) .. ")"
-	end
-	return self:GetName () .. " (" .. type (self.Value) .. ")"
+	return self:GetName ()
 end
 
-function self:IsNamespace ()
+function self:IsClass ()
 	return true
 end
 
 --- Returns a string representation of this namespace
 -- @return A string representing this namespace
 function self:ToString ()
-	local namespaceDefinition = "[Namespace] " .. (self:GetName () or "[Unnamed]")
+	local namespaceDefinition = "[Class] " .. (self:GetName () or "[Unnamed]")
 	
 	if not self:IsEmpty () then
 		namespaceDefinition = namespaceDefinition .. "\n{"

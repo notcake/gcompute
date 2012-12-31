@@ -175,7 +175,7 @@ include ("metadata/namespacedefinition.lua")
 include ("metadata/classdefinition.lua")
 
 include ("metadata/aliasdefinition.lua")
--- include ("metadata/eventdefinition.lua")
+include ("metadata/eventdefinition.lua")
 include ("metadata/propertydefinition.lua")
 include ("metadata/typeparameterdefinition.lua")
 include ("metadata/variabledefinition.lua")
@@ -216,11 +216,13 @@ include ("metadata/mergedlocalscope.lua")
 -- lua
 GCompute.Lua = {}
 include ("metadata/lua/table.lua")
+include ("metadata/lua/class.lua")
 include ("metadata/lua/function.lua")
 include ("metadata/lua/variable.lua")
 
 include ("metadata/lua/functionparameterlist.lua")
 include ("metadata/lua/tablenamespace.lua")
+include ("metadata/lua/classnamespace.lua")
 
 -- other
 GCompute.Other = {}

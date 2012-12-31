@@ -428,6 +428,14 @@ function self:IsProperty ()
 	return false
 end
 
+--- Gets whether this object is a TypeParameterDefinition
+-- @return A boolean indicating whether this object is a TypeParameterDefinition
+function self:IsTypeParameter ()
+	return false
+end
+
+--- Gets whether this object is a VariableDefinition
+-- @return A boolean indicating whether this object is a VariableDefinition
 function self:IsVariable ()
 	return false
 end

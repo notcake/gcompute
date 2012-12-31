@@ -147,8 +147,24 @@ function self:GetFilteredResultCount ()
 	return #self.FilteredResults
 end
 
+function self:GetFilteredResultEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.FilteredResults [i]
+	end
+end
+
 function self:GetFilteredResultObject (index)
 	return self.FilteredResults [index] and self.FilteredResults [index]:GetObject () or nil
+end
+
+function self:GetFilteredResultObjectEnumerator ()
+	local i = 0
+	return function ()
+		i = i + 1
+		return self.FilteredResults [i] and self.FilteredResults [i]:GetObject ()
+	end
 end
 
 function self:GetResult (index)

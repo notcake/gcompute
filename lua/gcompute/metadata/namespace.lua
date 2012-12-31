@@ -26,7 +26,7 @@ end
 function self:SetGlobalNamespace (globalNamespace)
 	if self.GlobalNamespace == globalNamespace then return end
 	self.GlobalNamespace = globalNamespace
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:SetGlobalNamespace (globalNamespace)
 	end
 end
@@ -60,7 +60,7 @@ function self:SetDeclaringMethod (declaringMethod)
 	if self.DeclaringMethod == declaringMethod then return end
 	self.DeclaringMethod = declaringMethod
 	if self.Definition and self.Definition:IsMethod () then return end
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:SetDeclaringMethod (declaringMethod)
 	end
 end
@@ -69,7 +69,7 @@ function self:SetDeclaringNamespace (declaringNamespace)
 	if self.DeclaringNamespace == declaringNamespace then return end
 	self.DeclaringNamespace = declaringNamespace
 	if self.Definition and self.Definition:IsNamespace () then return end
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:SetDeclaringNamespace (declaringNamespace)
 	end
 end
@@ -82,7 +82,7 @@ function self:SetDeclaringType (declaringType)
 	if self.DeclaringType == declaringType then return end
 	self.DeclaringType = declaringType
 	if self.Definition and self.Definition:IsClass () then return end
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:SetDeclaringType (declaringType)
 	end
 end
@@ -91,7 +91,7 @@ function self:SetDefinition (objectDefinition)
 	if self.Definition == objectDefinition then return end
 	self.Definition = objectDefinition
 	
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		self:SetupMemberHierarchy (member)
 	end
 end
@@ -100,7 +100,7 @@ function self:SetModule (module)
 	if self.Module == module then return end
 	self.Module = module
 	
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:SetModule (module)
 	end
 end
@@ -112,7 +112,7 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	
 	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self)
 	memoryUsageReport:CreditTableStructure ("Namespace Definitions", self.Members)
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:ComputeMemoryUsage (memoryUsageReport)
 	end
 	
@@ -227,6 +227,14 @@ function self:GetEnumerator ()
 	end
 end
 
+function self:GetLazyEnumerator ()
+	local next, tbl, key = pairs (self.Members)
+	return function ()
+		key = next (tbl, key)
+		return key, tbl [key]
+	end
+end
+
 function self:GetMember (member)
 	return self.Members [member]
 end
@@ -248,7 +256,7 @@ function self:MemberExists (name)
 end
 
 function self:ResolveTypes (objectResolver, errorReporter)
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:ResolveTypes (objectResolver, errorReporter)
 	end
 end
@@ -279,7 +287,7 @@ function self:ToString ()
 end
 
 function self:Visit (namespaceVisitor, ...)
-	for _, member in self:GetEnumerator () do
+	for _, member in self:GetLazyEnumerator () do
 		member:Visit (namespaceVisitor, ...)
 	end
 end

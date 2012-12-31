@@ -67,6 +67,7 @@ function self:dtor ()
 end
 
 function self:ForceHighlightLine (lineNumber)
+	if not self:IsEnabled () then return end
 	if self.CurrentLine > lineNumber then return end
 	
 	local previousLine = self.Document:GetLine (lineNumber - 1)

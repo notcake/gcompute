@@ -48,25 +48,7 @@ function self:ImportData ()
 			parameters = parameters:sub (parameters:find (":") + 1)
 		end
 		
-		local parameterList = GCompute.ParameterList ()
-		local i = 1
-		while i <= #parameters do
-			local match = nil
-			for j = 3, 1, -1 do
-				local typeId = parameters:sub (i, i + j - 1)
-				if types [typeId] or typeId == "..." then
-					match = typeId
-					break
-				end
-			end
-			match = match or parameters:sub (i, i)
-			if match == "..." then
-				parameterList:AddParameter (variantType or objectType, "...")
-			else
-				parameterList:AddParameter (types [match] and types [match]:GetClassType () or variantType or objectType)
-			end
-			i = i + #match
-		end
+		local parameterList = self:ParseParameterList (types, variantType or objectType, parameters)
 		
 		if class == self and self:GetMember (methodName) and self:GetMember (methodName):IsOverloadedClass () then
 			self:GetMember (methodName):GetClass (1)
@@ -76,4 +58,42 @@ function self:ImportData ()
 				:SetReturnType (returnType)
 		end
 	end
+	
+	-- Events
+	for name, data in pairs (LemonGate.EventsTable) do
+		local parameters = data [1]
+		local returnType = types [data [2]] and types [data [2]]:GetClassType () or voidType
+		
+		local parameterList = self:ParseParameterList (types, variantType or objectType, parameters)
+		
+		self:AddEvent (name, parameterList)
+			:SetReturnType (returnType)
+	end
+end
+
+function self:ParseParameterList (types, topType, parameters)
+	local parameterList = GCompute.ParameterList ()
+	
+	local i = 1
+	while i <= #parameters do
+		local match = nil
+		
+		-- Extract the type id or "..."
+		for j = 3, 1, -1 do
+			local typeId = parameters:sub (i, i + j - 1)
+			if types [typeId] or typeId == "..." then
+				match = typeId
+				break
+			end
+		end
+		
+		match = match or parameters:sub (i, i)
+		if match == "..." then
+			parameterList:AddParameter (topType, "...")
+		else
+			parameterList:AddParameter (types [match] and types [match]:GetClassType () or topType)
+		end
+		i = i + #match
+	end
+	return parameterList
 end

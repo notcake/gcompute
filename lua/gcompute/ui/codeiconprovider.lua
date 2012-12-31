@@ -30,7 +30,7 @@ function self:GetIconForObjectDefinition (objectDefinition)
 	elseif objectDefinition:IsNamespace () then
 		return "gui/codeicons/namespace"
 	elseif objectDefinition:IsProperty () then
-		return "gui/codeicons/application_double"
+		return "icon16/application_double.png"
 	elseif objectDefinition:IsTypeParameter () then
 		return "gui/codeicons/parametrictype"
 	elseif objectDefinition:IsVariable () then

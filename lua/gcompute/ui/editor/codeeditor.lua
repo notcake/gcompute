@@ -55,7 +55,7 @@ function PANEL:Init ()
 		self.TextEntry:SetText ("")
 		if text == "" then return end
 		if not pasted then
-			if ctrl then return end
+			if ctrl and text == " " then return end
 			if text == "\r" or text == "\n" then return end
 		end
 		

@@ -62,6 +62,10 @@ function self:GetType ()
 	return self.Type
 end
 
+function self:IsProperty ()
+	return true
+end
+
 function self:ResolveTypes (objectResolver, errorReporter)
 	errorReporter = errorReporter or GCompute.DefaultErrorReporter
 	

@@ -48,14 +48,14 @@ function self:ctor (codeEditor)
 	)
 	self.Editor:AddEventListener ("SizeChanged", tostring (self),
 		function (_)
-			if not self.SuggestionFrame then return end
+			if not self:IsVisible () then return end
 			if self.Editor:IsCaretVisible () then return end
 			self.SuggestionFrame:SetVisible (false)
 		end
 	)
 	self.Editor:AddEventListener ("ViewLocationChanged", tostring (self),
 		function (_)
-			if not self.SuggestionFrame then return end
+			if not self:IsVisible () then return end
 			if self.Editor:IsCaretVisible () then
 				self:UpdateSuggestionFramePosition ()
 			else

@@ -45,13 +45,13 @@ end
 function self:AddObjectDefinition (objectDefinition)
 	if not objectDefinition then return end
 	if self.ObjectDefinitionSet [objectDefinition] then return end
+	self.ObjectDefinitionSet [objectDefinition] = true
 	
 	if objectDefinition:IsOverloadedClass () and objectDefinition:GetClassCount () == 1 then
 		objectDefinition = objectDefinition:GetClass (1)
 	elseif objectDefinition:IsOverloadedMethod () and objectDefinition:GetMethodCount () == 1 then
 		objectDefinition = objectDefinition:GetMethod (1)
 	end
-	
 	self.ObjectDefinitionSet [objectDefinition] = true
 	
 	local listBoxItem = self.ListBox:AddItem (objectDefinition:GetShortName ())

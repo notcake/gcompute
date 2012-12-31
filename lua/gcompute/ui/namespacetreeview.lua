@@ -48,7 +48,7 @@ function self:Populate (objectDefinition, treeViewNode)
 			childNode.Definition = constructor
 			
 			childNode:SetText (constructor:GetDisplayText ())
-			childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (definition))
+			childNode:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (constructor))
 		end
 	end
 	for name, definition in namespace:GetEnumerator () do

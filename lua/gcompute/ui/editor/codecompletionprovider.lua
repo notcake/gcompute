@@ -171,7 +171,7 @@ function self:HandleText (text, pasted)
 	if pasted then return end
 	
 	if GLib.Unicode.IsLetterOrDigit (text) then return end
-	if text == "." or text == ":" then
+	if text == ":" then
 		self:CommitSuggestion ()
 	end
 end

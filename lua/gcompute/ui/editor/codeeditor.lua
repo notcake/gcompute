@@ -129,7 +129,7 @@ function PANEL:Init ()
 	self.EditorHelper = GCompute.IEditorHelper ()
 	
 	-- Autocomplete
-	self.CodeCompletionProvider = GCompute.Editor.CodeCompletionProvider (self)
+	self.CodeCompletionProvider = GCompute.Editor.CodeCompletion.CodeCompletionProvider (self)
 	
 	self.ToolTipController = Gooey.ToolTipController (self)
 	self.ToolTipController:SetManual (true)

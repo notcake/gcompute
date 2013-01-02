@@ -1,5 +1,5 @@
 local self = {}
-GCompute.Editor.CodeCompletionProvider = GCompute.MakeConstructor (self)
+GCompute.Editor.CodeCompletion.CodeCompletionProvider = GCompute.MakeConstructor (self)
 
 function self:ctor (codeEditor)
 	self.Editor = codeEditor
@@ -95,11 +95,22 @@ function self:dtor ()
 	end
 end
 
-function self:CommitSuggestion (objectDefinition)
-	objectDefinition = objectDefinition or self.SuggestionFrame:GetSelectedItem ()
-	if not objectDefinition then return end
+function self:CommitSuggestion (itemType, item)
+	itemType = itemType or self.SuggestionFrame:GetSelectedItemType ()
+	item     = item     or self.SuggestionFrame:GetSelectedItem ()
+	if itemType == GCompute.Editor.CodeCompletion.SuggestionType.None then return end
 	
-	local replacementName = objectDefinition:GetShortName ()
+	local replacementName
+	if itemType == GCompute.Editor.CodeCompletion.SuggestionType.Keyword then
+		replacementName = item
+	elseif itemType == GCompute.Editor.CodeCompletion.SuggestionType.Definition then
+		replacementName = item:GetShortName ()
+	else
+		GCompute.Error ("CodeCompletionProvider:CommitSuggestion : Unhandled item type (" .. itemType .. ")")
+	end
+	
+	local toolTipVisible = self.SuggestionFrame:IsToolTipVisible ()
+	
 	if replacementName == self.FullName then
 		self.Editor:SetCaretPos (
 			self.Editor:GetDocument ():CharacterToColumn (
@@ -115,11 +126,12 @@ function self:CommitSuggestion (objectDefinition)
 		self.Editor:ReplaceText (
 			GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameStartCharacter),
 			GCompute.Editor.LineCharacterLocation (self.NameLine, self.NameEndCharacter),
-			self.SuggestionFrame:GetSelectedItem ():GetShortName ()
+			replacementName
 		)
 	end
+	
 	self.SuggestionFrame:SetVisible (false)
-	self.SuggestionFrame:SetToolTipVisible (true)
+	self.SuggestionFrame:SetToolTipVisible (toolTipVisible)
 end
 
 function self:GetDocument ()
@@ -179,6 +191,11 @@ end
 function self:IsVisible ()
 	if not self.SuggestionFrame then return false end
 	return self.SuggestionFrame:IsVisible ()
+end
+
+function self:IsToolTipVisible ()
+	if not self.SuggestionFrame then return false end
+	return self.SuggestionFrame:IsToolTipVisible ()
 end
 
 function self:SetToolTipVisible (toolTipVisible)
@@ -361,6 +378,13 @@ function self:Trigger (forceShow)
 				end
 			end
 		end
+		
+		-- Global lookup, keywords are acceptable
+		for keyword in self.Language:GetKeywordEnumerator () do
+			if string.sub (keyword, 1, #lowercaseNamePrefix):lower () == lowercaseNamePrefix then
+				self.SuggestionFrame:AddKeyword (keyword)
+			end
+		end
 	end
 	
 	self.SuggestionFrame:Sort ()
@@ -368,6 +392,7 @@ function self:Trigger (forceShow)
 		self.SuggestionFrame:SelectItem (preferredItem)
 		timer.Simple (0.001,
 			function ()
+				if not preferredItem:IsValid () then return end
 				self.SuggestionFrame:EnsureVisible (preferredItem)
 			end
 		)
@@ -437,8 +462,8 @@ function self:CreateSuggestionFrame ()
 	self.SuggestionFrame:SetFont (self.Editor.Settings.Font)
 	
 	self.SuggestionFrame:AddEventListener ("ItemChosen",
-		function (_, objectDefinition)
-			self:CommitSuggestion (objectDefinition)
+		function (_, itemType, item)
+			self:CommitSuggestion (itemType, item)
 		end
 	)
 	

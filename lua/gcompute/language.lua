@@ -78,6 +78,14 @@ function self:AddKeywords (keywordType, keywords)
 	end
 end
 
+function self:GetKeywordEnumerator ()
+	local next, tbl, key = pairs (self.Keywords)
+	return function ()
+		key = next (tbl, key)
+		return key, tbl [key]
+	end
+end
+
 function self:GetKeywordType (token)
 	return self.Keywords [token] or GCompute.KeywordType.Unknown
 end

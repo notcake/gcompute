@@ -1,5 +1,11 @@
 local self = {}
 
+--[[
+	Events:
+		ItemChosen (SuggestionType itemType, item)
+			Fired when the user has double clicked an item.
+]]
+
 function self:Init ()
 	self.Control = nil
 	
@@ -15,7 +21,7 @@ function self:Init ()
 	self.ListBox:AddEventListener ("DoubleClick",
 		function (_, item)
 			if not self:GetSelectedItem () then return end
-			self:DispatchEvent ("ItemChosen", self:GetSelectedItem ())
+			self:DispatchEvent ("ItemChosen", self:GetSelectedItemType (), self:GetSelectedItem ())
 		end
 	)
 	
@@ -70,6 +76,7 @@ function self:Init ()
 	)
 	
 	self.ObjectDefinitionSet = {}
+	self.KeywordSet          = {}
 	
 	self.LastShowTime = CurTime ()
 	
@@ -106,20 +113,30 @@ function self:AddObjectDefinition (objectDefinition)
 	end
 	self.ObjectDefinitionSet [objectDefinition] = true
 	
-	local listBoxItem = self.ListBox:AddItem (objectDefinition:GetShortName ())
-	listBoxItem.ObjectDefinition = objectDefinition
-	listBoxItem:SetFont (self:GetFont ())
+	local listBoxItem = self:CreateSuggestionItem (objectDefinition:GetShortName ())
 	listBoxItem:SetIcon (GCompute.CodeIconProvider:GetIconForObjectDefinition (objectDefinition))
+	listBoxItem.SuggestionItem = objectDefinition
+	listBoxItem.SuggestionType = GCompute.Editor.CodeCompletion.SuggestionType.Definition
 	
-	if not self.ListBox:GetSelectedItem () then
-		self.ListBox:SetSelectedItem (listBoxItem)
-	end
+	return listBoxItem
+end
+
+function self:AddKeyword (keyword)
+	if not keyword then return end
+	if self.KeywordSet [keyword] then return end
+	self.KeywordSet [keyword] = true
+	
+	local listBoxItem = self:CreateSuggestionItem (keyword)
+	listBoxItem:SetIcon ("icon16/text_padding_top.png")
+	listBoxItem.SuggestionItem = keyword
+	listBoxItem.SuggestionType = GCompute.Editor.CodeCompletion.SuggestionType.Keyword
 	
 	return listBoxItem
 end
 
 function self:Clear ()
 	self.ObjectDefinitionSet = {}
+	self.KeywordSet          = {}
 	self.ListBox:Clear ()
 end
 
@@ -138,11 +155,21 @@ end
 function self:GetSelectedItem ()
 	local listBoxItem = self.ListBox:GetSelectedItem ()
 	if not listBoxItem then return nil end
-	return listBoxItem.ObjectDefinition
+	return listBoxItem.SuggestionItem
+end
+
+function self:GetSelectedItemType ()
+	local listBoxItem = self.ListBox:GetSelectedItem ()
+	if not listBoxItem then return GCompute.Editor.CodeCompletion.SuggestionType.None end
+	return listBoxItem.SuggestionType
 end
 
 function self:IsEmpty ()
 	return self.ListBox:IsEmpty ()
+end
+
+function self:IsToolTipVisible ()
+	return self.ToolTip:IsVisible ()
 end
 
 function self:Paint (w, h)
@@ -238,6 +265,17 @@ function self:Sort ()
 end
 
 -- Internal, do not call
+function self:CreateSuggestionItem (text)
+	local listBoxItem = self.ListBox:AddItem (text)
+	listBoxItem:SetFont (self:GetFont ())
+	
+	if not self.ListBox:GetSelectedItem () then
+		self.ListBox:SetSelectedItem (listBoxItem)
+	end
+	
+	return listBoxItem
+end
+
 function self:HookSelectedItem (listBoxItem)
 	if not listBoxItem then return end
 	
@@ -262,27 +300,28 @@ end
 
 function self:UpdateToolTip ()
 	local selectedItem = self.ListBox:GetSelectedItem ()
+	local suggestionItem = self:GetSelectedItem ()
+	local suggestionType = self:GetSelectedItemType ()
 	
-	self.ToolTip:SetVisible (
-		self:IsVisible () and
-		selectedItem and
-		self.ListBox:IsItemVisible (selectedItem)
-	)
+	local hideToolTip = false
+	hideToolTip = hideToolTip or not self:IsVisible ()
+	hideToolTip = hideToolTip or not self.ListBox:IsItemVisible (selectedItem)
+	hideToolTip = hideToolTip or suggestionType == GCompute.Editor.CodeCompletion.SuggestionType.None
+	hideToolTip = hideToolTip or suggestionType == GCompute.Editor.CodeCompletion.SuggestionType.Keyword
 	
-	if not self:IsVisible () then return end
-	if not selectedItem      then return end
-	if not self.ListBox:IsItemVisible (selectedItem) then return end
+	self.ToolTip:SetVisible (not hideToolTip)
+	if hideToolTip then return end
 	
 	local _, y = selectedItem:LocalToScreen (selectedItem:GetWide (), 0)
 	local x = self:GetPos () + self:GetWide () + 8
 	self.ToolTip:SetPos (x, y)
 	
-	local objectDefinition = selectedItem.ObjectDefinition
-	if objectDefinition:IsClass () and objectDefinition:GetConstructorCount () > 0 then
-		objectDefinition = objectDefinition:GetConstructor (1)
+	-- Update contents
+	if suggestionItem:IsClass () and suggestionItem:GetConstructorCount () > 0 then
+		suggestionItem = suggestionItem:GetConstructor (1)
 	end
-	if objectDefinition then
-		self.ToolTip:SetText (objectDefinition:GetDisplayText ())
+	if suggestionItem then
+		self.ToolTip:SetText (suggestionItem:GetDisplayText ())
 	end
 end
 

@@ -34,10 +34,12 @@ include ("editor/itokensink.lua")
 include ("editor/brackethighlighter.lua")
 include ("editor/syntaxhighlighter.lua")
 include ("editor/identifierhighlighter.lua")
-include ("editor/codecompletionprovider.lua")
 
 -- Code Completion
+include ("editor/codecompletion/codecompletion.lua")
+include ("editor/codecompletion/codecompletionprovider.lua")
 include ("editor/codecompletion/suggestionframe.lua")
+include ("editor/codecompletion/suggestiontype.lua")
 
 -- IDE
 include ("editor/editor.lua")

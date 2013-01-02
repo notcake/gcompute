@@ -73,7 +73,7 @@ LANGUAGE:GetTokenizer ()
 
 LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "foreach", "do", "try", "catch", "finally"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"break", "switch", "return", "continue", "throw"})
-LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using", "function", "event", "local"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"function", "event"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
 
 LANGUAGE:SetDirectiveCaseSensitivity (false)

@@ -185,7 +185,7 @@ function PANEL:GetLargestContainer ()
 	end
 	
 	local panel1 = self:GetPanel1 ():GetLargestContainer ()
-	local panel2 = self:GetPanel1 ():GetLargestContainer ()
+	local panel2 = self:GetPanel2 ():GetLargestContainer ()
 	if panel1:GetWide () * panel1:GetTall () > panel2:GetWide () * panel2:GetTall () then
 		return panel1
 	end

@@ -78,7 +78,15 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				local fileId = document:HasPath () and document:GetPath () or ("@anonymous_" .. document:GetId ())
 				
 				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
-				local f = CompileString (codeEditor:GetText (), fileId)
+				
+				local code = ""
+				code = code .. "local ErrorNoHalt = ErrorNoHalt "
+				code = code .. "local Msg         = Msg "
+				code = code .. "local MsgN        = MsgN "
+				code = code .. "local MsgC        = MsgC "
+				code = code .. "local print       = print "
+				code = code .. codeEditor:GetText ()
+				local f = CompileString (code, fileId)
 				
 				local _ErrorNoHalt = ErrorNoHalt
 				local _Msg         = Msg

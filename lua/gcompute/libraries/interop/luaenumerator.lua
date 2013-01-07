@@ -32,6 +32,6 @@ LuaEnumerator:AddMethod ("Reset")
 	:SetNativeFunction (
 		function (self)
 			-- Nope.mkv
-			executionContext:Throw (__.NotImplementedException ())
+			executionContext:Throw (__.NotSupportedException ())
 		end
 	)

@@ -471,28 +471,48 @@ function self:OpenFile (file, callback)
 		return
 	end
 	
-	file:Open (GAuth.GetLocalId (), VFS.OpenFlags.Read,
-		function (returnCode, fileStream)
-			if returnCode == VFS.ReturnCode.Success then
-				fileStream:Read (fileStream:GetLength (),
-					function (returnCode, data)
-						if returnCode == VFS.ReturnCode.Progress then return end
-						
-						local file = fileStream:GetFile ()
-						local view = self:CreateCodeView ()
-						view:SetTitle (file:GetDisplayName ())
-						view:SetCode (data)
-						view:GetSavable ():SetFile (file)
-						fileStream:Close ()
-						
-						callback (true, file, view)
-					end
-				)
-			else
-				callback (false, file)
+	local extension = file:GetExtension () or ""
+	extension = string.lower (extension)
+	
+	local imageExtensions =
+	{
+		["bmp"] = true,
+		["gif"] = true,
+		["jpg"] = true,
+		["png"] = true
+	}
+	
+	if imageExtensions [extension] then
+		local view = self:CreateView ("Image")
+		view:SetTitle (file:GetDisplayName ())
+		view:SetFile (file)
+		self.DockContainer:GetLargestContainer ():AddView (view)
+		
+		callback (true, file, view)
+	else
+		file:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
+			function (returnCode, fileStream)
+				if returnCode == VFS.ReturnCode.Success then
+					fileStream:Read (fileStream:GetLength (),
+						function (returnCode, data)
+							if returnCode == VFS.ReturnCode.Progress then return end
+							
+							local file = fileStream:GetFile ()
+							local view = self:CreateCodeView ()
+							view:SetTitle (file:GetDisplayName ())
+							view:SetCode (data)
+							view:GetSavable ():SetFile (file)
+							fileStream:Close ()
+							
+							callback (true, file, view)
+						end
+					)
+				else
+					callback (false, file)
+				end
 			end
-		end
-	)
+		)
+	end
 end
 
 --- Opens a new tab for the given path. Use OpenFile instead if you have an IFile.

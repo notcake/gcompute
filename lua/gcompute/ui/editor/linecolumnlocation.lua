@@ -38,6 +38,14 @@ function self:GetLine ()
 	return self.Line
 end
 
+function self:IsLineCharacterLocation ()
+	return false
+end
+
+function self:IsLineColumnLocation ()
+	return true
+end
+
 function self:SetColumn (column)
 	self.Column = column
 end
@@ -67,4 +75,18 @@ function self:__lt (lineColumnLocation)
 	if self.Line > lineColumnLocation.Line then return false end
 	if self.Column < lineColumnLocation.Column then return true end
 	return false
+end
+
+function self:__add (lineColumnLocation)
+	return GCompute.Editor.LineColumnLocation (
+		self.Line   + lineColumnLocation.Line,
+		self.Column + lineColumnLocation.Column
+	)
+end
+
+function self:__sub (lineColumnLocation)
+	return GCompute.Editor.LineColumnLocation (
+		self.Line   - lineColumnLocation.Line,
+		self.Column - lineColumnLocation.Column
+	)
 end

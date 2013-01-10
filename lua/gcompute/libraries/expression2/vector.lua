@@ -29,6 +29,15 @@ Vector:AddMethod ("length")
 		end
 	)
 
+Vector:AddMethod ("operator==", "vector v")
+	:SetReturnType ("bool")
+	:SetNativeString ("%self% == %arg:v%")
+	:SetNativeFunction (
+		function (self, v)
+			return self == v
+		end
+	)
+
 Vector:AddMethod ("operator+", "vector v")
 	:SetReturnType ("vector")
 	:SetNativeString ("%self% + %arg:v%")

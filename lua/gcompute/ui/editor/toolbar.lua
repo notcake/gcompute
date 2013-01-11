@@ -159,6 +159,8 @@ function GCompute.Editor.Toolbar (self)
 				if not editorHelper then return end
 				
 				local outputPaneCleared = false
+				self.DockContainer:GetViewById ("Output"):Clear ()
+				outputPaneCleared = true
 				
 				local pipe = GCompute.Pipe ()
 				pipe:AddEventListener ("Data",

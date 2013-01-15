@@ -124,7 +124,7 @@ function self:ResolveMemberFromTable (t, name)
 	local cleanName = tostring (name)
 	
 	local member = t [name]
-	if not member then return false end
+	if member == nil then return false end
 	
 	local memberType = type (member)
 	

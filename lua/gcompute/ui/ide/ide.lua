@@ -5,11 +5,11 @@ function self:ctor ()
 	self.DocumentTypes   = GCompute.IDE.DocumentTypes
 	self.ViewTypes       = GCompute.IDE.ViewTypes
 	
-	self.DocumentManager = GCompute.IDE.DocumentManager ()
-	self.ViewManager     = GCompute.IDE.ViewManager ()
+	-- self.DocumentManager = GCompute.IDE.DocumentManager ()
+	-- self.ViewManager     = GCompute.IDE.ViewManager ()
 	
-	self.DocumentManager:SetViewManager (self.ViewManager)
-	self.ViewManager:SetDocumentManager (self.DocumentManager)
+	-- self.DocumentManager:SetViewManager (self.ViewManager)
+	-- self.ViewManager:SetDocumentManager (self.DocumentManager)
 	
 	self.Panel = nil
 end
@@ -35,17 +35,12 @@ function self:GetFrame ()
 	return self.Panel
 end
 
+function self:SetVisible (visible)
+	self:GetFrame ():SetVisible (visible)
+end
+
 concommand.Add ("gcompute_show_ide",
 	function ()
-		if not GCompute.IDE.Instance then
-			GCompute.IDE.Instance = GCompute.IDE.IDE ()
-			GCompute:AddEventListener ("Unloaded",
-				function ()
-					GCompute.IDE.Instance:dtor ()
-				end
-			)
-		end
-		
-		GCompute.IDE.Instance:GetFrame ():SetVisible (true)
+		GCompute.IDE.GetInstance ():SetVisible (true)
 	end
 )

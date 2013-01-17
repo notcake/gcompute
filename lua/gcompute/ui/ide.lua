@@ -1,9 +1,17 @@
 if GCompute.IDE then return end
 GCompute.IDE = {}
 
--- IDE
-include ("ide/ide.lua")
-include ("ide/ideframe.lua")
+function GCompute.IDE.GetInstance ()
+	if not GCompute.IDE.Instance then
+		GCompute.IDE.Instance = GCompute.IDE.IDE ()
+		GCompute:AddEventListener ("Unloaded",
+			function ()
+				GCompute.IDE.Instance:dtor ()
+			end
+		)
+	end
+	return GCompute.IDE.Instance
+end
 
 -- Documents
 include ("ide/document.lua")
@@ -15,8 +23,8 @@ include ("ide/view.lua")
 include ("ide/viewtypes.lua")
 
 -- IDE
-include ("ide/editor.lua")
-include ("ide/editor_frame.lua")
+include ("ide/ide.lua")
+include ("ide/ideframe.lua")
 include ("ide/plugins.lua")
 include ("ide/savableproxy.lua")
 include ("ide/tabcontextmenu.lua")

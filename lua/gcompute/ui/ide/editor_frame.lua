@@ -103,7 +103,7 @@ function self:Init ()
 	)
 	
 	self.TabContextMenu = GCompute.IDE.TabContextMenu (self)
-	self.CodeEditorContextMenu = GCompute.IDE.CodeEditorContextMenu (self)
+	self.CodeEditorContextMenu = GCompute.CodeEditor.CodeEditorContextMenu (self)
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
 	self.LanguagePanel      = self.StatusBar:AddComboBoxPanel ("Unknown language")
@@ -183,7 +183,7 @@ function self:Init ()
 		self.DockContainer:RegisterView (view)
 	end
 	
-	self:SetKeyboardMap (GCompute.IDE.EditorKeyboardMap)
+	self:SetKeyboardMap (GCompute.IDE.KeyboardMap)
 	
 	self.NextNewId = 1
 	

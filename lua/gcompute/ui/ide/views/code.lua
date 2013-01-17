@@ -4,7 +4,7 @@ function self:ctor (container)
 	self.CodeEditor = vgui.Create ("GComputeCodeEditor", container)
 	self.CodeEditor:GetDocument ():AddView (self)
 	
-	self.ClipboardTarget = GCompute.IDE.EditorClipboardTarget (self.CodeEditor)
+	self.ClipboardTarget = GCompute.CodeEditor.EditorClipboardTarget (self.CodeEditor)
 	
 	self.SavableProxy = GCompute.SavableProxy (self:GetDocument ())
 	self.UndoRedoStackProxy = GCompute.UndoRedoStackProxy (self:GetDocument ():GetUndoRedoStack ())

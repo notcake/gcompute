@@ -22,7 +22,7 @@ function self:ctor ()
 	self.Lines = {}
 	
 	-- Reusable LineCharacterLocations for events
-	self.InsertionNewLocation = GCompute.IDE.LineCharacterLocation ()
+	self.InsertionNewLocation = GCompute.CodeEditor.LineCharacterLocation ()
 	
 	self:Clear ()
 	
@@ -36,7 +36,7 @@ end
 
 function self:CharacterToColumn (characterLocation, textRenderer)
 	if not textRenderer then GCompute.Error ("Document:CharacterToColumn : You forgot to pass a text renderer.") end
-	local columnLocation = GCompute.IDE.LineColumnLocation (characterLocation)
+	local columnLocation = GCompute.CodeEditor.LineColumnLocation (characterLocation)
 	local line = self:GetLine (characterLocation:GetLine ())
 	if line then
 		columnLocation:SetColumn (line:ColumnFromCharacter (characterLocation:GetCharacter (), textRenderer))
@@ -48,7 +48,7 @@ end
 
 function self:ColumnToCharacter (columnLocation, textRenderer)
 	if not textRenderer then GCompute.Error ("Document:ColumnToCharacter : You forgot to pass a text renderer.") end
-	local characterLocation = GCompute.IDE.LineCharacterLocation (columnLocation)
+	local characterLocation = GCompute.CodeEditor.LineCharacterLocation (columnLocation)
 	local line = self:GetLine (columnLocation:GetLine ())
 	if line then
 		characterLocation:SetCharacter (line:CharacterFromColumn (columnLocation:GetColumn (), textRenderer))
@@ -60,7 +60,7 @@ end
 
 function self:Clear ()
 	self.Lines = {}
-	self.Lines [#self.Lines + 1] = GCompute.IDE.Line (self)
+	self.Lines [#self.Lines + 1] = GCompute.CodeEditor.Line (self)
 	
 	self:DispatchEvent ("TextCleared")
 	self:DispatchEvent ("TextChanged")
@@ -87,7 +87,7 @@ function self:Delete (startLocation, endLocation)
 				endLine = endLine + 1
 				endCharacter = 0
 				
-				endLocation = GCompute.IDE.LineCharacterLocation (endLine, endCharacter)
+				endLocation = GCompute.CodeEditor.LineCharacterLocation (endLine, endCharacter)
 			end
 		end
 	end
@@ -147,7 +147,7 @@ function self:GetColor (location)
 end
 
 function self:GetEnd ()
-	local endLocation = GCompute.IDE.LineCharacterLocation ()
+	local endLocation = GCompute.CodeEditor.LineCharacterLocation ()
 	endLocation:SetLine (self:GetLineCount () - 1)
 	endLocation:SetCharacter (self:GetLine (self:GetLineCount () - 1):GetLengthIncludingLineBreak ())
 	return endLocation
@@ -203,7 +203,7 @@ function self:GetNextWordBoundary (lineCharacterLocation)
 		character = character + GLib.UTF8.Length (text:sub (offset, wordBoundaryOffset - 1))
 	end
 	
-	return GCompute.IDE.LineCharacterLocation (lineNumber, character)
+	return GCompute.CodeEditor.LineCharacterLocation (lineNumber, character)
 end
 
 function self:GetPreviousWordBoundary (lineCharacterLocation)
@@ -241,11 +241,11 @@ function self:GetPreviousWordBoundary (lineCharacterLocation)
 		end
 	end
 	
-	return GCompute.IDE.LineCharacterLocation (lineNumber, character)
+	return GCompute.CodeEditor.LineCharacterLocation (lineNumber, character)
 end
 
 function self:GetStart ()
-	return GCompute.IDE.LineCharacterLocation (0, 0)
+	return GCompute.CodeEditor.LineCharacterLocation (0, 0)
 end
 
 function self:GetText (startLocation, endLocation)
@@ -318,12 +318,12 @@ function self:Insert (location, text)
 	end
 	
 	if #self.Lines == 0 then
-		self.Lines [#self.Lines + 1] = GCompute.IDE.Line (self)
+		self.Lines [#self.Lines + 1] = GCompute.CodeEditor.Line (self)
 	end
 	
 	local insertionLine = self.Lines [location:GetLine () + 1]
 	
-	local newLocation = GCompute.IDE.LineCharacterLocation (location:GetLine ())
+	local newLocation = GCompute.CodeEditor.LineCharacterLocation (location:GetLine ())
 	
 	if #lines == 1 then
 		-- Single line insertion
@@ -342,7 +342,7 @@ function self:Insert (location, text)
 		-- Insert middle lines
 		local nextInsertionIndex = location:GetLine () + 2
 		for i = 2, #lines - 1 do
-			table.insert (self.Lines, nextInsertionIndex, GCompute.IDE.Line (self, lines [i]))
+			table.insert (self.Lines, nextInsertionIndex, GCompute.CodeEditor.Line (self, lines [i]))
 			nextInsertionIndex = nextInsertionIndex + 1
 		end
 		
@@ -412,7 +412,7 @@ end
 
 function self:SetText (text)
 	self:Clear ()
-	self:Insert (GCompute.IDE.LineCharacterLocation (0, 0), text)
+	self:Insert (GCompute.CodeEditor.LineCharacterLocation (0, 0), text)
 end
 
 function self:ShiftLines (startLine, endLine, shift)

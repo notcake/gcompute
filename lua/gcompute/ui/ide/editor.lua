@@ -1,6 +1,3 @@
-GCompute.IDE.CodeEditorKeyboardMap = Gooey.KeyboardMap ()
-GCompute.IDE.EditorKeyboardMap = Gooey.KeyboardMap ()
-
 GCompute:AddEventListener ("Unloaded", function ()
 	if GCompute.IDE.Panel and GCompute.IDE.Panel:IsValid () then
 		GCompute.IDE.Panel:Remove ()

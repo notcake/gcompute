@@ -74,7 +74,7 @@ function self:ctor (container)
 		end
 	)
 	
-	self.ClipboardTarget = GCompute.IDE.EditorClipboardTarget (self.CodeEditor)
+	self.ClipboardTarget = GCompute.CodeEditor.EditorClipboardTarget (self.CodeEditor)
 	
 	-- Buffering
 	self.BufferText         = {}
@@ -140,7 +140,7 @@ function self:BringUpView (view, line, char)
 	
 	if view:GetType () ~= "Code" then return end
 	
-	local location = GCompute.IDE.LineCharacterLocation (line - 1, char and (char - 1) or 0)
+	local location = GCompute.CodeEditor.LineCharacterLocation (line - 1, char and (char - 1) or 0)
 	location = view:GetEditor ():GetDocument ():CharacterToColumn (location, view:GetEditor ():GetTextRenderer ())
 	view:GetEditor ():SetCaretPos (location)
 	view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())

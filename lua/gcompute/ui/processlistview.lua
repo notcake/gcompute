@@ -234,6 +234,7 @@ end
 -- Event handlers
 function self:OnRemoved ()
 	self:SetProcessList (nil)
+	self.Menu:Remove ()
 end
 
 -- Event handlers

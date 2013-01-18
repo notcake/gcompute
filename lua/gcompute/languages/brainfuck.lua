@@ -38,7 +38,7 @@ LANGUAGE:GetTokenizer ()
 		end
 	)
 	:AddPatternSymbol (GCompute.TokenType.Comment,   "//[^\n\r]*")
-	:AddPatternSymbol (GCompute.TokenType.Operator,  "[<>+\\-]+")
+	:AddPatternSymbol (GCompute.TokenType.Operator,  "[<>+%-%.]+")
 	:AddPlainSymbols  (GCompute.TokenType.Operator, {"[", "]"})
 
 LANGUAGE:LoadParser ("brainfuck_parser.lua")

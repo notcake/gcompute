@@ -1447,7 +1447,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 			end
 		end
 	elseif keyCode == KEY_A then
-		if ctrl then
+		if ctrl and not shift and not alt then
 			self:SelectAll ()
 		end
 	end

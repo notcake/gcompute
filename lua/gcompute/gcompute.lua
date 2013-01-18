@@ -293,6 +293,5 @@ GCompute.GlobalNamespace:ResolveNames (
 )
 
 if CLIENT then
-	include ("gooey/gooey.lua")
 	GCompute.IncludeDirectory ("gcompute/ui")
 end

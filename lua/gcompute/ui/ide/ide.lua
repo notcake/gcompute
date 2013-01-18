@@ -31,6 +31,7 @@ end
 function self:GetFrame ()
 	if not self.Panel then
 		self.Panel = vgui.Create ("GComputeIDEFrame")
+		self.Panel:SetIDE (self)
 	end
 	return self.Panel
 end

@@ -211,7 +211,7 @@ function GCompute.IDE.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				RunConsoleCommand ("gcompute_reload")
-				RunConsoleCommand ("gcompute_show_editor")
+				RunConsoleCommand ("gcompute_show_ide")
 			end
 		)
 	toolbar:AddSeparator ()

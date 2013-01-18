@@ -15,6 +15,8 @@ function self:Init ()
 	self:SetDeleteOnClose (false)
 	self:MakePopup ()
 	
+	self.IDE = nil
+	
 	self.Toolbar = GCompute.IDE.Toolbar (self)
 	
 	self.DockContainer = vgui.Create ("GComputeDockContainer", self)
@@ -239,6 +241,15 @@ function self:PerformLayout ()
 		self.DockContainer:SetPos (2, 23 + self.Toolbar:GetTall ())
 		self.DockContainer:SetSize (self:GetWide () - 4, self:GetTall () - 23 - self.Toolbar:GetTall () - 4 - self.StatusBar:GetTall ())
 	end
+end
+
+-- IDE
+function self:GetIDE ()
+	return self.IDE
+end
+
+function self:SetIDE (ide)
+	self.IDE = ide
 end
 
 --- Returns false if the view is the last remaining document view and contains the unchanged default text

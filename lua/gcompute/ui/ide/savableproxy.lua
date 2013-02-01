@@ -63,7 +63,7 @@ function self:SetSavable (savable)
 	self:DispatchEvent ("CanSaveChanged", self:CanSave ())
 	self:DispatchEvent ("FileChanged", oldFile, self:GetFile ())
 	self:DispatchEvent ("PathChanged", oldPath, self:GetPath ())
-	self:DispatchEvent ("Saved", true)
+	self:DispatchEvent ("Saved")
 	self:DispatchEvent ("UnsavedChanged", self:IsUnsaved ())
 end
 
@@ -76,6 +76,7 @@ local events =
 	"Reloaded",
 	"Reloading",
 	"Saved",
+	"SaveFailed",
 	"Saving",
 	"UnsavedChanged",
 }

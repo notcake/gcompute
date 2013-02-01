@@ -15,6 +15,8 @@ GCompute.ISavable = GCompute.MakeConstructor (self)
 			Fired when the copy from disk has been reloaded.
 		Saved (bool success)
 			Fired when this object has been attempted to be saved.
+		SaveFailed ()
+			Fired when this object has failed to be saved.
 		Saving ()
 			Fired when this object is about to be saved.
 		UnsavedChanged (bool unsaved)

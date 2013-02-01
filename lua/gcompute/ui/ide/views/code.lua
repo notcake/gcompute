@@ -47,17 +47,25 @@ function self:ctor (container)
 			self.IgnoreFileChanges = true
 		end
 	)
-	self:GetSavable ():AddEventListener ("Saved",
-		function (_, success)
+	self:GetSavable ():AddEventListener ("SaveFailed",
+		function (_)
 			self.IgnoreFileChanges = false
-			if success then
-				if self.FileChangeNotificationBar  then self.FileChangeNotificationBar :SetVisible (false) end
-				if self.SaveFailureNotificationBar then self.SaveFailureNotificationBar:SetVisible (false) end
-			else
-				self:CreateSaveFailureNotificationBar ()
-				self.SaveFailureNotificationBar:SetVisible (true)
-				self.SaveFailureNotificationBar:SetText ("Cannot save to " .. self:GetSavable ():GetFile ():GetDisplayPath () .. ". (Is it not a .txt file or outside the garrysmod/data/ directory?)")
+			self:CreateSaveFailureNotificationBar ()
+			self.SaveFailureNotificationBar:SetVisible (true)
+			
+			local path = self:GetSavable ():GetPath ()
+			if self:GetSavable ():GetFile () then
+				path = self:GetSavable ():GetFile ():GetDisplayPath ()
 			end
+			self.SaveFailureNotificationBar:SetText ("Cannot save to " .. path .. ". (Is it not a .txt file or outside the garrysmod/data/ directory?)")
+		end
+	)
+	self:GetSavable ():AddEventListener ("Saved",
+		function (_)
+			self.IgnoreFileChanges = false
+			
+			if self.FileChangeNotificationBar  then self.FileChangeNotificationBar :SetVisible (false) end
+			if self.SaveFailureNotificationBar then self.SaveFailureNotificationBar:SetVisible (false) end
 		end
 	)
 	self:GetSavable ():AddEventListener ("UnsavedChanged",

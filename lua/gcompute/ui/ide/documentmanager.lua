@@ -2,14 +2,42 @@ local self = {}
 GCompute.IDE.DocumentManager = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.Documents = {}
-	self.DocumentsById = {}
-	self.DocumentsByPath = {}
-	self.DocumentCount = 0
+	-- IDE
+	self.IDE             = nil
+	self.DocumentTypes   = nil
 	
-	self.NextDocumentId = 0
+	-- Documents
+	self.Documents       = {}
+	self.DocumentsById   = {}
+	self.DocumentsByPath = {}
+	self.DocumentCount   = 0
+	
+	self.NextDocumentId  = 0
 end
 
+-- IDE
+function self:GetDocumentTypes ()
+	return self.DocumentTypes
+end
+
+function self:GetIDE ()
+	return self.IDE
+end
+
+function self:GetViewManager ()
+	if not self.IDE then return nil end
+	return self.IDE:GetViewManager ()
+end
+
+function self:SetDocumentTypes (documentTypes)
+	self.DocumentTypes = documentTypes
+end
+
+function self:SetIDE (ide)
+	self.IDE = ide
+end
+
+-- Documents
 function self:AddDocument (document)
 	if self.Documents [document] then return end
 	
@@ -34,8 +62,8 @@ function self:GenerateDocumentId (document)
 	return tostring (self.NextDocumentId - 1)
 end
 
-function self:GetDocumentById (id)
-	return self.DocumentsById [id]
+function self:GetDocumentById (documentId)
+	return self.DocumentsById [documentId]
 end
 
 function self:GetDocumentByPath (path)
@@ -56,6 +84,7 @@ end
 
 function self:RemoveDocument (document)
 	if not self.Documents [document] then return end
+	
 	self.Documents [document] = nil
 	if document:GetPath () then
 		self.DocumentsByPath [document:GetPath ()] = nil
@@ -68,19 +97,19 @@ end
 
 -- Persistance
 function self:LoadSession (inBuffer)
-	local id = inBuffer:String ()
-	while id ~= "" do
+	local documentId = inBuffer:String ()
+	while documentId ~= "" do
 		local documentType = inBuffer:String ()
 		local subInBuffer = GLib.StringInBuffer (inBuffer:LongString ())
 		local document = GCompute.IDE.DocumentTypes:Create (documentType)
 		if document then
-			document:SetId (id)
+			document:SetId (documentId)
 			document:LoadSession (subInBuffer)
 			self:AddDocument (document)
 		end
 		
 		inBuffer:Char () -- Discard newline
-		id = inBuffer:String ()
+		documentId = inBuffer:String ()
 	end
 end
 

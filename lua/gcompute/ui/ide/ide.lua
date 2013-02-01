@@ -5,11 +5,13 @@ function self:ctor ()
 	self.DocumentTypes   = GCompute.IDE.DocumentTypes
 	self.ViewTypes       = GCompute.IDE.ViewTypes
 	
-	-- self.DocumentManager = GCompute.IDE.DocumentManager ()
-	-- self.ViewManager     = GCompute.IDE.ViewManager ()
+	self.DocumentManager = GCompute.IDE.DocumentManager ()
+	self.ViewManager     = GCompute.IDE.ViewManager ()
 	
-	-- self.DocumentManager:SetViewManager (self.ViewManager)
-	-- self.ViewManager:SetDocumentManager (self.DocumentManager)
+	self.DocumentManager:SetIDE (self)
+	self.DocumentManager:SetDocumentTypes (self.DocumentTypes)
+	self.ViewManager:SetIDE (self)
+	self.ViewManager:SetViewTypes (self.ViewTypes)
 	
 	self.Panel = nil
 end
@@ -32,6 +34,7 @@ function self:GetFrame ()
 	if not self.Panel then
 		self.Panel = vgui.Create ("GComputeIDEFrame")
 		self.Panel:SetIDE (self)
+		self.Panel:LoadWorkspace ()
 	end
 	return self.Panel
 end

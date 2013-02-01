@@ -18,6 +18,10 @@ GCompute.IDE.View = GCompute.MakeConstructor (self)
 function self:ctor (container)
 	self.Id = nil
 	
+	-- IDE
+	self.IDE         = nil
+	self.ViewManager = nil
+	
 	self.Container = container
 	
 	self.DocumentManager = nil
@@ -42,6 +46,29 @@ function self:dtor ()
 	self.Container:Remove ()
 end
 
+-- IDE
+function self:GetDocumentManager ()
+	if not self.IDE then return nil end
+	return self.IDE:GetDocumentManager ()
+end
+
+function self:GetViewManager ()
+	return self.ViewManager
+end
+
+function self:GetIDE ()
+	return self.IDE
+end
+
+function self:SetIDE (ide)
+	self.IDE = ide
+end
+
+function self:SetViewManager (viewManager)
+	self.ViewManager = viewManager
+end
+
+-- View
 function self:CanClose ()
 	return self.Closable
 end
@@ -49,10 +76,6 @@ end
 function self:EnsureVisible ()
 	if not self.Container then return end
 	self.Container:EnsureVisible ()
-end
-
-function self:GetDocumentManager ()
-	return self.DocumentManager
 end
 
 function self:GetIcon ()
@@ -85,10 +108,6 @@ function self:SetCanClose (closable)
 	
 	self.Closable = closable
 	self:DispatchEvent ("CanCloseChanged", self.Closable)
-end
-
-function self:SetDocumentManager (documentManager)
-	self.DocumentManager = documentManager
 end
 
 function self:SetIcon (icon)

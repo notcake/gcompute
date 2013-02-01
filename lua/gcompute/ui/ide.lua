@@ -21,6 +21,7 @@ include ("ide/documentmanager.lua")
 -- Views
 include ("ide/view.lua")
 include ("ide/viewtypes.lua")
+include ("ide/viewmanager.lua")
 
 -- IDE
 include ("ide/ide.lua")

@@ -118,8 +118,13 @@ function self:Save (callback)
 		if not self:GetPath () then callback (false) return end
 		VFS.Root:CreateFile (GAuth.GetLocalId (), self:GetPath (),
 			function (returnCode, file)
-				if returnCode ~= VFS.ReturnCode.Success then callback (false) return end
-				if not file then callback (false) return end
+				if returnCode ~= VFS.ReturnCode.Success or
+				   not file then
+					self:DispatchEvent ("SaveFailed")
+					callback (false)
+					return
+				end
+				
 				self:SetFile (file)
 				self:Save (callback)
 			end
@@ -132,7 +137,7 @@ function self:Save (callback)
 	self:GetFile ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then
-				self:DispatchEvent ("Saved", false)
+				self:DispatchEvent ("SaveFailed")
 				callback (false)
 				return
 			end
@@ -141,7 +146,7 @@ function self:Save (callback)
 				function ()
 					fileStream:Close ()
 					self:MarkSaved ()
-					self:DispatchEvent ("Saved", true)
+					self:DispatchEvent ("Saved")
 					callback (true)
 				end
 			)

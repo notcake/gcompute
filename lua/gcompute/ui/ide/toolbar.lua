@@ -40,7 +40,7 @@ function GCompute.IDE.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				local unsaved = {}
-				for document in self.DocumentManager:GetEnumerator () do
+				for document in self:GetDocumentManager ():GetEnumerator () do
 					if document:IsUnsaved () then
 						unsaved [#unsaved + 1] = document:GetView (1)
 					end
@@ -157,18 +157,18 @@ function GCompute.IDE.Toolbar (self)
 				if not editorHelper then return end
 				
 				local outputPaneCleared = false
-				self.DockContainer:GetViewById ("Output"):Clear ()
+				self:GetViewManager ():GetViewById ("Output"):Clear ()
 				outputPaneCleared = true
 				
 				local pipe = GCompute.Pipe ()
 				pipe:AddEventListener ("Data",
 					function (_, data, color)
 						if not outputPaneCleared then
-							self.DockContainer:GetViewById ("Output"):Clear ()
+							self:GetViewManager ():GetViewById ("Output"):Clear ()
 							outputPaneCleared = true
 						end
 						
-						self.DockContainer:GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentPath)
+						self:GetViewManager ():GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentPath)
 					end
 				)
 				
@@ -176,11 +176,11 @@ function GCompute.IDE.Toolbar (self)
 				errorPipe:AddEventListener ("Data",
 					function (_, data, color)
 						if not outputPaneCleared then
-							self.DockContainer:GetViewById ("Output"):Clear ()
+							self:GetViewManager ():GetViewById ("Output"):Clear ()
 							outputPaneCleared = true
 						end
 						
-						self.DockContainer:GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentPath)
+						self:GetViewManager ():GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentPath)
 					end
 				)
 				

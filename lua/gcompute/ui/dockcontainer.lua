@@ -27,10 +27,6 @@ function PANEL:Init ()
 	self.Child = nil
 	
 	-- Root
-	self.ViewSet    = {}
-	self.ViewsById  = {}
-	self.NextViewId = 0
-	
 	self.ActiveView = nil
 	self.SkipActiveViewThink = 0
 	
@@ -159,14 +155,6 @@ function PANEL:AddView (view)
 	rootDockContainer:DispatchEvent ("ViewMoved", view)
 end
 
-function PANEL:GenerateViewId ()
-	while self.ViewsById [tostring (self.NextViewId)] do
-		self.NextViewId = self.NextViewId + 1
-	end
-	self.NextViewId = self.NextViewId + 1
-	return tostring (self.NextViewId - 1)
-end
-
 function PANEL:GetActiveView ()
 	if not self:IsRootDockContainer () then
 		return self:GetRootDockContainer ():GetActiveView ()
@@ -272,25 +260,6 @@ end
 function PANEL:GetRootDockContainer ()
 	if self:IsRootDockContainer () then return self end
 	return self:GetParentDockContainer ():GetRootDockContainer ()
-end
-
-function PANEL:GetViewById (id)
-	if not self:IsRootDockContainer () then
-		return self:GetRootDockContainer ():GetViewById (id)
-	end
-	return self.ViewsById [id]
-end
-
-function PANEL:GetViewEnumerator ()
-	if not self:IsRootDockContainer () then
-		return self:GetRootDockContainer ():GetViewEnumerator ()
-	end
-	
-	local next, tbl, key = pairs (self.ViewSet)
-	return function ()
-		key = next (tbl, key)
-		return key
-	end
 end
 
 function PANEL:IsPanel1 ()
@@ -406,28 +375,10 @@ end
 function PANEL:RegisterLocalView (view)
 	if not view then return end
 	if self.LocalViewSet [view] then return end
-	self:RegisterView (view)
 	
 	self.LocalViewSet [view] = true
 	self.LocalViewsById [view:GetId ()] = view
 	self.LocalViewCount = self.LocalViewCount + 1
-end
-
-function PANEL:RegisterView (view)
-	if not view then return end
-	if not self:IsRootDockContainer () then
-		self:GetRootDockContainer ():RegisterView (view)
-		return
-	end
-	if self.ViewSet [view] then return end
-	
-	self.ViewSet [view] = true
-	if not view:GetId () then
-		view:SetId (self:GenerateViewId (view))
-	end
-	self.ViewsById [view:GetId ()] = view
-	
-	self:DispatchEvent ("ViewRegistered", view)
 end
 
 function PANEL:RemoveView (view, viewRemovalReason)
@@ -473,7 +424,6 @@ function PANEL:SetActiveView (view)
 		return
 	end
 	
-	if view and not self.ViewSet [view] then return end
 	if self.ActiveView == view then return end
 	
 	local oldSelectedView = self.ActiveView
@@ -624,41 +574,28 @@ function PANEL:UnregisterLocalView (view)
 	self.LocalViewCount = self.LocalViewCount - 1
 end
 
-function PANEL:UnregisterView (view)
-	if not self:IsRootDockContainer () then
-		self:GetRootDockContainer ():UnregisterView (view)
-		return
-	end
-	if not self.ViewSet [view] then return end
-	
-	self.ViewSet [view] = nil
-	self.ViewsById [view:GetId ()] = nil
-	
-	self:DispatchEvent ("ViewUnregistered", view)
-end
-
 -- Persistance
-function PANEL:LoadSession (inBuffer)
+function PANEL:LoadSession (inBuffer, viewManager)
 	local dockContainerType = inBuffer:UInt8 ()
 	self:SetContainerType (dockContainerType)
 	if self.DockContainerType == GCompute.DockContainerType.None then
 	elseif self.DockContainerType == GCompute.DockContainerType.SplitContainer then
 		self:SetOrientation (inBuffer:UInt8 ())
 		self.Child:SetSplitterFraction (inBuffer:UInt16 () / 32768)
-		self:GetPanel1 ():LoadSession (GLib.StringInBuffer (inBuffer:String ()))
-		self:GetPanel2 ():LoadSession (GLib.StringInBuffer (inBuffer:String ()))
+		self:GetPanel1 ():LoadSession (GLib.StringInBuffer (inBuffer:String ()), viewManager)
+		self:GetPanel2 ():LoadSession (GLib.StringInBuffer (inBuffer:String ()), viewManager)
 	elseif self.DockContainerType == GCompute.DockContainerType.TabControl then
 		local tabCount = inBuffer:UInt16 ()
 		local selectedTabIndex = inBuffer:UInt16 ()
 		for i = 1, tabCount do
-			local view = self:GetViewById (inBuffer:String ())
+			local view = viewManager:GetViewById (inBuffer:String ())
 			self:AddView (view)
 			if i == selectedTabIndex then
 				view:GetContainer ():EnsureVisible ()
 			end
 		end
 	elseif self.DockContainerType == GCompute.DockContainerType.View then
-		self:SetView (self:GetViewById (inBuffer:String ()))
+		self:SetView (viewManager:GetViewById (inBuffer:String ()))
 	end
 end
 
@@ -1022,7 +959,6 @@ function PANEL:HookTabControl ()
 			-- tab.View should be nil
 			-- Otherwise, the view is being deleted.
 			self:RemoveView (tab.View, GCompute.ViewRemovalReason.Removal)
-			self:UnregisterView (tab.View)
 		end
 	)
 end
@@ -1209,10 +1145,8 @@ function PANEL:OnRemoved ()
 	self.DragDropController:EndDrag ()
 	Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()))
 	
-	if self:IsRootDockContainer () then
-		for view, _ in pairs (self.ViewSet) do
-			view:dtor ()
-		end
+	for view in self:GetLocalViewEnumerator () do
+		view:dtor ()
 	end
 end
 

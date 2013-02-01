@@ -20,8 +20,6 @@ function self:Init ()
 	self.Toolbar = GCompute.IDE.Toolbar (self)
 	
 	self.DockContainer = vgui.Create ("GComputeDockContainer", self)
-	self.DockContainer:SetContainerType (GCompute.DockContainerType.SplitContainer)
-	self.DockContainer:SetOrientation (Gooey.Orientation.Horizontal)
 	self.DockContainer:AddEventListener ("ActiveViewChanged",
 		function (_, oldView, view)
 			if view then view:Select () end
@@ -53,6 +51,9 @@ function self:Init ()
 	)
 	self.DockContainer:AddEventListener ("ContainerSplit",
 		function (_, splitDockContainer, container, emptyContainer)
+			if container:GetContainerType () == GCompute.DockContainerType.None then
+				container:SetContainerType (GCompute.DockContainerType.TabControl)
+			end
 			emptyContainer:SetContainerType (GCompute.DockContainerType.TabControl)
 		end
 	)
@@ -68,20 +69,15 @@ function self:Init ()
 			end
 		end
 	)
-	self.DockContainer:AddEventListener ("ViewRegistered",
-		function (_, view)
-			self:HookView (view)
-			
-			view:SetDocumentManager (self.DocumentManager)
-			self:RegisterDocument (view:GetDocument ())
-			
-			self:InvalidateSavedWorkspace ()
-		end
-	)
 	self.DockContainer:AddEventListener ("ViewRemoved",
 		function (_, container, view, viewRemovalReason)
 			if viewRemovalReason == GCompute.ViewRemovalReason.Removal then
-				self.DockContainer:UnregisterView (view)
+				self:GetViewManager ():RemoveView (view)
+				
+				-- Avoid having no views open
+				if self:GetDocumentManager ():GetDocumentCount () == 0 then
+					self:CreateEmptyCodeView ():Select ()
+				end
 			end
 			if viewRemovalReason == GCompute.ViewRemovalReason.Removal or
 			   viewRemovalReason == GCompute.ViewRemovalReason.Rearrangement then
@@ -95,20 +91,12 @@ function self:Init ()
 			end
 		end
 	)
-	self.DockContainer:AddEventListener ("ViewUnregistered",
-		function (_, view)
-			self:UnhookView (view)
-			view:dtor ()
-			
-			self:InvalidateSavedWorkspace ()
-		end
-	)
 	
 	self.TabContextMenu = GCompute.IDE.TabContextMenu (self)
 	self.CodeEditorContextMenu = GCompute.CodeEditor.CodeEditorContextMenu (self)
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
-	self.LanguagePanel      = self.StatusBar:AddComboBoxPanel ("Unknown language")
+	self.LanguagePanel = self.StatusBar:AddComboBoxPanel ("Unknown language")
 	self.LanguagePanel:AddEventListener ("MenuOpening",
 		function (_, menu)
 			menu:Clear ()
@@ -141,13 +129,13 @@ function self:Init ()
 		end
 	)
 	
-	self.ProgressPanel       = self.StatusBar:AddProgressPanel ()
+	self.ProgressPanel = self.StatusBar:AddProgressPanel ()
 	self.ProgressPanel:SetFixedWidth (128)
 	self.MemoryProfilerPanel = self.StatusBar:AddTextPanel ("0.00 MiB")
 	self.MemoryProfilerPanel:SetFixedWidth (128)
-	self.ProfilerPanel       = self.StatusBar:AddTextPanel ("0.000 ms, 0 %")
+	self.ProfilerPanel = self.StatusBar:AddTextPanel ("0.000 ms, 0 %")
 	self.ProfilerPanel:SetFixedWidth (128)
-	self.CaretPositionPanel  = self.StatusBar:AddTextPanel ("Line 1, col 1")
+	self.CaretPositionPanel = self.StatusBar:AddTextPanel ("Line 1, col 1")
 	self.CaretPositionPanel:SetFixedWidth (96)
 	
 	self.ClipboardController = Gooey.ClipboardController ()
@@ -167,24 +155,6 @@ function self:Init ()
 	self.UndoRedoController:AddRedoButton   (self.Toolbar:GetItemById ("Redo"))
 	self.UndoRedoController:AddRedoButton   (self.CodeEditorContextMenu:GetItemById ("Redo"))
 	
-	-- We need to create our DocumentManager before any views are created
-	-- so we can set their DocumentManager properly when they are registered
-	self.DocumentManager = GCompute.IDE.DocumentManager ()
-	
-	local viewTypes =
-	{
-		"Output",
-		"ProcessBrowser",
-		"HookProfiler"
-	}
-	for _, viewType in ipairs (viewTypes) do
-		local view = GCompute.IDE.ViewTypes:Create (viewType)
-		view:SetId (viewType)
-		view:SetCanClose (false)
-		self [viewType .. "View"] = view
-		self.DockContainer:RegisterView (view)
-	end
-	
 	self:SetKeyboardMap (GCompute.IDE.KeyboardMap)
 	
 	self.NextNewId = 1
@@ -202,29 +172,6 @@ function self:Init ()
 	self.WorkspaceSavingEnabled = true
 	self.WorkspaceUnsaved = false
 	
-	self:SetCanSaveWorkspace (false)
-	self:LoadWorkspace (
-		function ()
-			if not self.OutputView:GetContainer ():GetDockContainer () then
-				self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (self.OutputView)
-			end
-			for view in self.DockContainer:GetViewEnumerator () do
-				if not view:GetContainer ():GetDockContainer () then
-					if view:GetDocument () then
-						self.DockContainer:GetLargestContainer ():AddView (view)
-					else
-						self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (view)
-					end
-				end
-			end
-			
-			self:SetCanSaveWorkspace (true)
-			if self.DocumentManager:GetDocumentCount () == 0 then
-				self:CreateEmptyCodeView ()
-			end
-			self.DockContainer:GetLargestView ():Select ()
-		end
-	)
 	end, GLib.Error)
 end
 
@@ -244,14 +191,43 @@ function self:PerformLayout ()
 end
 
 -- IDE
+function self:GetDocumentManager ()
+	if not self.IDE then return nil end
+	return self.IDE:GetDocumentManager ()
+end
+
 function self:GetIDE ()
 	return self.IDE
 end
 
-function self:SetIDE (ide)
-	self.IDE = ide
+function self:GetViewManager ()
+	if not self.IDE then return nil end
+	return self.IDE:GetViewManager ()
 end
 
+function self:SetIDE (ide)
+	self:UnhookViewManager (self.IDE and self:GetViewManager ())
+	
+	self.IDE = ide
+	
+	self:HookViewManager (self.IDE and self:GetViewManager ())
+	
+	if not self.IDE then return end
+	
+	local viewTypes =
+	{
+		"Output",
+		"ProcessBrowser",
+		"HookProfiler"
+	}
+	for _, viewType in ipairs (viewTypes) do
+		local view = self:GetViewManager ():CreateView (viewType, viewType)
+		view:SetCanClose (false)
+		self [viewType .. "View"] = view
+	end
+end
+
+-- Views
 --- Returns false if the view is the last remaining document view and contains the unchanged default text
 function self:CanCloseView (view)
 	if not view then return true end
@@ -261,7 +237,7 @@ function self:CanCloseView (view)
 		return view:CanClose ()
 	end
 	
-	if self.DocumentManager:GetDocumentCount () == 1 and
+	if self:GetDocumentManager ():GetDocumentCount () == 1 and
 	   view:GetDocument ():GetViewCount () == 1 and
 	   view:GetType () == "Code" and
 	   not view:GetSavable ():HasPath () and
@@ -305,11 +281,6 @@ function self:CloseView (view, callback)
 					elseif result == "No" then
 						view:dtor ()
 						callback (true)
-						
-						-- Avoid having no views open
-						if self.DocumentManager:GetDocumentCount () == 0 then
-							self:CreateEmptyCodeView ()
-						end
 					else
 						callback (false)
 					end
@@ -318,21 +289,11 @@ function self:CloseView (view, callback)
 	else
 		view:dtor ()
 		callback (true)
-		
-		-- Avoid having no views open
-		if self.DocumentManager:GetDocumentCount () == 0 then
-			self:CreateEmptyCodeView ()
-		end
 	end
 end
 
-function self:CreateView (className, id)
-	local view = GCompute.IDE.ViewTypes:Create (className)
-	if not view then return nil end
-	view:SetId (id)
-	self.DockContainer:RegisterView (view)
-	
-	return view
+function self:CreateView (viewType, viewId)
+	return self:GetViewManager ():CreateView (viewType, viewId)
 end
 
 function self:CreateCodeView (title)
@@ -395,42 +356,49 @@ function self:InvalidateSavedWorkspace ()
 end
 
 function self:LoadWorkspace (callback)
+	self:SetCanSaveWorkspace (false)
+	
+	-- Deserialize
 	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_editor_tabs.txt", "GAME") or "")
 	inBuffer:String () -- Discard comment
-	self.DocumentManager:LoadSession (GLib.StringInBuffer (inBuffer:LongString ()))
+	self:GetDocumentManager ():LoadSession (GLib.StringInBuffer (inBuffer:LongString ()))
 	inBuffer:Char ()   -- Discard newline
 	inBuffer:String () -- Discard comment
 	
-	local id = inBuffer:String ()
-	while id ~= "" do
-		local viewType = inBuffer:String ()
-		local subInBuffer = GLib.StringInBuffer (inBuffer:String ())
-		local view = self.DockContainer:GetViewById (id)
-		if not view then
-			view = self:CreateView (viewType, id)
-		end
-		if view then
-			view:LoadSession (subInBuffer)
-		end
-		
-		inBuffer:Char () -- Discard newline
-		id = inBuffer:String ()
-	end
+	self:GetViewManager ():LoadSession (inBuffer)
 	
-	inBuffer:Char ()   -- Discard newline
 	inBuffer:String () -- Discard comment
 	
 	-- Check for orphaned documents
-	for document in self.DocumentManager:GetEnumerator () do
+	for document in self:GetDocumentManager ():GetEnumerator () do
 		if document:GetViewCount () == 0 then
 			local view = self:CreateView ("Code")
 			view:SetDocument (document)
 		end
 	end
 	
-	self.DockContainer:LoadSession (GLib.StringInBuffer (inBuffer:String ()))
+	self.DockContainer:LoadSession (GLib.StringInBuffer (inBuffer:String ()), self:GetViewManager ())
 	
-	callback ()
+	-- Ensure all views have a location
+	for view in self:GetViewManager ():GetEnumerator () do
+		if not view:GetContainer ():GetDockContainer () then
+			if view:GetDocument () then
+				self.DockContainer:GetLargestContainer ():AddView (view)
+			else
+				print ("SPLIT")
+				self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (view)
+			end
+		end
+	end
+	
+	self:SetCanSaveWorkspace (true)
+	
+	-- Ensure that at least one view is present
+	if self:GetDocumentManager ():GetDocumentCount () == 0 then
+		self:CreateEmptyCodeView ()
+	end
+	
+	self.DockContainer:GetLargestView ():Select ()
 end
 
 function self:SaveWorkspace ()
@@ -443,22 +411,13 @@ function self:SaveWorkspace ()
 	outBuffer:String ("\n=== Documents ===\n")
 	
 	local subOutBuffer = GLib.StringOutBuffer ()
-	self.DocumentManager:SaveSession (subOutBuffer)
+	self:GetDocumentManager ():SaveSession (subOutBuffer)
 	outBuffer:LongString (subOutBuffer:GetString ())
 	outBuffer:Char ("\n")
 	outBuffer:String ("\n=== Views ===\n")
 	
-	for view in self.DockContainer:GetViewEnumerator () do
-		local viewType = view:GetType ()
-		outBuffer:String (view:GetId ())
-		outBuffer:String (viewType)
-		subOutBuffer:Clear ()
-		view:SaveSession (subOutBuffer)
-		outBuffer:String (subOutBuffer:GetString ())
-		outBuffer:Char ("\n")
-	end
-	outBuffer:String ("")
-	outBuffer:Char ("\n")
+	self:GetViewManager ():SaveSession (outBuffer)
+	
 	outBuffer:String ("\n=== Workspace ===\n")
 	subOutBuffer:Clear ()
 	self.DockContainer:SaveSession (subOutBuffer)
@@ -476,7 +435,7 @@ end
 function self:OpenFile (file, callback)
 	if not file then return end
 	
-	local document = self.DocumentManager:GetDocumentByPath (file:GetPath ())
+	local document = self:GetDocumentManager ():GetDocumentByPath (file:GetPath ())
 	if document then
 		callback (true, file, document:GetView (1))
 		return
@@ -532,7 +491,7 @@ end
 function self:OpenPath (path, callback)
 	callback = callback or GCompute.NullCallback
 	
-	local document = self.DocumentManager:GetDocumentByPath (path)
+	local document = self:GetDocumentManager ():GetDocumentByPath (path)
 	if document then
 		callback (true, document:GetFile (), document:GetView (1))
 		return
@@ -600,7 +559,7 @@ end
 function self:RegisterDocument (document)
 	if not document then return end
 	
-	self.DocumentManager:AddDocument (document)
+	self:GetDocumentManager ():AddDocument (document)
 	self:HookDocument (document)
 	
 	self:InvalidateSavedWorkspace ()
@@ -609,7 +568,7 @@ end
 function self:UnregisterDocument (document)
 	if not document then return end
 	
-	self.DocumentManager:RemoveDocument (document)
+	self:GetDocumentManager ():RemoveDocument (document)
 	self:UnhookDocument (document)
 	
 	self:InvalidateSavedWorkspace ()
@@ -657,6 +616,35 @@ function self:UpdateProgressBar ()
 end
 
 -- Event hooking
+function self:HookViewManager (viewManager)
+	if not viewManager then return end
+	
+	viewManager:AddEventListener ("ViewAdded", tostring (self:GetTable ()),
+		function (_, view)
+			self:HookView (view)
+			self:RegisterDocument (view:GetDocument ())
+			
+			self:InvalidateSavedWorkspace ()
+		end
+	)
+	
+	viewManager:AddEventListener ("ViewRemoved", tostring (self:GetTable ()),
+		function (_, view)
+			self:UnhookView (view)
+			view:dtor ()
+			
+			self:InvalidateSavedWorkspace ()
+		end
+	)
+end
+
+function self:UnhookViewManager (viewManager)
+	if not viewManager then return end
+	
+	viewManager:RemoveEventListener ("ViewAdded",   tostring (self:GetTable ()))
+	viewManager:RemoveEventListener ("ViewRemoved", tostring (self:GetTable ()))
+end
+
 function self:HookDocument (document)
 	if not document then return end
 	
@@ -778,7 +766,7 @@ function self:HookView (view)
 		savable:AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
 			function (_, canSave)
 				local canSaveAll = false
-				for view in self.DockContainer:GetViewEnumerator () do
+				for view in self:GetViewManager ():GetEnumerator () do
 					if view:GetSavable () and view:GetSavable ():IsUnsaved () then
 						canSaveAll = true
 						break
@@ -812,7 +800,6 @@ function self:OnRemoved ()
 	GCompute.IDE.Plugins:Uninitialize ()
 end
 
--- Event handlers
 function self:Think ()
 	DFrame.Think (self)
 	

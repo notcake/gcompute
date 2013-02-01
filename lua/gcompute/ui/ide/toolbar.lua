@@ -40,11 +40,9 @@ function GCompute.IDE.Toolbar (self)
 		:AddEventListener ("Click",
 			function ()
 				local unsaved = {}
-				for i = 1, self.TabControl:GetTabCount () do
-					local tab = self.TabControl:GetTab (i)
-					local contents = tab:GetContents ()
-					if tab.View:GetSavable () and tab.View:GetSavable ():IsUnsaved () then
-						unsaved [#unsaved + 1] = tab.View
+				for document in self.DocumentManager:GetEnumerator () do
+					if document:IsUnsaved () then
+						unsaved [#unsaved + 1] = document:GetView (1)
 					end
 				end
 				

@@ -21,6 +21,6 @@ GCompute.IDE.KeyboardMap:Register (KEY_S,
 		if not ctrl then return end
 		if shift or alt then return end
 		
-		self:SaveView (self:GetActiveView ())
+		self:GetIDE ():SaveView (self:GetActiveView ())
 	end
 )

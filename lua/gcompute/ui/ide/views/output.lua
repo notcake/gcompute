@@ -58,8 +58,7 @@ function self:ctor (container)
 				document = self:GetDocumentManager ():GetDocumentByPath (sourceDocumentPath)
 			end
 			if not document and sourceDocumentPath and sourceDocumentPath ~= nil then
-				local editorFrame = self:GetContainer ():GetDockContainer ():GetRootDockContainer ():GetParent ()
-				editorFrame:OpenPath (sourceDocumentPath,
+				self:GetIDE ():OpenPath (sourceDocumentPath,
 					function (success, file, view)
 						self:BringUpView (view, line, char)
 					end

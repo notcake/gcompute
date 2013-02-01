@@ -181,8 +181,7 @@ function self:CreateSaveFailureNotificationBar ()
 	)
 	self.SaveFailureNotificationBar:AddEventListener ("SaveAsRequested",
 		function ()
-			local editorFrame = self:GetContainer ():GetDockContainer ():GetRootDockContainer ():GetParent ()
-			editorFrame:SaveAsView (self)
+			self:GetIDE ():SaveAsView (self)
 		end
 	)
 	self:InvalidateLayout ()

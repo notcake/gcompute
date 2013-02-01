@@ -18,7 +18,7 @@ function GCompute.IDE.Toolbar (self)
 						
 						if not file then GCompute.Error ("VFS.OpenOpenFileDialog returned a path but not an IFile???") end
 						
-						self:OpenFile (file,
+						self:GetIDE ():OpenFile (file,
 							function (success, file, view)
 								if not view then return end
 								view:Select ()
@@ -32,7 +32,7 @@ function GCompute.IDE.Toolbar (self)
 		:SetIcon ("icon16/disk.png")
 		:AddEventListener ("Click",
 			function ()
-				self:SaveView (self:GetActiveView ())
+				self:GetIDE ():SaveView (self:GetActiveView ())
 			end
 		)
 	toolbar:AddButton ("Save All")
@@ -55,7 +55,7 @@ function GCompute.IDE.Toolbar (self)
 					if not self or not self:IsValid () then return end
 					if not unsaved [i] then return end
 					if not success then return end
-					self:SaveView (unsaved [i], saveIterator)
+					self:GetIDE ():SaveView (unsaved [i], saveIterator)
 				end
 				saveIterator (true)
 			end

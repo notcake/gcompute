@@ -9,7 +9,7 @@ function GCompute.IDE.TabContextMenu (self)
 			local hasDocument = view and view:GetDocument () and true or false
 			local hasSavable  = view and view:GetSavable () and true or false
 			
-			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:CanCloseView (view))
+			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:GetIDE ():CanCloseView (view))
 			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (tabControl and tabControl:GetTabCount () > 1)
 			
 			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (hasSavable)
@@ -38,7 +38,7 @@ function GCompute.IDE.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				self:CloseView (tab.View)
+				self:GetIDE ():CloseView (tab.View)
 			end
 		)
 	menu:AddOption ("Close all others")
@@ -62,7 +62,7 @@ function GCompute.IDE.TabContextMenu (self)
 					if not self or not self:IsValid () then return end
 					if not tabs [i] then return end
 					if not success then return end
-					self:CloseView (tabs [i].View, closeIterator)
+					self:GetIDE ():CloseView (tabs [i].View, closeIterator)
 				end
 				closeIterator (true)
 			end
@@ -73,7 +73,7 @@ function GCompute.IDE.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				self:SaveView (tab.View)
+				self:GetIDE ():SaveView (tab.View)
 			end
 		)
 	menu:AddOption ("Save as...")
@@ -81,7 +81,7 @@ function GCompute.IDE.TabContextMenu (self)
 		:AddEventListener ("Click",
 			function (_, tab)
 				if not tab then return end
-				self:SaveAsView (tab.View)
+				self:GetIDE ():SaveAsView (tab.View)
 			end
 		)
 	menu:AddOption ("Rename")

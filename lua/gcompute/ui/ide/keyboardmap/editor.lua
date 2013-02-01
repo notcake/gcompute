@@ -10,6 +10,6 @@ GCompute.IDE.KeyboardMap:Register (KEY_W,
 		if not ctrl then return end
 		if not self:GetActiveView () then return end
 		if not self:GetActiveView ():CanClose () then return end
-		self:CloseView (self:GetActiveView ())
+		self:GetIDE ():CloseView (self:GetActiveView ())
 	end
 )

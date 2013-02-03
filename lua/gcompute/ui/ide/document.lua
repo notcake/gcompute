@@ -51,7 +51,7 @@ end
 
 -- Persistance
 function self:LoadSession (inBuffer, serializerRegistry)
-	local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+	local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
 	serializerType = serializerType or serializerRegistry:GetType ("Code")
 	local serializer = serializerType:Create (self)
 	
@@ -141,7 +141,7 @@ end
 function self:Reload ()
 	if not self:GetFile () then return end
 	
-	local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+	local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
 	serializerType = serializerType or serializerRegistry:GetType ("Code")
 	local serializer = serializerType:Create (self)
 	
@@ -171,7 +171,7 @@ function self:Reload ()
 	)
 end
 
-function self:Save (callback)
+function self:Save (callback, serializerRegistry)
 	callback = callback or GCompute.NullCallback
 	
 	if not self:GetFile () then
@@ -186,7 +186,7 @@ function self:Save (callback)
 				end
 				
 				self:SetFile (file)
-				self:Save (callback)
+				self:Save (callback, serializerRegistry)
 			end
 		)
 		return

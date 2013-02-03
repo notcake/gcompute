@@ -20,9 +20,30 @@ function self:CreateType (type)
 	return metatable, serializerType
 end
 
+function self:FindDeserializerForDocument (documentType)
+	for _, serializerType in pairs (self.Types) do
+		if serializerType:GetDocumentType () == documentType and
+		   serializerType:CanDeserialize () then
+			return serializerType
+		end
+	end
+	return nil
+end
+
+function self:FindDeserializerForExtension (extension)
+	for _, serializerType in pairs (self.Types) do
+		if serializerType:CanHandleExtension (extension) and
+		   serializerType:CanDeserialize () then
+			return serializerType
+		end
+	end
+	return nil
+end
+
 function self:FindSerializerForDocument (documentType)
 	for _, serializerType in pairs (self.Types) do
-		if serializerType:GetDocumentType () == documentType then
+		if serializerType:GetDocumentType () == documentType and
+		   serializerType:CanSerialize () then
 			return serializerType
 		end
 	end
@@ -31,7 +52,8 @@ end
 
 function self:FindSerializerForExtension (extension)
 	for _, serializerType in pairs (self.Types) do
-		if serializerType:CanHandleExtension (extension) then
+		if serializerType:CanHandleExtension (extension) and
+		   serializerType:CanSerialize () then
 			return serializerType
 		end
 	end

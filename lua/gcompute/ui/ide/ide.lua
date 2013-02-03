@@ -87,7 +87,7 @@ function self:OpenFile (file, callback)
 	local extension = file:GetExtension () or ""
 	extension = string.lower (extension)
 	
-	local serializerType = self:GetSerializerRegistry ():FindSerializerForExtension (extension)
+	local serializerType = self:GetSerializerRegistry ():FindDeserializerForExtension (extension)
 	serializerType = serializerType or self:GetSerializerRegistry ():GetType ("Code")
 	
 	local documentType   = serializerType and self:GetDocumentTypes ():GetType (serializerType:GetDocumentType ())
@@ -189,7 +189,7 @@ function self:SaveDocument (document, pathOrCallback, callback)
 		return
 	end
 	
-	document:Save (callback)
+	document:Save (callback, self:GetSerializerRegistry ())
 end
 
 -- Views

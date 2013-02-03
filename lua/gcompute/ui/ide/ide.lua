@@ -2,16 +2,31 @@ local self = {}
 GCompute.IDE.IDE = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.DocumentTypes   = GCompute.IDE.DocumentTypes
-	self.ViewTypes       = GCompute.IDE.ViewTypes
+	self.DocumentTypes      = GCompute.IDE.DocumentTypes
+	self.ViewTypes          = GCompute.IDE.ViewTypes
+	self.SerializerRegistry = GCompute.IDE.SerializerRegistry
 	
-	self.DocumentManager = GCompute.IDE.DocumentManager ()
-	self.ViewManager     = GCompute.IDE.ViewManager ()
+	self.DocumentManager    = GCompute.IDE.DocumentManager ()
+	self.ViewManager        = GCompute.IDE.ViewManager ()
 	
 	self.DocumentManager:SetIDE (self)
 	self.DocumentManager:SetDocumentTypes (self.DocumentTypes)
 	self.ViewManager:SetIDE (self)
 	self.ViewManager:SetViewTypes (self.ViewTypes)
+	
+	self.ViewManager:AddEventListener ("ViewAdded",
+		function (_, view)
+			self:HookView (view)
+			self:RegisterDocument (view:GetDocument ())
+		end
+	)
+	
+	self.ViewManager:AddEventListener ("ViewRemoved",
+		function (_, view)
+			self:UnhookView (view)
+			view:dtor ()
+		end
+	)
 	
 	self.Panel = nil
 end
@@ -27,8 +42,8 @@ function self:GetDocumentManager ()
 	return self.DocumentManager
 end
 
-function self:GetViewManager ()
-	return self.ViewManager
+function self:GetDocumentTypes ()
+	return self.DocumentTypes
 end
 
 function self:GetFrame ()
@@ -38,6 +53,18 @@ function self:GetFrame ()
 		self.Panel:LoadWorkspace ()
 	end
 	return self.Panel
+end
+
+function self:GetSerializerRegistry ()
+	return self.SerializerRegistry
+end
+
+function self:GetViewManager ()
+	return self.ViewManager
+end
+
+function self:GetViewTypes ()
+	return self.ViewTypes
 end
 
 function self:SetVisible (visible)
@@ -60,45 +87,40 @@ function self:OpenFile (file, callback)
 	local extension = file:GetExtension () or ""
 	extension = string.lower (extension)
 	
-	local imageExtensions =
-	{
-		["bmp"] = true,
-		["gif"] = true,
-		["jpg"] = true,
-		["png"] = true
-	}
+	local serializerType = self:GetSerializerRegistry ():FindSerializerForExtension (extension)
+	serializerType = serializerType or self:GetSerializerRegistry ():GetType ("Code")
 	
-	if imageExtensions [extension] then
-		local view = self:CreateView ("Image")
-		view:SetTitle (file:GetDisplayName ())
-		view:SetFile (file)
-		self.DockContainer:GetLargestContainer ():AddView (view)
-		
-		callback (true, file, view)
-	else
-		file:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
-			function (returnCode, fileStream)
-				if returnCode == VFS.ReturnCode.Success then
-					fileStream:Read (fileStream:GetLength (),
-						function (returnCode, data)
-							if returnCode == VFS.ReturnCode.Progress then return end
-							
-							local file = fileStream:GetFile ()
-							local view = self:CreateCodeView ()
-							view:SetTitle (file:GetDisplayName ())
-							view:SetCode (data)
-							view:GetSavable ():SetFile (file)
-							fileStream:Close ()
-							
-							callback (true, file, view)
-						end
-					)
-				else
-					callback (false, file)
-				end
+	local documentType   = serializerType and self:GetDocumentTypes ():GetType (serializerType:GetDocumentType ())
+	local viewType       = documentType and documentType:GetViewType ()
+	
+	file:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
+		function (returnCode, fileStream)
+			if returnCode ~= VFS.ReturnCode.Success then
+				callback (false, file)
+				return
 			end
-		)
-	end
+			
+			fileStream:Read (fileStream:GetLength (),
+				function (returnCode, data)
+					if returnCode == VFS.ReturnCode.Progress then return end
+					
+					fileStream:Close ()
+					
+					local document = documentType:Create ()
+					local serializer = serializerType:Create (document)
+					
+					local view = self:CreateView (viewType)
+					view:SetTitle (file:GetDisplayName ())
+					serializer:Deserialize (GLib.StringInBuffer (data))
+					view:SetDocument (document)
+					view:GetSavable ():SetFile (file)
+					
+					callback (true, file, view)
+				end
+			)
+		end
+	)
+	print (serializerType, documentType, viewType)
 end
 
 --- Opens a new tab for the given path. Use OpenFile instead if you have an IFile.
@@ -123,6 +145,52 @@ function self:OpenPath (path, callback)
 end
 
 -- Documents
+--- Prompts for a file to which to save, then saves a document's contents.
+-- @param document The document whose contents are to be saved
+-- @param callback A callback function (success, IFile file)
+function self:SaveAsDocument (document, callback)
+	callback = callback or GCompute.NullCallback
+	if not document then callback (true) return end
+	
+	VFS.OpenSaveFileDialog ("GCompute.IDE",
+		function (path, file)
+			if not path then callback (false) return end
+			if not self:GetFrame ():IsValid () then callback (false) return end
+			
+			document:SetPath (path)
+			self:SaveDocument (document, path, callback)
+		end
+	)
+end
+
+--- Saves a document's contents.
+-- @param document The document whose contents are to be saved
+-- @param pathOrCallback Optional path to which to save
+-- @param callback A callback function (success, IFile file)
+function self:SaveDocument (document, pathOrCallback, callback)
+	if type (pathOrCallback) == "function" then
+		callback = pathOrCallback
+		pathOrCallback = nil
+	end
+	callback = callback or GCompute.NullCallback
+	
+	if not document then callback (true) return end
+	
+	-- Determine save path
+	local path = pathOrCallback
+	if not path and document:HasPath () then
+		path = document:GetPath ()
+		document:SetPath (path)
+	end
+	
+	-- If the document has no path, invoke the save as dialog.
+	if not path then
+		self:SaveAsDocument (document, callback)
+		return
+	end
+	
+	document:Save (callback)
+end
 
 -- Views
 --- Returns false if the view is the last remaining document view and contains the unchanged default text
@@ -201,15 +269,7 @@ function self:SaveAsView (view, callback)
 	if not view               then callback (true) return end
 	if not view:GetSavable () then callback (true) return end
 	
-	VFS.OpenSaveFileDialog ("GCompute.IDE",
-		function (path, file)
-			if not path then callback (false) return end
-			if not self:GetFrame ():IsValid () then callback (false) return end
-			
-			view:GetSavable ():SetPath (path)
-			self:SaveView (view, path, callback)
-		end
-	)
+	self:SaveAsDocument (view:GetSavable ())
 end
 
 --- Saves a view's contents.
@@ -226,20 +286,64 @@ function self:SaveView (view, pathOrCallback, callback)
 	if not view               then callback (true) return end
 	if not view:GetSavable () then callback (true) return end
 	
-	-- Determine save path
 	local path = pathOrCallback
-	if not path and view:GetSavable ():HasPath () then
-		path = view:GetSavable ():GetPath ()
-		view:GetSavable ():SetPath (path)
-	end
+	self:SaveDocument (view:GetSavable (), pathOrCallback, callback)
+end
+
+-- Internal, do not call
+function self:RegisterDocument (document)
+	if not document then return end
 	
-	-- If the view has no path, invoke the save as dialog.
-	if not path then
-		self:SaveAsView (view, callback)
-		return
-	end
+	self:GetDocumentManager ():AddDocument (document)
+	self:HookDocument (document)
+end
+
+function self:UnregisterDocument (document)
+	if not document then return end
 	
-	view:GetSavable ():Save (callback)
+	self:GetDocumentManager ():RemoveDocument (document)
+	self:UnhookDocument (document)
+end
+
+function self:HookDocument (document)
+	if not document then return end
+	
+	document:AddEventListener ("ViewRemoved", tostring (self),
+		function (_)
+			if document:GetViewCount () == 0 then
+				self:UnregisterDocument (document)
+			end
+		end
+	)
+end
+
+function self:UnhookDocument (document)
+	if not document then return end
+	
+	document:RemoveEventListener ("ViewRemoved", tostring (self))
+end
+
+function self:HookView (view)
+	if not view then return end
+	
+	view:AddEventListener ("DocumentChanged", tostring (self),
+		function (_, oldDocument, newDocument)
+			-- Do not unregister the old document, this will occur on
+			-- Document:ViewRemoved if the document no longer has any views
+			if oldDocument then
+				oldDocument:RemoveView (view)
+			end
+			
+			self:RegisterDocument (newDocument)
+			newDocument:AddView (view)
+		end
+	)
+end
+
+function self:UnhookView (view)
+	if not view then return end
+	
+	view:RemoveEventListener ("DocumentChanged", tostring (self))
 end
 
 concommand.Add ("gcompute_show_ide",

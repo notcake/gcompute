@@ -15,13 +15,20 @@ end
 
 -- Documents
 include ("ide/document.lua")
+include ("ide/documenttype.lua")
 include ("ide/documenttypes.lua")
 include ("ide/documentmanager.lua")
 
 -- Views
 include ("ide/view.lua")
+include ("ide/viewtype.lua")
 include ("ide/viewtypes.lua")
 include ("ide/viewmanager.lua")
+
+-- Serializers
+include ("ide/serializer.lua")
+include ("ide/serializertype.lua")
+include ("ide/serializerregistry.lua")
 
 -- IDE
 include ("ide/ide.lua")

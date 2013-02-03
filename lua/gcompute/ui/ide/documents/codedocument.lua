@@ -1,4 +1,5 @@
-local self = GCompute.IDE.DocumentTypes:CreateType ("CodeDocument")
+local self, info = GCompute.IDE.DocumentTypes:CreateType ("CodeDocument")
+info:SetViewType ("Code")
 
 --[[
 	Events:
@@ -496,74 +497,13 @@ function self:SetLanguage (language)
 end
 
 -- Persistance
-function self:LoadSession (inBuffer)
-	local hasPath = inBuffer:Boolean ()
-	local languageName
-	if hasPath then
-		local path = inBuffer:String ()
-		VFS.Root:OpenFile (GLib.GetLocalId (), path, VFS.OpenFlags.Read,
-			function (returnCode, fileStream)
-				if returnCode ~= VFS.ReturnCode.Success then
-					self:SetPath (path)
-					return
-				end
-				self:SetFile (fileStream:GetFile ())
-				if GCompute.Languages.Get (languageName) then
-					self:SetLanguage (GCompute.Languages.Get (languageName))
-				end
-				self:LoadFromStream (fileStream,
-					function ()
-						fileStream:Close ()
-					end
-				)
-			end
-		)
-	else
-		if inBuffer:Boolean () then
-			self:MarkUnsaved ()
-		end
-		self:SetText (inBuffer:LongString ())
-	end
-	
-	languageName = inBuffer:String ()
+function self:LoadSessionMetadata (inBuffer)
+	local languageName = inBuffer:String ()
 	if GCompute.Languages.Get (languageName) then
 		self:SetLanguage (GCompute.Languages.Get (languageName))
 	end
 end
 
-function self:SaveSession (outBuffer)
-	outBuffer:Boolean (self:HasPath ())
-	if self:HasPath () then
-		outBuffer:String (self:GetPath ())
-	else
-		outBuffer:Boolean (self:IsUnsaved ())
-		outBuffer:LongString (self:GetText ())
-	end
+function self:SaveSessionMetadata (outBuffer)
 	outBuffer:String (self:GetLanguage () and self:GetLanguage ():GetName () or "")
-end
-
--- ISavable
-function self:LoadFromStream (fileStream, callback)
-	callback = callback or GCompute.NullCallback ()
-	
-	fileStream:Read (fileStream:GetLength (),
-		function (returnCode, data)
-			if returnCode == VFS.ReturnCode.Progress then return end
-			
-			if returnCode ~= VFS.ReturnCode.Success then
-				callback ()
-				GCompute.Error (VFS.ReturnCode [returnCode])
-			end
-			self:SetText (data)
-			
-			callback ()
-		end
-	)
-end
-
-function self:SaveToStream (fileStream, callback)
-	callback = callback or GCompute.NullCallback ()
-	
-	local code = self:GetText ()
-	fileStream:Write (#code, code, callback)
 end

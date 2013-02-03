@@ -50,10 +50,65 @@ function self:SetId (id)
 end
 
 -- Persistance
-function self:LoadSession (inBuffer)
+function self:LoadSession (inBuffer, serializerRegistry)
+	local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+	serializerType = serializerType or serializerRegistry:GetType ("Code")
+	local serializer = serializerType:Create (self)
+	
+	local hasPath = inBuffer:Boolean ()
+	if hasPath then
+		local path = inBuffer:String ()
+		VFS.Root:OpenFile (GLib.GetLocalId (), path, VFS.OpenFlags.Read,
+			function (returnCode, fileStream)
+				if returnCode ~= VFS.ReturnCode.Success then
+					self:SetPath (path)
+					return
+				end
+				
+				self:SetFile (fileStream:GetFile ())
+				
+				fileStream:Read (fileStream:GetLength (),
+					function (returnCode, data)
+						if returnCode == VFS.ReturnCode.Progress then return end
+						
+						fileStream:Close ()
+						serializer:Deserialize (GLib.StringInBuffer (data))
+					end
+				)
+			end
+		)
+	else
+		if inBuffer:Boolean () then
+			self:MarkUnsaved ()
+		end
+		local subInBuffer = GLib.StringInBuffer (inBuffer:LongString ())
+		serializer:Deserialize (subInBuffer)
+	end
+	self:LoadSessionMetadata (inBuffer)
 end
 
-function self:SaveSession (outBuffer)
+function self:LoadSessionMetadata (inBuffer)
+end
+
+function self:SaveSession (outBuffer, serializerRegistry)
+	local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+	serializerType = serializerType or serializerRegistry:GetType ("Code")
+	local serializer = serializerType:Create (self)
+	
+	outBuffer:Boolean (self:HasPath ())
+	if self:HasPath () then
+		outBuffer:String (self:GetPath ())
+	else
+		outBuffer:Boolean (self:IsUnsaved ())
+		
+		local subOutBuffer = GLib.StringOutBuffer ()
+		serializer:Serialize (subOutBuffer)
+		outBuffer:LongString (subOutBuffer:GetString ())
+	end
+	self:SaveSessionMetadata (outBuffer)
+end
+
+function self:SaveSessionMetadata (outBuffer)
 end
 
 -- ISavable
@@ -65,11 +120,6 @@ end
 
 function self:IsUnsaved ()
 	return self.SavePoint ~= self:GetUndoRedoStack ():GetUndoItem ()
-end
-
-function self:LoadFromStream (fileStream, callback)
-	callback = callback or GCompute.NullCallback ()
-	callback ()
 end
 
 function self:MarkSaved ()
@@ -91,6 +141,10 @@ end
 function self:Reload ()
 	if not self:GetFile () then return end
 	
+	local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+	serializerType = serializerType or serializerRegistry:GetType ("Code")
+	local serializer = serializerType:Create (self)
+	
 	self:GetFile ():Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then return end
@@ -100,11 +154,17 @@ function self:Reload ()
 			self:Clear ()
 			self.UndoRedoStack:Clear ()
 			
-			self:LoadFromStream (fileStream,
-				function ()
+			fileStream:Read (fileStream:GetLength (),
+				function (returnCode, data)
+					if returnCode == VFS.ReturnCode.Progress then return end
+					
 					fileStream:Close ()
-					self:MarkSaved ()
-					self:DispatchEvent ("Reloaded")
+					serializer:Deserialize (GLib.StringInBuffer (data),
+						function ()
+							self:MarkSaved ()
+							self:DispatchEvent ("Reloaded")
+						end
+					)
 				end
 			)
 		end
@@ -142,21 +202,24 @@ function self:Save (callback)
 				return
 			end
 			
-			self:SaveToStream (fileStream,
+			local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+			serializerType = serializerType or serializerRegistry:GetType ("Code")
+			local serializer = serializerType:Create (self)
+			local outBuffer = GLib.StringOutBuffer ()
+			serializer:Serialize (outBuffer,
 				function ()
-					fileStream:Close ()
-					self:MarkSaved ()
-					self:DispatchEvent ("Saved")
-					callback (true)
+					fileStream:Write (outBuffer:GetSize (), outBuffer:GetString (),
+						function (returnCode)
+							fileStream:Close ()
+							self:MarkSaved ()
+							self:DispatchEvent ("Saved")
+							callback (true)
+						end
+					)
 				end
 			)
 		end
 	)
-end
-
-function self:SaveToStream (fileStream, callback)
-	callback = callback or GCompute.NullCallback ()
-	callback ()
 end
 
 -- Views

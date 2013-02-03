@@ -1,70 +1,75 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("Image")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("Image")
+info:SetDocumentType ("ImageDocument")
 
 function self:ctor (container)
-	self.Path = nil
-	self.File = nil
+	self.Document = nil
+	self.SavableProxy = GCompute.SavableProxy ()
 	self.HTMLPanel = vgui.Create ("HTML", container)
 	
 	self:SetIcon ("icon16/image.png")
+	
+	self.SavableProxy:AddEventListener ("Reloaded",
+		function (_)
+			extension = self.Document:GetFile () and self.Document:GetFile ():GetExtension () or "png"
+			extension = string.lower (extension)
+			self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
+		end
+	)
 end
 
 function self:dtor ()
+	if self:GetDocument () then
+		self:GetDocument ():RemoveView (self)
+	end
+	
 	if not self.HTMLPanel then return end
 	if not self.HTMLPanel:IsValid () then return end
 	self.HTMLPanel:Remove ()
 	self.HTMLPanel = nil
 end
 
-function self:Reload ()
-	if not self.File then return end
-	if not self.File:IsFile () then return end
+function self:SetDocument (document)
+	if oldDocument then
+		oldDocument:RemoveView (self)
+	end
+	self.Document = document
+	if document then
+		document:AddView (self)
+	end
+	self.SavableProxy:SetSavable (document)
 	
-	self.File:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
-		function (returnCode, fileStream)
-			if returnCode ~= VFS.ReturnCode.Success then return end
-			fileStream:Read (fileStream:GetLength (),
-				function (returnCode, data)
-					if returnCode ~= VFS.ReturnCode.Success then return end
-					fileStream:Close ()
-					
-					self.HTMLPanel:OpenURL ("data:image/" .. self.File:GetExtension ():lower () .. ";base64," .. util.Base64Encode (data))
-				end
-			)
-		end
-	)
-end
-
-function self:SetFile (file)
-	file = file or self.File
-	if self.File == file then return end
+	self:DispatchEvent ("DocumentChanged", oldDocument, document)
 	
-	self.File = file
-	self.Path = self.File and self.File:GetPath ()
+	if not document then return end
 	
-	if not self.File then return end
-	
-	self:Reload ()
+	extension = self.Document:GetFile () and self.Document:GetFile ():GetExtension () or "png"
+	extension = string.lower (extension)
+	self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
 end
 
 -- Components
+function self:GetDocument ()
+	return self.Document
+end
+
+function self:GetSavable ()
+	return self.SavableProxy
+end
 
 -- Persistance
 function self:LoadSession (inBuffer)
-	self:SetTitle (inBuffer:String ())
-	self.Path = inBuffer:String ()
+	local title = inBuffer:String ()
 	
-	VFS.Root:GetChild (GLib.GetLocalId (), self.Path,
-		function (returnCode, file)
-			if returnCode ~= VFS.ReturnCode.Success then return end
-			
-			self:SetFile (file)
-		end
-	)
+	local document = self:GetDocumentManager ():GetDocumentById (inBuffer:String ())
+	if document then
+		self:SetDocument (document)
+	end
+	self:SetTitle (title)
 end
 
 function self:SaveSession (outBuffer)
 	outBuffer:String (self:GetTitle ())
-	outBuffer:String (self.Path)
+	outBuffer:String (self:GetDocument () and self:GetDocument ():GetId () or "")
 end
 
 -- Internal, do not call
@@ -79,7 +84,7 @@ function self:CreateFileChangeNotificationBar ()
 	)
 	self.FileChangeNotificationBar:AddEventListener ("ReloadRequested",
 		function ()
-			self:Reload ()
+			self:GetDocument ():Reload ()
 		end
 	)
 	self:InvalidateLayout ()

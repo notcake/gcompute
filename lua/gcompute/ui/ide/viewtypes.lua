@@ -2,26 +2,33 @@ local self = {}
 GCompute.IDE.ViewTypes = GCompute.MakeConstructor (self)
 
 function self:ctor ()
-	self.Constructors = {}
+	self.Types = {}
 end
 
 function self:Create (type, viewContainer, ...)
-	if not self.Constructors [type] then return end
+	if not self.Types [type] then return end
 	if not viewContainer then
 		viewContainer = vgui.Create ("GComputeViewContainer")
 	end
-	return self.Constructors [type] (viewContainer, ...)
+	return self.Types [type]:Create (viewContainer, ...)
 end
 
 function self:CreateType (type)
+	local viewType = GCompute.IDE.ViewType (type)
+	self.Types [type] = viewType
+	
 	local metatable = {}
-	self.Constructors [type] = GCompute.MakeConstructor (metatable, GCompute.IDE.View)
+	viewType:SetConstructor (GCompute.MakeConstructor (metatable, GCompute.IDE.View))
 	metatable.__Type = type
-	return metatable
+	return metatable, viewType
+end
+
+function self:GetType (type)
+	return self.Types [type]
 end
 
 function self:TypeExists (type)
-	return self.Constructors [type] and true or false
+	return self.Types [type] and true or false
 end
 
 GCompute.IDE.ViewTypes = GCompute.IDE.ViewTypes ()

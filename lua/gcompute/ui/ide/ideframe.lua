@@ -19,6 +19,7 @@ function self:Init ()
 	
 	self.Toolbar = GCompute.IDE.Toolbar (self)
 	
+	self.LoadingLayout = false
 	self.DockContainer = vgui.Create ("GComputeDockContainer", self)
 	self.DockContainer:AddEventListener ("ActiveViewChanged",
 		function (_, oldView, view)
@@ -59,7 +60,7 @@ function self:Init ()
 	)
 	self.DockContainer:AddEventListener ("ViewCloseRequested",
 		function (_, view)
-			self:CloseView (view)
+			self:GetIDE ():CloseView (view)
 		end
 	)
 	self.DockContainer:AddEventListener ("ViewMoved",
@@ -71,6 +72,8 @@ function self:Init ()
 	)
 	self.DockContainer:AddEventListener ("ViewRemoved",
 		function (_, container, view, viewRemovalReason)
+			if self.LoadingLayout then return end
+			
 			if viewRemovalReason == GCompute.ViewRemovalReason.Removal then
 				self:GetViewManager ():RemoveView (view)
 				
@@ -79,6 +82,8 @@ function self:Init ()
 					self:CreateEmptyCodeView ():Select ()
 				end
 			end
+			
+			-- Kill empty containers
 			if viewRemovalReason == GCompute.ViewRemovalReason.Removal or
 			   viewRemovalReason == GCompute.ViewRemovalReason.Rearrangement then
 				if container:GetLocalViewCount () == 0 and not container:IsRootDockContainer () then
@@ -196,8 +201,18 @@ function self:GetDocumentManager ()
 	return self.IDE:GetDocumentManager ()
 end
 
+function self:GetDocumentTypes ()
+	if not self.IDE then return nil end
+	return self.IDE:GetDocumentTypes ()
+end
+
 function self:GetIDE ()
 	return self.IDE
+end
+
+function self:GetSerializerRegistry ()
+	if not self.IDE then return nil end
+	return self.IDE:GetSerializerRegistry ()
 end
 
 function self:GetViewManager ()
@@ -205,12 +220,19 @@ function self:GetViewManager ()
 	return self.IDE:GetViewManager ()
 end
 
+function self:GetViewTypes ()
+	if not self.IDE then return nil end
+	return self.IDE:GetViewTypes ()
+end
+
 function self:SetIDE (ide)
-	self:UnhookViewManager (self.IDE and self:GetViewManager ())
+	self:UnhookDocumentManager (self:GetDocumentManager ())
+	self:UnhookViewManager (self:GetViewManager ())
 	
 	self.IDE = ide
 	
-	self:HookViewManager (self.IDE and self:GetViewManager ())
+	self:HookDocumentManager (self:GetDocumentManager ())
+	self:HookViewManager (self:GetViewManager ())
 	
 	if not self.IDE then return end
 	
@@ -291,13 +313,13 @@ function self:InvalidateSavedWorkspace ()
 	self.WorkspaceUnsaved = true
 end
 
-function self:LoadWorkspace (callback)
+function self:LoadWorkspace ()
 	self:SetCanSaveWorkspace (false)
 	
 	-- Deserialize
 	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_editor_tabs.txt", "GAME") or "")
 	inBuffer:String () -- Discard comment
-	self:GetDocumentManager ():LoadSession (GLib.StringInBuffer (inBuffer:LongString ()))
+	self:GetDocumentManager ():LoadSession (GLib.StringInBuffer (inBuffer:LongString ()), self:GetSerializerRegistry ())
 	inBuffer:Char ()   -- Discard newline
 	inBuffer:String () -- Discard comment
 	
@@ -308,12 +330,14 @@ function self:LoadWorkspace (callback)
 	-- Check for orphaned documents
 	for document in self:GetDocumentManager ():GetEnumerator () do
 		if document:GetViewCount () == 0 then
-			local view = self:CreateView ("Code")
+			local view = self:CreateView (self:GetDocumentTypes ():GetType (document:GetType ()):GetViewType ())
 			view:SetDocument (document)
 		end
 	end
 	
+	self.LoadingLayout = true
 	self.DockContainer:LoadSession (GLib.StringInBuffer (inBuffer:String ()), self:GetViewManager ())
+	self.LoadingLayout = false
 	
 	-- Ensure all views have a location
 	for view in self:GetViewManager ():GetEnumerator () do
@@ -321,7 +345,6 @@ function self:LoadWorkspace (callback)
 			if view:GetDocument () then
 				self.DockContainer:GetLargestContainer ():AddView (view)
 			else
-				print ("SPLIT")
 				self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (view)
 			end
 		end
@@ -347,7 +370,7 @@ function self:SaveWorkspace ()
 	outBuffer:String ("\n=== Documents ===\n")
 	
 	local subOutBuffer = GLib.StringOutBuffer ()
-	self:GetDocumentManager ():SaveSession (subOutBuffer)
+	self:GetDocumentManager ():SaveSession (subOutBuffer, self:GetSerializerRegistry ())
 	outBuffer:LongString (subOutBuffer:GetString ())
 	outBuffer:Char ("\n")
 	outBuffer:String ("\n=== Views ===\n")
@@ -366,24 +389,6 @@ function self:SetCanSaveWorkspace (canSaveWorkspace)
 end
 
 -- Internal, do not call
-function self:RegisterDocument (document)
-	if not document then return end
-	
-	self:GetDocumentManager ():AddDocument (document)
-	self:HookDocument (document)
-	
-	self:InvalidateSavedWorkspace ()
-end
-
-function self:UnregisterDocument (document)
-	if not document then return end
-	
-	self:GetDocumentManager ():RemoveDocument (document)
-	self:UnhookDocument (document)
-	
-	self:InvalidateSavedWorkspace ()
-end
-
 function self:UpdateCaretPositionText ()
 	local codeEditor = self:GetActiveCodeEditor ()
 	local caretLocation = codeEditor and codeEditor:GetCaretPos () or nil
@@ -426,14 +431,38 @@ function self:UpdateProgressBar ()
 end
 
 -- Event hooking
+function self:HookDocumentManager (documentManager)
+	if not documentManager then return end
+	
+	documentManager:AddEventListener ("DocumentAdded", tostring (self:GetTable ()),
+		function (_, document)
+			self:HookDocument (document)
+			self:InvalidateSavedWorkspace ()
+		end
+	)
+	
+	documentManager:AddEventListener ("DocumentRemoved", tostring (self:GetTable ()),
+		function (_, document)
+			self:UnhookDocument (document)
+			self:InvalidateSavedWorkspace ()
+		end
+	)
+end
+
+function self:UnhookDocumentManager (documentManager)
+	if not documentManager then return end
+	
+	documentManager:RemoveEventListener ("DocumentAdded",   tostring (self:GetTable ()))
+	documentManager:RemoveEventListener ("DocumentRemoved", tostring (self:GetTable ()))
+end
+
 function self:HookViewManager (viewManager)
 	if not viewManager then return end
 	
 	viewManager:AddEventListener ("ViewAdded", tostring (self:GetTable ()),
 		function (_, view)
 			self:HookView (view)
-			self:RegisterDocument (view:GetDocument ())
-			
+			self.DockContainer:GetLargestContainer ():AddView (view)
 			self:InvalidateSavedWorkspace ()
 		end
 	)
@@ -441,8 +470,6 @@ function self:HookViewManager (viewManager)
 	viewManager:AddEventListener ("ViewRemoved", tostring (self:GetTable ()),
 		function (_, view)
 			self:UnhookView (view)
-			view:dtor ()
-			
 			self:InvalidateSavedWorkspace ()
 		end
 	)
@@ -463,20 +490,12 @@ function self:HookDocument (document)
 			self:UpdateLanguageText ()
 		end
 	)
-	document:AddEventListener ("ViewRemoved", tostring (self:GetTable ()),
-		function (_)
-			if document:GetViewCount () == 0 then
-				self:UnregisterDocument (document)
-			end
-		end
-	)
 end
 
 function self:UnhookDocument (document)
 	if not document then return end
 	
 	document:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
-	document:RemoveEventListener ("ViewRemoved",     tostring (self:GetTable ()))
 end
 
 function self:HookSelectedCodeEditor (codeEditor)
@@ -564,13 +583,6 @@ end
 function self:HookView (view)
 	if not view then return end
 	
-	view:AddEventListener ("DocumentChanged", tostring (self:GetTable ()),
-		function (_, oldDocument, newDocument)
-			self:UnregisterDocument (oldDocument)
-			self:RegisterDocument (newDocument)
-		end
-	)
-	
 	if view:GetSavable () then
 		local savable = view:GetSavable ()
 		savable:AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
@@ -591,7 +603,7 @@ end
 
 function self:UnhookView (view)
 	if not view then return end
-	view:RemoveEventListener ("DocumentChanged", tostring (self:GetTable ()))
+	
 	if view:GetSavable () then
 		view:GetSavable ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
 	end

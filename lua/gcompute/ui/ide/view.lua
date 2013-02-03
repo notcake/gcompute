@@ -44,6 +44,10 @@ end
 
 function self:dtor ()
 	self.Container:Remove ()
+	
+	if self.ViewManager then
+		self.ViewManager:RemoveView (self)
+	end
 end
 
 -- IDE

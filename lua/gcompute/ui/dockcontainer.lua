@@ -70,6 +70,7 @@ function PANEL:Init ()
 	}
 	
 	self.DragDropController = Gooey.DragDropController (self)
+	self.DragDropController:SetDropTargetEnabled (true)
 	self.DragDropController:SetDragRenderer (
 		function (dragDropController, x, y)
 			if not self:IsValid () then return end
@@ -77,13 +78,21 @@ function PANEL:Init ()
 			local viewContainer = self.DragDropController:GetObject ():GetContainer ()
 			if not viewContainer or not viewContainer:IsValid () then return end
 			
-			local w = 256
-			local h = 256
+			local w, h = viewContainer:GetSize ()
+			if w > ScrW () * 0.2 then
+				h = h * ScrW () * 0.2 / w
+				w = ScrW () * 0.2
+			end
+			if h > ScrH () * 0.2 then
+				w = w * ScrH () * 0.2 / h
+				h = ScrH () * 0.2
+			end
+			
 			render.PushFilterMin (TEXFILTER.LINEAR)
 			render.PushFilterMag (TEXFILTER.LINEAR)
 			
-			render.SetScissorRect (x, y, x + viewContainer:GetWide () / ScrW () * w, y + viewContainer:GetTall () / ScrH () * h, true)
-			Gooey.RenderContext:PushViewPort (x, y, w, h)
+			render.SetScissorRect (x, y, x + w, y + h, true)
+			Gooey.RenderContext:PushViewPort (x, y, w * ScrW () / viewContainer:GetWide (), h * ScrH () / viewContainer:GetTall ())
 			surface.SetAlphaMultiplier (0.9)
 			viewContainer:PaintAt (0, 0)
 			surface.SetAlphaMultiplier (1)
@@ -359,7 +368,12 @@ function PANEL:PerformLayoutRecursive ()
 			else
 				contents = nil
 			end
-			if contents and contents:IsValid () then
+			
+			-- Check if contents are valid and have a PerformLayout function.
+			-- Some non-lua panel types do not have a PerformLayout function.
+			if contents and
+			   contents:IsValid () and
+			   type (contents.PerformLayout) == "function" then
 				contents:PerformLayout ()
 			end
 		end
@@ -383,6 +397,7 @@ end
 
 function PANEL:RemoveView (view, viewRemovalReason)
 	if not view then return end
+	
 	if self.DockContainerType ~= GCompute.DockContainerType.TabControl and
 	   self.DockContainerType ~= GCompute.DockContainerType.View then
 		GCompute.Error ("DockContainer:RemoveView : This DockContainer is not in tabcontrol or view mode!")
@@ -399,9 +414,9 @@ function PANEL:RemoveView (view, viewRemovalReason)
 			view:GetContainer ():SetTab (nil)
 		end
 	else
-		view:GetContainer ():SetParent (nil)
 		self.Child = nil
 	end
+	view:GetContainer ():SetParent (nil)
 	view:GetContainer ():SetDockContainer (nil)
 	view:GetContainer ():SetVisible (false)
 	self:UnhookView (view)
@@ -789,6 +804,7 @@ local dropButtonColor = Color (216, 216, 216, 255)
 function PANEL:DrawDropTargets (renderContext, alphaScale, dropData)
 	-- Draw drop buttons
 	if self:GetWide () < 160 or self:GetTall () < 160 then return end
+	if self:GetContainerType () == GCompute.DockContainerType.None then return end
 	
 	local baseAlpha = 0.75
 	local lastActiveButtonAlphaFraction = math.max (0, (1 - (SysTime () - dropData.ActiveDropButtonChangeTime) / 0.2))
@@ -850,6 +866,7 @@ end
 
 function PANEL:DropButtonFromPoint (x, y, dropData)
 	if self:GetWide () < 160 or self:GetTall () < 160 then return end
+	if self:GetContainerType () == GCompute.DockContainerType.None then return end
 	
 	local centreX = self:GetWide () * 0.5
 	local centreY = self:GetTall () * 0.5
@@ -1061,7 +1078,7 @@ function PANEL:OnDragOver (dragDropController, x, y)
 	
 	-- Our drop targets
 	if not self:IsRootDockContainer () or
-	   self.DockContainerType ~= GCompute.DockContainerType.SplitContainer then
+	   self:GetContainerType () ~= GCompute.DockContainerType.SplitContainer then
 		dropButton = self:DropButtonFromPoint (x, y, self.DropData)
 		if dropButton then
 			dropTarget = dropButton
@@ -1077,9 +1094,22 @@ function PANEL:OnDragOver (dragDropController, x, y)
 			end
 		end
 		
-		local normalizedX = x / self:GetWide ()
-		local normalizedY = y / self:GetTall ()
+		-- Drops on empty containers always hit the middle drop target
+		if self:GetContainerType () == GCompute.DockContainerType.None then
+			dropTarget = GCompute.DockContainerDropTarget.Middle
+		end
+		
+		-- Drops on the tab header section of tab control containers
+		-- always hit the middle drop target
+		if self:GetContainerType () == GCompute.DockContainerType.TabControl and
+		   self.Child:IsPointInHeaderArea (x, y) then
+			dropTarget = GCompute.DockContainerDropTarget.Middle
+		end
+		
+		-- Identify the area drop target
 		if not dropTarget then
+			local normalizedX = x / self:GetWide ()
+			local normalizedY = y / self:GetTall ()
 			if normalizedX < 0.25 then
 				dropTarget = GCompute.DockContainerDropTarget.Left
 			elseif normalizedX > 0.75 then

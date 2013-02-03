@@ -1,4 +1,5 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("Code")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("Code")
+info:SetDocumentType ("CodeDocument")
 
 function self:ctor (container)
 	self.CodeEditor = vgui.Create ("GComputeCodeEditor", container)

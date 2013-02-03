@@ -1,6 +1,14 @@
 local self = {}
 GCompute.IDE.DocumentManager = GCompute.MakeConstructor (self)
 
+--[[
+	Events:
+		DocumentAdded (Document document)
+			Fired when a document has been added.
+		DocumentRemoved (Document document)
+			Fired when a document has been removed.
+]]
+
 function self:ctor ()
 	-- IDE
 	self.IDE             = nil
@@ -13,6 +21,8 @@ function self:ctor ()
 	self.DocumentCount   = 0
 	
 	self.NextDocumentId  = 0
+	
+	GCompute.EventProvider (self)
 end
 
 -- IDE
@@ -52,6 +62,8 @@ function self:AddDocument (document)
 	self.DocumentCount = self.DocumentCount + 1
 	
 	self:HookDocument (document)
+	
+	self:DispatchEvent ("DocumentAdded", document)
 end
 
 function self:GenerateDocumentId (document)
@@ -93,10 +105,12 @@ function self:RemoveDocument (document)
 	self.DocumentCount = self.DocumentCount - 1
 	
 	self:UnhookDocument (document)
+	
+	self:DispatchEvent ("DocumentRemoved", document)
 end
 
 -- Persistance
-function self:LoadSession (inBuffer)
+function self:LoadSession (inBuffer, serializerRegistry)
 	local documentId = inBuffer:String ()
 	while documentId ~= "" do
 		local documentType = inBuffer:String ()
@@ -104,7 +118,7 @@ function self:LoadSession (inBuffer)
 		local document = GCompute.IDE.DocumentTypes:Create (documentType)
 		if document then
 			document:SetId (documentId)
-			document:LoadSession (subInBuffer)
+			document:LoadSession (subInBuffer, serializerRegistry)
 			self:AddDocument (document)
 		end
 		
@@ -113,13 +127,13 @@ function self:LoadSession (inBuffer)
 	end
 end
 
-function self:SaveSession (outBuffer)
+function self:SaveSession (outBuffer, serializerRegistry)
 	local subOutBuffer = GLib.StringOutBuffer ()
 	for document, _ in pairs (self.Documents) do
 		outBuffer:String (document:GetId ())
 		outBuffer:String (document:GetType ())
 		subOutBuffer:Clear ()
-		document:SaveSession (subOutBuffer)
+		document:SaveSession (subOutBuffer, serializerRegistry)
 		outBuffer:LongString (subOutBuffer:GetString ())
 		outBuffer:Char ("\n")
 	end

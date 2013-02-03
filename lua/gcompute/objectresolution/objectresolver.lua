@@ -39,7 +39,10 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 	if memoryUsageReport:IsCounted (self) then return end
 	
 	memoryUsageReport:CreditTableStructure ("Object Resolvers", self)
-	memoryUsageReport:CreditTableStructure ("Object Resolvers", self.RootNamespaces)
+	
+	if self.RootNamespaceSet then
+		self.RootNamespaceSet:ComputeMemoryUsage (memoryUsageReport)
+	end
 	
 	return memoryUsageReport
 end

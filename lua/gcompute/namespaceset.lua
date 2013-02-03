@@ -15,6 +15,17 @@ function self:AddNamespace (namespaceDefinition)
 	return self
 end
 
+function self:ComputeMemoryUsage (memoryUsageReport)
+	memoryUsageReport = memoryUsageReport or GCompute.MemoryUsageReport ()
+	if memoryUsageReport:IsCounted (self) then return end
+	
+	memoryUsageReport:CreditTableStructure ("Namespace Sets", self)
+	memoryUsageReport:CreditTableStructure ("Namespace Sets", self.Namespaces)
+	memoryUsageReport:CreditTableStructure ("Namespace Sets", self.NamespaceSet)
+	
+	return memoryUsageReport
+end
+
 function self:ContainsNamespace (namespaceDefinition)
 	return self.NamespaceSet [namespaceDefinition] or false
 end

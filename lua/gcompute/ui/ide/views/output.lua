@@ -10,6 +10,36 @@ function self:ctor (container)
 	self.CodeEditor:SetLineNumbersVisible (false)
 	self.CodeEditor:SetReadOnly (true)
 	
+	self.ContextMenu = vgui.Create ("GMenu")
+	self.ContextMenu:AddEventListener ("MenuOpening",
+		function ()
+			self.ContextMenu:GetItemById ("Copy") :SetEnabled (not self.CodeEditor:IsSelectionEmpty ())
+			self.ContextMenu:GetItemById ("Clear"):SetEnabled (self.CodeEditor:GetText () ~= "")
+		end
+	)
+	self.ContextMenu:AddOption ("Copy")
+		:SetIcon ("icon16/page_white_copy.png")
+		:AddEventListener ("Click",
+			function ()
+				self.ClipboardTarget:Copy ()
+			end
+		)
+	self.ContextMenu:AddSeparator ()
+	self.ContextMenu:AddOption ("Select All")
+		:AddEventListener ("Click",
+			function ()
+				self.CodeEditor:SelectAll ()
+			end
+		)
+	self.ContextMenu:AddSeparator ()
+	self.ContextMenu:AddOption ("Clear")
+		:AddEventListener ("Click",
+			function ()
+				self.CodeEditor:Clear ()
+			end
+		)
+	self.CodeEditor:SetContextMenu (self.ContextMenu)
+	
 	self.CodeEditor:AddEventListener ("DoubleClick",
 		function (_, x, y)
 			local lineColumnLocation = self.CodeEditor:PointToLocation (x, y)
@@ -80,6 +110,10 @@ function self:ctor (container)
 	self.BufferColor        = nil
 	self.BufferDocumentId   = nil
 	self.BufferDocumentPath = nil
+end
+
+function self:dtor ()
+	self.ContextMenu:Remove ()
 end
 
 function self:Append (text, color, sourceDocumentId, sourceDocumentPath)

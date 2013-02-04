@@ -32,9 +32,6 @@ function self:ctor (container)
 			if self.FileChangeNotificationBar then self.FileChangeNotificationBar:SetVisible (false) end
 			self.FileSystemWatcher:RemoveFile (oldFile)
 			self.FileSystemWatcher:AddFile (file)
-			
-			self:SetTitle (file and file:GetDisplayName () or self:GetSavable ():GetPath ())
-			self:SetToolTipText (file and file:GetDisplayPath () or nil)
 		end
 	)
 	self:GetSavable ():AddEventListener ("Reloaded",

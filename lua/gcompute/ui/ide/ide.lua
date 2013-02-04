@@ -337,12 +337,25 @@ function self:HookView (view)
 			newDocument:AddView (view)
 		end
 	)
+	
+	if view:GetSavable () then
+		view:GetSavable ():AddEventListener ("FileChanged", tostring (self),
+			function (_, oldFile, file)
+				view:SetTitle (file and file:GetDisplayName () or view:GetSavable ():GetPath ())
+				view:SetToolTipText (file and file:GetDisplayPath () or nil)
+			end
+		)
+	end
 end
 
 function self:UnhookView (view)
 	if not view then return end
 	
 	view:RemoveEventListener ("DocumentChanged", tostring (self))
+	
+	if view:GetSavable () then
+		view:GetSavable ():RemoveEventListener ("FileChanged", tostring (self))
+	end
 end
 
 concommand.Add ("gcompute_show_ide",

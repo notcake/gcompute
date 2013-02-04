@@ -41,5 +41,13 @@ function GCompute.IDE.MenuStrip (self)
 	editMenu:AddOption ("Select All")
 		:SetAction ("Select All")
 	
+	local toolsMenu = menuStrip:AddMenu ("Tools")
+	toolsMenu:AddOption ("Settings")
+		:SetAction ("Open Settings")
+	
+	local helpMenu = menuStrip:AddMenu ("Help")
+	helpMenu:AddOption ("About")
+		:SetAction ("Open About")
+	
 	return menuStrip
 end

@@ -41,6 +41,8 @@ surface.CreateFont (
 ]]
 
 function PANEL:Init ()
+	self:SetActionMap (GCompute.CodeEditor.ActionMap)
+	
 	-- Controls
 	self.TextEntry = vgui.Create ("DTextEntry", self)
 	self.TextEntry:SetMultiline (true)

@@ -83,7 +83,9 @@ function self:EnsureVisible ()
 end
 
 function self:GetActionMap ()
-	return nil, self
+	if not self.Container then return nil, nil end
+	if not self.Container:GetContents () then return nil, nil end
+	return self.Container:GetContents ():GetActionMap ()
 end
 
 function self:GetIcon ()

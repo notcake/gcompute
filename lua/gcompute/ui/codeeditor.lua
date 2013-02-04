@@ -40,6 +40,10 @@ include ("codeeditor/codecompletion/suggestiontype.lua")
 GCompute.CodeEditor.KeyboardMap = Gooey.KeyboardMap ()
 GCompute.IncludeDirectory ("gcompute/ui/codeeditor/keyboardmap")
 
+-- Actions
+GCompute.CodeEditor.ActionMap = Gooey.ActionMap ()
+GCompute.IncludeDirectory ("gcompute/ui/codeeditor/actions")
+
 -- Undo / Redo
 include ("codeeditor/undoredo/blockdeletionaction.lua")
 include ("codeeditor/undoredo/blockreplacementaction.lua")

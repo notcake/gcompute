@@ -3,7 +3,7 @@ GCompute.IDE.KeyboardMap:Register ({ KEY_N, KEY_T },
 		if not ctrl then return end
 		if shift or alt then return end
 		
-		self:GetActionMap ():Execute ("New")
+		self:DispatchAction ("New")
 	end
 )
 
@@ -12,7 +12,7 @@ GCompute.IDE.KeyboardMap:Register (KEY_O,
 		if not ctrl then return end
 		if shift or alt then return end
 		
-		self:GetActionMap ():Execute ("Open")
+		self:DispatchAction ("Open")
 	end
 )
 
@@ -21,6 +21,6 @@ GCompute.IDE.KeyboardMap:Register (KEY_S,
 		if not ctrl then return end
 		if shift or alt then return end
 		
-		self:GetActionMap ():Execute ("Save")
+		self:DispatchAction ("Save")
 	end
 )

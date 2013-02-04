@@ -83,7 +83,7 @@ function self:EnsureVisible ()
 end
 
 function self:GetActionMap ()
-	return nil
+	return nil, self
 end
 
 function self:GetIcon ()

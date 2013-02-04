@@ -18,7 +18,6 @@ function self:Init ()
 	self.IDE = nil
 	
 	self:SetActionMap (GCompute.IDE.ActionMap)
-	self:GetActionMap ():SetTarget (self)
 	
 	self.MenuStrip = GCompute.IDE.MenuStrip (self)
 	self.Toolbar = GCompute.IDE.Toolbar (self)
@@ -49,9 +48,15 @@ function self:Init ()
 			self:UpdateLanguageText ()
 			self:UpdateProgressBar ()
 			
+			self:GetActionMap ():GetAction ("Run Code"):SetEnabled (self:GetActiveCodeEditor () ~= nil)
 			self.Toolbar:GetItemById ("Run Code"):SetEnabled (self:GetActiveCodeEditor () ~= nil)
 			
-			self:GetActionMap ():SetChainedActionMap (view and view:GetActionMap () or nil)
+			if view then
+				local actionMap, control = view:GetActionMap ()
+				self:GetActionMap ():SetChainedActionMap (actionMap, control or view)
+			else
+				self:GetActionMap ():SetChainedActionMap (nil, nil)
+			end
 			
 			self:DispatchEvent ("ActiveViewChanged", oldView, view)
 		end
@@ -616,7 +621,7 @@ function self:HookView (view)
 					end
 				end
 				
-				self.MenuStrip:GetItemById ("File"):GetItemById ("Save All"):SetEnabled (canSaveAll)
+				self:GetActionMap ():GetAction ("Save All"):SetEnabled (canSaveAll)
 				self.Toolbar:GetItemById ("Save All"):SetEnabled (canSaveAll)
 			end
 		)

@@ -7,14 +7,14 @@ GCompute.IDE.ActionMap:Register ("New",
 GCompute.IDE.ActionMap:Register ("Open",
 	function (self)
 		VFS.OpenOpenFileDialog ("GCompute.IDE",
-			function (path, file)
-				if not path then return end
+			function (uri, resource)
+				if not uri then return end
 				if not self or not self:IsValid () then return end
 				
-				if not file then GCompute.Error ("VFS.OpenOpenFileDialog returned a path but not an IFile???") end
+				if not resource then GCompute.Error ("VFS.OpenOpenFileDialog returned a URI but not an IResource???") end
 				
-				self:GetIDE ():OpenFile (file,
-					function (success, file, view)
+				self:GetIDE ():OpenResource (resource,
+					function (success, resource, view)
 						if not view then return end
 						view:Select ()
 					end

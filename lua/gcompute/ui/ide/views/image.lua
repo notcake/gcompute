@@ -10,7 +10,7 @@ function self:ctor (container)
 	
 	self.SavableProxy:AddEventListener ("Reloaded",
 		function (_)
-			extension = self.Document:GetFile () and self.Document:GetFile ():GetExtension () or "png"
+			extension = self.Document:GetResource () and self.Document:GetResource ():GetExtension () or "png"
 			extension = string.lower (extension)
 			self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
 		end
@@ -42,7 +42,7 @@ function self:SetDocument (document)
 	
 	if not document then return end
 	
-	extension = self.Document:GetFile () and self.Document:GetFile ():GetExtension () or "png"
+	extension = self.Document:GetResource () and self.Document:GetResource ():GetExtension () or "png"
 	extension = string.lower (extension)
 	self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
 end
@@ -84,7 +84,7 @@ function self:CreateFileChangeNotificationBar ()
 	)
 	self.FileChangeNotificationBar:AddEventListener ("ReloadRequested",
 		function ()
-			self:GetDocument ():Reload ()
+			self:GetDocument ():Reload (self:GetSerializerRegistry ())
 		end
 	)
 	self:InvalidateLayout ()

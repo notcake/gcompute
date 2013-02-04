@@ -1,6 +1,6 @@
 "AddonInfo"
 {
-	"name"        "Gmod Computation Addon"
+	"name"        "GCompute"
 	"version"     "0.01"
 	"author_name" "!cake"
 	"author_url"  ""

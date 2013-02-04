@@ -27,8 +27,8 @@ function GCompute.IDE.TabContextMenu (self)
 				self.TabContextMenu:GetItemById ("Save")                  :SetEnabled (hasSavable and view:GetSavable ():CanSave ())
 				self.TabContextMenu:GetItemById ("Save as...")            :SetEnabled (hasSavable and true or false)
 				self.TabContextMenu:GetItemById ("Rename")                :SetEnabled (hasSavable)
-				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (hasSavable and view:GetSavable ():HasPath ())
-				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (hasSavable and view:GetSavable ():HasPath ())
+				self.TabContextMenu:GetItemById ("Delete")                :SetEnabled (hasSavable and view:GetSavable ():HasUri ())
+				self.TabContextMenu:GetItemById ("Copy path to clipboard"):SetEnabled (hasSavable and view:GetSavable ():HasUri ())
 			end
 		end
 	)
@@ -91,7 +91,7 @@ function GCompute.IDE.TabContextMenu (self)
 				if not tab then return end
 				if not tab.View:GetSavable () then return end
 				
-				if tab.View:GetSavable ():HasPath () then
+				if tab.View:GetSavable ():HasUri () then
 				else
 					Derma_StringRequest ("Rename " .. tab.View:GetTitle () .. "...", "Enter " .. tab.View:GetTitle () .. "'s new name:", tab.View:GetTitle (),
 						function (name)
@@ -110,8 +110,8 @@ function GCompute.IDE.TabContextMenu (self)
 			function (_, tab)
 				if not tab then return end
 				if not tab.View:GetSavable () then return end
-				if not tab.View:GetSavable ():HasPath () then return end
-				Gooey.Clipboard:SetText (tab.View:GetSavable ():GetPath ())
+				if not tab.View:GetSavable ():HasUri () then return end
+				Gooey.Clipboard:SetText (tab.View:GetSavable ():GetUri ())
 			end
 		)
 	menu:AddSeparator ("Separator3")

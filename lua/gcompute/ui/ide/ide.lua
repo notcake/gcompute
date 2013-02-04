@@ -72,19 +72,26 @@ function self:SetVisible (visible)
 end
 
 -- Opening
---- Opens a new tab for the IFile. Use OpenPath instead if you have a path only.
+--- Opens a new tab for the IFile. Use OpenUri instead if you have a URI only.
 -- @param file The IFile to be opened.
--- @param callback A callback function (success, IFile file, IView view)
+-- @param callback A callback function (success, IResource resource, IView view)
 function self:OpenFile (file, callback)
-	if not file then return end
+	self:OpenResource (VFS.Resource (file), callback)
+end
+
+--- Opens a new tab for the IResource. Use OpenUri instead if you have a URI only.
+-- @param resource The IResource to be opened.
+-- @param callback A callback function (success, IResource resource, IView view)
+function self:OpenResource (resource, callback)
+	if not resource then return end
 	
-	local document = self:GetDocumentManager ():GetDocumentByPath (file:GetPath ())
+	local document = self:GetDocumentManager ():GetDocumentByUri (resource:GetUri ())
 	if document then
-		callback (true, file, document:GetView (1))
+		callback (true, resource, document:GetView (1))
 		return
 	end
 	
-	local extension = file:GetExtension () or ""
+	local extension = resource:GetExtension () or ""
 	extension = string.lower (extension)
 	
 	local serializerType = self:GetSerializerRegistry ():FindDeserializerForExtension (extension)
@@ -93,10 +100,10 @@ function self:OpenFile (file, callback)
 	local documentType   = serializerType and self:GetDocumentTypes ():GetType (serializerType:GetDocumentType ())
 	local viewType       = documentType and documentType:GetViewType ()
 	
-	file:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
+	resource:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then
-				callback (false, file)
+				callback (false, resource)
 				return
 			end
 			
@@ -110,80 +117,73 @@ function self:OpenFile (file, callback)
 					local serializer = serializerType:Create (document)
 					
 					local view = self:CreateView (viewType)
-					view:SetTitle (file:GetDisplayName ())
+					view:SetTitle (resource:GetDisplayName ())
 					serializer:Deserialize (GLib.StringInBuffer (data))
 					view:SetDocument (document)
-					view:GetSavable ():SetFile (file)
+					view:GetSavable ():SetResource (resource)
 					
-					callback (true, file, view)
+					callback (true, resource, view)
 				end
 			)
 		end
 	)
 end
 
---- Opens a new tab for the given path. Use OpenFile instead if you have an IFile.
--- @param path The path of the file to be opened
--- @param callback A callback function (success, IFile file, IView view)
-function self:OpenPath (path, callback)
+--- Opens a new tab for the given uri. Use OpenResource instead if you have an IResource.
+-- @param uri The uri of the file to be opened
+-- @param callback A callback function (success, IResource resource, IView view)
+function self:OpenUri (uri, callback)
 	callback = callback or GCompute.NullCallback
 	
-	local document = self:GetDocumentManager ():GetDocumentByPath (path)
+	local document = self:GetDocumentManager ():GetDocumentByUri (uri)
 	if document then
-		callback (true, document:GetFile (), document:GetView (1))
+		callback (true, document:GetResource (), document:GetView (1))
 		return
 	end
 	
-	VFS.Root:GetChild (GAuth.GetLocalId (), path,
-		function (returnCode, file)
-			if not self:GetFrame ():IsValid () then return end
-			if not file then callback (false) return end
-			self:OpenFile (file, callback)
-		end
-	)
+	self:OpenResource (VFS.Resource (uri), callback)
 end
 
 -- Documents
---- Prompts for a file to which to save, then saves a document's contents.
+--- Prompts for a uri to which to save, then saves a document's contents.
 -- @param document The document whose contents are to be saved
--- @param callback A callback function (success, IFile file)
+-- @param callback A callback function (success, IResource resource)
 function self:SaveAsDocument (document, callback)
 	callback = callback or GCompute.NullCallback
 	if not document then callback (true) return end
 	
 	VFS.OpenSaveFileDialog ("GCompute.IDE",
-		function (path, file)
-			if not path then callback (false) return end
+		function (uri, resource)
+			if not uri then callback (false) return end
 			if not self:GetFrame ():IsValid () then callback (false) return end
 			
-			document:SetPath (path)
-			self:SaveDocument (document, path, callback)
+			document:SetUri (uri)
+			self:SaveDocument (document, uri, callback)
 		end
 	)
 end
 
 --- Saves a document's contents.
 -- @param document The document whose contents are to be saved
--- @param pathOrCallback Optional path to which to save
--- @param callback A callback function (success, IFile file)
-function self:SaveDocument (document, pathOrCallback, callback)
-	if type (pathOrCallback) == "function" then
-		callback = pathOrCallback
-		pathOrCallback = nil
+-- @param uriOrCallback Optional uri to which to save
+-- @param callback A callback function (success, IResource resource)
+function self:SaveDocument (document, uriOrCallback, callback)
+	if type (uriOrCallback) == "function" then
+		callback = uriOrCallback
+		uriOrCallback = nil
 	end
 	callback = callback or GCompute.NullCallback
 	
 	if not document then callback (true) return end
 	
-	-- Determine save path
-	local path = pathOrCallback
-	if not path and document:HasPath () then
-		path = document:GetPath ()
-		document:SetPath (path)
+	-- Determine save uri
+	local uri = uriOrCallback
+	if not uri and document:HasUri () then
+		uri = document:GetUri ()
 	end
 	
-	-- If the document has no path, invoke the save as dialog.
-	if not path then
+	-- If the document has no uri, invoke the save as dialog.
+	if not uri then
 		self:SaveAsDocument (document, callback)
 		return
 	end
@@ -204,7 +204,7 @@ function self:CanCloseView (view)
 	if self:GetDocumentManager ():GetDocumentCount () == 1 and
 	   view:GetDocument ():GetViewCount () == 1 and
 	   view:GetType () == "Code" and
-	   not view:GetSavable ():HasPath () and
+	   not view:GetSavable ():HasUri () and
 	   not view:GetSavable ():IsUnsaved () then
 		return false
 	end
@@ -273,20 +273,19 @@ end
 
 --- Saves a view's contents.
 -- @param view The view whose contents are to be saved
--- @param pathOrCallback Optional path to which to save
--- @param callback A callback function (success, IFile file)
-function self:SaveView (view, pathOrCallback, callback)
-	if type (pathOrCallback) == "function" then
-		callback = pathOrCallback
-		pathOrCallback = nil
+-- @param uriOrCallback Optional uri to which to save
+-- @param callback A callback function (success, IResource resource)
+function self:SaveView (view, uriOrCallback, callback)
+	if type (uriOrCallback) == "function" then
+		callback = uriOrCallback
+		uriOrCallback = nil
 	end
 	callback = callback or GCompute.NullCallback
 	
 	if not view               then callback (true) return end
 	if not view:GetSavable () then callback (true) return end
 	
-	local path = pathOrCallback
-	self:SaveDocument (view:GetSavable (), pathOrCallback, callback)
+	self:SaveDocument (view:GetSavable (), uriOrCallback, callback)
 end
 
 -- Internal, do not call
@@ -339,10 +338,10 @@ function self:HookView (view)
 	)
 	
 	if view:GetSavable () then
-		view:GetSavable ():AddEventListener ("FileChanged", tostring (self),
-			function (_, oldFile, file)
-				view:SetTitle (file and file:GetDisplayName () or view:GetSavable ():GetPath ())
-				view:SetToolTipText (file and file:GetDisplayPath () or nil)
+		view:GetSavable ():AddEventListener ("ResourceChanged", tostring (self),
+			function (_, oldResource, resource)
+				view:SetTitle (resource and resource:GetDisplayName () or view:GetSavable ():GetUri ())
+				view:SetToolTipText (resource and resource:GetDisplayUri () or nil)
 			end
 		)
 	end

@@ -56,6 +56,11 @@ function self:GetDocumentManager ()
 	return self.IDE:GetDocumentManager ()
 end
 
+function self:GetSerializerRegistry ()
+	if not self.IDE then return nil end
+	return self.IDE:GetSerializerRegistry ()
+end
+
 function self:GetViewManager ()
 	return self.ViewManager
 end

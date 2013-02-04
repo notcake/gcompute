@@ -47,7 +47,7 @@ function self:ctor (container)
 			if not line then return end
 			local lineText = line:GetText ()
 			local sourceDocumentId = line:GetAttribute ("SourceDocumentId", 0)
-			local sourceDocumentPath = line:GetAttribute ("SourceDocumentPath", 0)
+			local sourceDocumentUri = line:GetAttribute ("SourceDocumentUri", 0)
 			
 			-- Attempt to get line, char information
 			-- line %d, char %d
@@ -79,17 +79,17 @@ function self:ctor (container)
 			
 			if pathMatch then
 				sourceDocumentId = nil
-				sourceDocumentPath = "luacl/" .. pathMatch
+				sourceDocumentUri = "luacl/" .. pathMatch
 			end
 			
 			local document = self:GetDocumentManager ():GetDocumentById (sourceDocumentId)
 			local view = nil
 			if not document then
-				document = self:GetDocumentManager ():GetDocumentByPath (sourceDocumentPath)
+				document = self:GetDocumentManager ():GetDocumentByUri (sourceDocumentUri)
 			end
-			if not document and sourceDocumentPath and sourceDocumentPath ~= nil then
-				self:GetIDE ():OpenPath (sourceDocumentPath,
-					function (success, file, view)
+			if not document and sourceDocumentUri and sourceDocumentUri ~= nil then
+				self:GetIDE ():OpenUri (sourceDocumentUri,
+					function (success, resource, view)
 						self:BringUpView (view, line, char)
 					end
 				)
@@ -106,27 +106,27 @@ function self:ctor (container)
 	self.ClipboardTarget = GCompute.CodeEditor.EditorClipboardTarget (self.CodeEditor)
 	
 	-- Buffering
-	self.BufferText         = {}
-	self.BufferColor        = nil
-	self.BufferDocumentId   = nil
-	self.BufferDocumentPath = nil
+	self.BufferText        = {}
+	self.BufferColor       = nil
+	self.BufferDocumentId  = nil
+	self.BufferDocumentUri = nil
 end
 
 function self:dtor ()
 	self.ContextMenu:Remove ()
 end
 
-function self:Append (text, color, sourceDocumentId, sourceDocumentPath)
+function self:Append (text, color, sourceDocumentId, sourceDocumentUri)
 	if not text then return end
 	
 	if self.BufferDocumentId ~= sourceDocumentId or
-	   self.BufferDocumentPath ~= sourceDocumentPath or
+	   self.BufferDocumentUri ~= sourceDocumentUri or
 	   not self:ColorEquals (self.BufferColor, color) then
 		self:Flush ()
 		
-		self.BufferColor        = color
-		self.BufferDocumentId   = sourceDocumentId
-		self.BufferDocumentPath = sourceDocumentPath
+		self.BufferColor       = color
+		self.BufferDocumentId  = sourceDocumentId
+		self.BufferDocumentUri = sourceDocumentUri
 	end
 	
 	self.BufferText [#self.BufferText + 1] = text
@@ -148,13 +148,13 @@ function self:Flush ()
 			document:SetColor (self.BufferColor, startPos, endPos)
 		end
 		document:SetAttribute ("SourceDocumentId", self.BufferDocumentId, startPos, endPos)
-		document:SetAttribute ("SourceDocumentPath", self.BufferDocumentPath, startPos, endPos)
+		document:SetAttribute ("SourceDocumentUri", self.BufferDocumentUri, startPos, endPos)
 	end
 	
-	self.BufferText         = {}
-	self.BufferColor        = nil
-	self.BufferDocumentId   = nil
-	self.BufferDocumentPath = nil
+	self.BufferText        = {}
+	self.BufferColor       = nil
+	self.BufferDocumentId  = nil
+	self.BufferDocumentUri = nil
 end
 
 function self:GetEditor ()

@@ -11,16 +11,16 @@ GCompute.IDE.DocumentManager = GCompute.MakeConstructor (self)
 
 function self:ctor ()
 	-- IDE
-	self.IDE             = nil
-	self.DocumentTypes   = nil
+	self.IDE            = nil
+	self.DocumentTypes  = nil
 	
 	-- Documents
-	self.Documents       = {}
-	self.DocumentsById   = {}
-	self.DocumentsByPath = {}
-	self.DocumentCount   = 0
+	self.Documents      = {}
+	self.DocumentsById  = {}
+	self.DocumentsByUri = {}
+	self.DocumentCount  = 0
 	
-	self.NextDocumentId  = 0
+	self.NextDocumentId = 0
 	
 	GCompute.EventProvider (self)
 end
@@ -52,8 +52,8 @@ function self:AddDocument (document)
 	if self.Documents [document] then return end
 	
 	self.Documents [document] = true
-	if document:GetPath () then
-		self.DocumentsByPath [document:GetPath ()] = document
+	if document:GetUri () then
+		self.DocumentsByUri [document:GetUri ()] = document
 	end
 	if not document:GetId () then
 		document:SetId (self:GenerateDocumentId (document))
@@ -78,8 +78,8 @@ function self:GetDocumentById (documentId)
 	return self.DocumentsById [documentId]
 end
 
-function self:GetDocumentByPath (path)
-	return self.DocumentsByPath [path]
+function self:GetDocumentByUri (uri)
+	return self.DocumentsByUri [uri]
 end
 
 function self:GetDocumentCount ()
@@ -98,8 +98,8 @@ function self:RemoveDocument (document)
 	if not self.Documents [document] then return end
 	
 	self.Documents [document] = nil
-	if document:GetPath () then
-		self.DocumentsByPath [document:GetPath ()] = nil
+	if document:GetUri () then
+		self.DocumentsByUri [document:GetUri ()] = nil
 	end
 	self.DocumentsById [document:GetId ()] = nil
 	self.DocumentCount = self.DocumentCount - 1
@@ -144,13 +144,13 @@ end
 function self:HookDocument (document)
 	if not document then return end
 	
-	document:AddEventListener ("PathChanged", tostring (self),
-		function (_, oldPath, path)
-			if oldPath then
-				self.DocumentsByPath [oldPath] = nil
+	document:AddEventListener ("UriChanged", tostring (self),
+		function (_, oldUri, uri)
+			if oldUri then
+				self.DocumentsByUri [oldUri] = nil
 			end
-			if path then
-				self.DocumentsByPath [path] = document
+			if uri then
+				self.DocumentsByUri [uri] = document
 			end
 		end
 	)
@@ -159,5 +159,5 @@ end
 function self:UnhookDocument (document)
 	if not document then return end
 	
-	document:RemoveEventListener ("PathChanged", tostring (self))
+	document:RemoveEventListener ("UriChanged", tostring (self))
 end

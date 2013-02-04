@@ -2,7 +2,7 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 	function (self)
 		local codeEditor = self:GetActiveCodeEditor ()
 		local sourceDocumentId = codeEditor:GetDocument ():GetId ()
-		local sourceDocumentPath = codeEditor:GetDocument ():GetPath ()
+		local sourceDocumentUri = codeEditor:GetDocument ():GetUri ()
 		local editorHelper = codeEditor and codeEditor:GetEditorHelper ()
 		if not editorHelper then return end
 		
@@ -18,7 +18,7 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 					outputPaneCleared = true
 				end
 				
-				self:GetViewManager ():GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentPath)
+				self:GetViewManager ():GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentUri)
 			end
 		)
 		
@@ -30,7 +30,7 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 					outputPaneCleared = true
 				end
 				
-				self:GetViewManager ():GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentPath)
+				self:GetViewManager ():GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentUri)
 			end
 		)
 		

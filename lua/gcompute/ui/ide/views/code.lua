@@ -27,11 +27,11 @@ function self:ctor (container)
 	self.SaveFailureNotificationBar = nil
 	
 	-- Document events
-	self:GetSavable ():AddEventListener ("FileChanged",
-		function (_, oldFile, file)
+	self:GetSavable ():AddEventListener ("ResourceChanged",
+		function (_, oldResource, resource)
 			if self.FileChangeNotificationBar then self.FileChangeNotificationBar:SetVisible (false) end
-			self.FileSystemWatcher:RemoveFile (oldFile)
-			self.FileSystemWatcher:AddFile (file)
+			self.FileSystemWatcher:RemoveResource (oldResource)
+			self.FileSystemWatcher:AddResource (resource)
 		end
 	)
 	self:GetSavable ():AddEventListener ("Reloaded",
@@ -51,11 +51,11 @@ function self:ctor (container)
 			self:CreateSaveFailureNotificationBar ()
 			self.SaveFailureNotificationBar:SetVisible (true)
 			
-			local path = self:GetSavable ():GetPath ()
-			if self:GetSavable ():GetFile () then
-				path = self:GetSavable ():GetFile ():GetDisplayPath ()
+			local uri = self:GetSavable ():GetUri ()
+			if self:GetSavable ():GetResource () then
+				uri = self:GetSavable ():GetResource ():GetDisplayUri ()
 			end
-			self.SaveFailureNotificationBar:SetText ("Cannot save to " .. path .. ". (Is it not a .txt file or outside the garrysmod/data/ directory?)")
+			self.SaveFailureNotificationBar:SetText ("Cannot save to " .. uri .. ". (Is it not a .txt file or outside the garrysmod/data/ directory?)")
 		end
 	)
 	self:GetSavable ():AddEventListener ("Saved",
@@ -162,7 +162,7 @@ function self:CreateFileChangeNotificationBar ()
 	)
 	self.FileChangeNotificationBar:AddEventListener ("ReloadRequested",
 		function ()
-			self:GetDocument ():Reload ()
+			self:GetDocument ():Reload (self:GetSerializerRegistry ())
 		end
 	)
 	self:InvalidateLayout ()

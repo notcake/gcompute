@@ -28,7 +28,7 @@ function self:ctor ()
 	self:Clear ()
 	
 	self:DetectLanguage ()
-	self:AddEventListener ("PathChanged",
+	self:AddEventListener ("UriChanged",
 		function ()
 			self:DetectLanguage ()
 		end
@@ -472,8 +472,8 @@ end
 -- Language
 function self:DetectLanguage ()
 	local language = nil
-	if self:HasPath () then
-		language = GCompute.LanguageDetector:DetectLanguageByPath (self:GetPath ())
+	if self:HasUri () then
+		language = GCompute.LanguageDetector:DetectLanguageByPath (self:GetUri ())
 	end
 	if not language then
 		language = GCompute.LanguageDetector:DetectLanguageByContents (self:GetText ())

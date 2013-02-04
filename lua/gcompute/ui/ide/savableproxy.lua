@@ -11,20 +11,20 @@ function self:CanSave ()
 	return self.Savable and self.Savable:CanSave () or false
 end
 
-function self:GetFile ()
-	return self.Savable and self.Savable:GetFile () or nil
+function self:GetResource ()
+	return self.Savable and self.Savable:GetResource () or nil
 end
 
-function self:GetPath ()
-	return self.Savable and self.Savable:GetPath () or nil
+function self:GetUri ()
+	return self.Savable and self.Savable:GetUri () or nil
 end
 
-function self:HasFile ()
-	return self.Savable and self.Savable:HasFile () or false
+function self:HasResource ()
+	return self.Savable and self.Savable:HasResource () or false
 end
 
-function self:HasPath ()
-	return self.Savable and self.Savable:HasPath () or false
+function self:HasUri ()
+	return self.Savable and self.Savable:HasUri () or false
 end
 
 function self:IsUnsaved ()
@@ -41,28 +41,28 @@ function self:Save (...)
 	self.Savable:Save (...)
 end
 
-function self:SetFile (file)
+function self:SetResource (resource)
 	if not self.Savable then return end
-	self.Savable:SetFile (file)
+	self.Savable:SetResource (resource)
 end
 
-function self:SetPath (path)
+function self:SetUri (uri)
 	if not self.Savable then return end
-	self.Savable:SetPath (path)
+	self.Savable:SetUri (uri)
 end
 
 function self:SetSavable (savable)
 	if self.Savable == savable then return end
 	
-	local oldFile = self:GetFile ()
-	local oldPath = self:GetPath ()
+	local oldResource = self:GetResource ()
+	local oldUri = self:GetUri ()
 	self:UnhookSavable (self.Savable)
 	self.Savable = savable
 	self:HookSavable (savable)
 	
 	self:DispatchEvent ("CanSaveChanged", self:CanSave ())
-	self:DispatchEvent ("FileChanged", oldFile, self:GetFile ())
-	self:DispatchEvent ("PathChanged", oldPath, self:GetPath ())
+	self:DispatchEvent ("ResourceChanged", oldResource, self:GetResource ())
+	self:DispatchEvent ("UriChanged", oldUri, self:GetUri ())
 	self:DispatchEvent ("Saved")
 	self:DispatchEvent ("UnsavedChanged", self:IsUnsaved ())
 end
@@ -71,14 +71,14 @@ end
 local events =
 {
 	"CanSaveChanged",
-	"FileChanged",
-	"PathChanged",
 	"Reloaded",
 	"Reloading",
+	"ResourceChanged",
 	"Saved",
 	"SaveFailed",
 	"Saving",
 	"UnsavedChanged",
+	"UriChanged"
 }
 function self:HookSavable (savable)
 	if not savable then return end

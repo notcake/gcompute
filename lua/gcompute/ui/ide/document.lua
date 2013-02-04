@@ -3,12 +3,12 @@ GCompute.IDE.Document = GCompute.MakeConstructor (self, GCompute.ISavable)
 
 --[[
 	Events:
-		PathChanged (oldPath, path)
-			Fired when this document's path has changed.
 		Reloaded ()
 			Fired when this document has finished reloading the copy from disk.
 		Reloading ()
 			Fired when this document is about to reload the copy from disk.
+		UriChanged (oldUri, uri)
+			Fired when this document's uri has changed.
 		ViewAdded (IView view)
 			Fired when this document is opened in an IView.
 		ViewRemoved (IView view)
@@ -55,17 +55,17 @@ function self:LoadSession (inBuffer, serializerRegistry)
 	serializerType = serializerType or serializerRegistry:GetType ("Code")
 	local serializer = serializerType:Create (self)
 	
-	local hasPath = inBuffer:Boolean ()
-	if hasPath then
-		local path = inBuffer:String ()
-		VFS.Root:OpenFile (GLib.GetLocalId (), path, VFS.OpenFlags.Read,
+	local hasUri = inBuffer:Boolean ()
+	if hasUri then
+		local uri = inBuffer:String ()
+		local resource = VFS.Resource (uri)
+		self:SetUri (uri)
+		
+		resource:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
 			function (returnCode, fileStream)
-				if returnCode ~= VFS.ReturnCode.Success then
-					self:SetPath (path)
-					return
-				end
+				if returnCode ~= VFS.ReturnCode.Success then return end
 				
-				self:SetFile (fileStream:GetFile ())
+				self:SetResource (resource)
 				
 				fileStream:Read (fileStream:GetLength (),
 					function (returnCode, data)
@@ -95,9 +95,9 @@ function self:SaveSession (outBuffer, serializerRegistry)
 	serializerType = serializerType or serializerRegistry:GetType ("Code")
 	local serializer = serializerType:Create (self)
 	
-	outBuffer:Boolean (self:HasPath ())
-	if self:HasPath () then
-		outBuffer:String (self:GetPath ())
+	outBuffer:Boolean (self:HasUri ())
+	if self:HasUri () then
+		outBuffer:String (self:GetUri ())
 	else
 		outBuffer:Boolean (self:IsUnsaved ())
 		
@@ -114,7 +114,7 @@ end
 -- ISavable
 function self:CanSave ()
 	if self:IsUnsaved () then return true end
-	if not self:HasPath () then return true end
+	if not self:HasUri () then return true end
 	return false
 end
 
@@ -138,14 +138,14 @@ function self:MarkUnsaved ()
 	self:DispatchEvent ("UnsavedChanged", self:IsUnsaved ())
 end
 
-function self:Reload ()
-	if not self:GetFile () then return end
+function self:Reload (serializerRegistry)
+	if not self:GetResource () then return end
 	
 	local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
 	serializerType = serializerType or serializerRegistry:GetType ("Code")
 	local serializer = serializerType:Create (self)
 	
-	self:GetFile ():Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
+	self:GetResource ():Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then return end
 			
@@ -174,9 +174,9 @@ end
 function self:Save (callback, serializerRegistry)
 	callback = callback or GCompute.NullCallback
 	
-	if not self:GetFile () then
-		if not self:GetPath () then callback (false) return end
-		VFS.Root:CreateFile (GAuth.GetLocalId (), self:GetPath (),
+	if not self:GetResource () then
+		if not self:GetUri () then callback (false) return end
+		VFS.Root:CreateFile (GAuth.GetLocalId (), self:GetUri (),
 			function (returnCode, file)
 				if returnCode ~= VFS.ReturnCode.Success or
 				   not file then
@@ -185,7 +185,7 @@ function self:Save (callback, serializerRegistry)
 					return
 				end
 				
-				self:SetFile (file)
+				self:SetResource (VFS.Resource (file))
 				self:Save (callback, serializerRegistry)
 			end
 		)
@@ -194,7 +194,7 @@ function self:Save (callback, serializerRegistry)
 	
 	self:DispatchEvent ("Saving")
 	
-	self:GetFile ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
+	self:GetResource ():Open (GAuth.GetLocalId (), VFS.OpenFlags.Write + VFS.OpenFlags.Overwrite,
 		function (returnCode, fileStream)
 			if returnCode ~= VFS.ReturnCode.Success then
 				self:DispatchEvent ("SaveFailed")

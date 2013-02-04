@@ -5,14 +5,12 @@ GCompute.ISavable = GCompute.MakeConstructor (self)
 	Events:
 		CanSaveChanged (bool canSave)
 			Fired when the presence of savable changes has changed.
-		FileChanged (IFile oldFile, IFile file)
-			Fired when the file has changed.
-		PathChanged (oldPath, path)
-			Fired when the path has changed.
 		Reloaded ()
 			Fired when the copy from disk is about to be reloaded.
 		Reloading ()
 			Fired when the copy from disk has been reloaded.
+		ResourceChanged (IResource oldResource, IResource resource)
+			Fired when the resource has changed.
 		Saved (bool success)
 			Fired when this object has been attempted to be saved.
 		SaveFailed ()
@@ -21,11 +19,13 @@ GCompute.ISavable = GCompute.MakeConstructor (self)
 			Fired when this object is about to be saved.
 		UnsavedChanged (bool unsaved)
 			Fired when this object's unsaved status has changed.
+		UriChanged (oldUri, uri)
+			Fired when the uri has changed.
 ]]
 
 function self:ctor ()
-	self.File = nil
-	self.Path = nil
+	self.Resource = nil
+	self.Uri      = nil
 	
 	GCompute.EventProvider (self)
 end
@@ -34,20 +34,20 @@ function self:CanSave ()
 	return false
 end
 
-function self:GetFile ()
-	return self.File
+function self:GetResource ()
+	return self.Resource
 end
 
-function self:GetPath ()
-	return self.Path
+function self:GetUri ()
+	return self.Uri
 end
 
-function self:HasFile ()
-	return self.File and true or false
+function self:HasResource ()
+	return self.Resource and true or false
 end
 
-function self:HasPath ()
-	return self.Path and true or false
+function self:HasUri ()
+	return self.Uri and true or false
 end
 
 function self:IsUnsaved ()
@@ -61,25 +61,25 @@ function self:Save ()
 	self:DispatchEvent ("Saved", true)
 end
 
-function self:SetFile (file)
-	if self.File == file then return end
+function self:SetResource (resource)
+	if self.Resource == resource then return end
 	
-	local oldFile = self.File
-	self.File = file
-	self:SetPath (self.File and self.File:GetPath () or nil)
+	local oldResource = self.Resource
+	self.Resource = resource
+	self:SetUri (self.Resource and self.Resource:GetUri () or nil)
 	
-	self:DispatchEvent ("FileChanged", oldFile, self.File)
+	self:DispatchEvent ("ResourceChanged", oldResource, self.Resource)
 end
 
-function self:SetPath (path)
-	if self.Path == path then return end
+function self:SetUri (uri)
+	if self.Uri == uri then return end
 	
-	local oldPath = self.Path
-	self.Path = nil -- Suppress extra PathChanged event
-	if self.File and self.File:GetPath () ~= path then
-		self:SetFile (nil)
+	local oldUri = self.Uri
+	self.Uri = nil -- Suppress extra UriChanged event
+	if self.Resource and self.Resource:GetUri () ~= uri then
+		self:SetResource (nil)
 	end
-	self.Path = path
+	self.Uri = uri
 	
-	self:DispatchEvent ("PathChanged", oldPath, self.Path)
+	self:DispatchEvent ("UriChanged", oldUri, self.Uri)
 end

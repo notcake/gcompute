@@ -75,7 +75,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:AddEventListener ("Click",
 			function ()
 				local document = codeEditor:GetDocument ()
-				local fileId = document:HasPath () and document:GetPath () or ("@anonymous_" .. document:GetId ())
+				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
 				
 				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
 				
@@ -163,7 +163,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:AddEventListener ("Click",
 			function ()
 				local document = codeEditor:GetDocument ()
-				local fileId = document:HasPath () and document:GetPath () or ("@anonymous_" .. document:GetId ())
+				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
 				
 				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnServer (codeEditor:GetText ())
@@ -179,7 +179,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:AddEventListener ("Click",
 			function ()
 				local document = codeEditor:GetDocument ()
-				local fileId = document:HasPath () and document:GetPath () or ("@anonymous_" .. document:GetId ())
+				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
 				
 				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnClients (codeEditor:GetText ())
@@ -191,7 +191,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		:AddEventListener ("Click",
 			function ()
 				local document = codeEditor:GetDocument ()
-				local fileId = document:HasPath () and document:GetPath () or ("@anonymous_" .. document:GetId ())
+				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
 				
 				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
 				luadev.RunOnShared (codeEditor:GetText ())
@@ -217,7 +217,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			:AddEventListener ("Click",
 				function ()
 					local document = codeEditor:GetDocument ()
-					local fileId = document:HasPath () and document:GetPath () or ("@anonymous_" .. document:GetId ())
+					local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
 					
 					if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
 					luadev.RunOnClient (codeEditor:GetText (), nil, v)

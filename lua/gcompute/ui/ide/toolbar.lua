@@ -1,97 +1,38 @@
 function GCompute.IDE.Toolbar (self)
 	local toolbar = vgui.Create ("GToolbar", self)
+	
+	-- File Operations
 	toolbar:AddButton ("New")
 		:SetIcon ("icon16/page_white_add.png")
-		:AddEventListener ("Click",
-			function ()
-				self:CreateEmptyCodeView ():Select ()
-			end
-		)
+		:SetAction ("New")
 	toolbar:AddButton ("Open")
 		:SetIcon ("icon16/folder_page.png")
-		:AddEventListener ("Click",
-			function ()
-				VFS.OpenOpenFileDialog ("GCompute.IDE",
-					function (path, file)
-						if not path then return end
-						if not self or not self:IsValid () then return end
-						
-						if not file then GCompute.Error ("VFS.OpenOpenFileDialog returned a path but not an IFile???") end
-						
-						self:GetIDE ():OpenFile (file,
-							function (success, file, view)
-								if not view then return end
-								view:Select ()
-							end
-						)
-					end
-				)
-			end
-		)
+		:SetAction ("Open")
 	toolbar:AddButton ("Save")
 		:SetIcon ("icon16/disk.png")
-		:AddEventListener ("Click",
-			function ()
-				self:GetIDE ():SaveView (self:GetActiveView ())
-			end
-		)
+		:SetAction ("Save")
 	toolbar:AddButton ("Save All")
 		:SetIcon ("icon16/disk_multiple.png")
-		:AddEventListener ("Click",
-			function ()
-				local unsaved = {}
-				for document in self:GetDocumentManager ():GetEnumerator () do
-					if document:IsUnsaved () then
-						unsaved [#unsaved + 1] = document:GetView (1)
-					end
-				end
-				
-				if #unsaved == 0 then return end
-				
-				local saveIterator
-				local i = 0
-				function saveIterator (success)
-					i = i + 1
-					if not self or not self:IsValid () then return end
-					if not unsaved [i] then return end
-					if not success then return end
-					self:GetIDE ():SaveView (unsaved [i], saveIterator)
-				end
-				saveIterator (true)
-			end
-		)
+		:SetAction ("Save All")
+	
 	toolbar:AddSeparator ()
+	
+	-- Clipboard
 	toolbar:AddButton ("Cut")
 		:SetIcon ("icon16/cut.png")
 		:SetEnabled (false)
-		:AddEventListener ("Click",
-			function ()
-				local clipboardTarget = self:GetActiveClipboardTarget ()
-				if not clipboardTarget then return end
-				clipboardTarget:Cut ()
-			end
-		)
+		:SetAction ("Cut")
 	toolbar:AddButton ("Copy")
 		:SetIcon ("icon16/page_white_copy.png")
 		:SetEnabled (false)
-		:AddEventListener ("Click",
-			function ()
-				local clipboardTarget = self:GetActiveClipboardTarget ()
-				if not clipboardTarget then return end
-				clipboardTarget:Copy ()
-			end
-		)
+		:SetAction ("Copy")
 	toolbar:AddButton ("Paste")
 		:SetIcon ("icon16/paste_plain.png")
-		:AddEventListener ("Click",
-			function ()
-				local clipboardTarget = self:GetActiveClipboardTarget ()
-				if not clipboardTarget then return end
-				clipboardTarget:Paste ()
-			end
-		)
+		:SetAction ("Paste")
+	
 	toolbar:AddSeparator ()
 	
+	-- Undo / Redo
 	-- Don't register click handlers for undo / redo.
 	-- They should get registered with an UndoRedoController which will
 	-- register click handlers.
@@ -145,49 +86,15 @@ function GCompute.IDE.Toolbar (self)
 				end
 			end
 		)
+	
 	toolbar:AddSeparator ()
+	
 	toolbar:AddButton ("Run Code")
 		:SetIcon ("icon16/resultset_next.png")
-		:AddEventListener ("Click",
-			function ()
-				local codeEditor = self:GetActiveCodeEditor ()
-				local sourceDocumentId = codeEditor:GetDocument ():GetId ()
-				local sourceDocumentPath = codeEditor:GetDocument ():GetPath ()
-				local editorHelper = codeEditor and codeEditor:GetEditorHelper ()
-				if not editorHelper then return end
-				
-				local outputPaneCleared = false
-				self:GetViewManager ():GetViewById ("Output"):Clear ()
-				outputPaneCleared = true
-				
-				local pipe = GCompute.Pipe ()
-				pipe:AddEventListener ("Data",
-					function (_, data, color)
-						if not outputPaneCleared then
-							self:GetViewManager ():GetViewById ("Output"):Clear ()
-							outputPaneCleared = true
-						end
-						
-						self:GetViewManager ():GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentPath)
-					end
-				)
-				
-				local errorPipe = GCompute.Pipe ()
-				errorPipe:AddEventListener ("Data",
-					function (_, data, color)
-						if not outputPaneCleared then
-							self:GetViewManager ():GetViewById ("Output"):Clear ()
-							outputPaneCleared = true
-						end
-						
-						self:GetViewManager ():GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentPath)
-					end
-				)
-				
-				editorHelper:Run (codeEditor, pipe, errorPipe, pipe, errorPipe)
-			end
-		)
+		:SetAction ("Run Code")
+	
 	toolbar:AddSeparator ()
+	
 	toolbar:AddButton ("Namespace Browser")
 		:SetIcon ("icon16/application_side_list.png")
 		:AddEventListener ("Click",
@@ -203,7 +110,9 @@ function GCompute.IDE.Toolbar (self)
 				self.RootNamespaceBrowserView:Select ()
 			end
 		)
+	
 	toolbar:AddSeparator ()
+	
 	toolbar:AddButton ("Reload GCompute")
 		:SetIcon ("icon16/arrow_refresh.png")
 		:AddEventListener ("Click",
@@ -212,7 +121,9 @@ function GCompute.IDE.Toolbar (self)
 				RunConsoleCommand ("gcompute_show_ide")
 			end
 		)
+	
 	toolbar:AddSeparator ()
+	
 	toolbar:AddButton ("Stress Test")
 		:SetIcon ("icon16/exclamation.png")
 		:AddEventListener ("Click",

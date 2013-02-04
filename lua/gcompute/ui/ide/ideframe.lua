@@ -17,6 +17,10 @@ function self:Init ()
 	
 	self.IDE = nil
 	
+	self:SetActionMap (GCompute.IDE.ActionMap)
+	self:GetActionMap ():SetTarget (self)
+	
+	self.MenuStrip = GCompute.IDE.MenuStrip (self)
 	self.Toolbar = GCompute.IDE.Toolbar (self)
 	
 	self.LoadingLayout = false
@@ -46,6 +50,8 @@ function self:Init ()
 			self:UpdateProgressBar ()
 			
 			self.Toolbar:GetItemById ("Run Code"):SetEnabled (self:GetActiveCodeEditor () ~= nil)
+			
+			self:GetActionMap ():SetChainedActionMap (view and view:GetActionMap () or nil)
 			
 			self:DispatchEvent ("ActiveViewChanged", oldView, view)
 		end
@@ -144,19 +150,26 @@ function self:Init ()
 	self.CaretPositionPanel:SetFixedWidth (96)
 	
 	self.ClipboardController = Gooey.ClipboardController ()
+	self.ClipboardController:AddCopyAction  (self:GetActionMap ():GetAction ("Copy"))
 	self.ClipboardController:AddCopyButton  (self.Toolbar:GetItemById ("Copy"))
 	self.ClipboardController:AddCopyButton  (self.CodeEditorContextMenu:GetItemById ("Copy"))
+	self.ClipboardController:AddCutAction   (self:GetActionMap ():GetAction ("Cut"))
 	self.ClipboardController:AddCutButton   (self.Toolbar:GetItemById ("Cut"))
 	self.ClipboardController:AddCutButton   (self.CodeEditorContextMenu:GetItemById ("Cut"))
+	self.ClipboardController:AddPasteAction (self:GetActionMap ():GetAction ("Paste"))
 	self.ClipboardController:AddPasteButton (self.Toolbar:GetItemById ("Paste"))
 	self.ClipboardController:AddPasteButton (self.CodeEditorContextMenu:GetItemById ("Paste"))
 	
 	self.SaveController = Gooey.SaveController ()
+	self.SaveController:AddSaveAction       (self:GetActionMap ():GetAction ("Save"))
+	self.SaveController:AddSaveButton       (self.MenuStrip:GetItemById ("File"):GetItemById ("Save"))
 	self.SaveController:AddSaveButton       (self.Toolbar:GetItemById ("Save"))
 	
 	self.UndoRedoController = Gooey.UndoRedoController ()
+	self.UndoRedoController:AddUndoButton   (self.MenuStrip:GetItemById ("Edit"):GetItemById ("Undo"))
 	self.UndoRedoController:AddUndoButton   (self.Toolbar:GetItemById ("Undo"))
 	self.UndoRedoController:AddUndoButton   (self.CodeEditorContextMenu:GetItemById ("Undo"))
+	self.UndoRedoController:AddRedoButton   (self.MenuStrip:GetItemById ("Edit"):GetItemById ("Redo"))
 	self.UndoRedoController:AddRedoButton   (self.Toolbar:GetItemById ("Redo"))
 	self.UndoRedoController:AddRedoButton   (self.CodeEditorContextMenu:GetItemById ("Redo"))
 	
@@ -182,16 +195,24 @@ end
 
 function self:PerformLayout ()
 	DFrame.PerformLayout (self)
+	
+	local y = 21
+	if self.MenuStrip then
+		self.MenuStrip:SetPos (2, y)
+		self.MenuStrip:SetWide (self:GetWide () - 4)
+		y = y + self.MenuStrip:GetTall ()
+	end
 	if self.Toolbar then
-		self.Toolbar:SetPos (2, 21)
+		self.Toolbar:SetPos (2, y)
 		self.Toolbar:SetSize (self:GetWide () - 4, self.Toolbar:GetTall ())
+		y = y + self.Toolbar:GetTall () + 2
 	end
 	if self.StatusBar then
 		self.StatusBar:PerformLayout ()
 	end
 	if self.DockContainer then
-		self.DockContainer:SetPos (2, 23 + self.Toolbar:GetTall ())
-		self.DockContainer:SetSize (self:GetWide () - 4, self:GetTall () - 23 - self.Toolbar:GetTall () - 4 - self.StatusBar:GetTall ())
+		self.DockContainer:SetPos (2, y)
+		self.DockContainer:SetSize (self:GetWide () - 4, self:GetTall () - 4 - self.StatusBar:GetTall () - y)
 	end
 end
 
@@ -595,6 +616,7 @@ function self:HookView (view)
 					end
 				end
 				
+				self.MenuStrip:GetItemById ("File"):GetItemById ("Save All"):SetEnabled (canSaveAll)
 				self.Toolbar:GetItemById ("Save All"):SetEnabled (canSaveAll)
 			end
 		)

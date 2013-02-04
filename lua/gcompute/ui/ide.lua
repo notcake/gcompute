@@ -33,6 +33,7 @@ include ("ide/serializerregistry.lua")
 -- IDE
 include ("ide/ide.lua")
 include ("ide/ideframe.lua")
+include ("ide/menustrip.lua")
 include ("ide/plugins.lua")
 include ("ide/savableproxy.lua")
 include ("ide/tabcontextmenu.lua")
@@ -43,6 +44,10 @@ include ("ide/undoredostackproxy.lua")
 GCompute.IDE.KeyboardMap = Gooey.KeyboardMap ()
 GCompute.IncludeDirectory ("gcompute/ui/ide/keyboardmap")
 GCompute.IncludeDirectory ("gcompute/ui/ide/plugins")
+
+-- Actions
+GCompute.IDE.ActionMap = Gooey.ActionMap ()
+GCompute.IncludeDirectory ("gcompute/ui/ide/actions")
 
 -- Notification Bars
 include ("ide/notificationbars/notificationbar.lua")

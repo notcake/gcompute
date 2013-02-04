@@ -15,8 +15,12 @@ function self:CanCopy ()
 	return not self.CodeEditor:GetSelection ():IsEmpty ()
 end
 
+function self:CanCut ()
+	return not self.CodeEditor:GetSelection ():IsEmpty () and not self.CodeEditor:IsReadOnly ()
+end
+
 function self:CanPaste ()
-	return true
+	return not self.CodeEditor:IsReadOnly ()
 end
 
 function self:Copy ()

@@ -82,6 +82,10 @@ function self:EnsureVisible ()
 	self.Container:EnsureVisible ()
 end
 
+function self:GetActionMap ()
+	return nil
+end
+
 function self:GetIcon ()
 	return self.Icon
 end

@@ -120,7 +120,6 @@ function self:OpenFile (file, callback)
 			)
 		end
 	)
-	print (serializerType, documentType, viewType)
 end
 
 --- Opens a new tab for the given path. Use OpenFile instead if you have an IFile.

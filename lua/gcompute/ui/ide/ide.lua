@@ -14,6 +14,12 @@ function self:ctor ()
 	self.ViewManager:SetIDE (self)
 	self.ViewManager:SetViewTypes (self.ViewTypes)
 	
+	self.DocumentManager:AddEventListener ("DocumentRemoved",
+		function (_, document)
+			document:dtor ()
+		end
+	)
+	
 	self.ViewManager:AddEventListener ("ViewAdded",
 		function (_, view)
 			self:HookView (view)

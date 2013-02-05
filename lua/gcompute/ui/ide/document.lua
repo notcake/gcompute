@@ -51,15 +51,15 @@ end
 
 -- Persistance
 function self:LoadSession (inBuffer, serializerRegistry)
-	local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
-	serializerType = serializerType or serializerRegistry:GetType ("Code")
-	local serializer = serializerType:Create (self)
-	
 	local hasUri = inBuffer:Boolean ()
 	if hasUri then
 		local uri = inBuffer:String ()
 		local resource = VFS.Resource (uri)
 		self:SetUri (uri)
+		
+		local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType (), resource:GetExtension ())
+		serializerType = serializerType or serializerRegistry:GetType ("Code")
+		local serializer = serializerType:Create (self)
 		
 		resource:Open (GLib.GetLocalId (), VFS.OpenFlags.Read,
 			function (returnCode, fileStream)
@@ -82,6 +82,10 @@ function self:LoadSession (inBuffer, serializerRegistry)
 			self:MarkUnsaved ()
 		end
 		local subInBuffer = GLib.StringInBuffer (inBuffer:LongString ())
+		
+		local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
+		serializerType = serializerType or serializerRegistry:GetType ("Code")
+		local serializer = serializerType:Create (self)
 		serializer:Deserialize (subInBuffer)
 	end
 	self:LoadSessionMetadata (inBuffer)
@@ -141,7 +145,7 @@ end
 function self:Reload (serializerRegistry)
 	if not self:GetResource () then return end
 	
-	local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
+	local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType (), self:GetResource ():GetExtension ())
 	serializerType = serializerType or serializerRegistry:GetType ("Code")
 	local serializer = serializerType:Create (self)
 	
@@ -202,7 +206,7 @@ function self:Save (callback, serializerRegistry)
 				return
 			end
 			
-			local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType ())
+			local serializerType = serializerRegistry:FindSerializerForDocument (self:GetType (), self:GetResource ():GetExtension ())
 			serializerType = serializerType or serializerRegistry:GetType ("Code")
 			local serializer = serializerType:Create (self)
 			local outBuffer = GLib.StringOutBuffer ()

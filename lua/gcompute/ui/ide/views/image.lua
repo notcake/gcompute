@@ -2,8 +2,8 @@ local self, info = GCompute.IDE.ViewTypes:CreateType ("Image")
 info:SetDocumentType ("ImageDocument")
 
 function self:ctor (container)
-	self.Document = nil
-	self.SavableProxy = GCompute.SavableProxy ()
+	self:CreateSavableProxy ()
+	
 	self.HTMLPanel = vgui.Create ("HTML", container)
 	
 	self:SetIcon ("icon16/image.png")
@@ -18,42 +18,10 @@ function self:ctor (container)
 end
 
 function self:dtor ()
-	if self:GetDocument () then
-		self:GetDocument ():RemoveView (self)
-	end
-	
 	if not self.HTMLPanel then return end
 	if not self.HTMLPanel:IsValid () then return end
 	self.HTMLPanel:Remove ()
 	self.HTMLPanel = nil
-end
-
-function self:SetDocument (document)
-	if oldDocument then
-		oldDocument:RemoveView (self)
-	end
-	self.Document = document
-	if document then
-		document:AddView (self)
-	end
-	self.SavableProxy:SetSavable (document)
-	
-	self:DispatchEvent ("DocumentChanged", oldDocument, document)
-	
-	if not document then return end
-	
-	extension = self.Document:GetResource () and self.Document:GetResource ():GetExtension () or "png"
-	extension = string.lower (extension)
-	self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
-end
-
--- Components
-function self:GetDocument ()
-	return self.Document
-end
-
-function self:GetSavable ()
-	return self.SavableProxy
 end
 
 -- Persistance
@@ -91,6 +59,14 @@ function self:CreateFileChangeNotificationBar ()
 end
 
 -- Event handlers
+function self:OnDocumentChanged (oldDocument, document)
+	if not document then return end
+	
+	extension = self.Document:GetResource () and self.Document:GetResource ():GetExtension () or "png"
+	extension = string.lower (extension)
+	self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
+end
+
 function self:PerformLayout (w, h)
 	local y = 0
 	

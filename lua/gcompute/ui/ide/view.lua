@@ -24,8 +24,12 @@ function self:ctor (container)
 	
 	self.Container = container
 	
+	-- Documents
+	self.Document = nil
 	self.DocumentManager = nil
+	self.SavableProxy = nil
 	
+	-- UI
 	self.Closable = true
 	
 	self.Icon = "icon16/cross.png"
@@ -43,6 +47,10 @@ function self:ctor (container)
 end
 
 function self:dtor ()
+	if self:GetDocument () then
+		self:GetDocument ():RemoveView (self)
+	end
+	
 	self.Container:Remove ()
 	
 	if self.ViewManager then
@@ -166,20 +174,47 @@ function self:Select ()
 end
 
 -- Components
+function self:CreateSavableProxy ()
+	self.SavableProxy = self.SavableProxy or GCompute.SavableProxy ()
+	return self.SavableProxy
+end
+
 function self:GetClipboardTarget ()
 	return nil
 end
 
 function self:GetDocument ()
-	return nil
+	return self.Document
 end
 
 function self:GetSavable ()
-	return nil
+	return self.SavableProxy
 end
 
 function self:GetUndoRedoStack ()
-	return nil
+	if not self.Document then return nil end
+	return self.Document:GetUndoRedoStack ()
+end
+
+function self:SetDocument (document)
+	if self.Document == document then return end
+	
+	local oldDocument = self.Document
+	if oldDocument then
+		self:UnhookDocument (oldDocument)
+		oldDocument:RemoveView (self)
+	end
+	self.Document = document
+	if document then
+		self:HookDocument (document)
+		document:AddView (self)
+	end
+	if self.SavableProxy then
+		self.SavableProxy:SetSavable (document)
+	end
+	
+	self:OnDocumentChanged (oldDocument, document)
+	self:DispatchEvent ("DocumentChanged", oldDocument, document)
 end
 
 -- Persistance
@@ -187,4 +222,14 @@ function self:LoadSession (inBuffer)
 end
 
 function self:SaveSession (outBuffer)
+end
+
+-- Event handlers
+function self:OnDocumentChanged (oldDocument, document)
+end
+
+function self:HookDocument (document)
+end
+
+function self:UnhookDocument (document)
 end

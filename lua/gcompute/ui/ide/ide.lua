@@ -339,7 +339,10 @@ function self:HookView (view)
 			end
 			
 			self:RegisterDocument (newDocument)
-			newDocument:AddView (view)
+			
+			if newDocument then
+				newDocument:AddView (view)
+			end
 		end
 	)
 	

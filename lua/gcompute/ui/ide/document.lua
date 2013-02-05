@@ -3,6 +3,8 @@ GCompute.IDE.Document = GCompute.MakeConstructor (self, GCompute.ISavable)
 
 --[[
 	Events:
+		Loaded (reloaded)
+			Fired when this document has finished loading.
 		Reloaded ()
 			Fired when this document has finished reloading the copy from disk.
 		Reloading ()
@@ -72,7 +74,11 @@ function self:LoadSession (inBuffer, serializerRegistry)
 						if returnCode == VFS.ReturnCode.Progress then return end
 						
 						fileStream:Close ()
-						serializer:Deserialize (GLib.StringInBuffer (data))
+						serializer:Deserialize (GLib.StringInBuffer (data),
+							function ()
+								self:DispatchEvent ("Loaded", false)
+							end
+						)
 					end
 				)
 			end
@@ -86,7 +92,11 @@ function self:LoadSession (inBuffer, serializerRegistry)
 		local serializerType = serializerRegistry:FindDeserializerForDocument (self:GetType ())
 		serializerType = serializerType or serializerRegistry:GetType ("Code")
 		local serializer = serializerType:Create (self)
-		serializer:Deserialize (subInBuffer)
+		serializer:Deserialize (subInBuffer,
+			function ()
+				self:DispatchEvent ("Loaded", false)
+			end
+		)
 	end
 	self:LoadSessionMetadata (inBuffer)
 end
@@ -166,6 +176,7 @@ function self:Reload (serializerRegistry)
 					serializer:Deserialize (GLib.StringInBuffer (data),
 						function ()
 							self:MarkSaved ()
+							self:DispatchEvent ("Loaded", true)
 							self:DispatchEvent ("Reloaded")
 						end
 					)

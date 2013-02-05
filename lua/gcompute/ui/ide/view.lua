@@ -48,7 +48,7 @@ end
 
 function self:dtor ()
 	if self:GetDocument () then
-		self:GetDocument ():RemoveView (self)
+		self:SetDocument (nil)
 	end
 	
 	self.Container:Remove ()
@@ -98,6 +98,7 @@ end
 function self:GetActionMap ()
 	if not self.Container then return nil, nil end
 	if not self.Container:GetContents () then return nil, nil end
+	if type (self.Container:GetContents ().GetActionMap) ~= "function" then return nil, nil end
 	return self.Container:GetContents ():GetActionMap ()
 end
 
@@ -201,11 +202,17 @@ function self:SetDocument (document)
 	
 	local oldDocument = self.Document
 	if oldDocument then
+		oldDocument:RemoveEventListener ("Loaded", tostring (self))
 		self:UnhookDocument (oldDocument)
 		oldDocument:RemoveView (self)
 	end
 	self.Document = document
 	if document then
+		document:AddEventListener ("Loaded", tostring (self),
+			function (_, reloaded)
+				self:OnDocumentLoaded (document, reloaded)
+			end
+		)
 		self:HookDocument (document)
 		document:AddView (self)
 	end
@@ -226,6 +233,9 @@ end
 
 -- Event handlers
 function self:OnDocumentChanged (oldDocument, document)
+end
+
+function self:OnDocumentLoaded (document, reloaded)
 end
 
 function self:HookDocument (document)

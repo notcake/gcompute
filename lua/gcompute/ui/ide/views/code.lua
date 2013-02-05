@@ -109,9 +109,7 @@ function self:SetCode (code)
 end
 
 function self:SetDocument (document)
-	if not document then
-		GCompute.Error ("Code:SetDocument : document is nil!")
-	end
+	if not document then return end
 	self.CodeEditor:SetDocument (document)
 end
 

@@ -62,9 +62,13 @@ end
 function self:OnDocumentChanged (oldDocument, document)
 	if not document then return end
 	
+	self:OnDocumentLoaded (document, false)
+end
+
+function self:OnDocumentLoaded (document, reloaded)
 	extension = self.Document:GetResource () and self.Document:GetResource ():GetExtension () or "png"
 	extension = string.lower (extension)
-	self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. util.Base64Encode (self.Document:GetData ()))
+	self.HTMLPanel:OpenURL ("data:image/" .. extension .. ";base64," .. (util.Base64Encode (self.Document:GetData () or "") or ""))
 end
 
 function self:PerformLayout (w, h)

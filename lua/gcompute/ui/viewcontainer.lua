@@ -48,7 +48,9 @@ function PANEL:PerformLayout ()
 	contents:SetPos (0, 0)
 	contents:SetSize (self:GetSize ())
 	
-	contents:PerformLayout ()
+	if type (contents.PerformLayout) == "function" then
+		contents:PerformLayout ()
+	end
 end
 
 function PANEL:RequestFocus ()

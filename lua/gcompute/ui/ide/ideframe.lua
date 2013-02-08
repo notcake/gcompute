@@ -264,6 +264,7 @@ function self:SetIDE (ide)
 	
 	local viewTypes =
 	{
+		"Donation",
 		"Output",
 		"ProcessBrowser",
 		"HookProfiler"
@@ -370,6 +371,11 @@ function self:LoadWorkspace ()
 		if not view:GetContainer ():GetDockContainer () then
 			if view:GetDocument () then
 				self.DockContainer:GetLargestContainer ():AddView (view)
+			elseif view:GetType () == "Donation" then
+				self.DockContainer
+					:GetCreateSplit (GCompute.DockingSide.Bottom)
+					:GetCreateSplit (GCompute.DockingSide.Right)
+					:AddView (view)
 			else
 				self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (view)
 			end

@@ -1175,7 +1175,11 @@ function PANEL:OnRemoved ()
 	self.DragDropController:EndDrag ()
 	Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self:GetTable ()))
 	
+	local views = {}
 	for view in self:GetLocalViewEnumerator () do
+		views [#views + 1] = view
+	end
+	for _, view in ipairs (views) do
 		view:dtor ()
 	end
 end

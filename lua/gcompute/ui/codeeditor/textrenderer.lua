@@ -40,8 +40,11 @@ function self:GetCharacterColumnCount (character, currentColumn)
 	if character == "" then return 0 end
 	if character == "\t" then return self.TabWidth - currentColumn % self.TabWidth end
 	if character == "\r" or character == "\n" then return 0 end
-	if #character > 1 then return 2 end
-	return 1
+	if #character <= 1 then return 1 end
+	
+	local codePoint = GLib.UTF8.Byte (character)
+	if codePoint <= 0xFF then return 1 end
+	return 2
 end
 
 function self:GetStringColumnCount (text, currentColumn)

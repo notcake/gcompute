@@ -7,7 +7,11 @@ function self:ctor (container)
 	self.HTMLPanel.OnCallback = function (_, objectName, methodName, args)
 		if objectName == "gcompute" then
 			if methodName == "donate" then
-				gui.OpenURL (self.URL)
+				timer.Simple (0.001,
+					function ()
+						gui.OpenURL (self.URL)
+					end
+				)
 			end
 		end
 	end

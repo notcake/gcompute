@@ -314,7 +314,13 @@ function self:Trigger (forceShow)
 	-- Build chain of member indexes
 	local resolutionResults = GCompute.ResolutionResults ()
 	resolutionResults:AddResult (GCompute.ResolutionResult (self.RootNamespace))
-	local nameTokenChain = self:BuildPreviousIndexingTokenChain (previousToken)
+	local nameTokenChain, chainValid = self:BuildPreviousIndexingTokenChain (previousToken)
+	
+	if not chainValid then
+		self:SetVisible (false)
+		self:SetToolTipVisible (false)
+		return
+	end
 	
 	-- Resolve member chain
 	if #nameTokenChain > 0 then
@@ -408,13 +414,15 @@ end
 -- Internal, do not call
 function self:BuildPreviousIndexingTokenChain (token)
 	local expectingIndexer = true
+	local expectingIdentifier = false
 	local reverseTokens = {}
 	while token do
-		if expectingIndexer then
+		if token.TokenType == GCompute.TokenType.Whitespace or
+		   token.TokenType == GCompute.TokenType.Newline then
+		elseif expectingIndexer then
 			if token.TokenType == GCompute.TokenType.MemberIndexer then
 				expectingIndexer = false
-			elseif token.TokenType == GCompute.TokenType.Whitespace or
-			       token.TokenType == GCompute.TokenType.Newline then
+				expectingIdentifier = true
 			else
 				break
 			end
@@ -422,9 +430,8 @@ function self:BuildPreviousIndexingTokenChain (token)
 			if token.TokenType == GCompute.TokenType.Identifier or
 			   token.TokenType == GCompute.TokenType.Keyword then
 				reverseTokens [#reverseTokens + 1] = token
+				expectingIdentifier = false
 				expectingIndexer = true
-			elseif token.TokenType == GCompute.TokenType.Whitespace or
-			       token.TokenType == GCompute.TokenType.Newline then
 			else
 				break
 			end
@@ -438,7 +445,7 @@ function self:BuildPreviousIndexingTokenChain (token)
 	for i = #reverseTokens, 1, -1 do
 		tokens [#tokens + 1] = reverseTokens [i]
 	end
-	return tokens
+	return tokens, not expectingIdentifier
 end
 
 function self:CreateObjectResolver ()

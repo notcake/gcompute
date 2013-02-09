@@ -349,7 +349,7 @@ function self:Parse (callback)
 				if SysTime () - chunkStartTime < 0.010 then
 					callback ()
 				else
-					timer.Simple (0.001,
+					GLib.CallDelayed (
 						function ()
 							chunkStartTime = SysTime ()
 							callback ()

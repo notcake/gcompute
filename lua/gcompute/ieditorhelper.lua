@@ -38,7 +38,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	local document = codeEditor:GetDocument ()
 	local code = codeEditor:GetText ()
 	
-	local sourceFile = document:HasPath () and GCompute.SourceFileCache:CreateSourceFileFromPath (document:GetPath ()) or nil
+	local sourceFile = document:HasUri () and GCompute.SourceFileCache:CreateSourceFileFromPath (document:GetUri ()) or nil
 	sourceFile = sourceFile or GCompute.SourceFileCache:CreateAnonymousSourceFile ()
 	sourceFile:SetCode (code)
 

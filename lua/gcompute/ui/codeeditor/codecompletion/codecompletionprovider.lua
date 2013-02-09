@@ -393,7 +393,7 @@ function self:Trigger (forceShow)
 	self.SuggestionFrame:Sort ()
 	if preferredItem then
 		self.SuggestionFrame:SelectItem (preferredItem)
-		timer.Simple (0.001,
+		GLib.CallDelayed (
 			function ()
 				if not preferredItem:IsValid () then return end
 				self.SuggestionFrame:EnsureVisible (preferredItem)

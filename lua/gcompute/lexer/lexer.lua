@@ -159,7 +159,7 @@ function self:ProcessSome ()
 	
 	self.CompilationUnit:Debug ("Lexer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. (self:GetProgress () * 100) .. "%.")
 	if self.Offset <= string_len (self.Code) then
-		timer.Simple (0.001,
+		GLib.CallDelayed (
 			function ()
 				self.TickStartTime = SysTime ()
 				self:ProcessSome ()

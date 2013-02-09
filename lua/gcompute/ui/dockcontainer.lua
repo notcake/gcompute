@@ -561,7 +561,7 @@ function PANEL:Split (dockingSide, fraction)
 	
 	self:PerformLayoutRecursive ()
 	if childDockContainer.Child and childDockContainer.DockContainerType == GCompute.DockContainerType.TabControl then
-		timer.Simple (0.050,
+		GLib.CallDelayed (
 			function ()
 				if not childDockContainer then return end
 				if not childDockContainer:IsValid () then return end
@@ -837,9 +837,6 @@ function PANEL:DrawRootDropOverlay (renderContext)
 		self:GetRootDockContainer ():DrawRootDropOverlay (renderContext)
 		return
 	end
-	
-	if CurTime () == self.LastRootDropOverlayRenderTime then return end
-	self.LastRootDropOverlayRenderTime = CurTime ()
 	
 	local alphaScale
 	if self.RootDropData.EnterTime > self.RootDropData.LeaveTime then

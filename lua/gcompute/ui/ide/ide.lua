@@ -124,7 +124,9 @@ function self:OpenResource (resource, callback)
 					
 					local view = self:CreateView (viewType)
 					view:SetTitle (resource:GetDisplayName ())
-					serializer:Deserialize (GLib.StringInBuffer (data))
+					
+					-- TODO: Handle asynchronous serializers
+					serializer:Deserialize (GLib.StringInBuffer (data), nil, resource)
 					view:SetDocument (document)
 					view:GetSavable ():SetResource (resource)
 					

@@ -77,7 +77,8 @@ function self:LoadSession (inBuffer, serializerRegistry)
 						serializer:Deserialize (GLib.StringInBuffer (data),
 							function ()
 								self:DispatchEvent ("Loaded", false)
-							end
+							end,
+							resource
 						)
 					end
 				)
@@ -116,7 +117,10 @@ function self:SaveSession (outBuffer, serializerRegistry)
 		outBuffer:Boolean (self:IsUnsaved ())
 		
 		local subOutBuffer = GLib.StringOutBuffer ()
+		
+		-- TODO: Fix potential bug with asynchronous serializers here!
 		serializer:Serialize (subOutBuffer)
+		
 		outBuffer:LongString (subOutBuffer:GetString ())
 	end
 	self:SaveSessionMetadata (outBuffer)
@@ -178,7 +182,8 @@ function self:Reload (serializerRegistry)
 							self:MarkSaved ()
 							self:DispatchEvent ("Loaded", true)
 							self:DispatchEvent ("Reloaded")
-						end
+						end,
+						self:GetResource ()
 					)
 				end
 			)
@@ -231,7 +236,8 @@ function self:Save (callback, serializerRegistry)
 							callback (true)
 						end
 					)
-				end
+				end,
+				self:GetResource ()
 			)
 		end
 	)

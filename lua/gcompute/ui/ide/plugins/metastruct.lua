@@ -1,18 +1,18 @@
 local self = GCompute.IDE.Plugins:Create ("Metastruct")
 
-CreateClientConVar ("gcompute_editor_5ever", 1, true, false)
+CreateClientConVar ("gcompute_editor_5ever", 0, true, false)
 
-function self:ctor (editor)
-	self.Editor = editor
+function self:ctor (ide)
+	self.IDE = ide
 	self.TypingCode = false
 	self.ActiveCodeEditor = nil
 	
-	self.Editor:AddEventListener ("VisibleChanged", "Metastruct",
+	self.IDE:AddEventListener ("VisibleChanged", "Metastruct",
 		function (_)
 			self:UpdateHookedView ()
 		end
 	)
-	self.Editor:AddEventListener ("ActiveViewChanged", "Metastruct",
+	self.IDE:AddEventListener ("ActiveViewChanged", "Metastruct",
 		function (_)
 			self:UpdateHookedView ()
 		end
@@ -40,8 +40,8 @@ timer.Simple (1,
 )
 
 function self:dtor ()
-	self.Editor:RemoveEventListener ("VisibleChanged", "Metastruct")
-	self.Editor:RemoveEventListener ("SelectedContentsChanged", "Metastruct")
+	self.IDE:RemoveEventListener ("VisibleChanged", "Metastruct")
+	self.IDE:RemoveEventListener ("SelectedContentsChanged", "Metastruct")
 	hook.Remove ("PlayerBindPress", "Metastruct")
 end
 
@@ -62,8 +62,13 @@ function self:UnhookCodeEditor (codeEditor)
 end
 
 function self:UpdateHookedView ()
-	local codeEditor = self.Editor:GetActiveCodeEditor ()
-	if not self.Editor:IsVisible () then
+	local codeEditor = self.IDE:GetActiveCodeEditor ()
+	if not codeEditor and
+	   self.IDE:GetActiveView () and
+	   self.IDE:GetActiveView ():GetType () == "Output" then
+		codeEditor = self.IDE:GetActiveView ():GetEditor ()
+	end
+	if not self.IDE:IsVisible () then
 		codeEditor = nil
 	end
 	

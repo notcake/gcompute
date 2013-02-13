@@ -1454,7 +1454,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 		end
 	end
 	
-	self:GetKeyboardMap ():Execute (self, keyCode, ctrl, shift, alt)
+	self:DispatchKeyboardAction (keyCode, ctrl, shift, alt)
 	
 	if self:GetCodeCompletionProvider () then
 		self:GetCodeCompletionProvider ():HandlePostKey (keyCode, ctrl, shift, alt)

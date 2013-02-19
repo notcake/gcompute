@@ -4,7 +4,7 @@ GCompute.IDE.ActionMap:Register ("Cut",
 		if not clipboardTarget then return end
 		clipboardTarget:Cut ()
 	end
-)
+):SetIcon ("icon16/cut.png")
 
 GCompute.IDE.ActionMap:Register ("Copy",
 	function (self)
@@ -12,7 +12,7 @@ GCompute.IDE.ActionMap:Register ("Copy",
 		if not clipboardTarget then return end
 		clipboardTarget:Copy ()
 	end
-)
+):SetIcon ("icon16/page_white_copy.png")
 
 GCompute.IDE.ActionMap:Register ("Paste",
 	function (self)
@@ -20,4 +20,4 @@ GCompute.IDE.ActionMap:Register ("Paste",
 		if not clipboardTarget then return end
 		clipboardTarget:Paste ()
 	end
-)
+):SetIcon ("icon16/paste_plain.png")

@@ -3,31 +3,24 @@ function GCompute.IDE.Toolbar (self)
 	
 	-- File Operations
 	toolbar:AddButton ("New")
-		:SetIcon ("icon16/page_white_add.png")
 		:SetAction ("New")
 	toolbar:AddButton ("Open")
-		:SetIcon ("icon16/folder_page.png")
 		:SetAction ("Open")
 	toolbar:AddButton ("Save")
-		:SetIcon ("icon16/disk.png")
 		:SetAction ("Save")
 	toolbar:AddButton ("Save All")
-		:SetIcon ("icon16/disk_multiple.png")
 		:SetAction ("Save All")
 	
 	toolbar:AddSeparator ()
 	
 	-- Clipboard
 	toolbar:AddButton ("Cut")
-		:SetIcon ("icon16/cut.png")
 		:SetEnabled (false)
 		:SetAction ("Cut")
 	toolbar:AddButton ("Copy")
-		:SetIcon ("icon16/page_white_copy.png")
 		:SetEnabled (false)
 		:SetAction ("Copy")
 	toolbar:AddButton ("Paste")
-		:SetIcon ("icon16/paste_plain.png")
 		:SetAction ("Paste")
 	
 	toolbar:AddSeparator ()
@@ -90,7 +83,6 @@ function GCompute.IDE.Toolbar (self)
 	toolbar:AddSeparator ()
 	
 	toolbar:AddButton ("Run Code")
-		:SetIcon ("icon16/resultset_next.png")
 		:SetAction ("Run Code")
 	
 	toolbar:AddSeparator ()

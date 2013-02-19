@@ -36,4 +36,4 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 		
 		editorHelper:Run (codeEditor, pipe, errorPipe, pipe, errorPipe)
 	end
-)
+):SetIcon ("icon16/resultset_next.png")

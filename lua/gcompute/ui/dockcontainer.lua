@@ -380,7 +380,9 @@ function PANEL:PerformLayoutRecursive ()
 	elseif self.DockContainerType == GCompute.DockContainerType.View then
 		local container = self:GetView () and self:GetView ():GetContainer ()
 		local contents = container and container:GetContents () or nil
-		if contents and contents:IsValid () then
+		if contents and
+		   contents:IsValid () and
+		   type (contents.PerformLayout) == "function" then
 			contents:PerformLayout ()
 		end
 	end
@@ -1011,6 +1013,13 @@ function PANEL:HookView (view)
 			end
 		end
 	)
+	view:AddEventListener ("VisibleChanged", tostring (self:GetTable ()),
+		function (_, visible)
+			if view:GetContainer ():GetTab () then
+				view:GetContainer ():GetTab ():SetVisible (visible)
+			end
+		end
+	)
 end
 
 function PANEL:UnhookView (view)
@@ -1019,6 +1028,7 @@ function PANEL:UnhookView (view)
 	view:RemoveEventListener ("IconChanged",        tostring (self:GetTable ()))
 	view:RemoveEventListener ("TitleChanged",       tostring (self:GetTable ()))
 	view:RemoveEventListener ("ToolTipTextChanged", tostring (self:GetTable ()))
+	view:RemoveEventListener ("VisibleChanged",     tostring (self:GetTable ()))
 end
 
 -- Event handlers
@@ -1211,7 +1221,8 @@ function PANEL:Think ()
 		if not activePanel or not activePanel:IsValid () then return end
 		if activePanel:GetRootDockContainer () ~= self then return end
 		if activePanel:GetContainerType () == GCompute.DockContainerType.TabControl then
-			self:SetActiveView (activePanel.Child:GetSelectedTab ().View)
+			local selectedTab = activePanel.Child:GetSelectedTab ()
+			self:SetActiveView (selectedTab and selectedTab.View)
 		elseif activePanel:GetContainerType () == GCompute.DockContainerType.View then
 			self:SetActiveView (activePanel:GetView ())
 		end

@@ -195,6 +195,8 @@ function self:Init ()
 	self.WorkspaceSavingEnabled = true
 	self.WorkspaceUnsaved = false
 	
+	self:UpdateLanguageText ()
+	
 	end, GLib.Error)
 end
 
@@ -271,6 +273,8 @@ function self:SetIDE (ide)
 	}
 	for _, viewType in ipairs (viewTypes) do
 		local view = self:GetViewManager ():CreateView (viewType, viewType)
+		self:GetActionMap ():RegisterToggle (viewType, Gooey.VisibilityController (view))
+			:SetIcon (view:GetIcon ())
 		view:SetCanClose (false)
 		self [viewType .. "View"] = view
 	end
@@ -389,7 +393,11 @@ function self:LoadWorkspace ()
 		self:CreateEmptyCodeView ()
 	end
 	
-	self.DockContainer:GetLargestView ():Select ()
+	GLib.CallDelayed (
+		function ()
+			self.DockContainer:GetLargestView ():Select ()
+		end
+	)
 end
 
 function self:SaveWorkspace ()

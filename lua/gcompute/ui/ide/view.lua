@@ -13,6 +13,8 @@ GCompute.IDE.View = GCompute.MakeConstructor (self)
 			Fired when the view's title has changed.
 		ToolTipChanged (toolTip)
 			Fired when the view's tooltip text has changed.
+		VisibleChanged (visible)
+			Fired when the view's visibility has changed.
 ]]
 
 function self:ctor (container)
@@ -31,6 +33,7 @@ function self:ctor (container)
 	
 	-- UI
 	self.Closable = true
+	self.Visible = true
 	
 	self.Icon = "icon16/cross.png"
 	self.Title = "View"
@@ -169,9 +172,22 @@ function self:InvalidateLayout ()
 	self.Container:InvalidateLayout ()
 end
 
+function self:IsVisible ()
+	return self.Visible
+end
+
 function self:Select ()
 	if not self.Container then return end
 	self.Container:Select ()
+end
+
+function self:SetVisible (visible)
+	if self.Visible == visible then return self end
+	
+	self.Visible = visible
+	self:DispatchEvent ("VisibleChanged", self.Visible)
+	
+	return self
 end
 
 -- Components

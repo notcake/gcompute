@@ -115,9 +115,11 @@ function self:LoadSession (inBuffer)
 	local viewId = inBuffer:String ()
 	while viewId ~= "" do
 		local viewType = inBuffer:String ()
+		local visible = inBuffer:Boolean ()
 		local subInBuffer = GLib.StringInBuffer (inBuffer:String ())
 		local view = self:GetViewById (viewId) or self:CreateView (viewType, viewId)
 		if view then
+			view:SetVisible (visible)
 			view:LoadSession (subInBuffer)
 			self:AddView (view)
 		end
@@ -135,6 +137,7 @@ function self:SaveSession (outBuffer)
 	for view in self:GetEnumerator () do
 		outBuffer:String (view:GetId ())
 		outBuffer:String (view:GetType ())
+		outBuffer:Boolean (view:IsVisible ())
 		subOutBuffer:Clear ()
 		view:SaveSession (subOutBuffer)
 		outBuffer:String (subOutBuffer:GetString ())

@@ -348,7 +348,7 @@ function self:LoadWorkspace ()
 	self:SetCanSaveWorkspace (false)
 	
 	-- Deserialize
-	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_editor_tabs.txt", "GAME") or "")
+	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_ide_tabs.txt", "GAME") or "")
 	inBuffer:String () -- Discard comment
 	self:GetDocumentManager ():LoadSession (GLib.StringInBuffer (inBuffer:LongString ()), self:GetSerializerRegistry ())
 	inBuffer:Char ()   -- Discard newline
@@ -421,7 +421,7 @@ function self:SaveWorkspace ()
 	subOutBuffer:Clear ()
 	self.DockContainer:SaveSession (subOutBuffer)
 	outBuffer:String (subOutBuffer:GetString ())
-	file.Write ("gcompute_editor_tabs.txt", outBuffer:GetString ())
+	file.Write ("gcompute_ide_tabs.txt", outBuffer:GetString ())
 end
 
 function self:SetCanSaveWorkspace (canSaveWorkspace)

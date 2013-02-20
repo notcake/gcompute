@@ -36,7 +36,7 @@ function PANEL:Init ()
 	self.LocalViewCount = 0
 	
 	self.VisibleViewCount = 0
-	self.VisibleViewCountValid = false
+	self.VisibleViewCountValid = true
 	
 	-- Drag and drop
 	self.DragDropController = GCompute.DockContainer.DragDropController (self)
@@ -78,6 +78,7 @@ function PANEL:AddView (view)
 		tab:SetIcon (view:GetIcon ())
 		tab:SetText (view:GetTitle ())
 		tab:SetToolTipText (view:GetToolTipText ())
+		tab:SetVisible (view:IsVisible ())
 		
 		view:GetContainer ():SetTab (tab)
 	else
@@ -231,6 +232,8 @@ function PANEL:IsRootDockContainer ()
 	return self.ParentDockContainer == nil
 end
 
+--- Moves the contents of a child DockContainer into this DockContainer.
+-- The contents of this DockContainer and the other child DockContainer are destroyed.
 function PANEL:Merge (childDockContainer)
 	if not childDockContainer then return end
 	if self.DockContainerType ~= GCompute.DockContainer.DockContainerType.SplitContainer then
@@ -282,6 +285,7 @@ function PANEL:Merge (childDockContainer)
 	otherDockContainer:Remove ()
 	splitContainer:Remove ()
 	
+	self:InvalidateVisibleViewCount ()
 	self:PerformLayoutRecursive ()
 end
 
@@ -451,6 +455,8 @@ function PANEL:SetParentDockContainer (parentDockContainer)
 	self.ParentDockContainer = parentDockContainer
 end
 
+--- Converts this DockContainer into SplitContainer mode.
+-- The contents of this DockContainer are moved into the specified side.
 function PANEL:Split (dockingSide, fraction)
 	local childDockContainer = vgui.Create ("GComputeDockContainer")
 	
@@ -523,6 +529,11 @@ function PANEL:Split (dockingSide, fraction)
 			end
 		)
 	end
+	
+	-- Update visible view count
+	childDockContainer.VisibleViewCount      = self.VisibleViewCount
+	childDockContainer.VisibleViewCountValid = self.VisibleViewCountValid
+	-- otherDockContainer's visible view count should start off valid.
 	
 	self:GetRootDockContainer ():DispatchEvent ("ContainerSplit", self, childDockContainer, otherDockContainer)
 	return otherDockContainer

@@ -134,7 +134,7 @@ function GCompute.IDE.TabContextMenu (self)
 					end
 				end
 				if not destinationDockContainer then
-					destinationDockContainer = dockContainer:Split (GCompute.DockingSide.Right, 0.5)
+					destinationDockContainer = dockContainer:Split (GCompute.DockContainer.DockingSide.Right, 0.5)
 				end
 				
 				for existingView in destinationDockContainer:GetLocalViewEnumerator () do
@@ -170,7 +170,7 @@ function GCompute.IDE.TabContextMenu (self)
 					end
 				end
 				if not destinationDockContainer then
-					destinationDockContainer = dockContainer:Split (GCompute.DockingSide.Right, 0.5)
+					destinationDockContainer = dockContainer:Split (GCompute.DockContainer.DockingSide.Right, 0.5)
 				end
 				
 				local newView = nil

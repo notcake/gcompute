@@ -1,4 +1,4 @@
-GCompute.DockingSide = GCompute.Enum (
+GCompute.DockContainer.DockingSide = GCompute.Enum (
 	{
 		Top    = 1,
 		Bottom = 2,

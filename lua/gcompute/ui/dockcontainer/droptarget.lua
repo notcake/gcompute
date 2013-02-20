@@ -1,4 +1,4 @@
-GCompute.DockContainerDropTarget = GCompute.Enum (
+GCompute.DockContainer.DropTarget = GCompute.Enum (
 	{
 		None   = 0,
 		Middle = 1,

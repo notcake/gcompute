@@ -1,4 +1,4 @@
-GCompute.DockContainerType = GCompute.Enum (
+GCompute.DockContainer.DockContainerType = GCompute.Enum (
 	{
 		None           = 0,
 		SplitContainer = 1,

@@ -377,11 +377,11 @@ function self:LoadWorkspace ()
 				self.DockContainer:GetLargestContainer ():AddView (view)
 			elseif view:GetType () == "Donation" then
 				self.DockContainer
-					:GetCreateSplit (GCompute.DockingSide.Bottom)
-					:GetCreateSplit (GCompute.DockingSide.Right)
+					:GetCreateSplit (GCompute.DockContainer.DockingSide.Bottom)
+					:GetCreateSplit (GCompute.DockContainer.DockingSide.Right)
 					:AddView (view)
 			else
-				self.DockContainer:GetCreateSplit (GCompute.DockingSide.Bottom):AddView (view)
+				self.DockContainer:GetCreateSplit (GCompute.DockContainer.DockingSide.Bottom):AddView (view)
 			end
 		end
 	end

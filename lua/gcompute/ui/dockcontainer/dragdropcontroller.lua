@@ -79,6 +79,11 @@ end
 -- Internal, do not call
 function self:DoDragDrop (control, dragDropController, dropData)
 	local view = dragDropController:GetObject ()
+	
+	if not view then return end
+	if not view:GetContainer () then return end
+	if not view:GetContainer ():IsValid () then return end
+	
 	local originalDockContainer = view:GetContainer ():GetDockContainer ()
 	if dropData.ActiveDropTarget == GCompute.DockContainer.DropTarget.None then
 		return

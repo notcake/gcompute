@@ -47,6 +47,7 @@ function PANEL:AddView (view)
 	if not view then return end
 	if self.LocalViewSet [view] then return end
 	
+	-- Convert this DockContainer to an appropriate type
 	if next (self.LocalViewSet) and self.DockContainerType == GCompute.DockContainer.DockContainerType.View then
 		self:SetContainerType (GCompute.DockContainer.DockContainerType.TabControl)
 	end
@@ -59,12 +60,14 @@ function PANEL:AddView (view)
 		return
 	end
 	
+	-- Remove the View from its current DockContainer
 	local originalDockContainer = view:GetContainer ():GetDockContainer ()
 	if originalDockContainer then
 		originalDockContainer:RemoveView (view, GCompute.ViewRemovalReason.Rearrangement)
 	end
 	
 	if self.DockContainerType == GCompute.DockContainer.DockContainerType.TabControl then
+		-- TabControl mode
 		self:RegisterLocalView (view)
 		
 		local tab = self.Child:AddTab (view:GetTitle ())
@@ -78,6 +81,7 @@ function PANEL:AddView (view)
 		
 		view:GetContainer ():SetTab (tab)
 	else
+		-- Single view mode
 		if self:GetView () then
 			GCompute.Error ("DockContainer:AddView : This DockContainer in view mode already has a view!")
 		end
@@ -90,6 +94,10 @@ function PANEL:AddView (view)
 	view:GetContainer ():SetVisible (true)
 	self:HookView (view)
 	
+	-- Update visibility
+	self:OnVisibleViewCountChanged ()
+	
+	-- Dispatch root DockContainer events
 	local rootDockContainer = self:GetRootDockContainer ()
 	if originalDockContainer then
 		rootDockContainer:DispatchEvent ("ViewRemoved", originalDockContainer, view, GCompute.ViewRemovalReason.Rearrangement)
@@ -111,15 +119,15 @@ end
 
 function PANEL:GetLargestContainer ()
 	if self.DockContainerType ~= GCompute.DockContainer.DockContainerType.SplitContainer then
-		return self
+		return self, self:GetWide () * self:GetTall ()
 	end
 	
-	local panel1 = self:GetPanel1 ():GetLargestContainer ()
-	local panel2 = self:GetPanel2 ():GetLargestContainer ()
-	if panel1:GetWide () * panel1:GetTall () > panel2:GetWide () * panel2:GetTall () then
-		return panel1
+	local panel1, panel1Area = self:GetPanel1 ():GetLargestContainer ()
+	local panel2, panel2Area = self:GetPanel2 ():GetLargestContainer ()
+	if panel1Area > panel2Area then
+		return panel1, panel1Area
 	end
-	return panel2
+	return panel2, panel2Area
 end
 
 function PANEL:GetLargestView ()
@@ -202,6 +210,11 @@ end
 function PANEL:GetRootDockContainer ()
 	if self:IsRootDockContainer () then return self end
 	return self:GetParentDockContainer ():GetRootDockContainer ()
+end
+
+function PANEL:GetSplitContainerSide ()
+	if self:IsRootDockContainer () then return Gooey.SplitContainerPanel.None end
+	return self:IsPanel1 () and Gooey.SplitContainerPanel.Panel1 or Gooey.SplitContainerPanel.Panel2
 end
 
 function PANEL:IsPanel1 ()
@@ -355,6 +368,9 @@ function PANEL:RemoveView (view, viewRemovalReason)
 	view:GetContainer ():SetDockContainer (nil)
 	view:GetContainer ():SetVisible (false)
 	self:UnhookView (view)
+	
+	-- Update visibility
+	self:OnVisibleViewCountChanged ()
 	
 	if self:GetActiveView () == view then
 		self:SetActiveView (nil)
@@ -716,6 +732,9 @@ function PANEL:HookView (view)
 			if view:GetContainer ():GetTab () then
 				view:GetContainer ():GetTab ():SetVisible (visible)
 			end
+			
+			-- Update visiblity
+			self:OnVisibleViewCountChanged ()
 		end
 	)
 end
@@ -727,6 +746,74 @@ function PANEL:UnhookView (view)
 	view:RemoveEventListener ("TitleChanged",       tostring (self:GetTable ()))
 	view:RemoveEventListener ("ToolTipTextChanged", tostring (self:GetTable ()))
 	view:RemoveEventListener ("VisibleChanged",     tostring (self:GetTable ()))
+end
+
+-- Visibility
+function PANEL:GetVisibleViewCount ()
+	if not self.VisibleViewCountValid then
+		self.VisibleViewCount = 0
+		self.VisibleViewCountValid = true
+		if self.DockContainerType == GCompute.DockContainer.DockContainerType.None then
+		elseif self.DockContainerType == GCompute.DockContainer.DockContainerType.SplitContainer then
+			self.VisibleViewCount = self:GetPanel1 ():GetVisibleViewCount () + self:GetPanel2 ():GetVisibleViewCount ()
+		elseif self.DockContainerType == GCompute.DockContainer.DockContainerType.TabControl then
+			for view in self:GetLocalViewEnumerator () do
+				if view:IsVisible () then
+					self.VisibleViewCount = self.VisibleViewCount + 1
+				end
+			end
+		elseif self.DockContainerType == GCompute.DockContainer.DockContainerType.View then
+			if self:GetView () and self:GetView ():IsVisible () then
+				self.VisibleViewCount = 1
+			end
+		end
+	end
+	return self.VisibleViewCount
+end
+
+function PANEL:InvalidateVisibleViewCount ()
+	if not self.VisibleViewCountValid then return end
+	
+	self.VisibleViewCountValid = false
+	if self:GetParentDockContainer () then
+		self:GetParentDockContainer ():InvalidateVisibleViewCount ()
+	end
+end
+
+function PANEL:IsHidden ()
+	if not self:GetParentDockContainer () then return false end
+	
+	if self:IsPanel1 () then
+		return self:GetParentDockContainer ().Child:GetHiddenPanel () == Gooey.SplitContainerPanel.Panel1 or self:GetParentDockContainer ():IsHidden ()
+	else
+		return self:GetParentDockContainer ().Child:GetHiddenPanel () == Gooey.SplitContainerPanel.Panel2 or self:GetParentDockContainer ():IsHidden ()
+	end
+end
+
+function PANEL:OnVisibleViewCountChanged ()
+	self:InvalidateVisibleViewCount ()
+	if not self:GetParentDockContainer () then return end
+	
+	self:GetParentDockContainer ():OnChildVisibleViewCountChanged (self:GetSplitContainerSide ())
+end
+
+function PANEL:OnChildVisibleViewCountChanged (splitContainerPanel)
+	local panel1VisibleViewCount = self:GetPanel1 ():GetVisibleViewCount ()
+	local panel2VisibleViewCount = self:GetPanel2 ():GetVisibleViewCount ()
+	
+	local shouldHideThis = false
+	if panel1VisibleViewCount == 0 and panel2VisibleViewCount == 0 then
+		shouldHideThis = true
+	elseif panel1VisibleViewCount ~= 0 and panel2VisibleViewCount == 0 then
+		self.Child:SetHiddenPanel (Gooey.SplitContainerPanel.Panel2)
+	elseif panel1VisibleViewCount == 0 and panel2VisibleViewCount ~= 0 then
+		self.Child:SetHiddenPanel (Gooey.SplitContainerPanel.Panel1)
+	else
+		self.Child:SetHiddenPanel (Gooey.SplitContainerPanel.None)
+	end
+	if self:GetParentDockContainer () and self:IsHidden () ~= shouldHideThis then
+		self:GetParentDockContainer ():OnChildVisibleViewCountChanged (self:GetSplitContainerSide ())
+	end
 end
 
 -- Event handlers

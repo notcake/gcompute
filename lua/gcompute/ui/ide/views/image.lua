@@ -1,12 +1,11 @@
 local self, info = GCompute.IDE.ViewTypes:CreateType ("Image")
+self.Icon = "icon16/image.png"
 info:SetDocumentType ("ImageDocument")
 
 function self:ctor (container)
 	self:CreateSavableProxy ()
 	
 	self.HTMLPanel = vgui.Create ("HTML", container)
-	
-	self:SetIcon ("icon16/image.png")
 	
 	self.SavableProxy:AddEventListener ("Reloaded",
 		function (_)

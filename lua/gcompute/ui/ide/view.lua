@@ -34,12 +34,12 @@ function self:ctor (container)
 	self.SavableProxy = nil
 	
 	-- UI
-	self.Closable = true
-	self.Hideable = false
-	self.Visible = true
+	if self.Closable == nil then self.Closable = true  end
+	if self.Hideable == nil then self.Hideable = false end
+	if self.Visible  == nil then self.Visible  = true  end
 	
-	self.Icon = "icon16/cross.png"
-	self.Title = "View"
+	self.Icon = self.Icon or "icon16/cross.png"
+	self.Title = self.Title or "View"
 	self.ToolTipText = nil
 	
 	GCompute.EventProvider (self)

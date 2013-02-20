@@ -1,10 +1,12 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("HookProfiler")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("HookProfiler")
+info:SetAutoCreate (true)
+info:SetDefaultLocation ("Bottom")
+self.Title    = "Hook Profiler"
+self.Icon     = "icon16/clock.png"
+self.Hideable = true
+self.Visible  = false
 
 function self:ctor (container)
-	self:SetTitle ("Hook Profiler")
-	self:SetIcon ("icon16/clock.png")
-	self:SetCanHide (true)
-	
 	self.Toolbar = vgui.Create ("GToolbar", container)
 	self.Toolbar:AddButton ("Start")
 		:SetIcon ("icon16/control_play.png")

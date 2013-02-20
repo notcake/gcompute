@@ -1,4 +1,5 @@
 local self, info = GCompute.IDE.ViewTypes:CreateType ("Code")
+self.Icon = "icon16/page.png"
 info:SetDocumentType ("CodeDocument")
 
 function self:ctor (container)
@@ -85,8 +86,6 @@ function self:ctor (container)
 			self:DispatchEvent ("DocumentChanged", oldDocument, document)
 		end
 	)
-	
-	self:SetIcon ("icon16/page.png")
 end
 
 function self:dtor ()

@@ -24,6 +24,7 @@ function self:Init ()
 	
 	self.LoadingLayout = false
 	self.DockContainer = vgui.Create ("GComputeDockContainer", self)
+	self.DockContainer:SetContainerType (GCompute.DockContainer.DockContainerType.TabControl)
 	self.DockContainer:AddEventListener ("ActiveViewChanged",
 		function (_, oldView, view)
 			if view then view:Select () end
@@ -264,19 +265,14 @@ function self:SetIDE (ide)
 	
 	if not self.IDE then return end
 	
-	local viewTypes =
-	{
-		"Donation",
-		"Output",
-		"ProcessBrowser",
-		"HookProfiler"
-	}
-	for _, viewType in ipairs (viewTypes) do
-		local view = self:GetViewManager ():CreateView (viewType, viewType)
-		self:GetActionMap ():RegisterToggle (viewType, Gooey.VisibilityController (view))
-			:SetIcon (view:GetIcon ())
-		view:SetCanClose (false)
-		self [viewType .. "View"] = view
+	for viewType in self:GetViewTypes ():GetEnumerator () do
+		if viewType:ShouldAutoCreate () then
+			local view = self:GetViewManager ():CreateView (viewType:GetName (), viewType:GetName ())
+			self:GetActionMap ():RegisterToggle (viewType:GetName (), Gooey.VisibilityController (view))
+				:SetIcon (view:GetIcon ())
+			view:SetCanClose (false)
+			self [viewType:GetName () .. "View"] = view
+		end
 	end
 end
 
@@ -375,13 +371,16 @@ function self:LoadWorkspace ()
 		if not view:GetContainer ():GetDockContainer () then
 			if view:GetDocument () then
 				self.DockContainer:GetLargestContainer ():AddView (view)
-			elseif view:GetType () == "Donation" then
-				self.DockContainer
-					:GetCreateSplit (GCompute.DockContainer.DockingSide.Bottom)
-					:GetCreateSplit (GCompute.DockContainer.DockingSide.Right)
-					:AddView (view)
 			else
-				self.DockContainer:GetCreateSplit (GCompute.DockContainer.DockingSide.Bottom):AddView (view)
+				local viewType = self:GetViewTypes ():GetType (view:GetType ())
+				local defaultLocation = viewType:GetDefaultLocation ()
+				local defaultLocationParts = defaultLocation:Split ("/")
+				
+				local dockContainer = self.DockContainer
+				for _, locationPart in ipairs (defaultLocationParts) do
+					dockContainer = dockContainer:GetCreateSplit (GCompute.DockContainer.DockingSide [locationPart])
+				end
+				dockContainer:AddView (view)
 			end
 		end
 	end
@@ -671,23 +670,6 @@ function self:Think ()
 		   not self:GetActiveView ():GetContainer ():HasHierarchicalFocus () then
 			self:GetActiveView ():GetContainer ():RequestFocus ()
 		end
-	end
-	
-	-- Clamp position within screen bounds
-	local x, y = self:GetPos ()
-	local w, h = self:GetSize ()
-	local newX = math.max (0, x)
-	local newY = math.max (0, y)
-	
-	if w <= ScrW () and x + w > ScrW () then
-		newX = ScrW () - w
-	end
-	if h <= ScrH () and y + h > ScrH () then
-		newY = ScrH () - h
-	end
-	
-	if newX ~= x or newY ~= y then
-		self:SetPos (newX, newY)
 	end
 	
 	-- Tab saving

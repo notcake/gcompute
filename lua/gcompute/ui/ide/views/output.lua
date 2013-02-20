@@ -1,10 +1,11 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("Output")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("Output")
+info:SetAutoCreate (true)
+info:SetDefaultLocation ("Bottom")
+self.Title    = "Output"
+self.Icon     = "icon16/application_xp_terminal.png"
+self.Hideable = true
 
 function self:ctor (container)
-	self:SetTitle ("Output")
-	self:SetIcon ("icon16/application_xp_terminal.png")
-	self:SetCanHide (true)
-	
 	self.CodeEditor = vgui.Create ("GComputeCodeEditor", container)
 	self.CodeEditor:GetDocument ():AddView (self)
 	self.CodeEditor:SetCompilationEnabled (false)

@@ -7,6 +7,9 @@ function self:ctor (typeName)
 	
 	self.DisplayName = typeName
 	
+	self.AutoCreate = false
+	self.DefaultLocation = "Bottom"
+	
 	self.Constructor = nil
 end
 
@@ -16,6 +19,10 @@ end
 
 function self:GetConstructor ()
 	return self.Constructor
+end
+
+function self:GetDefaultLocation ()
+	return self.DefaultLocation
 end
 
 function self:GetDisplayName ()
@@ -30,8 +37,18 @@ function self:GetName ()
 	return self.Name
 end
 
+function self:SetAutoCreate (autoCreate)
+	self.AutoCreate = autoCreate
+	return self
+end
+
 function self:SetConstructor (constructor)
 	self.Constructor = constructor
+	return self
+end
+
+function self:SetDefaultLocation (defaultLocation)
+	self.DefaultLocation = defaultLocation
 	return self
 end
 
@@ -43,4 +60,8 @@ end
 function self:SetDocumentType (documentType)
 	self.DocumentType = documentType
 	return self
+end
+
+function self:ShouldAutoCreate ()
+	return self.AutoCreate
 end

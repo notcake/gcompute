@@ -1,13 +1,14 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("ProcessBrowser")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("ProcessBrowser")
+info:SetAutoCreate (true)
+info:SetDefaultLocation ("Bottom")
+self.Title    = "Processes"
+self.Icon     = "icon16/application_side_list.png"
+self.Hideable = true
+self.Visible  = false
 
 function self:ctor (container)
-	self:SetCanHide (true)
-	
 	self.ProcessList = vgui.Create ("GComputeProcessListView", container)
 	self.ProcessList:SetProcessList (GCompute.LocalProcessList)
-	
-	self:SetTitle ("Processes")
-	self:SetIcon ("icon16/application_side_list.png")
 end
 
 -- Persistance

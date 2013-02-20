@@ -23,6 +23,14 @@ function self:CreateType (type)
 	return metatable, viewType
 end
 
+function self:GetEnumerator ()
+	local next, tbl, key = pairs (self.Types)
+	return function ()
+		key = next (tbl, key)
+		return tbl [key]
+	end
+end
+
 function self:GetType (type)
 	return self.Types [type]
 end

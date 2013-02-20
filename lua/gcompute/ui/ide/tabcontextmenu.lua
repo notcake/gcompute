@@ -10,7 +10,17 @@ function GCompute.IDE.TabContextMenu (self)
 			local hasSavable  = view and view:GetSavable () and true or false
 			
 			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:GetIDE ():CanCloseView (view) or view:CanHide ())
-			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (tabControl and tabControl:GetTabCount () > 1)
+			
+			local canCloseOtherTabs = false
+			if tabControl then
+				for tab in tabControl:GetEnumerator () do
+					if tab.View and tab.View ~= view and tab.View:CanClose () then
+						canCloseOtherTabs = true
+						break
+					end
+				end
+			end
+			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (canCloseOtherTabs)
 			
 			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (hasSavable)
 			self.TabContextMenu:GetItemById ("Save")                  :SetVisible (hasSavable)
@@ -62,7 +72,9 @@ function GCompute.IDE.TabContextMenu (self)
 					if not self or not self:IsValid () then return end
 					if not tabs [i] then return end
 					if not success then return end
-					self:GetIDE ():CloseView (tabs [i].View, closeIterator)
+					if tabs [i].View:CanClose () then
+						self:GetIDE ():CloseView (tabs [i].View, closeIterator)
+					end
 				end
 				closeIterator (true)
 			end

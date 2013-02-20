@@ -1,4 +1,9 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("Donation")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("Donation")
+info:SetAutoCreate (true)
+info:SetDefaultLocation ("Bottom/Right")
+self.Title           = "Donate!"
+self.Icon            = "icon16/heart.png"
+self.Hideable        = true
 
 function self:ctor (container)
 	self.URL = "http://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=U9PLFRU6AYJPC"
@@ -33,9 +38,6 @@ function self:ctor (container)
 			</html>
 		]]
 	)
-	
-	self:SetTitle ("Donate!")
-	self:SetIcon ("icon16/heart.png")
 end
 
 function self:dtor ()

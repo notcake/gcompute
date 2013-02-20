@@ -1,4 +1,6 @@
 local self = GCompute.IDE.ViewTypes:CreateType ("NamespaceBrowser")
+self.Title = "Namespace Browser"
+self.Icon  = "icon16/application_side_list.png"
 
 function self:ctor (container)
 	self.ComboBox = vgui.Create ("GComboBox", container)
@@ -22,9 +24,6 @@ function self:ctor (container)
 	self.NamespaceBrowser = vgui.Create ("GComputeNamespaceTreeView", container)
 	
 	self:SetNamespaceDefinition (GCompute.GlobalNamespace)
-	
-	self:SetTitle ("Namespace Browser")
-	self:SetIcon ("icon16/application_side_list.png")
 	
 	self.ComboBox:ChooseOptionID (6)
 end

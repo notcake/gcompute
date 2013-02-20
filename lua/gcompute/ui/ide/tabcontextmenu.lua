@@ -9,7 +9,7 @@ function GCompute.IDE.TabContextMenu (self)
 			local hasDocument = view and view:GetDocument () and true or false
 			local hasSavable  = view and view:GetSavable () and true or false
 			
-			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:GetIDE ():CanCloseView (view))
+			self.TabContextMenu:GetItemById ("Close")                 :SetEnabled (self:GetIDE ():CanCloseView (view) or view:CanHide ())
 			self.TabContextMenu:GetItemById ("Close all others")      :SetEnabled (tabControl and tabControl:GetTabCount () > 1)
 			
 			self.TabContextMenu:GetItemById ("Separator1")            :SetVisible (hasSavable)

@@ -3,6 +3,7 @@ local self = GCompute.IDE.ViewTypes:CreateType ("Output")
 function self:ctor (container)
 	self:SetTitle ("Output")
 	self:SetIcon ("icon16/application_xp_terminal.png")
+	self:SetCanHide (true)
 	
 	self.CodeEditor = vgui.Create ("GComputeCodeEditor", container)
 	self.CodeEditor:GetDocument ():AddView (self)

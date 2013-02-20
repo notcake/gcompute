@@ -226,7 +226,13 @@ function self:CloseView (view, callback)
 	callback = callback or GCompute.NullCallback
 	
 	if not view             then callback (true)  return end
-	if not view:CanClose () then callback (false) return end
+	if not view:CanClose () then
+		if view:CanHide () then
+			view:SetVisible (false)
+		end
+		callback (false)
+		return
+	end
 
 	-- Don't close the last tab if it contains the default text
 	if not self:CanCloseView (view) then

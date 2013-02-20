@@ -1,6 +1,8 @@
 local self = GCompute.IDE.ViewTypes:CreateType ("ProcessBrowser")
 
 function self:ctor (container)
+	self:SetCanHide (true)
+	
 	self.ProcessList = vgui.Create ("GComputeProcessListView", container)
 	self.ProcessList:SetProcessList (GCompute.LocalProcessList)
 	

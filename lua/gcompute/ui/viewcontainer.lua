@@ -115,7 +115,7 @@ end
 
 function PANEL:UpdateCloseButtonVisibility ()
 	if self.Tab and self.View then
-		self.Tab:SetCloseButtonVisible (self.View:CanClose ())
+		self.Tab:SetCloseButtonVisible (self.View:CanClose () or self.View:CanHide ())
 	end
 end
 

@@ -5,6 +5,8 @@ GCompute.IDE.View = GCompute.MakeConstructor (self)
 	Events:
 		CanCloseChanged (canClose)
 			Fired when the view's closability has changed.
+		CanHideChanged (canHide)
+			Fired when the view's hideability has changed.
 		DocumentChanged (oldDocument, newDocument)
 			Fired when the view's document has changed.
 		IconChanged (icon)
@@ -33,6 +35,7 @@ function self:ctor (container)
 	
 	-- UI
 	self.Closable = true
+	self.Hideable = false
 	self.Visible = true
 	
 	self.Icon = "icon16/cross.png"
@@ -93,6 +96,10 @@ function self:CanClose ()
 	return self.Closable
 end
 
+function self:CanHide ()
+	return self.Hideable
+end
+
 function self:EnsureVisible ()
 	if not self.Container then return end
 	self.Container:EnsureVisible ()
@@ -135,6 +142,13 @@ function self:SetCanClose (closable)
 	
 	self.Closable = closable
 	self:DispatchEvent ("CanCloseChanged", self.Closable)
+end
+
+function self:SetCanHide (hideable)
+	if self.Hideable == hideable then return end
+	
+	self.Hideable = hideable
+	self:DispatchEvent ("CanHideChanged", self.Hideable)
 end
 
 function self:SetIcon (icon)

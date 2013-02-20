@@ -63,10 +63,10 @@ function self:Init ()
 	)
 	self.DockContainer:AddEventListener ("ContainerSplit",
 		function (_, splitDockContainer, container, emptyContainer)
-			if container:GetContainerType () == GCompute.DockContainerType.None then
-				container:SetContainerType (GCompute.DockContainerType.TabControl)
+			if container:GetContainerType () == GCompute.DockContainer.DockContainerType.None then
+				container:SetContainerType (GCompute.DockContainer.DockContainerType.TabControl)
 			end
-			emptyContainer:SetContainerType (GCompute.DockContainerType.TabControl)
+			emptyContainer:SetContainerType (GCompute.DockContainer.DockContainerType.TabControl)
 		end
 	)
 	self.DockContainer:AddEventListener ("ViewCloseRequested",

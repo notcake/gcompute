@@ -89,7 +89,9 @@ end
 -- @param resource The IResource to be opened.
 -- @param callback A callback function (success, IResource resource, IView view)
 function self:OpenResource (resource, callback)
-	if not resource then return end
+	callback = callback or GCompute.NullCallback
+	
+	if not resource then callback (false) return end
 	
 	local document = self:GetDocumentManager ():GetDocumentByUri (resource:GetUri ())
 	if document then

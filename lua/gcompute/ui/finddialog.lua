@@ -12,8 +12,7 @@ function self:Init ()
 	self.FindLabel = vgui.Create ("DLabel", self)
 	self.FindLabel:SetText ("Find:")
 	
-	self.TextEntry = vgui.Create ("DTextEntry", self)
-	self.TextEntry:SetAllowNonAsciiCharacters (true)
+	self.TextEntry = vgui.Create ("GTextEntry", self)
 	self.TextEntry.OnEnter = function ()
 		self.FindButton:DispatchEvent ("Click")
 	end

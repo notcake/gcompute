@@ -11,7 +11,8 @@ function self:ctor (typeName)
 end
 
 function self:Create (...)
-	return self.Constructor (...)
+	local _, view = xpcall (self.Constructor, GLib.Error, ...)
+	return view
 end
 
 function self:GetConstructor ()

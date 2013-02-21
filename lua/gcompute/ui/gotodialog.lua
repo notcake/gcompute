@@ -12,7 +12,7 @@ function self:Init ()
 	self.GoToLabel = vgui.Create ("DLabel", self)
 	self.GoToLabel:SetText ("Go to line:")
 	
-	self.TextEntry = vgui.Create ("DTextEntry", self)
+	self.TextEntry = vgui.Create ("GTextEntry", self)
 	self.TextEntry.OnEnter = function ()
 		self.GoToButton:DispatchEvent ("Click")
 	end

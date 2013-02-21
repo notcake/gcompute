@@ -1,4 +1,4 @@
-local self = GCompute.IDE.ViewTypes:CreateType ("NamespaceBrowser")
+local self, info = GCompute.IDE.ViewTypes:CreateType ("NamespaceBrowser")
 self.Title = "Namespace Browser"
 self.Icon  = "icon16/application_side_list.png"
 

@@ -76,7 +76,7 @@ LANGUAGE:GetTokenizer ()
 	:AddPlainSymbols  (GCompute.TokenType.Newline,             {"\r\n", "\r", "\n"})
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")
 
-LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "do", "break", "switch", "return", "continue"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "foreach", "do", "break", "switch", "case", "return", "continue"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using", "function", "local"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
 

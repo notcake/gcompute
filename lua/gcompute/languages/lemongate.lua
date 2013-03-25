@@ -44,16 +44,7 @@ LANGUAGE:GetTokenizer ()
 			return string.sub (code, offset), string.len (code) - offset + 1
 		end
 	)
-	:AddCustomSymbol (GCompute.TokenType.Comment, "#[",
-		function (code, offset)
-			local endOffset = string.find (code, "]#", offset + 2, true)
-			if endOffset then
-				return string.sub (code, offset, endOffset + 1), endOffset - offset + 2
-			end
-			return string.sub (code, offset), string.len (code) - offset + 1
-		end
-	)
-	:AddPatternSymbol (GCompute.TokenType.Comment,              "#[^\n\r]*")
+	:AddPatternSymbol (GCompute.TokenType.Comment,              "//[^\n\r]*")
 	:AddPatternSymbol (GCompute.TokenType.Identifier,           "[a-zA-Z_][a-zA-Z0-9_]*")
 	:AddPatternSymbol (GCompute.TokenType.Number,               "0b[01]+")
 	:AddPatternSymbol (GCompute.TokenType.Number,               "0x[0-9a-fA-F]+")
@@ -65,16 +56,16 @@ LANGUAGE:GetTokenizer ()
 	:AddPatternSymbol (GCompute.TokenType.Number,               "[-+]?[0-9]+")
 	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"##", "++", "--", "==", "!=", "<=", ">=", "<<=", ">>=", "+=", "-=", "*=", "/=", "^=", "||", "&&", "^^", ">>", "<<"})
 	:AddPlainSymbols  (GCompute.TokenType.MemberIndexer,       {".", ":"})
-	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"!", "~", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ","})
-	:AddPlainSymbol   (GCompute.TokenType.Preprocessor,         "@")
+	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"!", "~", "#", "+", "-", "^", "&", "|", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", "?", ","})
 	:AddPlainSymbol   (GCompute.TokenType.StatementTerminator,  ";")
 	:AddPlainSymbols  (GCompute.TokenType.Newline,             {"\r\n", "\r", "\n"})
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")
 
-LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "foreach", "do", "try", "catch", "finally"})
-LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"break", "switch", "return", "continue", "throw"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Modifier, {"local", "global", "input", "output"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "foreach", "switch", "case", "default", "try", "catch"})
+LANGUAGE:AddKeywords (GCompute.KeywordType.Control,  {"break", "return", "continue", "throw"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.DataType, {"function", "event"})
-LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
+-- LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "null"})
 
 LANGUAGE:SetDirectiveCaseSensitivity (false)
 

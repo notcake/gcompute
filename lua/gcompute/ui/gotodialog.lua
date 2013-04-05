@@ -51,6 +51,10 @@ function self:Init ()
 	self.Document = nil
 end
 
+function self:Focus ()
+	self.TextEntry:Focus ()
+end
+
 function self:GetCallback ()
 	return self.Callback
 end
@@ -70,10 +74,6 @@ function self:PerformLayout ()
 	end
 end
 
-function self:RequestFocus ()
-	self.TextEntry:RequestFocus ()
-end
-
 function self:SetCallback (callback)
 	self.Callback = callback or GCompute.NullCallback
 end
@@ -81,8 +81,8 @@ end
 function self:Think ()
 	DFrame.Think (self)
 	
-	if self:HasFocus () then
-		self.TextEntry:RequestFocus ()
+	if self:IsFocused () then
+		self.TextEntry:Focus ()
 	end
 end
 
@@ -102,7 +102,7 @@ function GCompute.OpenGoToDialog (callback)
 	GCompute.GoToDialog:SetCallback (callback)
 	GCompute.GoToDialog:SetVisible (true)
 	GCompute.GoToDialog:MoveToFront ()
-	GCompute.GoToDialog:RequestFocus ()
+	GCompute.GoToDialog:Focus ()
 	GCompute.GoToDialog.TextEntry:SelectAll ()
 	
 	return GCompute.GoToDialog

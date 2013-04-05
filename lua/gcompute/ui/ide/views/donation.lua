@@ -8,7 +8,7 @@ self.Hideable        = true
 function self:ctor (container)
 	self.URL = "http://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=U9PLFRU6AYJPC"
 	
-	self.HTMLPanel = vgui.Create ("HTML", container)
+	self.HTMLPanel = vgui.Create ("GHTML", container)
 	self.HTMLPanel.OnCallback = function (_, objectName, methodName, args)
 		if objectName == "gcompute" then
 			if methodName == "donate" then

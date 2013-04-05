@@ -246,7 +246,7 @@ function self:ShouldHide (lastShowTime)
 	                      y >= 0 and y < self:GetTall ()
 	containsMouse = containsMouse or self.ResizeGrip:IsPressed ()
 	if self.Control:IsVisible () and
-	   not self.Control:HasFocus () and
+	   not self.Control:IsFocused () and
 	   not self.Control:HasHierarchicalFocus () and
 	   not self:HasHierarchicalFocus () and
 	   not containsMouse and

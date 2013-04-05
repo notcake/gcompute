@@ -17,31 +17,28 @@ function self:Init ()
 	self:AddColumn ("Name")
 	self:AddColumn ("PID")
 		:SetAlignment (6)
-		:SetMaxWidth (64)
+		:SetMaximumWidth (64)
+		:SetComparator (			
+			function (a, b)
+				return a.Process:GetProcessId () < b.Process:GetProcessId ()
+			end
+		)
 	self:AddColumn ("CPU")
 		:SetAlignment (6)
-		:SetMaxWidth (64)
+		:SetMaximumWidth (64)
+		:SetComparator (
+			function (a, b)
+				return a.Process:GetCpuTime () < b.Process:GetCpuTime ()
+			end
+		)
 	self:AddColumn ("Created")
-		:SetMaxWidth (192)
+		:SetMaximumWidth (192)
+		:SetComparator (
+			function (a, b)
+				return a.Process:GetCreationTimestamp () < b.Process:GetCreationTimestamp ()
+			end
+		)
 	
-	self:SetColumnComparator ("PID",
-		function (a, b)
-			return a.Process:GetProcessId () < b.Process:GetProcessId ()
-		end
-	)
-	
-	self:SetColumnComparator ("CPU",
-		function (a, b)
-			return a.Process:GetCpuTime () < b.Process:GetCpuTime ()
-		end
-	)
-	
-	self:SetColumnComparator ("Created",
-		function (a, b)
-			return a.Process:GetProcessId () < b.Process:GetProcessId ()
-		end
-	)
-
 	self.Menu = vgui.Create ("GMenu")
 	self.Menu:AddEventListener ("MenuOpening",
 		function (_, targetItem)
@@ -192,15 +189,15 @@ end
 function self:AddProcess (process)
 	if self.Processes [process:GetProcessId ()] then return end
 	
-	local listViewItem = self:AddLine (process:GetName ())
+	local listViewItem = self:AddItem (process:GetName ())
 	listViewItem:SetText (process:GetName ())
 	listViewItem.Process = process
 	
 	self:UpdateIcon (listViewItem)
 	
-	listViewItem:SetColumnText (2, string.format ("%08x", process:GetProcessId ()))
-	listViewItem:SetColumnText (3, "")
-	listViewItem:SetColumnText (4, GLib.FormatDate (process:GetCreationTimestamp ()))
+	listViewItem:SetColumnText ("PID", string.format ("%08x", process:GetProcessId ()))
+	listViewItem:SetColumnText ("CPU", "")
+	listViewItem:SetColumnText ("Created", GLib.FormatDate (process:GetCreationTimestamp ()))
 	
 	self.Processes [process:GetProcessId ()] = listViewItem
 	

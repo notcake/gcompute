@@ -9,7 +9,7 @@ function self:ctor (container)
 	self.TextEntry = vgui.Create ("GTextEntry", container)
 	
 	self.FolderListView = vgui.Create ("VFSFolderListView", container)
-	self.FolderListView:GetColumn ("Last Modified"):SetVisible (false)
+	self.FolderListView:GetColumnById ("Last Modified"):SetVisible (false)
 	self.FolderListView:SetShowParentFolder (true)
 	
 	self.FolderListView:AddEventListener ("FolderChanged",

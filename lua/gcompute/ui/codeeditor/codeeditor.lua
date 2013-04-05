@@ -149,11 +149,15 @@ function PANEL:Init ()
 end
 
 -- Control
+function PANEL:Focus ()
+	self.TextEntry:RequestFocus ()
+end
+
 function PANEL:GetContextMenu ()
 	return self.ContextMenu
 end
 
-function PANEL:HasFocus ()
+function PANEL:IsFocused ()
 	return self.TextEntry:HasFocus ()
 end
 
@@ -206,17 +210,13 @@ function PANEL:PerformLayout ()
 	end
 end
 
-function PANEL:RequestFocus ()
-	self.TextEntry:RequestFocus ()
-end
-
 function PANEL:SetContextMenu (contextMenu)
 	self.ContextMenu = contextMenu
 end
 
 -- Rendering
 function PANEL:DrawCaret ()
-	if not self:HasFocus () then return end
+	if not self:ContainsFocus () then return end
 	
 	if self:GetSelectionMode () == GCompute.CodeEditor.SelectionMode.Regular then
 		self:DrawCaretRegular ()
@@ -1404,7 +1404,7 @@ function PANEL:UnhookDocument (document)
 end
 
 -- Event handlers
-function PANEL:OnGetFocus ()
+function PANEL:OnGotFocus ()
 	self.TextEntry:RequestFocus ()
 end
 
@@ -1462,7 +1462,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 end
 
 function PANEL:OnMouseDown (mouseCode, x, y)
-	self:RequestFocus ()
+	self:Focus ()
 end
 
 function PANEL:OnMouseLeave ()
@@ -1476,6 +1476,7 @@ end
 function PANEL:OnMouseUp (mouseCode, x, y)
 	if mouseCode == MOUSE_RIGHT then
 		if self.ContextMenu then
+			self.ContextMenu:SetOwner (self)
 			self.ContextMenu:Open ()
 		end
 	end

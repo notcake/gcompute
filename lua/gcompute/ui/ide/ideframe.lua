@@ -268,10 +268,12 @@ function self:SetIDE (ide)
 	for viewType in self:GetViewTypes ():GetEnumerator () do
 		if viewType:ShouldAutoCreate () then
 			local view = self:GetViewManager ():CreateView (viewType:GetName (), viewType:GetName ())
-			self:GetActionMap ():RegisterToggle (viewType:GetName (), Gooey.VisibilityController (view))
-				:SetIcon (view:GetIcon ())
-			view:SetCanClose (false)
-			self [viewType:GetName () .. "View"] = view
+			if view then
+				self:GetActionMap ():RegisterToggle (viewType:GetName (), Gooey.VisibilityController (view))
+					:SetIcon (view:GetIcon ())
+				view:SetCanClose (false)
+				self [viewType:GetName () .. "View"] = view
+			end
 		end
 	end
 end
@@ -665,10 +667,10 @@ end
 function self:Think ()
 	DFrame.Think (self)
 	
-	if self:HasFocus () and not Gooey.IsMenuOpen () then
+	if self:IsFocused () and not Gooey.IsMenuOpen () then
 		if self:GetActiveView () and
-		   not self:GetActiveView ():GetContainer ():HasHierarchicalFocus () then
-			self:GetActiveView ():GetContainer ():RequestFocus ()
+		   not self:GetActiveView ():GetContainer ():ContainsFocus () then
+			self:GetActiveView ():GetContainer ():Focus ()
 		end
 	end
 	

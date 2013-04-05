@@ -32,18 +32,20 @@ function self:ctor (container)
 	self.ListView:AddColumn ("ID")
 	self.ListView:AddColumn ("Calls")
 	self.ListView:AddColumn ("Frame Time (ms)")
+		:SetComparator (
+			function (a, b)
+				return a.HookData.LastFrameTime > b.HookData.LastFrameTime
+			end
+		)
 	self.ListView:AddColumn ("ΔFPS")
-	self.ListView.Comparator = function (a, b)
-		return a.HookData.CallCount > b.HookData.CallCount
-	end
-	self.ListView:SetColumnComparator ("Frame Time (ms)",
+		:SetComparator (
+			function (a, b)
+				return a.HookData.DeltaFPS > b.HookData.DeltaFPS
+			end
+		)
+	self.ListView:SetComparator (
 		function (a, b)
-			return a.HookData.LastFrameTime > b.HookData.LastFrameTime
-		end
-	)
-	self.ListView:SetColumnComparator ("ΔFPS",
-		function (a, b)
-			return a.HookData.DeltaFPS > b.HookData.DeltaFPS
+			return a.HookData.CallCount > b.HookData.CallCount
 		end
 	)
 	
@@ -120,21 +122,21 @@ end
 -- Internal, do not call
 function self:UpdateHookData (hookData)
 	if not hookData.ListViewItem then
-		local listViewItem = self.ListView:AddLine (tostring (hookData))
+		local listViewItem = self.ListView:AddItem (tostring (hookData))
 		listViewItem:SetText (tostring (hookData.EventName))
-		listViewItem:SetColumnText (2, tostring (hookData.HookName))
+		listViewItem:SetColumnText ("ID", tostring (hookData.HookName))
 		
 		listViewItem.HookData = hookData
 		hookData.ListViewItem = listViewItem
 	end
 	
-	hookData.ListViewItem:SetColumnText (3, tostring (hookData.CallCount))
-	hookData.ListViewItem:SetColumnText (4, string.format ("%.3f", (hookData.LastFrameTime) * 1000))
+	hookData.ListViewItem:SetColumnText ("Calls", tostring (hookData.CallCount))
+	hookData.ListViewItem:SetColumnText ("Frame Time (ms)", string.format ("%.3f", (hookData.LastFrameTime) * 1000))
 	
 	local currentFPS = 1 / FrameTime ()
 	local higherFPS = 1 / (FrameTime () - hookData.LastFrameTime)
 	hookData.DeltaFPS = higherFPS - currentFPS
-	hookData.ListViewItem:SetColumnText (5, string.format ("%.3f", hookData.DeltaFPS))
+	hookData.ListViewItem:SetColumnText ("ΔFPS", string.format ("%.3f", hookData.DeltaFPS))
 end
 
 -- Event handlers

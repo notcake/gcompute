@@ -14,6 +14,12 @@ function PANEL:EnsureVisible ()
 	if self.Tab then self.Tab:Select () end
 end
 
+function PANEL:Focus ()
+	if not self:GetContents () then return end
+	if self:ContainsFocus () then return end
+	self:GetContents ():Focus ()
+end
+
 function PANEL:GetContents ()
 	if not self.Contents or not self.Contents:IsValid () then
 		self.Contents = self:GetChildren () [1]
@@ -53,14 +59,9 @@ function PANEL:PerformLayout ()
 	end
 end
 
-function PANEL:RequestFocus ()
-	if not self:GetContents () then return end
-	self:GetContents ():RequestFocus ()
-end
-
 function PANEL:Select ()
 	self:EnsureVisible ()
-	self:RequestFocus ()
+	self:Focus ()
 end
 
 function PANEL:SetDockContainer (dockContainer)

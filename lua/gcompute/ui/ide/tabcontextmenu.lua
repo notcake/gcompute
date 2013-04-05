@@ -159,7 +159,7 @@ function GCompute.IDE.TabContextMenu (self)
 				destinationDockContainer:AddView (view)
 				if viewActive then
 					view:GetContainer ():Select ()
-					view:GetContainer ():RequestFocus ()
+					view:GetContainer ():Focus ()
 				end
 			end
 		)
@@ -201,7 +201,7 @@ function GCompute.IDE.TabContextMenu (self)
 				end
 				if viewActive then
 					newView:GetContainer ():Select ()
-					newView:GetContainer ():RequestFocus ()
+					newView:GetContainer ():Focus ()
 				end
 			end
 		)

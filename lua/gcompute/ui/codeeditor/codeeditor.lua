@@ -85,6 +85,7 @@ function PANEL:Init ()
 	self.ContextMenu = nil
 	
 	-- Data
+	self.Multiline = true
 	self.ReadOnly = false
 	self.Document = nil
 	self.DocumentChangeUnhandled = false
@@ -155,6 +156,10 @@ end
 
 function PANEL:GetContextMenu ()
 	return self.ContextMenu
+end
+
+function PANEL:GetLineHeight ()
+	return self.Settings.LineHeight
 end
 
 function PANEL:IsFocused ()
@@ -569,6 +574,10 @@ function PANEL:GetDocument ()
 	return self.Document
 end
 
+function PANEL:IsMultiline ()
+	return self.Multiline
+end
+
 function PANEL:IsReadOnly ()
 	return self.ReadOnly
 end
@@ -613,6 +622,11 @@ function PANEL:SetDocument (document)
 	self:DispatchEvent ("LanguageChanged", oldLanguage, self:GetLanguage ())
 	self:DispatchEvent ("SyntaxHighlighterChanged", oldDocument and oldDocument.SyntaxHighlighter, self.Document.SyntaxHighlighter)
 	self:DispatchEvent ("IdentifierHighlighterChanged", oldDocument and oldDocument.IdentifierHighlighter, self.Document.IdentifierHighlighter)
+end
+
+function PANEL:SetMultiline (multiline)
+	self.Multiline = multiline
+	self.TextEntry:SetMultiline (self.Multiline)
 end
 
 function PANEL:SetReadOnly (readOnly)
@@ -720,8 +734,16 @@ function PANEL:ReplaceText (startLocation, endLocation, text)
 end
 
 function PANEL:SetText (text)
-	self.Document:SetText (text)
+	local originalText = self.self.Document:GetText ()
+	if originalText == text then return self end
+	
+	local undoRedoItem = GCompute.CodeEditor.ReplacementAction (self, self.Document:GetStart (), self.Document:GetEnd (), originalText, text)
+	undoRedoItem:Redo ()
+	self:GetUndoRedoStack ():Push (undoRedoItem)
+	
 	self:UpdateScrollBars ()
+	
+	return self
 end
 
 -- Caret
@@ -1436,7 +1458,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 			end
 		end
 	elseif keyCode == KEY_ENTER then
-		if not self:IsReadOnly () then
+		if self:IsMultiline () and not self:IsReadOnly () then
 			-- Autocompletion
 			local suppressText = self.CodeCompletionProvider:HandleText ("\n", false)
 			

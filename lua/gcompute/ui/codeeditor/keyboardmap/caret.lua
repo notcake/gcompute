@@ -44,10 +44,14 @@ GCompute.CodeEditor.KeyboardMap:Register (KEY_HOME,
 		local offset = 1
 		local char = ""
 		
-		self:SetRawCaretPos (GCompute.CodeEditor.LineColumnLocation (
-			self.CaretLocation:GetLine (),
-			self.CaretLocation:GetColumn () == homeColumn and 0 or homeColumn
-		))
+		if ctrl then
+			self:SetRawCaretPos (GCompute.CodeEditor.LineColumnLocation (0, 0))
+		else
+			self:SetRawCaretPos (GCompute.CodeEditor.LineColumnLocation (
+				self.CaretLocation:GetLine (),
+				self.CaretLocation:GetColumn () == homeColumn and 0 or homeColumn
+			))
+		end
 		
 		if shift then
 			self:SetSelectionEnd (self.CaretLocation)
@@ -60,10 +64,14 @@ GCompute.CodeEditor.KeyboardMap:Register (KEY_HOME,
 
 GCompute.CodeEditor.KeyboardMap:Register (KEY_END,
 	function (self, key, ctrl, shift, alt)
-		self:SetRawCaretPos (GCompute.CodeEditor.LineColumnLocation (
-			self.CaretLocation:GetLine (),
-			self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer)
-		))
+		if ctrl then
+			self:SetRawCaretPos (self.Document:CharacterToColumn (self.Document:GetEnd (), self.TextRenderer))
+		else
+			self:SetRawCaretPos (GCompute.CodeEditor.LineColumnLocation (
+				self.CaretLocation:GetLine (),
+				self.Document:GetLine (self.CaretLocation:GetLine ()):GetColumnCount (self.TextRenderer)
+			))
+		end
 		
 		if shift then
 			self:SetSelectionEnd (self.CaretLocation)

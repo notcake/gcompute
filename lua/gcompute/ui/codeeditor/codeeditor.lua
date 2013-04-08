@@ -734,7 +734,7 @@ function PANEL:ReplaceText (startLocation, endLocation, text)
 end
 
 function PANEL:SetText (text)
-	local originalText = self.self.Document:GetText ()
+	local originalText = self.Document:GetText ()
 	if originalText == text then return self end
 	
 	local undoRedoItem = GCompute.CodeEditor.ReplacementAction (self, self.Document:GetStart (), self.Document:GetEnd (), originalText, text)

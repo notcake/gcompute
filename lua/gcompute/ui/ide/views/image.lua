@@ -5,7 +5,7 @@ info:SetDocumentType ("ImageDocument")
 function self:ctor (container)
 	self:CreateSavableProxy ()
 	
-	self.HTMLPanel = vgui.Create ("HTML", container)
+	self.HTMLPanel = vgui.Create ("GHTML", container)
 	
 	self.SavableProxy:AddEventListener ("Reloaded",
 		function (_)

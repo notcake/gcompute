@@ -34,6 +34,8 @@ function GCompute.IDE.MenuStrip (self)
 		:SetAction ("Select All")
 	
 	local toolsMenu = menuStrip:AddMenu ("View")
+	toolsMenu:AddOption ("Console")
+		:SetAction ("Console")
 	toolsMenu:AddOption ("Output")
 		:SetAction ("Output")
 	toolsMenu:AddOption ("File Browser")

@@ -53,12 +53,6 @@ include ("isavable.lua")
 
 include ("substitutionmap.lua")
 
--- memory usage
-include ("memoryusagereport.lua")
-
--- containers
-include ("containers.lua")
-
 -- pipes
 include ("pipe.lua")
 
@@ -267,6 +261,11 @@ include ("runtime/localprocesslist.lua")
 -- native code emission
 include ("nativegen/icodeemitter.lua")
 include ("nativegen/luaemitter.lua")
+
+-- glua
+include ("glua/luasession.lua")
+include ("glua/luaoutputsink.lua")
+include ("glua/localluasession.lua")
 
 GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 

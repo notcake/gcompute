@@ -12,14 +12,14 @@ function self:ctor (container)
 	self.CodeEditor:SetLineNumbersVisible (false)
 	self.CodeEditor:SetReadOnly (true)
 	
-	self.ContextMenu = vgui.Create ("GMenu")
+	self.ContextMenu = Gooey.Menu ()
 	self.ContextMenu:AddEventListener ("MenuOpening",
 		function ()
 			self.ContextMenu:GetItemById ("Copy") :SetEnabled (not self.CodeEditor:IsSelectionEmpty ())
 			self.ContextMenu:GetItemById ("Clear"):SetEnabled (self.CodeEditor:GetText () ~= "")
 		end
 	)
-	self.ContextMenu:AddOption ("Copy")
+	self.ContextMenu:AddItem ("Copy")
 		:SetIcon ("icon16/page_white_copy.png")
 		:AddEventListener ("Click",
 			function ()
@@ -27,14 +27,14 @@ function self:ctor (container)
 			end
 		)
 	self.ContextMenu:AddSeparator ()
-	self.ContextMenu:AddOption ("Select All")
+	self.ContextMenu:AddItem ("Select All")
 		:AddEventListener ("Click",
 			function ()
 				self.CodeEditor:SelectAll ()
 			end
 		)
 	self.ContextMenu:AddSeparator ()
-	self.ContextMenu:AddOption ("Clear")
+	self.ContextMenu:AddItem ("Clear")
 		:AddEventListener ("Click",
 			function ()
 				self.CodeEditor:Clear ()
@@ -115,7 +115,7 @@ function self:ctor (container)
 end
 
 function self:dtor ()
-	self.ContextMenu:Remove ()
+	self.ContextMenu:dtor ()
 end
 
 function self:Append (text, color, sourceDocumentId, sourceDocumentUri)

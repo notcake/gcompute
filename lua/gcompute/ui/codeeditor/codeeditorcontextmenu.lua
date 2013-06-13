@@ -1,5 +1,5 @@
 function GCompute.CodeEditor.CodeEditorContextMenu (self)
-	local menu = vgui.Create ("GMenu")
+	local menu = Gooey.Menu ()
 	menu:AddEventListener ("MenuOpening",
 		function ()
 			local codeEditor = self:GetActiveCodeEditor ()
@@ -8,12 +8,12 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 			menu:GetItemById ("Delete"):SetEnabled (not codeEditor:IsSelectionEmpty ())
 		end
 	)
-	menu:AddOption ("Undo")
+	menu:AddItem ("Undo")
 		:SetIcon ("icon16/arrow_undo.png")
-	menu:AddOption ("Redo")
+	menu:AddItem ("Redo")
 		:SetIcon ("icon16/arrow_redo.png")
 	menu:AddSeparator ()
-	menu:AddOption ("Cut")
+	menu:AddItem ("Cut")
 		:SetIcon ("icon16/cut.png")
 		:AddEventListener ("Click",
 			function ()
@@ -22,7 +22,7 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 				clipboardTarget:Cut ()
 			end
 		)
-	menu:AddOption ("Copy")
+	menu:AddItem ("Copy")
 		:SetIcon ("icon16/page_white_copy.png")
 		:AddEventListener ("Click",
 			function ()
@@ -31,7 +31,7 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 				clipboardTarget:Copy ()
 			end
 		)
-	menu:AddOption ("Paste")
+	menu:AddItem ("Paste")
 		:SetIcon ("icon16/paste_plain.png")
 		:AddEventListener ("Click",
 			function ()
@@ -40,7 +40,7 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 				clipboardTarget:Paste ()
 			end
 		)
-	menu:AddOption ("Delete")
+	menu:AddItem ("Delete")
 		:SetIcon ("icon16/cross.png")
 		:AddEventListener ("Click",
 			function ()
@@ -50,7 +50,7 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 			end
 		)
 	menu:AddSeparator ()
-	menu:AddOption ("Select All")
+	menu:AddItem ("Select All")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -59,7 +59,7 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 			end
 		)
 	menu:AddSeparator ()
-	menu:AddOption ("Indent")
+	menu:AddItem ("Indent")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()
@@ -67,7 +67,7 @@ function GCompute.CodeEditor.CodeEditorContextMenu (self)
 				codeEditor:IndentSelection ()
 			end
 		)
-	menu:AddOption ("Outdent")
+	menu:AddItem ("Outdent")
 		:AddEventListener ("Click",
 			function ()
 				local codeEditor = self:GetActiveCodeEditor ()

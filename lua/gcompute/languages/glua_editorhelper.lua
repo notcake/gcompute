@@ -68,9 +68,9 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	self.LastStdOut = stdOut
 	self.LastStdErr = stdErr
 	
-	local menu = vgui.Create ("GMenu")
-	local playerMenu = vgui.Create ("GMenu")
-	menu:AddOption ("Run on self")
+	local menu = Gooey.Menu ()
+	local playerMenu = Gooey.Menu ()
+	menu:AddItem ("Run on self")
 		:SetIcon ("icon16/user_go.png")
 		:AddEventListener ("Click",
 			function ()
@@ -157,7 +157,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				print       = _print
 			end
 		)
-	menu:AddOption ("Run on server")
+	menu:AddItem ("Run on server")
 		:SetEnabled (luadev ~= nil)
 		:SetIcon ("icon16/server_go.png")
 		:AddEventListener ("Click",
@@ -169,11 +169,11 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				luadev.RunOnServer (codeEditor:GetText ())
 			end
 		)
-	menu:AddOption ("Run on client")
+	menu:AddItem ("Run on client")
 		:SetEnabled (luadev ~= nil)
 		:SetIcon ("icon16/user_go.png")
 		:SetSubMenu (playerMenu)
-	menu:AddOption ("Run on clients")
+	menu:AddItem ("Run on clients")
 		:SetEnabled (luadev ~= nil)
 		:SetIcon ("icon16/group_go.png")
 		:AddEventListener ("Click",
@@ -185,7 +185,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				luadev.RunOnClients (codeEditor:GetText ())
 			end
 		)
-	menu:AddOption ("Run on shared")
+	menu:AddItem ("Run on shared")
 		:SetEnabled (luadev ~= nil)
 		:SetIcon ("icon16/world_go.png")
 		:AddEventListener ("Click",
@@ -199,8 +199,8 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		)
 	menu:AddEventListener ("MenuClosed",
 		function ()
-			menu:Remove ()
-			playerMenu:Remove ()
+			menu:dtor ()
+			playerMenu:dtor ()
 		end
 	)
 	
@@ -211,7 +211,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 		end
 	)
 	for _, v in ipairs (players) do
-		playerMenu:AddOption (v:Name ())
+		playerMenu:AddItem (v:Name ())
 			:SetEnabled (luadev ~= nil)
 			:SetIcon (v:IsAdmin () and "icon16/shield_go.png" or "icon16/user_go.png")
 			:AddEventListener ("Click",
@@ -225,8 +225,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			)
 	end
 	
-	menu:SetOwner (codeEditor)
-	menu:Open ()
+	menu:Show (codeEditor)
 end
 
 function self:ShouldOutdent (codeEditor, location)

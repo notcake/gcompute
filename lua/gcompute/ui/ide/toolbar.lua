@@ -45,7 +45,7 @@ function GCompute.IDE.Toolbar (self)
 					local item = stack:Peek (i)
 					if not item then return end
 					
-					dropDownMenu:AddOption (item:GetDescription ())
+					dropDownMenu:AddItem (item:GetDescription ())
 						:AddEventListener ("Click",
 							function ()
 								undoRedoStack:Undo (i + 1)
@@ -70,7 +70,7 @@ function GCompute.IDE.Toolbar (self)
 					local item = stack:Peek (i)
 					if not item then return end
 					
-					dropDownMenu:AddOption (item:GetDescription ())
+					dropDownMenu:AddItem (item:GetDescription ())
 						:AddEventListener ("Click",
 							function ()
 								undoRedoStack:Redo (i + 1)

@@ -130,8 +130,8 @@ function self:Init ()
 			local codeEditor = self:GetActiveCodeEditor ()
 			local currentLanguage = codeEditor and codeEditor:GetLanguage ()
 			for _, language in ipairs (languages) do
-				local option = menu:AddOption (language:GetName ())
-				option:AddEventListener ("Click",
+				local menuItem = menu:AddItem (language:GetName ())
+				menuItem:AddEventListener ("Click",
 					function ()
 						local codeEditor = self:GetActiveCodeEditor ()
 						if not codeEditor then return end
@@ -140,7 +140,7 @@ function self:Init ()
 					end
 				)
 				if language == currentLanguage then
-					option:SetIcon ("icon16/bullet_black.png")
+					menuItem:SetIcon ("icon16/bullet_black.png")
 				end
 			end
 		end
@@ -658,8 +658,8 @@ function self:OnRemoved ()
 	self:SetCanSaveWorkspace (false)
 	
 	self.ClipboardController:dtor ()
-	self.CodeEditorContextMenu:Remove ()
-	self.TabContextMenu:Remove ()
+	self.CodeEditorContextMenu:dtor ()
+	self.TabContextMenu:dtor ()
 	
 	GCompute.IDE.Plugins:Uninitialize ()
 end

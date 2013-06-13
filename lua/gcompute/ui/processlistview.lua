@@ -39,7 +39,7 @@ function self:Init ()
 			end
 		)
 	
-	self.Menu = vgui.Create ("GMenu")
+	self.Menu = Gooey.Menu ()
 	self.Menu:AddEventListener ("MenuOpening",
 		function (_, targetItem)
 			local targetItem = self:GetSelectedProcesses ()
@@ -48,21 +48,21 @@ function self:Init ()
 			self.Menu:GetItemById ("Terminate"):SetEnabled (#targetItem ~= 0)
 		end
 	)
-	self.Menu:AddOption ("Terminate",
+	self.Menu:AddItem ("Terminate",
 		function (targetProcesses)
 			for _, process in ipairs (targetProcesses) do
 				process:Terminate ()
 			end
 		end
 	):SetIcon ("icon16/cross.png")
-	self.Menu:AddOption ("Suspend",
+	self.Menu:AddItem ("Suspend",
 		function (targetProcesses)
 			for _, process in ipairs (targetProcesses) do
 				process:Suspend ()
 			end
 		end
 	):SetIcon ("icon16/control_pause_blue.png")
-	self.Menu:AddOption ("Resume",
+	self.Menu:AddItem ("Resume",
 		function (targetProcesses)
 			for _, process in ipairs (targetProcesses) do
 				process:Resume ()
@@ -70,7 +70,7 @@ function self:Init ()
 		end
 	):SetIcon ("icon16/control_play_blue.png")
 	self.Menu:AddSeparator ()
-	self.Menu:AddOption ("Properties",
+	self.Menu:AddItem ("Properties",
 		function (targetProcesses)
 		end
 	):SetIcon ("icon16/application_view_list.png")
@@ -231,7 +231,7 @@ end
 -- Event handlers
 function self:OnRemoved ()
 	self:SetProcessList (nil)
-	self.Menu:Remove ()
+	self.Menu:dtor ()
 end
 
 -- Event handlers

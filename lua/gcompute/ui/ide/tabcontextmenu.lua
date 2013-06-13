@@ -1,5 +1,5 @@
 function GCompute.IDE.TabContextMenu (self)
-	local menu = vgui.Create ("GMenu")
+	local menu = Gooey.Menu ()
 	menu:AddEventListener ("MenuOpening",
 		function (_, tab)
 			local tabControl = tab and tab:GetTabControl ()
@@ -43,7 +43,7 @@ function GCompute.IDE.TabContextMenu (self)
 		end
 	)
 	
-	menu:AddOption ("Close")
+	menu:AddItem ("Close")
 		:SetIcon ("icon16/tab_delete.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -51,7 +51,7 @@ function GCompute.IDE.TabContextMenu (self)
 				self:GetIDE ():CloseView (tab.View)
 			end
 		)
-	menu:AddOption ("Close all others")
+	menu:AddItem ("Close all others")
 		:SetIcon ("icon16/tab_delete.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -72,15 +72,18 @@ function GCompute.IDE.TabContextMenu (self)
 					if not self or not self:IsValid () then return end
 					if not tabs [i] then return end
 					if not success then return end
+					
 					if tabs [i].View:CanClose () then
 						self:GetIDE ():CloseView (tabs [i].View, closeIterator)
+					else
+						closeIterator (true)
 					end
 				end
 				closeIterator (true)
 			end
 		)
 	menu:AddSeparator ("Separator1")
-	menu:AddOption ("Save")
+	menu:AddItem ("Save")
 		:SetIcon ("icon16/disk.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -88,7 +91,7 @@ function GCompute.IDE.TabContextMenu (self)
 				self:GetIDE ():SaveView (tab.View)
 			end
 		)
-	menu:AddOption ("Save as...")
+	menu:AddItem ("Save as...")
 		:SetIcon ("icon16/disk.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -96,7 +99,7 @@ function GCompute.IDE.TabContextMenu (self)
 				self:GetIDE ():SaveAsView (tab.View)
 			end
 		)
-	menu:AddOption ("Rename")
+	menu:AddItem ("Rename")
 		:SetIcon ("icon16/page_edit.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -113,10 +116,10 @@ function GCompute.IDE.TabContextMenu (self)
 				end
 			end
 		)
-	menu:AddOption ("Delete")
+	menu:AddItem ("Delete")
 		:SetIcon ("icon16/cross.png")
 	menu:AddSeparator ("Separator2")
-	menu:AddOption ("Copy path to clipboard")
+	menu:AddItem ("Copy path to clipboard")
 		:SetIcon ("icon16/page_white_copy.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -127,7 +130,7 @@ function GCompute.IDE.TabContextMenu (self)
 			end
 		)
 	menu:AddSeparator ("Separator3")
-	menu:AddOption ("Move to other view")
+	menu:AddItem ("Move to other view")
 		:SetIcon ("icon16/shape_square_go.png")
 		:AddEventListener ("Click",
 			function (_, tab)
@@ -163,7 +166,7 @@ function GCompute.IDE.TabContextMenu (self)
 				end
 			end
 		)
-	menu:AddOption ("Clone to other view")
+	menu:AddItem ("Clone to other view")
 		:SetIcon ("icon16/shape_square_add.png")
 		:AddEventListener ("Click",
 			function (_, tab)

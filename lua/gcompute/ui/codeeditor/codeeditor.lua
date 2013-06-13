@@ -1498,8 +1498,7 @@ end
 function PANEL:OnMouseUp (mouseCode, x, y)
 	if mouseCode == MOUSE_RIGHT then
 		if self.ContextMenu then
-			self.ContextMenu:SetOwner (self)
-			self.ContextMenu:Open ()
+			self.ContextMenu:Show (self)
 		end
 	end
 end

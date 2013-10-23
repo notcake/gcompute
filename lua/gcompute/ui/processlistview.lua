@@ -231,7 +231,6 @@ end
 -- Event handlers
 function self:OnRemoved ()
 	self:SetProcessList (nil)
-	self.Menu:dtor ()
 end
 
 -- Event handlers

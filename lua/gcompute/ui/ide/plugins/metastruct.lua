@@ -80,21 +80,21 @@ function self:UpdateHookedView ()
 end
 
 function self:UpdateChatStatus ()
-	if not COH2 then return end
+	if not coh then return end
 	
 	if self.ActiveCodeEditor then
 		if not self.TypingCode then
-			COH2:ChatStart ()
+			coh.StartChat ()
 			self.TypingCode = true
 		end
 		local code = self.ActiveCodeEditor:GetText ()
 		if code:len () > 4096 then
 			code = code:sub (1, GLib.UTF8.GetSequenceStart (code, 4097) - 1) .. "..."
 		end
-		COH2:ChatUpdate (code)
+		coh.SendTypedMessage (code)
 	else
 		if self.TypingCode then
-			COH2:ChatStop ()
+			coh.FinishChat ()
 			self.TypingCode = false
 		end
 	end

@@ -23,14 +23,14 @@ timer.Simple (1,
 	function ()
 		if chatbox then
 			chatbox._ShowChat2Box = chatbox._ShowChat2Box or chatbox.ShowChat2Box
-			function chatbox.ShowChat2Box (tab)
+			function chatbox.ShowChat2Box (tab, mode, reserved)
 				pcall (
 					function ()
 						if GetConVar ("gcompute_editor_5ever"):GetBool () and GCompute and GCompute.IDE and tab == 2 then
 							GCompute.IDE.GetInstance ():GetFrame ():SetVisible (true)
 							GCompute.IDE.GetInstance ():GetFrame ():MoveToFront ()
 						else
-							chatbox._ShowChat2Box (tab)
+							chatbox._ShowChat2Box (tab, mode, reserved)
 						end
 					end
 				)

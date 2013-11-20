@@ -53,7 +53,7 @@ function self:GetDocumentTypes ()
 end
 
 function self:GetFrame ()
-	if not self.Panel then
+	if not self.Panel or not self.Panel:IsValid () then
 		self.Panel = vgui.Create ("GComputeIDEFrame")
 		self.Panel:SetIDE (self)
 		self.Panel:LoadWorkspace ()

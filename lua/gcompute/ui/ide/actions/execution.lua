@@ -13,6 +13,8 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 		local pipe = GCompute.Pipe ()
 		pipe:AddEventListener ("Data",
 			function (_, data, color)
+				if not self or not self:IsValid () then return end
+				
 				if not outputPaneCleared then
 					self:GetViewManager ():GetViewById ("Output"):Clear ()
 					outputPaneCleared = true
@@ -25,6 +27,8 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 		local errorPipe = GCompute.Pipe ()
 		errorPipe:AddEventListener ("Data",
 			function (_, data, color)
+				if not self or not self:IsValid () then return end
+				
 				if not outputPaneCleared then
 					self:GetViewManager ():GetViewById ("Output"):Clear ()
 					outputPaneCleared = true

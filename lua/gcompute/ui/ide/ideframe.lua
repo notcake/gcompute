@@ -396,6 +396,10 @@ function self:LoadWorkspace ()
 	
 	GLib.CallDelayed (
 		function ()
+			if not self or not self:IsValid () then return end
+			if not self.DockContainer or not self.DockContainer:IsValid () then return end
+			if not self.DockContainer:GetLargestView () or not self.DockContainer:GetLargestView ():IsValid () then return end
+			
 			self.DockContainer:GetLargestView ():Select ()
 		end
 	)

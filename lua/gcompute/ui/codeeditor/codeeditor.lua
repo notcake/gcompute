@@ -1221,6 +1221,9 @@ function PANEL:CutSelection ()
 	if self.Selection:IsEmpty () then return end
 	
 	local text = self:CopySelection ()
+	
+	if self:IsReadOnly () then return end
+	
 	local deletionAction
 	if self.Selection:GetSelectionMode () == GCompute.CodeEditor.SelectionMode.Regular then
 		local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)

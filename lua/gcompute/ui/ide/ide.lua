@@ -41,6 +41,7 @@ function self:dtor ()
 	if self.Panel and self.Panel:IsValid () then
 		self.Panel:Remove ()
 	end
+	self.ViewManager:Clear ()
 end
 
 -- IDE

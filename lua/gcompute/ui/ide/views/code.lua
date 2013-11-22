@@ -89,10 +89,10 @@ function self:ctor (container)
 end
 
 function self:dtor ()
+	self.FileSystemWatcher:dtor ()
+	
 	if not self:GetDocument () then return end
 	self:GetDocument ():RemoveView (self)
-	
-	self.FileSystemWatcher:dtor ()
 end
 
 function self:GetCode ()

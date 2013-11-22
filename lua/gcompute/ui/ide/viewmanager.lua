@@ -65,6 +65,18 @@ function self:AddView (view)
 	self:DispatchEvent ("ViewAdded", view)
 end
 
+function self:Clear ()
+	for view, _ in pairs (self.Views) do
+		self.ViewCount = self.ViewCount - 1
+		self:UnhookView (view)
+	
+		self:DispatchEvent ("ViewRemoved", view)
+	end
+	
+	self.Views = {}
+	self.ViewsById = {}
+end
+
 function self:CreateView (viewType, viewId)
 	local view = self.ViewTypes:Create (viewType)
 	if not view then return nil end

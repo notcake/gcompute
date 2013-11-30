@@ -567,7 +567,7 @@ function PANEL:LoadSession (inBuffer, viewManager)
 		for i = 1, tabCount do
 			local view = viewManager:GetViewById (inBuffer:String ())
 			self:AddView (view)
-			if i == selectedTabIndex then
+			if i == selectedTabIndex and view then
 				view:GetContainer ():EnsureVisible ()
 			end
 		end

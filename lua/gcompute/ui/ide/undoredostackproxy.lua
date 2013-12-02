@@ -84,7 +84,7 @@ function self:HookUndoRedoStack (undoRedoStack)
 	if not undoRedoStack then return end
 	
 	for _, eventName in ipairs (events) do
-		undoRedoStack:AddEventListener (eventName, tostring (self),
+		undoRedoStack:AddEventListener (eventName, self:GetHashCode (),
 			function (_, ...)
 				self:DispatchEvent (eventName, ...)
 			end
@@ -96,6 +96,6 @@ function self:UnhookUndoRedoStack (undoRedoStack)
 	if not undoRedoStack then return end
 	
 	for _, eventName in ipairs (events) do
-		undoRedoStack:RemoveEventListener (eventName, tostring (self))
+		undoRedoStack:RemoveEventListener (eventName, self:GetHashCode ())
 	end
 end

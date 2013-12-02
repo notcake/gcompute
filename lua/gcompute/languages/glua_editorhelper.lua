@@ -6,7 +6,7 @@ function self:ctor (language)
 	self.LastStdOut = nil
 	self.LastStdErr = nil
 	
-	GCompute.EPOE:AddEventListener ("LineReceived", tostring (self),
+	GCompute.EPOE:AddEventListener ("LineReceived", self:GetHashCode (),
 		function (_, lineData)
 			self:ProcessEPOELine (lineData)
 		end
@@ -14,7 +14,7 @@ function self:ctor (language)
 end
 
 function self:dtor ()
-	GCompute.EPOE:RemoveEventListener ("LineReceived", tostring (self))
+	GCompute.EPOE:RemoveEventListener ("LineReceived", self:GetHashCode ())
 end
 
 function self:GetCommentFormat ()

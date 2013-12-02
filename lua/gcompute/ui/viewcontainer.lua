@@ -94,12 +94,12 @@ end
 function PANEL:HookView (view)
 	if not view then return end
 	
-	view:AddEventListener ("CanCloseChanged", tostring (self:GetTable ()),
+	view:AddEventListener ("CanCloseChanged", self:GetHashCode (),
 		function (_)
 			self:UpdateCloseButtonVisibility ()
 		end
 	)
-	view:AddEventListener ("VisibleChanged", tostring (self:GetTable ()),
+	view:AddEventListener ("VisibleChanged", self:GetHashCode (),
 		function (_, visible)
 			if not self:GetTab () then return end
 			self:GetTab ():SetVisible (visible)
@@ -110,8 +110,8 @@ end
 function PANEL:UnhookView (view)
 	if not view then return end
 	
-	view:RemoveEventListener ("CanCloseChanged", tostring (self:GetTable ()))
-	view:RemoveEventListener ("VisibleChanged",  tostring (self:GetTable ()))
+	view:RemoveEventListener ("CanCloseChanged", self:GetHashCode ())
+	view:RemoveEventListener ("VisibleChanged",  self:GetHashCode ())
 end
 
 function PANEL:UpdateCloseButtonVisibility ()

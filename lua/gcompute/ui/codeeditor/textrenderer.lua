@@ -72,7 +72,7 @@ function self:SetTabWidth (tabWidth)
 end
 
 function self:UpdateStateHash ()
-	self.StateHash = tostring (self) .. tostring (self.NextHashId)
+	self.StateHash = self:GetHashCode () .. tostring (self.NextHashId)
 	self.NextHashId = self.NextHashId + 1
 end
 

@@ -17,12 +17,12 @@ function self:ctor (document, syntaxHighlighter)
 	self.UsingSource      = nil
 	self.ObjectResolver   = nil
 	
-	self.Document:AddEventListener ("LanguageChanged", tostring (self),
+	self.Document:AddEventListener ("LanguageChanged", self:GetHashCode (),
 		function (_, oldLanguage, language)
 			self:HandleLanguageChange (language)
 		end
 	)
-	self.SyntaxHighlighter:AddEventListener ("LineHighlighted", tostring (self),
+	self.SyntaxHighlighter:AddEventListener ("LineHighlighted", self:GetHashCode (),
 		function (_, lineNumber, tokens)
 			self.UnprocessedLines [lineNumber] = tokens
 		end
@@ -34,8 +34,8 @@ end
 function self:dtor ()
 	self:UnhookLanguage (self.Language)
 	
-	self.Document:RemoveEventListener ("LanguageChanged", tostring (self))
-	self.SyntaxHighlighter:RemoveEventListener ("LineHighlighted", tostring (self))
+	self.Document:RemoveEventListener ("LanguageChanged", self:GetHashCode ())
+	self.SyntaxHighlighter:RemoveEventListener ("LineHighlighted", self:GetHashCode ())
 end
 
 function self:GetDocument ()
@@ -172,7 +172,7 @@ end
 function self:HookLanguage (language)
 	if not language then return end
 	
-	language:AddEventListener ("NamespaceChanged", tostring (self),
+	language:AddEventListener ("NamespaceChanged", self:GetHashCode (),
 		function ()
 			self:HandleNamespaceChange ()
 		end
@@ -182,5 +182,5 @@ end
 function self:UnhookLanguage (language)
 	if not language then return end
 	
-	language:RemoveEventListener ("NamespaceChanged", tostring (self))
+	language:RemoveEventListener ("NamespaceChanged", self:GetHashCode ())
 end

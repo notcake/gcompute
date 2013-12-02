@@ -29,28 +29,28 @@ function self:ctor (document)
 	self.CurrentLineTokens = {}
 	self.TokenizationStartTime = SysTime ()
 	
-	self.Document:AddEventListener ("LanguageChanged", tostring (self),
+	self.Document:AddEventListener ("LanguageChanged", self:GetHashCode (),
 		function (_, oldLanguage, language)
 			self:HandleLanguageChange (language)
 		end
 	)
-	self.Document:AddEventListener ("LinesShifted", tostring (self),
+	self.Document:AddEventListener ("LinesShifted", self:GetHashCode (),
 		function (_, startLine, endLine, shift)
 			self:InvalidateLine (startLine)
 			self:InvalidateLine (startLine + shift)
 		end
 	)
-	self.Document:AddEventListener ("TextCleared", tostring (self),
+	self.Document:AddEventListener ("TextCleared", self:GetHashCode (),
 		function (_)
 			self:InvalidateLine (0)
 		end
 	)
-	self.Document:AddEventListener ("TextDeleted", tostring (self),
+	self.Document:AddEventListener ("TextDeleted", self:GetHashCode (),
 		function (_, deletionStart)
 			self:InvalidateLine (deletionStart:GetLine ())
 		end
 	)
-	self.Document:AddEventListener ("TextInserted", tostring (self),
+	self.Document:AddEventListener ("TextInserted", self:GetHashCode (),
 		function (_, insertionLocation)
 			self:InvalidateLine (insertionLocation:GetLine ())
 		end
@@ -62,8 +62,8 @@ function self:ctor (document)
 end
 
 function self:dtor ()
-	self.Document:RemoveEventListener ("LanguageChanged", tostring (self))
-	self.Document:RemoveEventListener ("TextChanged",     tostring (self))
+	self.Document:RemoveEventListener ("LanguageChanged", self:GetHashCode ())
+	self.Document:RemoveEventListener ("TextChanged",     self:GetHashCode ())
 end
 
 function self:ForceHighlightLine (lineNumber)

@@ -24,7 +24,7 @@ function self:ctor (codeEditor)
 	self.NamePrefix = ""
 	self.FullName   = ""
 	
-	self.Editor:AddEventListener ("CaretMoved", tostring (self),
+	self.Editor:AddEventListener ("CaretMoved", self:GetHashCode (),
 		function (_, caretLocation)
 			if not self.SuggestionFrame then return end
 			if not self.TriggerOnBackspace and
@@ -36,29 +36,29 @@ function self:ctor (codeEditor)
 			self:SetToolTipVisible (false)
 		end
 	)
-	self.Editor:AddEventListener ("ItemRedone", tostring (self),
+	self.Editor:AddEventListener ("ItemRedone", self:GetHashCode (),
 		function (_)
 			self:Trigger ()
 		end
 	)
-	self.Editor:AddEventListener ("ItemUndone", tostring (self),
+	self.Editor:AddEventListener ("ItemUndone", self:GetHashCode (),
 		function (_)
 			self:Trigger ()
 		end
 	)
-	self.Editor:AddEventListener ("LanguageChanged", tostring (self),
+	self.Editor:AddEventListener ("LanguageChanged", self:GetHashCode (),
 		function (_, oldLanguage, language)
 			self:HandleLanguageChange (language)
 		end
 	)
-	self.Editor:AddEventListener ("SizeChanged", tostring (self),
+	self.Editor:AddEventListener ("SizeChanged", self:GetHashCode (),
 		function (_)
 			if not self:IsVisible () then return end
 			if self.Editor:IsCaretVisible () then return end
 			self.SuggestionFrame:SetVisible (false)
 		end
 	)
-	self.Editor:AddEventListener ("ViewLocationChanged", tostring (self),
+	self.Editor:AddEventListener ("ViewLocationChanged", self:GetHashCode (),
 		function (_)
 			if not self:IsVisible () then return end
 			if self.Editor:IsCaretVisible () then
@@ -68,7 +68,7 @@ function self:ctor (codeEditor)
 			end
 		end
 	)
-	self.Editor:GetParent ():AddEventListener ("VisibleChanged", tostring (self),
+	self.Editor:GetParent ():AddEventListener ("VisibleChanged", self:GetHashCode (),
 		function (_, visible)
 			if visible then return end
 			if not self.SuggestionFrame then return end
@@ -81,14 +81,14 @@ function self:ctor (codeEditor)
 end
 
 function self:dtor ()
-	self.Editor:RemoveEventListener ("CaretMoved",          tostring (self))
-	self.Editor:RemoveEventListener ("ItemRedone",          tostring (self))
-	self.Editor:RemoveEventListener ("ItemUndone",          tostring (self))
-	self.Editor:RemoveEventListener ("LanguageChanged",     tostring (self))
-	self.Editor:RemoveEventListener ("MouseUp",             tostring (self))
-	self.Editor:RemoveEventListener ("SizeChanged",         tostring (self))
-	self.Editor:RemoveEventListener ("ViewLocationChanged", tostring (self))
-	self.Editor:GetParent ():RemoveEventListener ("VisibleChanged",  tostring (self))
+	self.Editor:RemoveEventListener ("CaretMoved",          self:GetHashCode ())
+	self.Editor:RemoveEventListener ("ItemRedone",          self:GetHashCode ())
+	self.Editor:RemoveEventListener ("ItemUndone",          self:GetHashCode ())
+	self.Editor:RemoveEventListener ("LanguageChanged",     self:GetHashCode ())
+	self.Editor:RemoveEventListener ("MouseUp",             self:GetHashCode ())
+	self.Editor:RemoveEventListener ("SizeChanged",         self:GetHashCode ())
+	self.Editor:RemoveEventListener ("ViewLocationChanged", self:GetHashCode ())
+	self.Editor:GetParent ():RemoveEventListener ("VisibleChanged",  self:GetHashCode ())
 	
 	if self.SuggestionFrame then
 		self.SuggestionFrame:Remove ()

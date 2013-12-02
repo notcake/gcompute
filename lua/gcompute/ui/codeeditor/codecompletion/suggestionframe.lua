@@ -94,7 +94,7 @@ function self:Init ()
 		end
 	)
 	
-	GCompute:AddEventListener ("Unloaded", tostring (self:GetTable ()),
+	GCompute:AddEventListener ("Unloaded", self:GetHashCode (),
 		function ()
 			self:Remove ()
 		end
@@ -279,12 +279,12 @@ end
 function self:HookSelectedItem (listBoxItem)
 	if not listBoxItem then return end
 	
-	listBoxItem:AddEventListener ("PositionChanged", tostring (self:GetTable ()),
+	listBoxItem:AddEventListener ("PositionChanged", self:GetHashCode (),
 		function (_)
 			self:UpdateToolTip ()
 		end
 	)
-	listBoxItem:AddEventListener ("SizeChanged", tostring (self:GetTable ()),
+	listBoxItem:AddEventListener ("SizeChanged", self:GetHashCode (),
 		function (_)
 			self:UpdateToolTip ()
 		end
@@ -294,8 +294,8 @@ end
 function self:UnhookSelectedItem (listBoxItem)
 	if not listBoxItem then return end
 	
-	listBoxItem:RemoveEventListener ("PositionChanged", tostring (self:GetTable ()))
-	listBoxItem:RemoveEventListener ("SizeChanged",     tostring (self:GetTable ()))
+	listBoxItem:RemoveEventListener ("PositionChanged", self:GetHashCode ())
+	listBoxItem:RemoveEventListener ("SizeChanged",     self:GetHashCode ())
 end
 
 function self:UpdateToolTip ()
@@ -328,7 +328,7 @@ end
 -- Event handlers
 function self:OnRemoved ()
 	self.ToolTip:Remove ()
-	GCompute:RemoveEventListener ("Unloaded", tostring (self:GetTable ()))
+	GCompute:RemoveEventListener ("Unloaded", self:GetHashCode ())
 end
 
 function self:Think ()

@@ -4,7 +4,7 @@ GCompute.CodeEditor.EditorClipboardTarget = GCompute.MakeConstructor (self, Gooe
 function self:ctor (codeEditor)
 	self.CodeEditor = codeEditor
 	
-	self.CodeEditor:AddEventListener ("SelectionChanged", tostring (self),
+	self.CodeEditor:AddEventListener ("SelectionChanged", self:GetHashCode (),
 		function ()
 			self:DispatchEvent ("CanCopyChanged", self:CanCopy ())
 		end

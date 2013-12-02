@@ -29,7 +29,7 @@ function self:CreateProcess ()
 	
 	self.Processes [processId] = process
 	
-	process:AddEventListener ("Terminated", tostring (self), self.ProcessTerminated)
+	process:AddEventListener ("Terminated", self:GetHashCode (), self.ProcessTerminated)
 	
 	self:DispatchEvent ("ProcessCreated", process)
 	

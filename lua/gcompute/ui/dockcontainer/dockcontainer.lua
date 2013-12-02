@@ -540,7 +540,7 @@ function PANEL:Split (dockingSide, fraction)
 end
 
 function PANEL:ToString ()
-	return self:GetPath () .. " [" .. tostring (self:GetTable ()) .. ": " .. GCompute.DockContainer.DockContainerType [self.DockContainerType] .. "]"
+	return self:GetPath () .. " [" .. self:GetHashCode () .. ": " .. GCompute.DockContainer.DockContainerType [self.DockContainerType] .. "]"
 end
 
 function PANEL:UnregisterLocalView (view)
@@ -665,33 +665,33 @@ end
 function PANEL:HookTabControl ()
 	if self.DockContainerType ~= GCompute.DockContainer.DockContainerType.TabControl then return end
 	
-	self.Child:AddEventListener ("ExternalTabDragStarted", tostring (self:GetTable ()),
+	self.Child:AddEventListener ("ExternalTabDragStarted", self:GetHashCode (),
 		function (_, tab)
 			if not tab.View then return end
 			self.DragDropController:StartDrag ("DockableView", tab.View)
 		end
 	)
 	
-	self.Child:AddEventListener ("SelectedContentsChanged", tostring (self:GetTable ()),
+	self.Child:AddEventListener ("SelectedContentsChanged", self:GetHashCode (),
 		function (_, oldSelectedTab, oldSelectedContents, selectedTab, selectedContents)
 			self:GetRootDockContainer ():SetActiveView (selectedTab and selectedTab.View or nil)
 		end
 	)
-	self.Child:AddEventListener ("TabAdded", tostring (self:GetTable ()),
+	self.Child:AddEventListener ("TabAdded", self:GetHashCode (),
 		function (_, tab)
 			if not tab.View then return end
 			
 			self:RegisterLocalView (tab.View)
 		end
 	)
-	self.Child:AddEventListener ("TabCloseRequested", tostring (self:GetTable ()),
+	self.Child:AddEventListener ("TabCloseRequested", self:GetHashCode (),
 		function (_, tab)
 			if not tab.View then return end
 			
 			self:GetRootDockContainer ():DispatchEvent ("ViewCloseRequested", tab.View)
 		end
 	)
-	self.Child:AddEventListener ("TabRemoved", tostring (self:GetTable ()),
+	self.Child:AddEventListener ("TabRemoved", self:GetHashCode (),
 		function (_, tab)
 			if not tab.View then return end
 			
@@ -706,39 +706,39 @@ end
 function PANEL:UnhookTabControl ()
 	if self.DockContainerType ~= GCompute.DockContainer.DockContainerType.TabControl then return end
 	
-	self.Child:RemoveEventListener ("ExternalTabDragStarted",  tostring (self:GetTable ()))
-	self.Child:RemoveEventListener ("SelectedContentsChanged", tostring (self:GetTable ()))
-	self.Child:RemoveEventListener ("TabAdded",                tostring (self:GetTable ()))
-	self.Child:RemoveEventListener ("TabCloseRequested",       tostring (self:GetTable ()))
-	self.Child:RemoveEventListener ("TabRemoved",              tostring (self:GetTable ()))
-	self.Child:RemoveEventListener ("TabVisibleChanged",       tostring (self:GetTable ()))
+	self.Child:RemoveEventListener ("ExternalTabDragStarted",  self:GetHashCode ())
+	self.Child:RemoveEventListener ("SelectedContentsChanged", self:GetHashCode ())
+	self.Child:RemoveEventListener ("TabAdded",                self:GetHashCode ())
+	self.Child:RemoveEventListener ("TabCloseRequested",       self:GetHashCode ())
+	self.Child:RemoveEventListener ("TabRemoved",              self:GetHashCode ())
+	self.Child:RemoveEventListener ("TabVisibleChanged",       self:GetHashCode ())
 end
 
 function PANEL:HookView (view)
 	if not view then return end
 	
-	view:AddEventListener ("IconChanged", tostring (self:GetTable ()),
+	view:AddEventListener ("IconChanged", self:GetHashCode (),
 		function (_, icon)
 			if view:GetContainer ():GetTab () then
 				view:GetContainer ():GetTab ():SetIcon (icon)
 			end
 		end
 	)
-	view:AddEventListener ("TitleChanged", tostring (self:GetTable ()),
+	view:AddEventListener ("TitleChanged", self:GetHashCode (),
 		function (_, title)
 			if view:GetContainer ():GetTab () then
 				view:GetContainer ():GetTab ():SetText (title)
 			end
 		end
 	)
-	view:AddEventListener ("ToolTipTextChanged", tostring (self:GetTable ()),
+	view:AddEventListener ("ToolTipTextChanged", self:GetHashCode (),
 		function (_, toolTipText)
 			if view:GetContainer ():GetTab () then
 				view:GetContainer ():GetTab ():SetToolTipText (toolTipText)
 			end
 		end
 	)
-	view:AddEventListener ("VisibleChanged", tostring (self:GetTable ()),
+	view:AddEventListener ("VisibleChanged", self:GetHashCode (),
 		function (_, visible)
 			if view:GetContainer ():GetTab () then
 				view:GetContainer ():GetTab ():SetVisible (visible)
@@ -753,10 +753,10 @@ end
 function PANEL:UnhookView (view)
 	if not view then return end
 	
-	view:RemoveEventListener ("IconChanged",        tostring (self:GetTable ()))
-	view:RemoveEventListener ("TitleChanged",       tostring (self:GetTable ()))
-	view:RemoveEventListener ("ToolTipTextChanged", tostring (self:GetTable ()))
-	view:RemoveEventListener ("VisibleChanged",     tostring (self:GetTable ()))
+	view:RemoveEventListener ("IconChanged",        self:GetHashCode ())
+	view:RemoveEventListener ("TitleChanged",       self:GetHashCode ())
+	view:RemoveEventListener ("ToolTipTextChanged", self:GetHashCode ())
+	view:RemoveEventListener ("VisibleChanged",     self:GetHashCode ())
 end
 
 -- Visibility

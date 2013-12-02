@@ -108,7 +108,7 @@ function self:GetCorrespondingDefinition (globalNamespace)
 end
 
 function self:GetFullName ()
-	return "<inferred-type " .. tostring (self):sub (8) .. ">"
+	return "<inferred-type " .. self:GetHashCode ():sub (8) .. ">"
 end
 
 function self:ImportMethodTypes (overloadedMethodDefinition)

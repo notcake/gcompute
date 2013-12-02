@@ -479,14 +479,14 @@ end
 function self:HookDocumentManager (documentManager)
 	if not documentManager then return end
 	
-	documentManager:AddEventListener ("DocumentAdded", tostring (self:GetTable ()),
+	documentManager:AddEventListener ("DocumentAdded", self:GetHashCode (),
 		function (_, document)
 			self:HookDocument (document)
 			self:InvalidateSavedWorkspace ()
 		end
 	)
 	
-	documentManager:AddEventListener ("DocumentRemoved", tostring (self:GetTable ()),
+	documentManager:AddEventListener ("DocumentRemoved", self:GetHashCode (),
 		function (_, document)
 			self:UnhookDocument (document)
 			self:InvalidateSavedWorkspace ()
@@ -497,14 +497,14 @@ end
 function self:UnhookDocumentManager (documentManager)
 	if not documentManager then return end
 	
-	documentManager:RemoveEventListener ("DocumentAdded",   tostring (self:GetTable ()))
-	documentManager:RemoveEventListener ("DocumentRemoved", tostring (self:GetTable ()))
+	documentManager:RemoveEventListener ("DocumentAdded",   self:GetHashCode ())
+	documentManager:RemoveEventListener ("DocumentRemoved", self:GetHashCode ())
 end
 
 function self:HookViewManager (viewManager)
 	if not viewManager then return end
 	
-	viewManager:AddEventListener ("ViewAdded", tostring (self:GetTable ()),
+	viewManager:AddEventListener ("ViewAdded", self:GetHashCode (),
 		function (_, view)
 			self:HookView (view)
 			self.DockContainer:GetLargestContainer ():AddView (view)
@@ -512,7 +512,7 @@ function self:HookViewManager (viewManager)
 		end
 	)
 	
-	viewManager:AddEventListener ("ViewRemoved", tostring (self:GetTable ()),
+	viewManager:AddEventListener ("ViewRemoved", self:GetHashCode (),
 		function (_, view)
 			self:UnhookView (view)
 			self:InvalidateSavedWorkspace ()
@@ -523,14 +523,14 @@ end
 function self:UnhookViewManager (viewManager)
 	if not viewManager then return end
 	
-	viewManager:RemoveEventListener ("ViewAdded",   tostring (self:GetTable ()))
-	viewManager:RemoveEventListener ("ViewRemoved", tostring (self:GetTable ()))
+	viewManager:RemoveEventListener ("ViewAdded",   self:GetHashCode ())
+	viewManager:RemoveEventListener ("ViewRemoved", self:GetHashCode ())
 end
 
 function self:HookDocument (document)
 	if not document then return end
 	
-	document:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+	document:AddEventListener ("LanguageChanged", self:GetHashCode (),
 		function (_)
 			self:UpdateLanguageText ()
 		end
@@ -540,19 +540,19 @@ end
 function self:UnhookDocument (document)
 	if not document then return end
 	
-	document:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
+	document:RemoveEventListener ("LanguageChanged", self:GetHashCode ())
 end
 
 function self:HookSelectedCodeEditor (codeEditor)
 	if not codeEditor then return end
 	
-	codeEditor:AddEventListener ("CaretMoved", tostring (self:GetTable ()),
+	codeEditor:AddEventListener ("CaretMoved", self:GetHashCode (),
 		function (_, caretLocation)
 			self:UpdateCaretPositionText ()
 		end
 	)
 	
-	codeEditor:AddEventListener ("SyntaxHighligherChanged", tostring (self:GetTable ()),
+	codeEditor:AddEventListener ("SyntaxHighligherChanged", self:GetHashCode (),
 		function (_, oldSyntaxHighlighter, syntaxHighlighter)
 			self:UnhookSyntaxHighlighter (oldSyntaxHighlighter)
 			self:HookSyntaxHighlighter (syntaxHighlighter)
@@ -564,25 +564,25 @@ end
 
 function self:UnhookSelectedCodeEditor (codeEditor)
 	if not codeEditor then return end
-	codeEditor:RemoveEventListener ("CaretMoved",               tostring (self:GetTable ()))
-	codeEditor:RemoveEventListener ("SyntaxHighlighterChanged", tostring (self:GetTable ()))
+	codeEditor:RemoveEventListener ("CaretMoved",               self:GetHashCode ())
+	codeEditor:RemoveEventListener ("SyntaxHighlighterChanged", self:GetHashCode ())
 	self:UnhookSyntaxHighlighter (codeEditor:GetSyntaxHighlighter ())
 end
 
 function self:HookSyntaxHighlighter (syntaxHighlighter)
 	if not syntaxHighlighter then return end
 	
-	syntaxHighlighter:AddEventListener ("HighlightingFinished", tostring (self:GetTable ()),
+	syntaxHighlighter:AddEventListener ("HighlightingFinished", self:GetHashCode (),
 		function (_)
 			self:UpdateProgressBar ()
 		end
 	)
-	syntaxHighlighter:AddEventListener ("HighlightingProgress", tostring (self:GetTable ()),
+	syntaxHighlighter:AddEventListener ("HighlightingProgress", self:GetHashCode (),
 		function (_, linesProcessed, totalLines)
 			self:UpdateProgressBar ()
 		end
 	)
-	syntaxHighlighter:AddEventListener ("HighlightingStarted", tostring (self:GetTable ()),
+	syntaxHighlighter:AddEventListener ("HighlightingStarted", self:GetHashCode (),
 		function (_)
 			self:UpdateProgressBar ()
 		end
@@ -591,24 +591,24 @@ end
 
 function self:UnhookSyntaxHighlighter (syntaxHighlighter)
 	if not syntaxHighlighter then return end
-	syntaxHighlighter:RemoveEventListener ("HighlightingFinished", tostring (self:GetTable ()))
-	syntaxHighlighter:RemoveEventListener ("HighlightingProgress", tostring (self:GetTable ()))
-	syntaxHighlighter:RemoveEventListener ("HighlightingStarted",  tostring (self:GetTable ()))
+	syntaxHighlighter:RemoveEventListener ("HighlightingFinished", self:GetHashCode ())
+	syntaxHighlighter:RemoveEventListener ("HighlightingProgress", self:GetHashCode ())
+	syntaxHighlighter:RemoveEventListener ("HighlightingStarted",  self:GetHashCode ())
 end
 
 function self:HookTabContents (tab, contents)
 	if not tab.View then return end
-	tab.View:AddEventListener ("IconChanged", tostring (self:GetTable ()),
+	tab.View:AddEventListener ("IconChanged", self:GetHashCode (),
 		function (_, icon)
 			tab:SetIcon (icon)
 		end
 	)
-	tab.View:AddEventListener ("TitleChanged", tostring (self:GetTable ()),
+	tab.View:AddEventListener ("TitleChanged", self:GetHashCode (),
 		function (_, title)
 			tab:SetText (title)
 		end
 	)
-	tab.View:AddEventListener ("ToolTipTextChanged", tostring (self:GetTable ()),
+	tab.View:AddEventListener ("ToolTipTextChanged", self:GetHashCode (),
 		function (_, toolTipText)
 			tab:SetToolTipText (toolTipText)
 		end
@@ -620,9 +620,9 @@ end
 
 function self:UnhookTabContents (tab, contents)
 	if not tab.View then return end
-	tab.View:RemoveEventListener ("IconChanged",        tostring (self:GetTable ()))
-	tab.View:RemoveEventListener ("TitleChanged",       tostring (self:GetTable ()))
-	tab.View:RemoveEventListener ("ToolTipTextChanged", tostring (self:GetTable ()))
+	tab.View:RemoveEventListener ("IconChanged",        self:GetHashCode ())
+	tab.View:RemoveEventListener ("TitleChanged",       self:GetHashCode ())
+	tab.View:RemoveEventListener ("ToolTipTextChanged", self:GetHashCode ())
 end
 
 function self:HookView (view)
@@ -630,7 +630,7 @@ function self:HookView (view)
 	
 	if view:GetSavable () then
 		local savable = view:GetSavable ()
-		savable:AddEventListener ("CanSaveChanged", tostring (self:GetTable ()),
+		savable:AddEventListener ("CanSaveChanged", self:GetHashCode (),
 			function (_, canSave)
 				local canSaveAll = false
 				for view in self:GetViewManager ():GetEnumerator () do
@@ -651,7 +651,7 @@ function self:UnhookView (view)
 	if not view then return end
 	
 	if view:GetSavable () then
-		view:GetSavable ():RemoveEventListener ("CanSaveChanged", tostring (self:GetTable ()))
+		view:GetSavable ():RemoveEventListener ("CanSaveChanged", self:GetHashCode ())
 	end
 end
 

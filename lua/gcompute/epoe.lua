@@ -47,7 +47,7 @@ function self:ctor ()
 		end
 	)
 	
-	GCompute.AddEventListener ("Unloaded", tostring (self),
+	GCompute.AddEventListener ("Unloaded", self:GetHashCode (),
 		function ()
 			self:dtor ()
 		end
@@ -58,7 +58,7 @@ end
 
 function self:dtor ()
 	hook.Remove ("EPOE", "GCompute.EPOE")
-	GCompute.RemoveEventListener ("Unloaded", tostring (self))
+	GCompute.RemoveEventListener ("Unloaded", self:GetHashCode ())
 end
 
 GCompute.EPOE = GCompute.EPOE ()

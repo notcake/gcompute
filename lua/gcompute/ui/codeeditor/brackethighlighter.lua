@@ -172,7 +172,7 @@ end
 
 -- Internal, do not call
 function self:GetId ()
-	return "GCompute.CodeEditor.BracketHighlighter." .. tostring (self)
+	return "GCompute.CodeEditor.BracketHighlighter." .. self:GetHashCode ()
 end
 
 function self:Update ()

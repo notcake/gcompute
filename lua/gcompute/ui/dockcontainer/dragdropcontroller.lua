@@ -330,7 +330,7 @@ end
 -- Event handlers
 function self:OnControlChanged (oldControl, control)
 	if oldControl then
-		Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self))
+		Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. self:GetHashCode ())
 	end
 	
 	if control then
@@ -352,7 +352,7 @@ function self:OnDragEnter (_, dragDropController, oldDropPanel)
 	end
 	self.DropData.EnterTime = SysTime ()
 	
-	Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self))
+	Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. self:GetHashCode ())
 end
 
 function self:OnDragLeave (_, dragDropController, newDropPanel)
@@ -364,11 +364,11 @@ function self:OnDragLeave (_, dragDropController, newDropPanel)
 	
 	self.DropData.LeaveTime = SysTime ()
 	
-	Gooey.AddRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self),
+	Gooey.AddRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. self:GetHashCode (),
 		function ()
 			self:DrawDropOverlay (Gooey.RenderContext)
 			if SysTime () - self.DropData.LeaveTime > 1 then
-				Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. tostring (self))
+				Gooey.RemoveRenderHook (Gooey.RenderType.DragDropPreview, "GCompute.DockContainer." .. self:GetHashCode ())
 			end
 		end
 	)

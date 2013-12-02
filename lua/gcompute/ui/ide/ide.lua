@@ -323,7 +323,7 @@ end
 function self:HookDocument (document)
 	if not document then return end
 	
-	document:AddEventListener ("ViewRemoved", tostring (self),
+	document:AddEventListener ("ViewRemoved", self:GetHashCode (),
 		function (_)
 			if document:GetViewCount () == 0 then
 				self:UnregisterDocument (document)
@@ -335,13 +335,13 @@ end
 function self:UnhookDocument (document)
 	if not document then return end
 	
-	document:RemoveEventListener ("ViewRemoved", tostring (self))
+	document:RemoveEventListener ("ViewRemoved", self:GetHashCode ())
 end
 
 function self:HookView (view)
 	if not view then return end
 	
-	view:AddEventListener ("DocumentChanged", tostring (self),
+	view:AddEventListener ("DocumentChanged", self:GetHashCode (),
 		function (_, oldDocument, newDocument)
 			-- Do not unregister the old document, this will occur on
 			-- Document:ViewRemoved if the document no longer has any views
@@ -358,7 +358,7 @@ function self:HookView (view)
 	)
 	
 	if view:GetSavable () then
-		view:GetSavable ():AddEventListener ("ResourceChanged", tostring (self),
+		view:GetSavable ():AddEventListener ("ResourceChanged", self:GetHashCode (),
 			function (_, oldResource, resource)
 				view:SetTitle (resource and resource:GetDisplayName () or view:GetSavable ():GetUri ())
 				view:SetToolTipText (resource and resource:GetDisplayUri () or nil)
@@ -370,10 +370,10 @@ end
 function self:UnhookView (view)
 	if not view then return end
 	
-	view:RemoveEventListener ("DocumentChanged", tostring (self))
+	view:RemoveEventListener ("DocumentChanged", self:GetHashCode ())
 	
 	if view:GetSavable () then
-		view:GetSavable ():RemoveEventListener ("FileChanged", tostring (self))
+		view:GetSavable ():RemoveEventListener ("FileChanged", self:GetHashCode ())
 	end
 end
 

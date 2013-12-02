@@ -84,7 +84,7 @@ function self:HookSavable (savable)
 	if not savable then return end
 	
 	for _, eventName in ipairs (events) do
-		savable:AddEventListener (eventName, tostring (self),
+		savable:AddEventListener (eventName, self:GetHashCode (),
 			function (_, ...)
 				self:DispatchEvent (eventName, ...)
 			end
@@ -96,6 +96,6 @@ function self:UnhookSavable (savable)
 	if not savable then return end
 	
 	for _, eventName in ipairs (events) do
-		savable:RemoveEventListener (eventName, tostring (self))
+		savable:RemoveEventListener (eventName, self:GetHashCode ())
 	end
 end

@@ -146,8 +146,8 @@ function self:SetProcessList (processList)
 	self:Clear ()
 	self.Processes = {}
 	if self.ProcessList then
-		self.ProcessList:RemoveEventListener ("ProcessCreated",   tostring (self:GetTable ()))
-		self.ProcessList:RemoveEventListener ("ProcessDestroyed", tostring (self:GetTable ()))
+		self.ProcessList:RemoveEventListener ("ProcessCreated",   self:GetHashCode ())
+		self.ProcessList:RemoveEventListener ("ProcessDestroyed", self:GetHashCode ())
 		
 		for process, _ in pairs (self.HookedProcesses) do
 			self:RemoveProcess (process)
@@ -159,14 +159,14 @@ function self:SetProcessList (processList)
 	self.ProcessList = processList
 	self:MergeRefresh ()
 	
-	self.ProcessList:AddEventListener ("ProcessCreated", tostring (self:GetTable ()),
+	self.ProcessList:AddEventListener ("ProcessCreated", self:GetHashCode (),
 		function (_, process)
 			self:AddProcess (process)
 			self:Sort ()
 		end
 	)
 	
-	self.ProcessList:AddEventListener ("ProcessDestroyed", tostring (self:GetTable ()),
+	self.ProcessList:AddEventListener ("ProcessDestroyed", self:GetHashCode (),
 		function (_, process)
 			self:Sort ()
 		end
@@ -203,7 +203,7 @@ function self:AddProcess (process)
 	
 	self.HookedProcesses [process] = true
 	for hookName, hook in pairs (self.ProcessHooks) do
-		process:AddEventListener (hookName, tostring (self:GetTable ()), hook)
+		process:AddEventListener (hookName, self:GetHashCode (), hook)
 	end
 	
 	return listViewItem
@@ -219,7 +219,7 @@ function self:RemoveProcess (process)
 	
 	self.HookedProcesses [process] = nil
 	for hookName, _ in pairs (self.ProcessHooks) do
-		process:RemoveEventListener (hookName, tostring (self:GetTable ()))
+		process:RemoveEventListener (hookName, self:GetHashCode ())
 	end
 end
 

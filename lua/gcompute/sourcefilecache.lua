@@ -42,8 +42,8 @@ function self:Add (sourceFile)
 	self.SourceFilesById [sourceFile:GetId ()] = sourceFile
 	self.SourceFilesByPath [sourceFile:GetPath ()] = sourceFile
 	
-	sourceFile:AddEventListener ("IdChanged",   tostring (self), self.IdChanged)
-	sourceFile:AddEventListener ("PathChanged", tostring (self), self.PathChanged)
+	sourceFile:AddEventListener ("IdChanged",   self:GetHashCode (), self.IdChanged)
+	sourceFile:AddEventListener ("PathChanged", self:GetHashCode (), self.PathChanged)
 end
 
 function self:CreateAnonymousSourceFile ()
@@ -65,8 +65,8 @@ function self:Remove (sourceFile)
 	self.SourceFilesById [sourceFile:GetId ()] = nil
 	self.SourceFilesByPath [sourceFile:GetPath ()] = nil
 	
-	sourceFile:RemoveEventListener ("PathChanged", tostring (self))
-	sourceFile:RemoveEventListener ("IdChanged",   tostring (self))
+	sourceFile:RemoveEventListener ("PathChanged", self:GetHashCode ())
+	sourceFile:RemoveEventListener ("IdChanged",   self:GetHashCode ())
 	
 	sourceFile:dtor ()
 end

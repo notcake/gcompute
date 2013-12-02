@@ -45,7 +45,7 @@ function self:ctor (container)
 	GCompute.EventProvider (self)
 	
 	self.Container:SetView (self)
-	self.Container:AddEventListener ("Removed", tostring (self),
+	self.Container:AddEventListener ("Removed", self:GetHashCode (),
 		function ()
 			self:DispatchEvent ("Removed")
 		end
@@ -232,13 +232,13 @@ function self:SetDocument (document)
 	
 	local oldDocument = self.Document
 	if oldDocument then
-		oldDocument:RemoveEventListener ("Loaded", tostring (self))
+		oldDocument:RemoveEventListener ("Loaded", self:GetHashCode ())
 		self:UnhookDocument (oldDocument)
 		oldDocument:RemoveView (self)
 	end
 	self.Document = document
 	if document then
-		document:AddEventListener ("Loaded", tostring (self),
+		document:AddEventListener ("Loaded", self:GetHashCode (),
 			function (_, reloaded)
 				self:OnDocumentLoaded (document, reloaded)
 			end

@@ -7,7 +7,7 @@ Object:AddMethod ("GetHashCode")
 	:SetReturnType ("int")
 	:SetNativeFunction (
 		function (self)
-			return tonumber (util.CRC (tostring (self)))
+			return tonumber (util.CRC (self:GetHashCode ()))
 		end
 	)
 

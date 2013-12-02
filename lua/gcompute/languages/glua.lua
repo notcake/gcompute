@@ -86,3 +86,4 @@ LANGUAGE:AddKeywords (GCompute.KeywordType.Operator, {"not", "and", "or"})
 LANGUAGE:AddKeywords (GCompute.KeywordType.Constant, {"true", "false", "nil"})
 
 LANGUAGE:LoadEditorHelper ("glua_editorhelper.lua")
+LANGUAGE:LoadParser ("glua_parser.lua")

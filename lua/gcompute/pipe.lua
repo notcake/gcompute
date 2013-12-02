@@ -6,7 +6,7 @@ function self:ctor ()
 end
 
 function self:Chain (pipe)
-	pipe:AddEventListener ("Data", tostring (self),
+	pipe:AddEventListener ("Data", self:GetHashCode (),
 		function (_, data, color)
 			self:DispatchEvent ("Data", data, color)
 		end
@@ -14,7 +14,7 @@ function self:Chain (pipe)
 end
 
 function self:Unchain (pipe)
-	pipe:RemoveEventListener ("Data", tostring (self))
+	pipe:RemoveEventListener ("Data", self:GetHashCode ())
 end
 
 function self:Write (data)

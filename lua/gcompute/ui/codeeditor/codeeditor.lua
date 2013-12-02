@@ -1323,25 +1323,25 @@ end
 function PANEL:HookDocument (document)
 	if not document then return end
 	
-	document:GetUndoRedoStack ():AddEventListener ("ItemRedone", tostring (self:GetTable ()),
+	document:GetUndoRedoStack ():AddEventListener ("ItemRedone", self:GetHashCode (),
 		function (_, undoRedoItem)
 			self:DispatchEvent ("ItemRedone")
 		end
 	)
-	document:GetUndoRedoStack ():AddEventListener ("ItemUndone", tostring (self:GetTable ()),
+	document:GetUndoRedoStack ():AddEventListener ("ItemUndone", self:GetHashCode (),
 		function (_, undoRedoItem)
 			self:DispatchEvent ("ItemUndone")
 		end
 	)
 	
-	document:AddEventListener ("LanguageChanged", tostring (self:GetTable ()),
+	document:AddEventListener ("LanguageChanged", self:GetHashCode (),
 		function (_, oldLanguage, language)
 			self.EditorHelper = language and language:GetEditorHelper ()
 			
 			self:DispatchEvent ("LanguageChanged", oldLanguage, language)
 		end
 	)
-	document:AddEventListener ("LinesShifted", tostring (self:GetTable ()),
+	document:AddEventListener ("LinesShifted", self:GetHashCode (),
 		function (_, startLine, endLine, shift)
 			self.DocumentChangeUnhandled = true
 			
@@ -1358,7 +1358,7 @@ function PANEL:HookDocument (document)
 			end
 		end
 	)
-	document:AddEventListener ("TextCleared", tostring (self:GetTable ()),
+	document:AddEventListener ("TextCleared", self:GetHashCode (),
 		function (_)
 			self:SetCaretPos (GCompute.CodeEditor.LineColumnLocation (0, 0))
 			self:SetSelection (self:GetCaretPos (), self:GetCaretPos ())
@@ -1370,12 +1370,12 @@ function PANEL:HookDocument (document)
 			self:UpdateVerticalScrollBar ()
 		end
 	)
-	document:AddEventListener ("TextChanged", tostring (self:GetTable ()),
+	document:AddEventListener ("TextChanged", self:GetHashCode (),
 		function (_)
 			self:DispatchEvent ("TextChanged")
 		end
 	)
-	document:AddEventListener ("TextDeleted", tostring (self:GetTable ()),
+	document:AddEventListener ("TextDeleted", self:GetHashCode (),
 		function (_, startLocation, endLocation)
 			self.DocumentChangeUnhandled = true
 			
@@ -1403,7 +1403,7 @@ function PANEL:HookDocument (document)
 			self:UpdateVerticalScrollBar ()
 		end
 	)
-	document:AddEventListener ("TextInserted", tostring (self:GetTable ()),
+	document:AddEventListener ("TextInserted", self:GetHashCode (),
 		function (_, location, text, newLocation)
 			self.DocumentChangeUnhandled = true
 			
@@ -1418,14 +1418,14 @@ end
 function PANEL:UnhookDocument (document)
 	if not document then return end
 	
-	document:GetUndoRedoStack ():RemoveEventListener ("ItemRedone", tostring (self:GetTable ()))
-	document:GetUndoRedoStack ():RemoveEventListener ("ItemUndone", tostring (self:GetTable ()))
-	document:RemoveEventListener ("LanguageChanged", tostring (self:GetTable ()))
-	document:RemoveEventListener ("LinesShifted",    tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextCleared",     tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextChanged",     tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextDeleted",     tostring (self:GetTable ()))
-	document:RemoveEventListener ("TextInserted",    tostring (self:GetTable ()))
+	document:GetUndoRedoStack ():RemoveEventListener ("ItemRedone", self:GetHashCode ())
+	document:GetUndoRedoStack ():RemoveEventListener ("ItemUndone", self:GetHashCode ())
+	document:RemoveEventListener ("LanguageChanged", self:GetHashCode ())
+	document:RemoveEventListener ("LinesShifted",    self:GetHashCode ())
+	document:RemoveEventListener ("TextCleared",     self:GetHashCode ())
+	document:RemoveEventListener ("TextChanged",     self:GetHashCode ())
+	document:RemoveEventListener ("TextDeleted",     self:GetHashCode ())
+	document:RemoveEventListener ("TextInserted",    self:GetHashCode ())
 end
 
 -- Event handlers

@@ -144,7 +144,7 @@ end
 function self:HookDocument (document)
 	if not document then return end
 	
-	document:AddEventListener ("UriChanged", tostring (self),
+	document:AddEventListener ("UriChanged", self:GetHashCode (),
 		function (_, oldUri, uri)
 			if oldUri then
 				self.DocumentsByUri [oldUri] = nil
@@ -159,5 +159,5 @@ end
 function self:UnhookDocument (document)
 	if not document then return end
 	
-	document:RemoveEventListener ("UriChanged", tostring (self))
+	document:RemoveEventListener ("UriChanged", self:GetHashCode ())
 end

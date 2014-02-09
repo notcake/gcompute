@@ -61,6 +61,7 @@ LANGUAGE:GetTokenizer ()
 	:AddPlainSymbols  (GCompute.TokenType.MemberIndexer,       {".", ":"})
 	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"#", "+", "-", "^", "*", "/", "=", "<", ">", "(", ")", "{", "}", "[", "]", "%", ","})
 	:AddPlainSymbols  (GCompute.TokenType.Operator,            {"not", "and", "or"})
+	:AddPlainSymbol   (GCompute.TokenType.StatementTerminator,  ";")
 	:AddPlainSymbols  (GCompute.TokenType.Newline,             {"\r\n", "\r", "\n"})
 	:AddPatternSymbol (GCompute.TokenType.Whitespace,           "[ \t]+")
 

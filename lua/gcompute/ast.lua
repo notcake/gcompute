@@ -1,6 +1,14 @@
 GCompute.AST = GCompute.AST or {}
 
+local StaticTableMetatable =
+{
+	__call = function (self, ...)
+		return self.ctor (...)
+	end
+}
+
 function GCompute.AST.MakeConstructor (metatable, base)
+	metatable.__index = metatable
 	base = base or GCompute.AST.ASTNode
 	
 	if not metatable.__Type then
@@ -8,38 +16,86 @@ function GCompute.AST.MakeConstructor (metatable, base)
 		GCompute.Error ("Missing __Type field in AST node!")
 	end
 	
+	-- Instance constructor, what this function returns
+	local ictor
+	
 	metatable.__index = metatable
 	metatable.__Types = {}
 	metatable.__Types [metatable.__Type] = true
 	
-	local basetable = GCompute.GetMetaTable (base)
-	metatable.__base = basetable
-	for t, _ in pairs (basetable.__Types) do
-		metatable.__Types [t] = true
+	if base then
+		-- 1st base class
+		local basetable = GCompute.GetMetaTable (base)
+		metatable.__tostring = metatable.__tostring or basetable.__tostring
+		metatable.__base = basetable
+		setmetatable (metatable, basetable)
+		
+		for t, _ in pairs (basetable.__Types) do
+			metatable.__Types [t] = true
+		end
 	end
-	setmetatable (metatable, basetable)
 	
-	return function (...)
+	ictor = function (...)
 		local object = {}
 		setmetatable (object, metatable)
 		
-		-- Call base constructors
-		local base = object.__base
-		local basectors = {}
-		while base ~= nil do
-			basectors [#basectors + 1] = base.ctor
-			base = base.__base
-		end
-		for i = #basectors, 1, -1 do
-			basectors [i] (object, ...)
+		-- Create constructor and destructor if they don't already exist
+		if not rawget (metatable, "__ctor") or not rawget (metatable, "__dtor") then
+			local base = metatable
+			local ctors = {}
+			local dtors = {}
+			
+			-- Pull together list of constructors and destructors needing to be called
+			while base ~= nil do
+				ctors [#ctors + 1] = rawget (base, "ctor")
+				ctors [#ctors + 1] = rawget (base, "ctor2")
+				dtors [#dtors + 1] = rawget (base, "dtor")
+				base = base.__base
+			end
+			
+			-- Constructor
+			function metatable:__ctor (...)
+				-- Invoke constructors,
+				-- starting from the base classes upwards
+				for i = #ctors, 1, -1 do
+					ctors [i] (self, ...)
+				end
+			end
+			
+			-- Destructor
+			function metatable:__dtor (...)
+				-- Invoke destructors,
+				-- starting from the derived classes downwards
+				for i = 1, #dtors do
+					dtors [i] (self, ...)
+				end
+			end
 		end
 		
-		-- Call object constructor
-		if object.ctor then
-			object:ctor (...)
-		end
+		-- Assign destructor
+		object.dtor = object.__dtor
+		
+		-- Invoke constructor
+		object:__ctor (...)
+		
+		-- 2000 years ago
+		-- my race created you.
+		-- We turned you loose in space,
+		-- now a polluted zoo
 		return object
 	end
+	
+	-- Instance constructor
+	metatable.__ictor = ictor
+	
+	-- Static table
+	local staticTable = {}
+	staticTable.__ictor = ictor
+	staticTable.__static = true
+	staticTable.ctor = ictor
+	setmetatable (staticTable, StaticTableMetatable)
+	
+	return staticTable
 end
 
 include ("ast/error.lua")

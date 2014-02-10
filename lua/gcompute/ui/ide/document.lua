@@ -99,7 +99,8 @@ function self:LoadSession (inBuffer, serializerRegistry)
 			end
 		)
 	end
-	self:LoadSessionMetadata (inBuffer)
+	
+	xpcall (self.LoadSessionMetadata, GLib.Error, self, inBuffer)
 end
 
 function self:LoadSessionMetadata (inBuffer)

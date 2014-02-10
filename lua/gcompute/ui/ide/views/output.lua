@@ -69,7 +69,7 @@ function self:ctor (container)
 			end
 			if not lineMatch then
 				-- GLib style stack trace
-				pathMatch, lineMatch = lowercaseLineText:match ("lua/(.*): ([0-9]+)%)")
+				pathMatch, lineMatch = lowercaseLineText:match ("lua/(.*): ([0-9]+)[%)%]]")
 			end
 			if not lineMatch then
 				lineMatch = lowercaseLineText:match (":([0-9]+): ")

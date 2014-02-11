@@ -115,6 +115,7 @@ function self:SetFunctionEntry (functionEntry)
 	
 	-- Flag for update
 	self.UpdateNeeded = true
+	self.LastSortTime = 0 -- We want a sorted view straight away
 	
 	return self
 end

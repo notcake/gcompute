@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.DeletionAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.DeletionAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor, selectionStartLocation, selectionEndLocation, deletionStartLocation, deletionEndLocation, text)
 	self.CodeEditor = codeEditor

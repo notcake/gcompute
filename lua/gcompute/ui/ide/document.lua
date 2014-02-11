@@ -26,7 +26,7 @@ function self:ctor ()
 	self.Views   = {}
 	self.ViewSet = {}
 	
-	self.UndoRedoStack = GCompute.UndoRedoStack ()
+	self.UndoRedoStack = Gooey.UndoRedoStack ()
 	self.UndoRedoStack:AddEventListener ("StackChanged",
 		function ()
 			self:DispatchEvent ("CanSaveChanged", self:CanSave ())

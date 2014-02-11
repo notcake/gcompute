@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.ReplacementAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.ReplacementAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor, selectionStartLocation, selectionEndLocation, originalText, finalText)
 	self.CodeEditor = codeEditor

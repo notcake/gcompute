@@ -56,7 +56,3 @@ GCompute.IncludeDirectory ("gcompute/ui/ide/actions")
 include ("ide/notificationbars/notificationbar.lua")
 include ("ide/notificationbars/filechangenotificationbar.lua")
 include ("ide/notificationbars/savefailurenotificationbar.lua")
-
--- Undo / Redo
-include ("ide/undoredo/undoredostack.lua")
-include ("ide/undoredo/undoredoitem.lua")

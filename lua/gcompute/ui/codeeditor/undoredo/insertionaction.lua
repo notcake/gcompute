@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.InsertionAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.InsertionAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor, insertionLocation, text)
 	self.CodeEditor = codeEditor

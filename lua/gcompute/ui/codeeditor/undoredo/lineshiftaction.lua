@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.LineShiftAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.LineShiftAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor, selectionSnapshot, startLine, endLine, shift)
 	self.CodeEditor   = codeEditor

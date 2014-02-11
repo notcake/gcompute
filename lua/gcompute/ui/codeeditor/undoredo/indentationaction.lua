@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.IndentationAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.IndentationAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor, selectionSnapshot)
 	self.CodeEditor = codeEditor

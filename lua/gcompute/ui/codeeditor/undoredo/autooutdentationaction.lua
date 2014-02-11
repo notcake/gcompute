@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.AutoOutdentationAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.AutoOutdentationAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor)
 	self.CodeEditor   = codeEditor

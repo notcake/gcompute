@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CodeEditor.BlockReplacementAction = GCompute.MakeConstructor (self, GCompute.UndoRedoItem)
+GCompute.CodeEditor.BlockReplacementAction = GCompute.MakeConstructor (self, Gooey.UndoRedoItem)
 
 function self:ctor (codeEditor, selectionSnapshot, text)
 	self.CodeEditor = codeEditor

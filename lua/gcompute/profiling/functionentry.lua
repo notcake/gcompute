@@ -1,8 +1,8 @@
 local self = {}
 GCompute.Profiling.FunctionEntry = GCompute.MakeConstructor (self)
 
-function self:ctor (profiler, func)
-	self.Profiler = profiler
+function self:ctor (profilingResultSet, func)
+	self.ProfilingResultSet = profilingResultSet
 	self.Function = GLib.Lua.Function (func)
 	
 	self.TotalSampleCount = 0
@@ -22,7 +22,7 @@ function self:GetFunction ()
 end
 
 function self:GetFunctionName ()
-	local name = GLib.Lua.NameCache:GetFunctionName (self:GetRawFunction ())
+	local name = GLib.Lua.GetFunctionName (self:GetRawFunction ())
 	if name then return name end
 	
 	local func = self:GetFunction ()
@@ -30,7 +30,7 @@ function self:GetFunctionName ()
 end
 
 function self:GetFunctionPrototype ()
-	local name = GLib.Lua.NameCache:GetFunctionName (self:GetRawFunction ())
+	local name = GLib.Lua.GetFunctionName (self:GetRawFunction ())
 	if name then return name .. " " .. self:GetFunction ():GetParameterList ():ToString () end
 	
 	local func = self:GetFunction ()
@@ -63,7 +63,7 @@ function self:GetExclusiveSampleCount ()
 end
 
 function self:GetExclusiveSampleFraction ()
-	return self.ExclusiveSampleCount / self.Profiler:GetSampleCount ()
+	return self.ExclusiveSampleCount / self.ProfilingResultSet:GetSampleCount ()
 end
 
 function self:GetInclusiveSampleCount ()
@@ -71,7 +71,7 @@ function self:GetInclusiveSampleCount ()
 end
 
 function self:GetInclusiveSampleFraction ()
-	return self.InclusiveSampleCount / self.Profiler:GetSampleCount ()
+	return self.InclusiveSampleCount / self.ProfilingResultSet:GetSampleCount ()
 end
 
 function self:GetLineCount (line)
@@ -95,12 +95,30 @@ function self:GetCallerCount (func)
 	return self.CallerCounts [func] or 0
 end
 
+function self:GetCallerEnumerator ()
+	local next, tbl, key = pairs (self.CallerCounts)
+	
+	return function ()
+		key = next (tbl, key)
+		return key, tbl [key]
+	end
+end
+
 function self:GetCallerFraction (func)
 	return (self.CallerCounts [func] or 0) / self.TotalCallerCount
 end
 
 function self:GetCalleeCount (func)
 	return self.CalleeCounts [func] or 0
+end
+
+function self:GetCalleeEnumerator ()
+	local next, tbl, key = pairs (self.CalleeCounts)
+	
+	return function ()
+		key = next (tbl, key)
+		return key, tbl [key]
+	end
 end
 
 function self:GetCalleeFraction (func)

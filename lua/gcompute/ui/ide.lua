@@ -19,6 +19,9 @@ include ("ide/documenttype.lua")
 include ("ide/documenttypes.lua")
 include ("ide/documentmanager.lua")
 
+-- Subviews
+include ("ide/subview.lua")
+
 -- Views
 include ("ide/view.lua")
 include ("ide/viewtype.lua")

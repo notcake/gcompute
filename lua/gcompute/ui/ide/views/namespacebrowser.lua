@@ -26,7 +26,7 @@ function self:ctor (container)
 	
 	self:SetNamespaceDefinition (GCompute.GlobalNamespace)
 	
-	self.ComboBox:ChooseOptionID (6)
+	self.ComboBox:SetSelectedItem ("GCompute")
 end
 
 function self:SetNamespaceDefinition (namespaceDefinition)

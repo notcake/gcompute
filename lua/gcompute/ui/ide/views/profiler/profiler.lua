@@ -1,3 +1,6 @@
+GCompute.IDE.Profiler = {}
+GCompute.IDE.Profiler.SubViews = {}
+
 local self, info = GCompute.IDE.ViewTypes:CreateType ("Profiler")
 info:SetAutoCreate (true)
 info:SetDefaultLocation ("Bottom")
@@ -33,69 +36,54 @@ function self:ctor (container)
 	self.Toolbar:AddButton ("Forwards")
 		:SetIcon ("icon16/resultset_next.png")
 	self.ComboBox = self.Toolbar:AddComboBox ()
-	self.ComboBox:AddItem ("Functions")
-		:AddEventListener ("Selected",
-			function ()
-				self.ListView:SetVisible (true)
-			end
-		)
-		:AddEventListener ("Deselected",
-			function ()
-				self.ListView:SetVisible (false)
-			end
-		)
-	self.ComboBox:AddItem ("Function Details")
-		:AddEventListener ("Selected",
-			function ()
-			end
-		)
-		:AddEventListener ("Deselected",
-			function ()
-			end
-		)
 	self.ComboBox:SetWidth (128)
+	
+	self.Profiler = nil
+	self.ProfilingResultSet = nil
+	
+	self.SubViewContainer = vgui.Create ("GPanel", container)
+	self.ActiveSubView = nil
+	
+	self.SubViews = {}
+	self.SubViews [#self.SubViews + 1] = GCompute.IDE.Profiler.SubViews.Functions (self, self.SubViewContainer)
+	self.SubViews [#self.SubViews + 1] = GCompute.IDE.Profiler.SubViews.FunctionDetails (self, self.SubViewContainer)
+	
+	for _, subView in ipairs (self.SubViews) do
+		self.SubViews [subView:GetId ()] = subView
 		
-	self.ListView = vgui.Create ("GListView", container)
-	self.ListView:AddColumn ("Function")
-	self.ListView:AddColumn ("Inclusive Samples")
-		:SetComparator (
-			function (a, b)
-				return a.FunctionEntry.InclusiveSampleCount > b.FunctionEntry.InclusiveSampleCount
+		local comboBoxItem = self.ComboBox:AddItem (subView:GetName (), subView:GetId ())
+		comboBoxItem:AddEventListener ("Selected",
+			function ()
+				self:SetActiveSubView (subView)
 			end
 		)
-	self.ListView:AddColumn ("Exclusive Samples")
-		:SetComparator (
-			function (a, b)
-				return a.FunctionEntry.ExclusiveSampleCount > b.FunctionEntry.ExclusiveSampleCount
-			end
-		)
-	self.ListView:AddColumn ("Inclusive Samples %")
-		:SetComparator (
-			function (a, b)
-				return a.FunctionEntry.InclusiveSampleCount > b.FunctionEntry.InclusiveSampleCount
-			end
-		)
-	self.ListView:AddColumn ("Exclusive Samples %")
-		:SetComparator (
-			function (a, b)
-				return a.FunctionEntry.ExclusiveSampleCount > b.FunctionEntry.ExclusiveSampleCount
-			end
-		)
-	self.ListView:SetComparator (
-		function (a, b)
-			return a.FunctionEntry.ExclusiveSampleCount > b.FunctionEntry.ExclusiveSampleCount
+		
+		subView.ComboBoxItem = comboBoxItem
+	end
+	
+	self:AddEventListener ("ActiveSubViewChanged",
+		function (_, subView)
+			if not subView then return end
+			
+			subView.ComboBoxItem:Select ()
 		end
 	)
 	
-	self.ListViewItems = GCompute.WeakTable ()
+	self:SetProfiler (GCompute.Profiling.Profiler)
+	self:SetProfilingResultSet (GCompute.Profiling.ProfilingResultSet ())
 	
-	self.LastSortTime = SysTime ()
-	self.UpdateNeeded = false
-	self.SortNeeded   = false
+	self:SetActiveSubView (self.SubViews.Functions)
 end
 
 function self:dtor ()
 	self:Stop ()
+	
+	self:SetProfiler (nil)
+	self:SetProfilingResultSet (nil)
+	
+	for _, subView in ipairs (self.SubViews) do
+		subView:dtor ()
+	end
 end
 
 -- Persistance
@@ -105,111 +93,143 @@ end
 function self:SaveSession (outBuffer)
 end
 
+-- Sub views
+function self:GetActiveSubView ()
+	return self.ActiveSubView
+end
+
+function self:GetSubView (id)
+	return self.SubViews [id]
+end
+
+function self:SetActiveSubView (subView)
+	if type (subView) == "string" then
+		subView = self.SubViews [subView]
+	end
+	
+	if self.ActiveSubView == subView then return end
+	
+	if self.ActiveSubView then
+		self.ActiveSubView:SetVisible (false)
+	end
+	
+	self.ActiveSubView = subView
+	
+	if self.ActiveSubView then
+		self.ActiveSubView:SetVisible (true)
+		self.ComboBox:SetSelectedItem (self.ActiveSubView:GetId ())
+	end
+end
+
+function self:ShowFunctionCode (functionEntry)
+	local uri = functionEntry:GetFunction ():GetFilePath ()
+	local pathMatch = string.match (uri, "lua/(.*)")
+	if pathMatch then
+		if file.Exists (pathMatch, "LCL") then
+			uri = "luacl/" .. pathMatch
+		else
+			uri = "luasv/" .. pathMatch
+		end
+		
+		self:GetIDE ():OpenUri (uri,
+			function (success, resource, view)
+				if not view then return end
+				view:Select ()
+				
+				if view:GetType () ~= "Code" then return end
+				
+				local startLine = functionEntry:GetFunction ():GetStartLine ()
+				local endLine = functionEntry:GetFunction ():GetEndLine ()
+				local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
+				local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
+				location1 = view:GetEditor ():GetDocument ():CharacterToColumn (location1, view:GetEditor ():GetTextRenderer ())
+				location2 = view:GetEditor ():GetDocument ():CharacterToColumn (location2, view:GetEditor ():GetTextRenderer ())
+				view:GetEditor ():SetCaretPos (location2)
+				GLib.CallDelayed (
+					function ()
+						view:GetEditor ():ScrollToCaret ()
+						view:GetEditor ():SetCaretPos (location1)
+						view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
+						view:GetEditor ():ScrollToCaret ()
+					end
+				)
+			end
+		)
+	end
+end
+
+-- Profiling
+function self:GetProfiler ()
+	return self.Profiler
+end
+
+function self:GetProfilingResultSet ()
+	return self.ProfilingResultSet
+end
+
+function self:SetProfiler (profiler)
+	if self.Profiler == profiler then return self end
+	
+	self.Profiler = profiler
+	
+	for _, subView in ipairs (self.SubViews) do
+		subView:SetProfiler (profiler)
+	end
+	
+	return self
+end
+
+function self:SetProfilingResultSet (profilingResultSet)
+	if self.ProfilingResultSet == profilingResultSet then return self end
+	
+	self.ProfilingResultSet = profilingResultSet
+	
+	for _, subView in ipairs (self.SubViews) do
+		subView:SetProfilingResultSet (profilingResultSet)
+	end
+	
+	return self
+end
+
 function self:Clear ()
-	self.ListView:Clear ()
-	self.ListViewItems = GLib.WeakTable ()
+	if self.Profiler then
+		self.Profiler:Clear ()
+	end
+	
+	if self.ProfilingResultSet then
+		self.ProfilingResultSet:Clear ()
+	end
 end
 
 function self:Start ()
-	self:Clear ()
-	GCompute.Profiling.Profiler:Clear ()
-	GCompute.Profiling.Profiler:Start ()
+	if not self.Profiler then return end
 	
-	self.UpdateNeeded = true
-	self.SortNeeded   = true
+	self.Profiler:SetProfilingResultSet (self.ProfilingResultSet)
+	
+	for _, subView in ipairs (self.SubViews) do
+		subView:SetProfiler (self.Profiler)
+		subView:SetProfilingResultSet (self.ProfilingResultSet)
+	end
+	
+	self:Clear ()
+	self.Profiler:Start ()
 end
 
 function self:Stop ()
-	GCompute.Profiling.Profiler:Stop ()
+	if not self.Profiler then return end
 	
-	self.UpdateNeeded = true
-	self.SortNeeded   = true
-end
-
--- Internal, do not call
-function self:UpdateFunctionData ()
-	if not self.UpdateNeeded then return end
-	
-	self.UpdateNeeded = false
-	
-	for functionEntry in GCompute.Profiling.Profiler:GetFunctionEntryEnumerator () do
-		if not self.ListViewItems [functionEntry] then
-			local listViewItem = self.ListView:AddItem (tostring (functionEntry:GetHashCode ()))
-			listViewItem.FunctionEntry = functionEntry
-			listViewItem:SetText (functionEntry:GetFunctionName ())
-			
-			local uri = functionEntry:GetFunction ():GetFilePath ()
-			local pathMatch = string.match (uri, "lua/(.*)")
-			if pathMatch then
-				if file.Exists (pathMatch, "LCL") then
-					uri = "luacl/" .. pathMatch
-				else
-					uri = "luasv/" .. pathMatch
-				end
-			end
-			
-			listViewItem:AddEventListener ("DoubleClick",
-				function ()
-					self:GetIDE ():OpenUri (uri,
-						function (success, resource, view)
-							if not view then return end
-							view:Select ()
-							
-							if view:GetType () ~= "Code" then return end
-							
-							local startLine = functionEntry:GetFunction ():GetStartLine ()
-							local endLine = functionEntry:GetFunction ():GetEndLine ()
-							local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
-							local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
-							location1 = view:GetEditor ():GetDocument ():CharacterToColumn (location1, view:GetEditor ():GetTextRenderer ())
-							location2 = view:GetEditor ():GetDocument ():CharacterToColumn (location2, view:GetEditor ():GetTextRenderer ())
-							view:GetEditor ():SetCaretPos (location2)
-							GLib.CallDelayed (
-								function ()
-									view:GetEditor ():ScrollToCaret ()
-									view:GetEditor ():SetCaretPos (location1)
-									view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
-									view:GetEditor ():ScrollToCaret ()
-								end
-							)
-						end
-					)
-				end
-			)
-			
-			local func = functionEntry:GetFunction ()
-			listViewItem:SetToolTipText (func:GetFilePath () .. ": " .. func:GetStartLine () .. "-" .. func:GetEndLine ())
-			
-			self.ListViewItems [functionEntry] = listViewItem
-		end
-		
-		local listViewItem = self.ListViewItems [functionEntry]
-		listViewItem:SetColumnText ("Inclusive Samples", tostring (functionEntry.InclusiveSampleCount))
-		listViewItem:SetColumnText ("Exclusive Samples", tostring (functionEntry.ExclusiveSampleCount))
-		listViewItem:SetColumnText ("Inclusive Samples %", string.format ("%.2f %%", functionEntry:GetInclusiveSampleFraction () * 100))
-		listViewItem:SetColumnText ("Exclusive Samples %", string.format ("%.2f %%", functionEntry:GetExclusiveSampleFraction () * 100))
-	end
-	
-	self.SortNeeded = true
+	self.Profiler:Stop ()
 end
 
 -- Event handlers
 function self:PerformLayout (w, h)
 	self.Toolbar:SetWide (w)
-	self.ListView:SetPos (0, self.Toolbar:GetTall ())
-	self.ListView:SetSize (w, h - self.Toolbar:GetTall ())
+	self.SubViewContainer:SetPos (0, self.Toolbar:GetTall ())
+	self.SubViewContainer:SetSize (w, h - self.Toolbar:GetTall ())
 end
 
 function self:Think ()
-	self.UpdateNeeded = self.UpdateNeeded or GCompute.Profiling.Profiler:IsRunning ()
-	
-	if self.UpdateNeeded then
-		self:UpdateFunctionData ()
-	end
-	if self.SortNeeded and
-	   SysTime () - self.LastSortTime > 1 then
-		self.ListView:Sort ()
-		self.LastSortTime = SysTime ()
-		self.SortNeeded = false
+	if self.ActiveSubView then
+		self.ActiveSubView:Think ()
 	end
 end

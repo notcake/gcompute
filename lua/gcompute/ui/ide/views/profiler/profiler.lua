@@ -1,6 +1,3 @@
-GCompute.IDE.Profiler = {}
-GCompute.IDE.Profiler.SubViews = {}
-
 local self, info = GCompute.IDE.ViewTypes:CreateType ("Profiler")
 info:SetAutoCreate (true)
 info:SetDefaultLocation ("Bottom")
@@ -44,6 +41,24 @@ function self:ctor (container)
 	self.SubViewContainer = vgui.Create ("GPanel", container)
 	self.ActiveSubView = nil
 	
+	self.FunctionEntryMenu = Gooey.Menu ()
+	self.FunctionEntryMenu:AddItem ("View Source")
+		:SetIcon ("icon16/page_code.png")
+		:AddEventListener ("Click",
+			function (_, functionEntry)
+				A = functionEntry
+				self:ShowFunctionCode (functionEntry)
+			end
+		)
+	self.FunctionEntryMenu:AddSeparator ()
+	self.FunctionEntryMenu:AddItem ("Show Function Details")
+		:SetIcon ("icon16/magnifier.png")
+		:AddEventListener ("Click",
+			function (_, functionEntry)
+				self:ShowFunctionDetails (functionEntry)
+			end
+		)
+	
 	self.SubViews = {}
 	self.SubViews [#self.SubViews + 1] = GCompute.IDE.Profiler.SubViews.Functions (self, self.SubViewContainer)
 	self.SubViews [#self.SubViews + 1] = GCompute.IDE.Profiler.SubViews.FunctionDetails (self, self.SubViewContainer)
@@ -84,6 +99,8 @@ function self:dtor ()
 	for _, subView in ipairs (self.SubViews) do
 		subView:dtor ()
 	end
+	
+	self.FunctionEntryMenu:dtor ()
 end
 
 -- Persistance
@@ -119,6 +136,18 @@ function self:SetActiveSubView (subView)
 		self.ActiveSubView:SetVisible (true)
 		self.ComboBox:SetSelectedItem (self.ActiveSubView:GetId ())
 	end
+end
+
+-- Menus
+function self:GetFunctionEntryMenu ()
+	return self.FunctionEntryMenu
+end
+
+-- Navigation
+function self:ShowFunctionDetails (functionEntry)
+	local functionDetails = self:GetSubView ("Function Details")
+	self:SetActiveSubView (functionDetails)
+	functionDetails:SetFunctionEntry (functionEntry)
 end
 
 function self:ShowFunctionCode (functionEntry)

@@ -31,6 +31,10 @@ function self:ctor (view, container)
 		end
 	)
 	
+	self.Callers:SetButtonMenu (self.View:GetFunctionEntryMenu ())
+	self.Current:SetButtonMenu (self.View:GetFunctionEntryMenu ())
+	self.Callees:SetButtonMenu (self.View:GetFunctionEntryMenu ())
+	
 	self.FunctionEntry = nil
 	
 	self.LastSortTime = SysTime ()
@@ -38,12 +42,16 @@ function self:ctor (view, container)
 end
 
 function self:dtor ()
+	self:SetFunctionEntry (nil)
+	
 	self.Callers:Remove ()
 	self.Current:Remove ()
 	self.Callees:Remove ()
 end
 
 function self:Clear ()
+	self:SetFunctionEntry (nil)
+	
 	self.Callers:Clear ()
 	self.Current:Clear ()
 	self.Callees:Clear ()
@@ -56,8 +64,11 @@ end
 function self:SetFunctionEntry (functionEntry)
 	if self.FunctionEntry == functionEntry then return self end
 	
+	self.Callers:Clear ()
+	self.Current:Clear ()
+	self.Callees:Clear ()
+	
 	self.FunctionEntry = functionEntry
-	self:Clear ()
 	self.UpdateNeeded = true
 	
 	return self

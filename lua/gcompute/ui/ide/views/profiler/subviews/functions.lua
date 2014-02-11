@@ -39,12 +39,35 @@ function self:ctor (view, container)
 	
 	self.ListViewItems = GCompute.WeakTable ()
 	
+	self.ListViewMenu = self.View:GetFunctionEntryMenu ():Clone ()
+	self.ListViewMenu:AddEventListener ("MenuOpening",
+		function (_, selectedItems)
+			local singleItemSelected = #selectedItems == 1
+			self.ListViewMenu:GetItemById ("View Source"):SetEnabled (singleItemSelected)
+			self.ListViewMenu:GetItemById ("Show Function Details"):SetEnabled (singleItemSelected)
+			
+			if singleItemSelected then
+				self.ListViewMenu:SetTargetItem (selectedItems [1].FunctionEntry)
+				return
+			end
+			
+			local selectedFunctionEntries = {}
+			for _, listViewItem in ipairs (selectedItems) do
+				selectedFunctionEntries [#selectedFunctionEntries + 1] = listViewItem.FunctionEntry
+			end
+			
+			self.ListViewMenu:SetTargetItem (selectedFunctionEntries)
+		end
+	)
+	self.ListView:SetMenu (self.ListViewMenu)
+	
 	self.LastSortTime = SysTime ()
 	self.SortNeeded   = false
 end
 
 function self:dtor ()
 	self.ListView:Remove ()
+	self.ListViewMenu:dtor ()
 end
 
 function self:Clear ()
@@ -91,9 +114,7 @@ function self:UpdateFunctionData ()
 			
 			listViewItem:AddEventListener ("DoubleClick",
 				function ()
-					local functionDetails = self.View:GetSubView ("Function Details")
-					self.View:SetActiveSubView (functionDetails)
-					functionDetails:SetFunctionEntry (listViewItem.FunctionEntry)
+					self.View:ShowFunctionDetails (listViewItem.FunctionEntry)
 				end
 			)
 			

@@ -10,6 +10,8 @@ function self:Init ()
 	self.FunctionEntryCounts = {}
 	self.FunctionEntryContainerElements = {}
 	
+	self.ButtonMenu = nil
+	
 	self:AddEventListener ("TextChanged",
 		function ()
 			self.Label:SetText (self:GetText ())
@@ -31,6 +33,13 @@ function self:AddFunctionEntry (functionEntry)
 	element:AddEventListener ("Click",
 		function ()
 			self:DispatchEvent ("FunctionEntryClicked", element.FunctionEntry)
+		end
+	)
+	element:AddEventListener ("RightClick",
+		function ()
+			if not self.ButtonMenu then return end
+			
+			self.ButtonMenu:Show (element, element.FunctionEntry)
 		end
 	)
 	
@@ -59,8 +68,16 @@ function self:GetMaximumSampleCount ()
 	return self.MaximumSampleCount
 end
 
+function self:GetButtonMenu ()
+	return self.ButtonMenu
+end
+
 function self:GetTotalSampleCount ()
 	return self.TotalSampleCount
+end
+
+function self:SetButtonMenu (buttonMenu)
+	self.ButtonMenu = buttonMenu
 end
 
 function self:SetMaximumSampleCount (maximumSampleCount)

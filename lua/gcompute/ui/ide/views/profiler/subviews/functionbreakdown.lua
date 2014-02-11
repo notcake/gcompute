@@ -2,6 +2,8 @@ local self = {}
 
 function self:Init ()
 	self.Label = vgui.Create ("GLabel", self)
+	self.Label:SetFont ("Trebuchet24")
+	self.Label:SetTextColor (GLib.Colors.Black)
 	self.Container = vgui.Create ("GPanel", self)
 	
 	self.TotalSampleCount = 0
@@ -147,10 +149,10 @@ function self:PerformLayout ()
 	
 	-- Label
 	self.Label:SetPos (0, 0)
-	self.Label:SetSize (w, 20)
+	self.Label:SetSize (w, 24)
 	
 	y = y + self.Label:GetHeight ()
-	y = y + 8
+	y = y + 4
 	
 	-- Container
 	self.Container:SetPos (0, y)

@@ -3,15 +3,36 @@ self.Name = "Function Details"
 GCompute.IDE.Profiler.SubViews.FunctionDetails = GCompute.MakeConstructor (self, GCompute.IDE.Profiler.ProfilerSubView)
 
 function self:ctor (view, container)
-	self.Callers = vgui.Create ("GComputeProfilerFunctionBreakdown", container)
-	self.Current = vgui.Create ("GComputeProfilerFunctionBreakdown", container)
-	self.Callees = vgui.Create ("GComputeProfilerFunctionBreakdown", container)
+	self.Container = vgui.Create ("GPanel", container)
+	self.Container:SetBackgroundColor (GLib.Colors.White)
+	self.Container:SetVisible (self:IsVisible ())
+	
+	self.Container.Paint = function (_, w, h)
+		local renderContext = Gooey.RenderContext
+		
+		surface.SetDrawColor (GLib.Colors.White)
+		surface.DrawRect (0, 0, w, h)
+		
+		local x, y = self.PathLabel:GetPos ()
+		y = y + self.PathLabel:GetHeight ()
+		y = y + 4
+		
+		surface.SetDrawColor (GLib.Colors.Black)
+		surface.DrawLine (4, y, w - 32, y)
+	end
+	
+	self.TitleLabel = vgui.Create ("GLabel", self.Container)
+	self.TitleLabel:SetFont ("DermaLarge")
+	self.TitleLabel:SetTextColor (GLib.Colors.Black)
+	self.PathLabel = vgui.Create ("GLabel", self.Container)
+	self.PathLabel:SetTextColor (GLib.Colors.Black)
+	
+	self.Callers = vgui.Create ("GComputeProfilerFunctionBreakdown", self.Container)
+	self.Current = vgui.Create ("GComputeProfilerFunctionBreakdown", self.Container)
+	self.Callees = vgui.Create ("GComputeProfilerFunctionBreakdown", self.Container)
 	self.Callers:SetText ("Calling functions")
 	self.Current:SetText ("Current function")
 	self.Callees:SetText ("Called functions")
-	self.Callers:SetVisible (self:IsVisible ())
-	self.Current:SetVisible (self:IsVisible ())
-	self.Callees:SetVisible (self:IsVisible ())
 	
 	self.Callers:AddEventListener ("FunctionEntryClicked",
 		function (_, functionEntry)
@@ -44,9 +65,7 @@ end
 function self:dtor ()
 	self:SetFunctionEntry (nil)
 	
-	self.Callers:Remove ()
-	self.Current:Remove ()
-	self.Callees:Remove ()
+	self.Container:Remove ()
 end
 
 function self:Clear ()
@@ -78,36 +97,66 @@ end
 function self:SetFunctionEntry (functionEntry)
 	if self.FunctionEntry == functionEntry then return self end
 	
+	-- Clear boxes
 	self.Callers:Clear ()
 	self.Current:Clear ()
 	self.Callees:Clear ()
 	
 	self.FunctionEntry = functionEntry
+	
+	-- Update title and path
+	local func = self.FunctionEntry and self.FunctionEntry:GetFunction ()
+	local definitionLocation = ""
+	if func then
+		definitionLocation = func:GetFilePath () .. ": " .. func:GetStartLine () .. "-" .. func:GetEndLine ()
+	end
+	
+	self.TitleLabel:SetText (self.FunctionEntry and self.FunctionEntry:GetFunctionName () or "")
+	self.PathLabel:SetText (definitionLocation)
+	
+	-- Flag for update
 	self.UpdateNeeded = true
 	
 	return self
 end
 
 function self:OnVisibleChanged (visible)
-	self.Callers:SetVisible (visible)
-	self.Current:SetVisible (visible)
-	self.Callees:SetVisible (visible)
+	self.Container:SetVisible (visible)
 end
 
 function self:PerformLayout (w, h)
-	local padding = 8
-	w = w - 2 * padding
-	h = h - 2 * padding
+	self.Container:SetSize (w, h)
 	
+	local padding = 8
+	local contentWidth  = w - 2 * padding
+	local contentHeight = h - 2 * padding
+	
+	local x = padding
 	local y = padding
 	
-	local containerWidth = (w - 2 * 32) / 3
+	-- Title label
+	self.TitleLabel:SetPos (x, y)
+	self.TitleLabel:SetSize (w, 32)
+	y = y + self.TitleLabel:GetHeight ()
+	
+	-- Path label
+	self.PathLabel:SetPos (x, y)
+	self.PathLabel:SetSize (w, 16)
+	y = y + self.PathLabel:GetHeight ()
+	
+	-- Horizontal line
+	y = y + 12
+	
+	local spacing = 32
+	local containerWidth = (contentWidth - 2 * spacing) / 3
+	contentHeight = h - y - padding
+	
 	self.Callers:SetPos (padding, y)
-	self.Current:SetPos (padding + containerWidth + 32, y)
-	self.Callees:SetPos (padding + 2 * containerWidth + 2 * 32, y)
-	self.Callers:SetHeight (h)
-	self.Current:SetHeight (h)
-	self.Callees:SetHeight (h)
+	self.Current:SetPos (padding + containerWidth + spacing, y)
+	self.Callees:SetPos (padding + 2 * containerWidth + 2 * spacing, y)
+	self.Callers:SetHeight (contentHeight)
+	self.Current:SetHeight (contentHeight)
+	self.Callees:SetHeight (contentHeight)
 	self.Callers:SetWidth (containerWidth)
 	self.Current:SetWidth (containerWidth)
 	self.Callees:SetWidth (containerWidth)

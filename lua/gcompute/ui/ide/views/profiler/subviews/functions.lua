@@ -94,32 +94,6 @@ function self:UpdateFunctionData ()
 					local functionDetails = self.View:GetSubView ("Function Details")
 					self.View:SetActiveSubView (functionDetails)
 					functionDetails:SetFunctionEntry (listViewItem.FunctionEntry)
-					
-					if true then return end
-					self:GetIDE ():OpenUri (uri,
-						function (success, resource, view)
-							if not view then return end
-							view:Select ()
-							
-							if view:GetType () ~= "Code" then return end
-							
-							local startLine = functionEntry:GetFunction ():GetStartLine ()
-							local endLine = functionEntry:GetFunction ():GetEndLine ()
-							local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
-							local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
-							location1 = view:GetEditor ():GetDocument ():CharacterToColumn (location1, view:GetEditor ():GetTextRenderer ())
-							location2 = view:GetEditor ():GetDocument ():CharacterToColumn (location2, view:GetEditor ():GetTextRenderer ())
-							view:GetEditor ():SetCaretPos (location2)
-							GLib.CallDelayed (
-								function ()
-									view:GetEditor ():ScrollToCaret ()
-									view:GetEditor ():SetCaretPos (location1)
-									view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
-									view:GetEditor ():ScrollToCaret ()
-								end
-							)
-						end
-					)
 				end
 			)
 			

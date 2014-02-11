@@ -22,9 +22,12 @@ end
 function self:AddFunctionEntry (functionEntry)
 	if self.FunctionEntryContainerElements [functionEntry] then return end
 	
+	local func = functionEntry:GetFunction ()
+	
 	local element = vgui.Create ("GButton", self.Container)
 	element.FunctionEntry = functionEntry
 	element:SetText (functionEntry:GetFunctionName ())
+	element:SetToolTipText (func:GetFilePath () .. ": " .. func:GetStartLine () .. "-" .. func:GetEndLine ())
 	element:AddEventListener ("Click",
 		function ()
 			self:DispatchEvent ("FunctionEntryClicked", element.FunctionEntry)

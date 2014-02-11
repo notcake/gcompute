@@ -123,36 +123,55 @@ end
 
 function self:ShowFunctionCode (functionEntry)
 	local uri = functionEntry:GetFunction ():GetFilePath ()
-	local pathMatch = string.match (uri, "lua/(.*)")
-	if pathMatch then
-		if file.Exists (pathMatch, "LCL") then
-			uri = "luacl/" .. pathMatch
+	local luaPath = string.match (uri, "lua/(.*)")
+	if luaPath then
+		local function showFunctionDefinition (view)
+			view:Select ()
+			
+			if view:GetType () ~= "Code" then return end
+			
+			local startLine = functionEntry:GetFunction ():GetStartLine ()
+			local endLine = functionEntry:GetFunction ():GetEndLine ()
+			local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
+			local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
+			location1 = view:GetEditor ():GetDocument ():CharacterToColumn (location1, view:GetEditor ():GetTextRenderer ())
+			location2 = view:GetEditor ():GetDocument ():CharacterToColumn (location2, view:GetEditor ():GetTextRenderer ())
+			view:GetEditor ():SetCaretPos (location2)
+			GLib.CallDelayed (
+				function ()
+					view:GetEditor ():ScrollToCaret ()
+					view:GetEditor ():SetCaretPos (location1)
+					view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
+					view:GetEditor ():ScrollToCaret ()
+				end
+			)
+		end
+		
+		local client = false
+		if file.Exists (luaPath, "LCL") then
+			uri = "luacl/" .. luaPath
+			client = true
 		else
-			uri = "luasv/" .. pathMatch
+			uri = "luasv/" .. luaPath
 		end
 		
 		self:GetIDE ():OpenUri (uri,
 			function (success, resource, view)
-				if not view then return end
-				view:Select ()
-				
-				if view:GetType () ~= "Code" then return end
-				
-				local startLine = functionEntry:GetFunction ():GetStartLine ()
-				local endLine = functionEntry:GetFunction ():GetEndLine ()
-				local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
-				local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
-				location1 = view:GetEditor ():GetDocument ():CharacterToColumn (location1, view:GetEditor ():GetTextRenderer ())
-				location2 = view:GetEditor ():GetDocument ():CharacterToColumn (location2, view:GetEditor ():GetTextRenderer ())
-				view:GetEditor ():SetCaretPos (location2)
-				GLib.CallDelayed (
-					function ()
-						view:GetEditor ():ScrollToCaret ()
-						view:GetEditor ():SetCaretPos (location1)
-						view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
-						view:GetEditor ():ScrollToCaret ()
+				if not view then
+					if client then
+						uri = "luasv/" .. luaPath
+						self:GetIDE ():OpenUri (uri,
+							function (success, resource, view)
+								if not view then return end
+								
+								showFunctionDefinition (view)
+							end
+						)
 					end
-				)
+					return
+				end
+				
+				showFunctionDefinition (view)
 			end
 		)
 	end

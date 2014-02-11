@@ -41,4 +41,4 @@ end
 
 GCompute.IDE.ViewTypes = GCompute.IDE.ViewTypes ()
 
-GCompute.IncludeDirectory ("gcompute/ui/ide/views")
+GCompute.IncludeDirectory ("gcompute/ui/ide/views", true)

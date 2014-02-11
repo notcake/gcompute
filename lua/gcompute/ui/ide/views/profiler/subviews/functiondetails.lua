@@ -10,8 +10,7 @@ function self:ctor (view, container)
 	self.Container.Paint = function (_, w, h)
 		local renderContext = Gooey.RenderContext
 		
-		surface.SetDrawColor (GLib.Colors.White)
-		surface.DrawRect (0, 0, w, h)
+		draw.RoundedBox (4, 0, 0, w, h, GLib.Colors.White)
 		
 		local x, y = self.PathLabel:GetPos ()
 		y = y + self.PathLabel:GetHeight ()

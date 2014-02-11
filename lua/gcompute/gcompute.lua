@@ -219,6 +219,11 @@ include ("metadata/lua/functionparameterlist.lua")
 include ("metadata/lua/tablenamespace.lua")
 include ("metadata/lua/classnamespace.lua")
 
+-- lua profiling
+GCompute.Profiling = {}
+include ("profiling/profiler.lua")
+include ("profiling/functionentry.lua")
+
 -- other
 GCompute.Other = {}
 include ("metadata/other/expression2.lua")

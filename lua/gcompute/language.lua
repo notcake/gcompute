@@ -80,6 +80,7 @@ end
 
 function self:GetKeywordEnumerator ()
 	local next, tbl, key = pairs (self.Keywords)
+	
 	return function ()
 		key = next (tbl, key)
 		return key, tbl [key]

@@ -4,19 +4,20 @@ self.Icon  = "icon16/application_side_list.png"
 
 function self:ctor (container)
 	self.ComboBox = vgui.Create ("GComboBox", container)
-	self.ComboBox:AddChoice ("Lua - GLib",     function () return GCompute.Lua.Table ("GLib",     GLib    ) end)
-	self.ComboBox:AddChoice ("Lua - GAuth",    function () return GCompute.Lua.Table ("GAuth",    GAuth   ) end)
-	self.ComboBox:AddChoice ("Lua - VFS",      function () return GCompute.Lua.Table ("VFS",      VFS     ) end)
-	self.ComboBox:AddChoice ("Lua - GCompute", function () return GCompute.Lua.Table ("GCompute", GCompute) end)
-	self.ComboBox:AddChoice ("Lua - GVote",    function () return GCompute.Lua.Table ("GVote",    GVote   ) end)
-	self.ComboBox:AddChoice ("GCompute",       function () return GCompute.GlobalNamespace end)
-	self.ComboBox:AddChoice ("Expression 2",   function () return GCompute.Other.Expression2Namespace () end)
-	self.ComboBox:AddChoice ("Lemon Gate",     function () return GCompute.Other.LemonGateNamespace () end)
+	self.ComboBox:AddItem ("Lua - GLib"    ).GetNamespace = function (_) return GCompute.Lua.Table ("GLib",     GLib    ) end
+	self.ComboBox:AddItem ("Lua - GAuth"   ).GetNamespace = function (_) return GCompute.Lua.Table ("GAuth",    GAuth   ) end
+	self.ComboBox:AddItem ("Lua - VFS"     ).GetNamespace = function (_) return GCompute.Lua.Table ("VFS",      VFS     ) end
+	self.ComboBox:AddItem ("Lua - GCompute").GetNamespace = function (_) return GCompute.Lua.Table ("GCompute", GCompute) end
+	self.ComboBox:AddItem ("Lua - GVote"   ).GetNamespace = function (_) return GCompute.Lua.Table ("GVote",    GVote   ) end
+	self.ComboBox:AddItem ("GCompute"      ).GetNamespace = function (_) return GCompute.GlobalNamespace                  end
+	self.ComboBox:AddItem ("Expression 2"  ).GetNamespace = function (_) return GCompute.Other.Expression2Namespace ()    end
+	self.ComboBox:AddItem ("Lemon Gate"    ).GetNamespace = function (_) return GCompute.Other.LemonGateNamespace   ()    end
 	
 	self.ComboBox:AddEventListener ("SelectedItemChanged",
-		function (_, text, data)
-			local namespaceDefinition = data ()
+		function (_, lastSelectedItem, selectedItem)
+			local namespaceDefinition = selectedItem:GetNamespace ()
 			if not namespaceDefinition then return end
+			
 			self:SetNamespaceDefinition (namespaceDefinition)
 		end
 	)

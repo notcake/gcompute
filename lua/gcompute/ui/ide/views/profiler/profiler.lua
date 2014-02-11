@@ -28,6 +28,8 @@ function self:ctor (container)
 			end
 		)
 	self.Toolbar:AddSeparator ()
+	
+	-- Navigation controls
 	self.Toolbar:AddButton ("Back")
 		:SetIcon ("icon16/resultset_previous.png")
 	self.Toolbar:AddButton ("Forwards")
@@ -35,9 +37,29 @@ function self:ctor (container)
 	self.ComboBox = self.Toolbar:AddComboBox ()
 	self.ComboBox:SetWidth (128)
 	
+	-- Navigation history
+	self.HistoryStack = Gooey.HistoryStack ()
+	self.HistoryStack:AddEventListener ("CurrentItemChanged",
+		function (_, historyItem)
+			if not historyItem then return end
+			
+			self:SetActiveSubView (historyItem:GetSubViewId ())
+			local activeSubView = self:GetActiveSubView ()
+			if activeSubView then
+				activeSubView:RestoreHistoryItem (historyItem)
+			end
+		end
+	)
+	
+	self.HistoryController = Gooey.HistoryController (self.HistoryStack)
+	self.HistoryController:AddMoveForwardButton (self.Toolbar:GetItemById ("Forwards"))
+	self.HistoryController:AddMoveBackButton (self.Toolbar:GetItemById ("Back"))
+	
+	-- Profiling
 	self.Profiler = nil
 	self.ProfilingResultSet = nil
 	
+	-- Subviews
 	self.SubViewContainer = vgui.Create ("GPanel", container)
 	self.ActiveSubView = nil
 	
@@ -46,7 +68,6 @@ function self:ctor (container)
 		:SetIcon ("icon16/page_code.png")
 		:AddEventListener ("Click",
 			function (_, functionEntry)
-				A = functionEntry
 				self:ShowFunctionCode (functionEntry)
 			end
 		)
@@ -55,7 +76,7 @@ function self:ctor (container)
 		:SetIcon ("icon16/magnifier.png")
 		:AddEventListener ("Click",
 			function (_, functionEntry)
-				self:ShowFunctionDetails (functionEntry)
+				self:NavigateToFunctionDetailsView (functionEntry)
 			end
 		)
 	
@@ -69,7 +90,7 @@ function self:ctor (container)
 		local comboBoxItem = self.ComboBox:AddItem (subView:GetName (), subView:GetId ())
 		comboBoxItem:AddEventListener ("Selected",
 			function ()
-				self:SetActiveSubView (subView)
+				self:NavigateToSubView (subView)
 			end
 		)
 		
@@ -84,10 +105,11 @@ function self:ctor (container)
 		end
 	)
 	
+	-- Initialize
 	self:SetProfiler (GCompute.Profiling.Profiler)
 	self:SetProfilingResultSet (GCompute.Profiling.ProfilingResultSet ())
 	
-	self:SetActiveSubView (self.SubViews.Functions)
+	self:NavigateToSubView (self.SubViews.Functions)
 end
 
 function self:dtor ()
@@ -113,6 +135,11 @@ end
 -- Sub views
 function self:GetActiveSubView ()
 	return self.ActiveSubView
+end
+
+function self:GetActiveSubViewId ()
+	if not self.ActiveSubView then return nil end
+	return self.ActiveSubView:GetId ()
 end
 
 function self:GetSubView (id)
@@ -144,10 +171,42 @@ function self:GetFunctionEntryMenu ()
 end
 
 -- Navigation
-function self:ShowFunctionDetails (functionEntry)
-	local functionDetails = self:GetSubView ("Function Details")
-	self:SetActiveSubView (functionDetails)
-	functionDetails:SetFunctionEntry (functionEntry)
+function self:CreateHistoryItem ()
+	local activeSubView = self:GetActiveSubView ()
+	local historyItem = activeSubView and activeSubView:CreateHistoryItem () or GCompute.IDE.Profiler.HistoryItem ()
+	historyItem:SetView (self)
+	historyItem:SetSubViewId (self:GetActiveSubViewId ())
+	
+	return historyItem
+end
+
+function self:NavigateToSubView (subView)
+	if subView == self:GetActiveSubView () then
+		return nil
+	end
+	
+	-- Open up the view
+	self:SetActiveSubView (subView)
+	
+	-- Stick an entry in our history
+	local historyItem = self:CreateHistoryItem ()
+	self.HistoryStack:Push (historyItem)
+	
+	return historyItem
+end
+
+function self:NavigateToFunctionDetailsView (functionEntry)
+	local subView = self:GetSubView ("Function Details")
+	
+	-- Open up the function details view
+	self:SetActiveSubView (subView)
+	subView:SetFunctionEntry (functionEntry)
+	
+	-- Stick an entry in our history
+	local historyItem = self:CreateHistoryItem ()
+	self.HistoryStack:Push (historyItem)
+	
+	return historyItem
 end
 
 function self:ShowFunctionCode (functionEntry)
@@ -247,6 +306,13 @@ function self:Clear ()
 	if self.ProfilingResultSet then
 		self.ProfilingResultSet:Clear ()
 	end
+	
+	-- Clear the history
+	self.HistoryStack:Clear ()
+	
+	-- The history needs to have at least one item in it
+	local historyItem = self:CreateHistoryItem ()
+	self.HistoryStack:Push (historyItem)
 end
 
 function self:Start ()

@@ -15,7 +15,7 @@ function self:ctor (view, container)
 	
 	self.Callers:AddEventListener ("FunctionEntryClicked",
 		function (_, functionEntry)
-			self:SetFunctionEntry (functionEntry)
+			self.View:NavigateToFunctionDetailsView (functionEntry)
 		end
 	)
 	
@@ -27,7 +27,7 @@ function self:ctor (view, container)
 	
 	self.Callees:AddEventListener ("FunctionEntryClicked",
 		function (_, functionEntry)
-			self:SetFunctionEntry (functionEntry)
+			self.View:NavigateToFunctionDetailsView (functionEntry)
 		end
 	)
 	
@@ -55,6 +55,20 @@ function self:Clear ()
 	self.Callers:Clear ()
 	self.Current:Clear ()
 	self.Callees:Clear ()
+end
+
+-- History
+function self:CreateHistoryItem (historyItem)
+	historyItem = historyItem or GCompute.IDE.Profiler.HistoryItem ()
+	historyItem:SetSubViewId (self:GetId ())
+	
+	historyItem.FunctionEntry = self.FunctionEntry
+	
+	return historyItem
+end
+
+function self:RestoreHistoryItem (historyItem)
+	self:SetFunctionEntry (historyItem.FunctionEntry)
 end
 
 function self:GetFunctionEntry ()

@@ -114,7 +114,7 @@ function self:UpdateFunctionData ()
 			
 			listViewItem:AddEventListener ("DoubleClick",
 				function ()
-					self.View:ShowFunctionDetails (listViewItem.FunctionEntry)
+					self.View:NavigateToFunctionDetailsView (listViewItem.FunctionEntry)
 				end
 			)
 			

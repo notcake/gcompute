@@ -20,7 +20,16 @@ function self:IsUpdateNeeded ()
 	return self.UpdateNeeded
 end
 
--- ProfilerSubView
+function self:CreateHistoryItem (historyItem)
+	historyItem = historyItem or GCompute.IDE.Profiler.HistoryItem ()
+	historyItem:SetSubViewId (self:GetId ())
+	
+	return historyItem
+end
+
+function self:RestoreHistoryItem (historyItem)
+end
+
 function self:GetId ()
 	return self.Id or self.Name or tostring (self:GetHashCode ())
 end

@@ -41,7 +41,7 @@ function self:ctor (view, container)
 	
 	self.Current:AddEventListener ("FunctionEntryClicked",
 		function (_, functionEntry)
-			self.View:ShowFunctionCode (functionEntry)
+			self.View:ShowAnnotatedFunctionCode (functionEntry)
 		end
 	)
 	

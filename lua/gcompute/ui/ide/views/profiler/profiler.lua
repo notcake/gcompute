@@ -71,6 +71,13 @@ function self:ctor (container)
 				self:ShowFunctionCode (functionEntry)
 			end
 		)
+	self.FunctionEntryMenu:AddItem ("View Annotated Source")
+		:SetIcon ("icon16/page_code.png")
+		:AddEventListener ("Click",
+			function (_, functionEntry)
+				self:ShowAnnotatedFunctionCode (functionEntry)
+			end
+		)
 	self.FunctionEntryMenu:AddSeparator ()
 	self.FunctionEntryMenu:AddItem ("Show Function Details")
 		:SetIcon ("icon16/magnifier.png")
@@ -209,6 +216,40 @@ function self:NavigateToFunctionDetailsView (functionEntry)
 	return historyItem
 end
 
+function self:ShowAnnotatedFunctionCode (functionEntry)
+	self:GetFunctionCode (functionEntry,
+		function (success, code)
+			if not success then return false end
+			
+			-- Annotate code
+			local lines = string.Split (code, "\n")
+			
+			local startLine = functionEntry:GetFunction ():GetStartLine ()
+			local endLine = functionEntry:GetFunction ():GetEndLine ()
+			endLine = math.min (endLine, #lines)
+			for i = startLine, endLine do
+				local lineCount = functionEntry:GetLineCount (i)
+				if lineCount == 0 then
+					lines [i] = "--[[          ]] " .. lines [i]
+				else
+					local fraction = lineCount / self:GetProfilingResultSet ():GetSampleCount ()
+					local percentage = string.format ("%.2f", fraction * 100)
+					percentage = string.rep (" ", string.len ("100.00") - #percentage) .. percentage
+					lines [i] = "--[[ " .. percentage .. " % ]] " .. lines [i]
+				end
+			end
+			code = table.concat (lines, "\n")
+			
+			local codeView = self:GetIDE ():CreateView ("Code")
+			codeView:SetCode (code)
+			codeView:SetTitle (functionEntry:GetFunctionName ())
+			codeView:Select ()
+			
+			self:ShowCodeViewLines (codeView, startLine, endLine)
+		end
+	)
+end
+
 function self:ShowFunctionCode (functionEntry)
 	local uri = functionEntry:GetFunction ():GetFilePath ()
 	local luaPath = string.match (uri, "lua/(.*)")
@@ -220,19 +261,7 @@ function self:ShowFunctionCode (functionEntry)
 			
 			local startLine = functionEntry:GetFunction ():GetStartLine ()
 			local endLine = functionEntry:GetFunction ():GetEndLine ()
-			local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
-			local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
-			location1 = view:GetEditor ():GetDocument ():CharacterToColumn (location1, view:GetEditor ():GetTextRenderer ())
-			location2 = view:GetEditor ():GetDocument ():CharacterToColumn (location2, view:GetEditor ():GetTextRenderer ())
-			view:GetEditor ():SetCaretPos (location2)
-			GLib.CallDelayed (
-				function ()
-					view:GetEditor ():ScrollToCaret ()
-					view:GetEditor ():SetCaretPos (location1)
-					view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
-					view:GetEditor ():ScrollToCaret ()
-				end
-			)
+			self:ShowCodeViewLines (view, startLine, endLine)
 		end
 		
 		local client = false
@@ -246,16 +275,16 @@ function self:ShowFunctionCode (functionEntry)
 		self:GetIDE ():OpenUri (uri,
 			function (success, resource, view)
 				if not view then
-					if client then
-						uri = "luasv/" .. luaPath
-						self:GetIDE ():OpenUri (uri,
-							function (success, resource, view)
-								if not view then return end
-								
-								showFunctionDefinition (view)
-							end
-						)
-					end
+					if not client then return end
+					
+					uri = "luasv/" .. luaPath
+					self:GetIDE ():OpenUri (uri,
+						function (success, resource, view)
+							if not view then return end
+							
+							showFunctionDefinition (view)
+						end
+					)
 					return
 				end
 				
@@ -263,6 +292,76 @@ function self:ShowFunctionCode (functionEntry)
 			end
 		)
 	end
+end
+
+function self:ShowCodeViewLines (codeView, startLine, endLine)
+	codeView:Select ()
+	
+	if codeView:GetType () ~= "Code" then return end
+	
+	local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
+	local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
+	location1 = codeView:GetEditor ():GetDocument ():CharacterToColumn (location1, codeView:GetEditor ():GetTextRenderer ())
+	location2 = codeView:GetEditor ():GetDocument ():CharacterToColumn (location2, codeView:GetEditor ():GetTextRenderer ())
+	codeView:GetEditor ():SetCaretPos (location2)
+	GLib.CallDelayed (
+		function ()
+			codeView:GetEditor ():ScrollToCaret ()
+			codeView:GetEditor ():SetCaretPos (location1)
+			codeView:GetEditor ():SetSelection (codeView:GetEditor ():GetCaretPos ())
+			codeView:GetEditor ():ScrollToCaret ()
+		end
+	)
+end
+
+function self:GetFunctionCode (functionEntry, callback)
+	local uri = functionEntry:GetFunction ():GetFilePath ()
+	
+	local luaPath = string.match (uri, "lua/(.*)")
+	if not luaPath then callback (false, nil) return end
+	
+	if file.Exists (luaPath, "LCL") then
+		uri = "luacl/" .. luaPath
+		client = true
+	else
+		uri = "luasv/" .. luaPath
+	end
+	
+	local function handleFileStream (fileStream)
+		fileStream:Read (fileStream:GetLength (),
+			function (returnCode, data)
+				if returnCode == VFS.ReturnCode.Progress then return end
+				
+				fileStream:Close ()
+				
+				if returnCode ~= VFS.ReturnCode.Success then
+					callback (false, nil)
+				else
+					callback (true, data)
+				end
+			end
+		)
+	end
+	
+	VFS.Root:OpenFile (GLib.GetLocalId (), uri, VFS.OpenFlags.Read,
+		function (returnCode, fileStream)
+			if returnCode ~= VFS.ReturnCode.Success then
+				if not client then callback (false, nil) return end
+				
+				uri = "luasv/" .. luaPath
+				VFS.Root:OpenFile (GLib.GetLocalId (), uri, VFS.OpenFlags.Read,
+					function (returnCode, fileStream)
+						if returnCode ~= VFS.ReturnCode.Success then callback (false, nil) return end
+						
+						handleFileStream (fileStream)
+					end
+				)
+				return
+			end
+			
+			handleFileStream (fileStream)
+		end
+	)
 end
 
 -- Profiling

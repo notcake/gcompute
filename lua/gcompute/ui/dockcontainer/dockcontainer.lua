@@ -840,43 +840,76 @@ function PANEL:OnRemoved ()
 	end
 end
 
+--[[
+	Updates what the DockContainer at the root of a DockContainer hierarchy
+	thinks is the active View.
+]]
 function PANEL:Think ()
+	-- Only the root DockContainer should do this
 	if not self:IsRootDockContainer () then return end
 	
-	local activePanel = vgui.GetKeyboardFocus ()
-	if not activePanel then return end
+	local focusedPanel = vgui.GetKeyboardFocus ()
+	if not focusedPanel then return end
 	
 	local activeView = self:GetActiveView ()
-	local activeContainer = nil
+	local activeViewContainer = nil
+	
+	-- Check if the active view's container has been destroyed.
 	if activeView then
-		activeContainer = activeView:GetContainer ()
+		activeViewContainer = activeView:GetContainer ()
+		
+		-- The active view's container has been destroyed,
+		-- it can no longer be our active view.
 		if not activeView:GetContainer () or not activeView:GetContainer ():IsValid () then
+			-- Update our active view
 			self:SetActiveView (nil)
-			activeContainer = nil
+			activeViewContainer = nil
 		end
 	end
 	
-	if activeContainer and activeContainer:IsOurChild (activePanel) then return end
+	-- Check if the focused view is a descendent of our active view's container
+	if activeViewContainer then
+		local testPanel = focusedPanel
+		while testPanel and
+		      testPanel:IsValid () and
+			  testPanel ~= activeViewContainer do
+			testPanel = testPanel:GetParent ()
+		end
+		
+		if testPanel == activeViewContainer then
+			-- The focused control is already a descendant of our active view's container
+			-- Nothing to do here
+			return
+		end
+	end
 	
 	if self.SkipActiveViewThink > 1 then
 		self.SkipActiveViewThink = self.SkipActiveViewThink - 1
 		return
 	end
 	
-	if vgui.FocusedHasParent (self) then
-		while activePanel and activePanel:IsValid () and activePanel.ClassName ~= self.ClassName do
-			activePanel = activePanel:GetParent ()
-		end
-		if not activePanel or not activePanel:IsValid () then return end
-		if activePanel:GetRootDockContainer () ~= self then return end
-		if activePanel:GetContainerType () == GCompute.DockContainer.DockContainerType.TabControl then
-			local selectedTab = activePanel.Child:GetSelectedTab ()
-			self:SetActiveView (selectedTab and selectedTab.View)
-		elseif activePanel:GetContainerType () == GCompute.DockContainer.DockContainerType.View then
-			self:SetActiveView (activePanel:GetView ())
-		end
-	end
+	-- The focused panel cannot belong to one of our views, nothing to do here
+	if not vgui.FocusedHasParent (self) then return end
 	
+	-- Find the DockContainer the focused panel belongs to
+	-- and bail if the focused panel isn't within a DockContainer
+	while focusedPanel and
+	      focusedPanel:IsValid () and
+		  focusedPanel.ClassName ~= self.ClassName do
+		focusedPanel = focusedPanel:GetParent ()
+	end
+	if not focusedPanel or not focusedPanel:IsValid () then return end
+	
+	-- Bail if the focused panel belongs to a different DockContainer hierarchy
+	if focusedPanel:GetRootDockContainer () ~= self then return end
+	
+	-- Update the root DockContainer's active view
+	if focusedPanel:GetContainerType () == GCompute.DockContainer.DockContainerType.TabControl then
+		local selectedTab = focusedPanel.Child:GetSelectedTab ()
+		self:SetActiveView (selectedTab and selectedTab.View)
+	elseif focusedPanel:GetContainerType () == GCompute.DockContainer.DockContainerType.View then
+		self:SetActiveView (focusedPanel:GetView ())
+	end
 end
 
 Gooey.Register ("GComputeDockContainer", PANEL, "GPanel")

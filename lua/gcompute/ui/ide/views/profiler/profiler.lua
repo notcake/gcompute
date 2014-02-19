@@ -252,7 +252,7 @@ end
 
 function self:ShowFunctionCode (functionEntry)
 	local uri = functionEntry:GetFunction ():GetFilePath ()
-	local luaPath = string.match (uri, "lua/(.*)")
+	local luaPath = string.match (uri, "lua/(.*)") or string.match (uri, "gamemodes/(.*)")
 	if luaPath then
 		local function showFunctionDefinition (view)
 			view:Select ()
@@ -317,7 +317,7 @@ end
 function self:GetFunctionCode (functionEntry, callback)
 	local uri = functionEntry:GetFunction ():GetFilePath ()
 	
-	local luaPath = string.match (uri, "lua/(.*)")
+	local luaPath = string.match (uri, "lua/(.*)") or string.match (uri, "gamemodes/(.*)")
 	if not luaPath then callback (false, nil) return end
 	
 	if file.Exists (luaPath, "LCL") then

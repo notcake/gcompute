@@ -2,16 +2,16 @@ local PANEL = {}
 surface.CreateFont (
 	"GComputeMonospace",
 	{
-		font   = "Courier New",
-		size   = 16,
+		font   = "Lucida Console",
+		size   = 14,
 		weight = 400
 	}
 )
 surface.CreateFont (
 	"GComputeMonospaceBold",
 	{
-		font   = "Courier New",
-		size   = 16,
+		font   = "Lucida Console",
+		size   = 14,
 		weight = 1000
 	}
 )

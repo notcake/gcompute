@@ -9,20 +9,14 @@ function self:Init ()
 	self:SetSize (256, 64)
 	self:Center ()
 	
+	self:SetKeyboardMap (Gooey.DialogKeyboardMap)
+	
 	self.GoToLabel = vgui.Create ("DLabel", self)
 	self.GoToLabel:SetText ("Go to line:")
 	
 	self.TextEntry = vgui.Create ("GTextEntry", self)
 	self.TextEntry.OnEnter = function ()
 		self.GoToButton:DispatchEvent ("Click")
-	end
-	self.TextEntry._OnKeyCodeTyped = self.TextEntry.OnKeyCodeTyped
-	self.TextEntry.OnKeyCodeTyped = function (_, keyCode, ...)
-		if keyCode == KEY_ESCAPE then
-			self:SetVisible (false)
-			gui.HideGameUI ()
-		end
-		self.TextEntry:_OnKeyCodeTyped (keyCode, ...)
 	end
 	self.TextEntry.OnTextChanged = function ()
 		local text = self.TextEntry:GetText ()

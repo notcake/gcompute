@@ -9,20 +9,14 @@ function self:Init ()
 	self:SetSize (256, 80)
 	self:Center ()
 	
+	self:SetKeyboardMap (Gooey.DialogKeyboardMap)
+	
 	self.FindLabel = vgui.Create ("DLabel", self)
 	self.FindLabel:SetText ("Find:")
 	
 	self.TextEntry = vgui.Create ("GTextEntry", self)
 	self.TextEntry.OnEnter = function ()
 		self.FindButton:DispatchEvent ("Click")
-	end
-	self.TextEntry._OnKeyCodeTyped = self.TextEntry.OnKeyCodeTyped
-	self.TextEntry.OnKeyCodeTyped = function (_, keyCode, ...)
-		if keyCode == KEY_ESCAPE then
-			self:SetVisible (false)
-			gui.HideGameUI ()
-		end
-		self.TextEntry:_OnKeyCodeTyped (keyCode, ...)
 	end
 	
 	self.CaseSensitive = vgui.Create ("GCheckbox", self)

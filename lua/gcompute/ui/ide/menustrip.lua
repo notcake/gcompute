@@ -38,6 +38,7 @@ function GCompute.IDE.MenuStrip (self)
 	toolsMenu:AddEventListener ("MenuOpening",
 		function ()
 			if toolsMenuPopulated then return end
+			toolsMenuPopulated = true
 			
 			local autoCreatedViews = {}
 			for view in self:GetViewManager ():GetEnumerator () do

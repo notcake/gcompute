@@ -8,6 +8,8 @@ function self:ctor (typeName)
 	self.DisplayName = typeName
 	
 	self.AutoCreate = false
+	self.AutoCreationCount = 1
+	
 	self.DefaultLocation = "Bottom"
 	
 	self.Constructor = nil
@@ -16,6 +18,10 @@ end
 function self:Create (...)
 	local _, view = xpcall (self.Constructor, GLib.Error, ...)
 	return view
+end
+
+function self:GetAutoCreationCount ()
+	return self.AutoCreationCount
 end
 
 function self:GetConstructor ()
@@ -40,6 +46,11 @@ end
 
 function self:SetAutoCreate (autoCreate)
 	self.AutoCreate = autoCreate
+	return self
+end
+
+function self:SetAutoCreationCount (autoCreationCount)
+	self.AutoCreationCount = autoCreationCount
 	return self
 end
 

@@ -265,14 +265,40 @@ function self:SetIDE (ide)
 	
 	if not self.IDE then return end
 	
+	-- Create auto-created views
 	for viewType in self:GetViewTypes ():GetEnumerator () do
 		if viewType:ShouldAutoCreate () then
-			local view = self:GetViewManager ():CreateView (viewType:GetName (), viewType:GetName ())
-			if view then
-				self:GetActionMap ():RegisterToggle (viewType:GetName (), Gooey.VisibilityController (view))
-					:SetIcon (view:GetIcon ())
-				view:SetCanClose (false)
-				self [viewType:GetName () .. "View"] = view
+			local autoCreationCount = viewType:GetAutoCreationCount ()
+			local createMultiple = autoCreationCount > 1
+			for i = 1, autoCreationCount do
+				local viewId = viewType:GetName ()
+				if createMultiple then
+					viewId = viewId .. tostring (i)
+				end
+				
+				local view = self:GetViewManager ():CreateView (viewType:GetName (), viewId)
+				if view then
+					local visibilityController = Gooey.VisibilityController (view)
+					visibilityController:AddEventListener ("VisibleChanged",
+						function (_, visible)
+							if visible then
+								view:Select ()
+							end
+						end
+					)
+					
+					-- Add a menu item
+					self:GetActionMap ():RegisterToggle (viewId, visibilityController)
+						:SetIcon (view:GetIcon ())
+					
+					-- Set the view title
+					if createMultiple then
+						view:SetTitle (view:GetTitle () .. " " .. tostring (i))
+					end
+					view:SetCanClose (false)
+					
+					self [viewId .. "View"] = view
+				end
 			end
 		end
 	end

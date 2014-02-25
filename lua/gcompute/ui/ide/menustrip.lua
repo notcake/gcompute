@@ -34,20 +34,31 @@ function GCompute.IDE.MenuStrip (self)
 		:SetAction ("Select All")
 	
 	local toolsMenu = menuStrip:AddMenu ("View")
-	toolsMenu:AddItem ("Console")
-		:SetAction ("Console")
-	toolsMenu:AddItem ("Output")
-		:SetAction ("Output")
-	toolsMenu:AddItem ("File Browser")
-		:SetAction ("FileBrowser")
-	toolsMenu:AddItem ("Processes")
-		:SetAction ("ProcessBrowser")
-	toolsMenu:AddItem ("Profiler")
-		:SetAction ("Profiler")
-	toolsMenu:AddItem ("Hook Profiler")
-		:SetAction ("HookProfiler")
-	toolsMenu:AddItem ("Donation")
-		:SetAction ("Donation")
+	local toolsMenuPopulated = false
+	toolsMenu:AddEventListener ("MenuOpening",
+		function ()
+			if toolsMenuPopulated then return end
+			
+			local autoCreatedViews = {}
+			for view in self:GetViewManager ():GetEnumerator () do
+				local viewType = self:GetViewTypes ():GetType (view:GetType ())
+				if viewType:ShouldAutoCreate () then
+					autoCreatedViews [#autoCreatedViews + 1] = view
+				end
+			end
+			
+			table.sort (autoCreatedViews,
+				function (a, b)
+					return a:GetTitle () < b:GetTitle ()
+				end
+			)
+			
+			for _, view in ipairs (autoCreatedViews) do
+				toolsMenu:AddItem (view:GetTitle ())
+					:SetAction (view:GetId ())
+			end
+		end
+	)
 	
 	local toolsMenu = menuStrip:AddMenu ("Tools")
 	toolsMenu:AddItem ("Settings")

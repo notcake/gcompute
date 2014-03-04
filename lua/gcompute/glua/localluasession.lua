@@ -48,7 +48,7 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 	local f = CompileString (code, sourceId, false)
 	if type (f) == "string" then
 		luaOutputSink:SyntaxError (sourceId, f)
-		return
+		return { Success = false }
 	end
 	
 	local _ErrorNoHalt = ErrorNoHalt
@@ -105,18 +105,24 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 		"\t"
 	)
 	
-	xpcall (f,
-		function (message)
-			luaOutputSink:Error (sourceId, GLib.GetLocalId (), message, GLib.StackTrace (nil, 3))
-			_ErrorNoHalt (message)
-		end
-	)
+	local ret = {
+		xpcall (f,
+			function (message)
+				luaOutputSink:Error (sourceId, GLib.GetLocalId (), message, GLib.StackTrace (nil, 3))
+				_ErrorNoHalt (message)
+			end
+		)
+	}
+	ret.Success = ret [1]
+	table.remove (ret, 1)
 	
 	ErrorNoHalt = _ErrorNoHalt
 	Msg         = _Msg
 	MsgN        = _MsgN
 	MsgC        = _MsgC
 	print       = _print
+	
+	return ret
 end
 
 -- Internal, do not call

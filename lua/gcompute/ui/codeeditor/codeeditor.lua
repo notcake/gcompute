@@ -48,7 +48,7 @@ function PANEL:Init ()
 	self.TextEntry:SetMultiline (true)
 	self.TextEntry:SetAllowNonAsciiCharacters (true)
 	self.TextEntry.OnKeyCodeTyped = function (_, keyCode)
-		self:OnKeyCodeTyped (keyCode)
+		return self:OnKeyCodeTyped (keyCode)
 	end
 	self.TextEntry.OnTextChanged = function (textEntry)
 		local ctrl    = input.IsKeyDown (KEY_LCONTROL) or input.IsKeyDown (KEY_RCONTROL)
@@ -1445,7 +1445,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 	
 	if self:GetCodeCompletionProvider () and
 	   self:GetCodeCompletionProvider ():HandleKey (keyCode, ctrl, shift, alt) then
-		return
+		return true
 	end
 	
 	if keyCode == KEY_TAB then
@@ -1459,6 +1459,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 					self:ReplaceSelectionText ("\t")
 				end
 			end
+			return true
 		end
 	elseif keyCode == KEY_ENTER then
 		if self:IsMultiline () and not self:IsReadOnly () then

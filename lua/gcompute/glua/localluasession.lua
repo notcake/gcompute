@@ -68,12 +68,12 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 			outputFunction (table.concat (args, separator))
 		end
 	end
-	--error = makeOutputter (
-	--	function (text)
-	--		luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
-	--		_error (text)
-	--	end
-	--)
+	error = makeOutputter (
+		function (text)
+			luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
+			_error (text)
+		end
+	)
 	ErrorNoHalt = makeOutputter (
 		function (text)
 			luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
@@ -116,7 +116,7 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 	local ret = {
 		xpcall (f,
 			function (message)
-				luaOutputSink:Error (sourceId, GLib.GetLocalId (), message, GLib.StackTrace (nil, 3))
+				luaOutputSink:Error (sourceId, GLib.GetLocalId (), message, GLib.Lua.StackTrace ())
 				_ErrorNoHalt (message)
 			end
 		)

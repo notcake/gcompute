@@ -118,7 +118,8 @@ function self:ctor (container)
 			local luaOutputSink = GCompute.LuaOutputSink ()
 			luaOutputSink:AddEventListener ("Error",
 				function (_, sourceId, userId, message, stackTrace)
-					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n\t" .. string.gsub (stackTrace, "\n", "\n\t"), GLib.Colors.IndianRed, sourceId)
+					local stackTraceString = stackTrace:ToString ()
+					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n\t" .. string.gsub (stackTraceString, "\n", "\n\t"), GLib.Colors.IndianRed, sourceId)
 				end
 			)
 			luaOutputSink:AddEventListener ("Output",
@@ -231,6 +232,11 @@ function self:BringUpView (view, line, char)
 	location = view:GetEditor ():GetDocument ():CharacterToColumn (location, view:GetEditor ():GetTextRenderer ())
 	view:GetEditor ():SetCaretPos (location)
 	view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
+	GLib.CallDelayed (
+		function ()
+			view:GetEditor ():ScrollToCaret ()
+		end
+	)
 end
 
 function self:ColorEquals (a, b)

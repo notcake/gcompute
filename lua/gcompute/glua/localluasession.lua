@@ -38,6 +38,7 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 	luaOutputSink = luaOutputSink or GCompute.LuaOutputSink ()
 	
 	local outputUpvalues = ""
+	outputUpvalues = outputUpvalues .. "local error       = error "
 	outputUpvalues = outputUpvalues .. "local ErrorNoHalt = ErrorNoHalt "
 	outputUpvalues = outputUpvalues .. "local Msg         = Msg "
 	outputUpvalues = outputUpvalues .. "local MsgN        = MsgN "
@@ -51,6 +52,7 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 		return { Success = false }
 	end
 	
+	local _error       = error
 	local _ErrorNoHalt = ErrorNoHalt
 	local _Msg         = Msg
 	local _MsgN        = MsgN
@@ -66,9 +68,15 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 			outputFunction (table.concat (args, separator))
 		end
 	end
+	--error = makeOutputter (
+	--	function (text)
+	--		luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
+	--		_error (text)
+	--	end
+	--)
 	ErrorNoHalt = makeOutputter (
 		function (text)
-			luaOutputSink:Output (sourceId, GLib.GetLocalId (), text)
+			luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
 			_ErrorNoHalt (text)
 		end
 	)
@@ -116,6 +124,7 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 	ret.Success = ret [1]
 	table.remove (ret, 1)
 	
+	error       = _error
 	ErrorNoHalt = _ErrorNoHalt
 	Msg         = _Msg
 	MsgN        = _MsgN

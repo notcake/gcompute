@@ -15,9 +15,10 @@ function PANEL:EnsureVisible ()
 end
 
 function PANEL:Focus ()
-	if not self:GetContents () then return end
 	if self:ContainsFocus () then return end
-	self:GetContents ():Focus ()
+	if not self.View then return end
+	
+	self.View:Focus ()
 end
 
 function PANEL:GetContents ()

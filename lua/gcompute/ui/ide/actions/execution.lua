@@ -7,6 +7,7 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 		if not editorHelper then return end
 		
 		local outputPaneCleared = false
+		local outputReceived = false
 		self:GetViewManager ():GetViewById ("Output"):Clear ()
 		outputPaneCleared = true
 		
@@ -18,6 +19,11 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 				if not outputPaneCleared then
 					self:GetViewManager ():GetViewById ("Output"):Clear ()
 					outputPaneCleared = true
+				end
+				if not outputReceived then
+					self:GetViewManager ():GetViewById ("Output"):SetVisible (true)
+					self:GetViewManager ():GetViewById ("Output"):Select ()
+					outputReceived = true
 				end
 				
 				self:GetViewManager ():GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentUri)
@@ -32,6 +38,11 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 				if not outputPaneCleared then
 					self:GetViewManager ():GetViewById ("Output"):Clear ()
 					outputPaneCleared = true
+				end
+				if not outputReceived then
+					self:GetViewManager ():GetViewById ("Output"):SetVisible (true)
+					self:GetViewManager ():GetViewById ("Output"):Select ()
+					outputReceived = true
 				end
 				
 				self:GetViewManager ():GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentUri)

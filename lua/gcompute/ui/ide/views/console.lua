@@ -107,6 +107,10 @@ function self:ctor (container)
 	
 	self.ClipboardTarget = GCompute.CodeEditor.EditorClipboardTarget (self.Output)
 	
+	self.NextInputId = 0
+	self.InputHistory = {}
+	self.InputHistoryPosition = 1
+	
 	self.Input = vgui.Create ("GComputeCodeEditor", container)
 	self.Input:SetMultiline (false)
 	self.Input:SetLineNumbersVisible (false)
@@ -122,29 +126,65 @@ function self:ctor (container)
 					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n\t" .. string.gsub (stackTraceString, "\n", "\n\t"), GLib.Colors.IndianRed, sourceId)
 				end
 			)
+			
+			local firstOutput = true
 			luaOutputSink:AddEventListener ("Output",
 				function (_, sourceId, userId, message, color)
+					if firstOutput then
+						self:Append ("\t", GLib.Colors.White, sourceId)
+						firstOutput = false
+					end
 					self:Append (string.gsub (message, "\n", "\n\t"), color or GLib.Colors.White, sourceId)
 				end
 			)
 			
 			local code = self.Input:GetText ()
+			
+			-- Input history
+			self.InputHistory [#self.InputHistory + 1] = self.Input:GetText ()
+			self.InputHistoryPosition = #self.InputHistory + 1
+			
 			luaOutputSink:AddEventListener ("SyntaxError",
 				function (_, sourceId, message)
 					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, sourceId)
+					firstOutput = true
 				end
 			)
 			
 			self:Append (code .. "\n", GLib.Colors.White, sourceId)
-			local ret = luaSession:Execute ("@repl", nil, "return " .. code, luaOutputSink)
+			
+			-- Input Id
+			local inputId = "@repl_" .. tostring (self.NextInputId)
+			self.NextInputId = self.NextInputId + 1
+			
+			local ret = luaSession:Execute (inputId, nil, "return " .. code, luaOutputSink)
 			if not ret.Success then
-				ret = luaSession:Execute ("@repl", nil, code, luaOutputSink)
+				ret = luaSession:Execute (inputId, nil, code, luaOutputSink)
 			end
 			if ret.Success then
 				self:Append ("\t" .. string.gsub (GLib.Lua.ToLuaString (ret [1]), "\n", "\n\t") .. "\n", GLib.Colors.White, sourceId)
+				firstOutput = true
 			end
 			
 			self.Input:SetText ("")
+		end
+	)
+	self.Input:GetKeyboardMap ():UnregisterAll (KEY_UP)
+	self.Input:GetKeyboardMap ():Register (KEY_UP,
+		function (_, key, ctrl, shift, alt)
+			if self.InputHistoryPosition == 1 then return false end
+			
+			self.InputHistoryPosition = self.InputHistoryPosition - 1
+			self.Input:SetText (self.InputHistory [self.InputHistoryPosition])
+		end
+	)
+	self.Input:GetKeyboardMap ():UnregisterAll (KEY_DOWN)
+	self.Input:GetKeyboardMap ():Register (KEY_DOWN,
+		function (_, key, ctrl, shift, alt)
+			if self.InputHistoryPosition == #self.InputHistory + 1 then return false end
+			
+			self.InputHistoryPosition = self.InputHistoryPosition + 1
+			self.Input:SetText (self.InputHistory [self.InputHistoryPosition] or "")
 		end
 	)
 	
@@ -177,12 +217,16 @@ end
 
 function self:Clear ()
 	self:Flush ()
-	self:GetEditor ():Clear ()
+	self.Output:Clear ()
+end
+
+function self:Focus ()
+	self.Input:Focus ()
 end
 
 function self:Flush ()
 	if #self.BufferText > 0 then
-		local codeEditor = self:GetEditor ()
+		local codeEditor = self.Output
 		local document = codeEditor:GetDocument ()
 		local startPos = document:GetEnd ()
 		codeEditor:Append (table.concat (self.BufferText))
@@ -201,6 +245,7 @@ function self:Flush ()
 end
 
 function self:GetEditor ()
+	if self.Input:ContainsFocus () then return self.Input end
 	return self.Output
 end
 

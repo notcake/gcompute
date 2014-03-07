@@ -105,6 +105,11 @@ function self:EnsureVisible ()
 	self.Container:EnsureVisible ()
 end
 
+function self:Focus ()
+	if not self.Container:GetContents () then return end
+	self.Container:GetContents ():Focus ()
+end
+
 function self:GetActionMap ()
 	if not self.Container then return nil, nil end
 	if not self.Container:GetContents () then return nil, nil end

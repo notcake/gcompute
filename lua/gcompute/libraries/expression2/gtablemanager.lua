@@ -23,8 +23,8 @@ function self:ctor ()
 	)
 	
 	GCompute.PlayerMonitor:AddEventListener ("PlayerDisconnected", "Expression2.GTableManager",
-		function (_, steamId)
-			self:CheckOwner (ownerId)
+		function (_, userId)
+			self:CheckOwner (userId)
 		end
 	)
 end

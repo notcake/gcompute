@@ -40,9 +40,15 @@ timer.Simple (1,
 )
 
 function self:dtor ()
-	self.IDE:RemoveEventListener ("VisibleChanged", "Metastruct")
+	self:UnhookCodeEditor (self.ActiveCodeEditor)
+	self.ActiveCodeEditor = nil
+	
+	self.IDE:RemoveEventListener ("VisibleChanged",          "Metastruct")
+	self.IDE:RemoveEventListener ("ActiveViewChanged",       "Metastruct")
 	self.IDE:RemoveEventListener ("SelectedContentsChanged", "Metastruct")
 	hook.Remove ("PlayerBindPress", "Metastruct")
+	
+	self:UpdateChatStatus ()
 end
 
 function self:HookCodeEditor (codeEditor)
@@ -89,8 +95,8 @@ function self:UpdateChatStatus ()
 			self.TypingCode = true
 		end
 		local code = self.ActiveCodeEditor:GetText ()
-		if code:len () > 4096 then
-			code = code:sub (1, GLib.UTF8.GetSequenceStart (code, 4097) - 1) .. "..."
+		if #code > 4096 then
+			code = string.sub (code, 1, GLib.UTF8.GetSequenceStart (code, 4097) - 1) .. "..."
 		end
 		coh.SendTypedMessage (code)
 	else

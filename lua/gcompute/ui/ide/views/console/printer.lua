@@ -249,7 +249,7 @@ function self:PrintTable (t, multiline)
 		end
 		
 		self:Append ("}\n", GLib.Colors.White)
-		self:PrintComment ("-- " .. tostring (#sortedKeys) .. " total entries" .. (#sortedKeys == 1 and "" or "s") .. ".")
+		self:PrintComment ("-- " .. tostring (#sortedKeys) .. " total entrie" .. (#sortedKeys == 1 and "" or "s") .. ".")
 	end
 end
 

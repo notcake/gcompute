@@ -83,6 +83,8 @@ end
 -- @param file The IFile to be opened.
 -- @param callback A callback function (success, IResource resource, IView view)
 function self:OpenFile (file, callback)
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	self:OpenResource (VFS.Resource (file), callback)
 end
 
@@ -90,6 +92,8 @@ end
 -- @param resource The IResource to be opened.
 -- @param callback A callback function (success, IResource resource, IView view)
 function self:OpenResource (resource, callback)
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	
 	if not resource then callback (false) return end
@@ -144,6 +148,8 @@ end
 -- @param uri The uri of the file to be opened
 -- @param callback A callback function (success, IResource resource, IView view)
 function self:OpenUri (uri, callback)
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	
 	local document = self:GetDocumentManager ():GetDocumentByUri (uri)
@@ -160,6 +166,8 @@ end
 -- @param document The document whose contents are to be saved
 -- @param callback A callback function (success, IResource resource)
 function self:SaveAsDocument (document, callback)
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	if not document then callback (true) return end
 	
@@ -183,6 +191,9 @@ function self:SaveDocument (document, uriOrCallback, callback)
 		callback = uriOrCallback
 		uriOrCallback = nil
 	end
+	
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	
 	if not document then callback (true) return end
@@ -226,6 +237,8 @@ end
 --- Closes a view
 -- @param callback function (success)
 function self:CloseView (view, callback)
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	
 	if not view             then callback (true)  return end
@@ -281,6 +294,8 @@ end
 -- @param view The view whose contents are to be saved
 -- @param callback A callback function (success, IFile file)
 function self:SaveAsView (view, callback)
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	if not view               then callback (true) return end
 	if not view:GetSavable () then callback (true) return end
@@ -297,6 +312,9 @@ function self:SaveView (view, uriOrCallback, callback)
 		callback = uriOrCallback
 		uriOrCallback = nil
 	end
+	
+	if not callback and GLib.InThread () then return I (GLib.CallSelfAsAsync ()) end
+	
 	callback = callback or GCompute.NullCallback
 	
 	if not view               then callback (true) return end

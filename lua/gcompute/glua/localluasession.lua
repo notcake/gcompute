@@ -122,7 +122,11 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 		)
 	}
 	ret.Success = ret [1]
-	table.remove (ret, 1)
+	
+	-- We can't use table.remove since that will mess up nils
+	for i = 1, table.maxn (ret) do
+		ret [i] = ret [i + 1]
+	end
 	
 	error       = _error
 	ErrorNoHalt = _ErrorNoHalt

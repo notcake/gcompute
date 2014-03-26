@@ -300,7 +300,7 @@ function self:ShowCodeViewLines (codeView, startLine, endLine)
 	if codeView:GetType () ~= "Code" then return end
 	
 	local location1 = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
-	local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
+	local location2 = GCompute.CodeEditor.LineCharacterLocation (endLine   - 1, char and (char - 1) or 0)
 	location1 = codeView:GetEditor ():GetDocument ():CharacterToColumn (location1, codeView:GetEditor ():GetTextRenderer ())
 	location2 = codeView:GetEditor ():GetDocument ():CharacterToColumn (location2, codeView:GetEditor ():GetTextRenderer ())
 	codeView:GetEditor ():SetCaretPos (location2)

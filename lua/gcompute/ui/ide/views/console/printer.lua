@@ -184,8 +184,8 @@ function self:PrintTable (t, multiline)
 				if isnumber (a) and isnumber (b) then
 					return a < b
 				end
-				if isnumber (a) then return true end
-				if isnumber (b) then return true end
+				if isnumber (a) then return true  end
+				if isnumber (b) then return false end
 				
 				return tostring (a) < tostring (b)
 			end

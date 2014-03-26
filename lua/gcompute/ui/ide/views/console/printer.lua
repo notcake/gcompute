@@ -259,9 +259,9 @@ function self:PrintColor (t, multiline)
 	if multiline then
 		self:PrintComment ("-- " .. string.format ("0x%08x", GLib.Lua.AddressOf (t)) .. "\n")
 		
-		self:PrintComment ("--[[ ")
+		self:PrintComment ("-- ")
 		self:Append ("█", t)
-		self:PrintComment (" ]]\n")
+		self:PrintComment ("\n")
 	end
 	
 	self:Append ("Color", GLib.Colors.SkyBlue)

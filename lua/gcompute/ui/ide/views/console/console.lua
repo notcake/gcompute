@@ -148,7 +148,7 @@ function self:ctor (container)
 			luaOutputSink:AddEventListener ("Error",
 				function (_, sourceId, userId, message, stackTrace)
 					local stackTraceString = stackTrace:ToString ()
-					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n\t" .. string.gsub (stackTraceString, "\n", "\n\t"), GLib.Colors.IndianRed, sourceId)
+					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n\t" .. string.gsub (stackTraceString, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, sourceId)
 				end
 			)
 			
@@ -169,8 +169,10 @@ function self:ctor (container)
 			self.InputHistory [#self.InputHistory + 1] = self.Input:GetText ()
 			self.InputHistoryPosition = #self.InputHistory + 1
 			
+			local syntaxError = false
 			luaOutputSink:AddEventListener ("SyntaxError",
 				function (_, sourceId, message)
+					syntaxError = true
 					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, sourceId)
 					firstOutput = true
 				end
@@ -183,11 +185,10 @@ function self:ctor (container)
 			self.NextInputId = self.NextInputId + 1
 			
 			local ret = luaSession:Execute (inputId, nil, "return " .. code, luaOutputSink)
-			if not ret.Success then
+			if syntaxError then
 				ret = luaSession:Execute (inputId, nil, code, luaOutputSink)
 			end
 			if ret.Success then
-				local firstOutput = true
 				local pipe = GCompute.Pipe ()
 				pipe:AddEventListener ("Data",
 					function (_, data, color)

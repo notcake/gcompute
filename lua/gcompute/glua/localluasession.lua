@@ -70,7 +70,7 @@ function self:Execute (sourceId, upvalues, code, luaOutputSink)
 	end
 	error = makeOutputter (
 		function (text)
-			luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
+			-- luaOutputSink:Error (sourceId, GLib.GetLocalId (), text, GLib.Lua.StackTrace ())
 			_error (text)
 		end
 	)

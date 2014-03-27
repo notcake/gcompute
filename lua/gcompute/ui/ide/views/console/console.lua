@@ -44,43 +44,57 @@ function self:ctor (container)
 	
 	self.Output:AddEventListener ("DoubleClick",
 		function (_, x, y)
+			if GLib.CallSelfInThread () then return end
+			
 			local lineColumnLocation = self.Output:PointToLocation (x, y)
 			local line = self.Output:GetDocument ():GetLine (lineColumnLocation:GetLine ())
 			if not line then return end
 			local lineText = line:GetText ()
-			local sourceDocumentId = line:GetAttribute ("SourceDocumentId", 0)
+			local sourceDocumentId  = line:GetAttribute ("SourceDocumentId", 0)
 			local sourceDocumentUri = line:GetAttribute ("SourceDocumentUri", 0)
 			
 			-- Attempt to get line, char information
 			-- line %d, char %d
 			
-			local lowercaseLineText = lineText:lower ()
-			local luaPath = nil
-			local lineMatch, charMatch = lowercaseLineText:match ("line[ \t]*([0-9]+),?[ \t]*char[ \t]*([0-9]+)")
-			if not lineMatch then
-				lineMatch, charMatch = lowercaseLineText:match ("line[ \t]*([0-9]+),?[ \t]*character[ \t]*([0-9]+)")
+			local lowercaseLineText = string.lower (lineText)
+			
+			local luaPath        = nil
+			local startLineMatch = nil
+			local endLineMatch   = nil
+			local charMatch      = nil
+			
+			startLineMatch, charMatch = string.match (lowercaseLineText, "line[ \t]*([0-9]+),?[ \t]*char[ \t]*([0-9]+)")
+			if not startLineMatch then
+				startLineMatch, charMatch = string.match (lowercaseLineText, "line[ \t]*([0-9]+),?[ \t]*character[ \t]*([0-9]+)")
 			end
-			if not lineMatch then
-				lineMatch = lowercaseLineText:match ("line[ \t]*([0-9]+)")
+			startLineMatch = startLineMatch or string.match (lowercaseLineText, "line[ \t]*([0-9]+)")
+			
+			-- debug.Trace style stack traces
+			-- GLib style stack traces
+			if not startLineMatch then
+				luaPath, startLineMatch, endLineMatch = string.match (lowercaseLineText, "lua/(.*): ?([0-9]+)%-([0-9]+)")
 			end
-			if not lineMatch then
-				-- debug.Trace style stack trace
-				luaPath, lineMatch = lowercaseLineText:match ("lua/(.*):([0-9]+): ")
+			if not startLineMatch then
+				luaPath, startLineMatch = string.match (lowercaseLineText, "lua/(.*): ?([0-9]+)")
 			end
-			if not lineMatch then
-				-- GLib style stack trace
-				luaPath, lineMatch = lowercaseLineText:match ("lua/(.*): ([0-9]+)")
+			if not startLineMatch then
+				luaPath, startLineMatch, endLineMatch = string.match (lowercaseLineText, "gamemodes/(.*): ?([0-9]+)%-([0-9]+)")
 			end
-			if not luaPath then
-				-- Getting desperate
-				luaPath = lowercaseLineText:match ("lua/(.*%.lua)")
-			end
-			if not lineMatch then
-				lineMatch = lowercaseLineText:match (":([0-9]+): ")
+			if not startLineMatch then
+				luaPath, startLineMatch = string.match (lowercaseLineText, "gamemodes/(.*): ?([0-9]+)")
 			end
 			
-			local line = tonumber (lineMatch)
-			local char = tonumber (charMatch)
+			-- Getting desperate
+			luaPath = luaPath or string.match (lowercaseLineText, "lua/(.*%.lua)")
+			luaPath = luaPath or string.match (lowercaseLineText, "gamemodes/(.*%.lua)")
+			
+			if not startLineMatch then
+				startLineMatch = string.match (lowercaseLineText, ":([0-9]+): ")
+			end
+			
+			local startLine = tonumber (startLineMatch)
+			local endLine   = tonumber (endLineMatch)
+			local char      = tonumber (charMatch)
 			
 			local client = false
 			local uri = nil
@@ -103,29 +117,19 @@ function self:ctor (container)
 			if document then
 				local view = document:GetView (1)
 				if not view then return end
-				self:BringUpView (view, line, char)
+				
+				self:BringUpView (view, startLine, char, endLine)
 			elseif uri and uri ~= nil then
-				self:GetIDE ():OpenUri (uri,
-					function (success, resource, view)
-						if not view then
-							if not client then return end
-							
-							uri = "luasv/" .. luaPath
-							
-							self:GetIDE ():OpenUri (uri,
-								function (success, resource, view)
-									if not view then return end
-									
-									self:BringUpView (view, line, char)
-								end
-							)
-							return
-						end
-						
-						self:BringUpView (view, line, char)
-					end
-				)
-				return
+				local success, resource, view = self:GetIDE ():OpenUri (uri)
+				
+				if not view and client then
+					uri = "luasv/" .. luaPath
+					success, resource, view = self:GetIDE ():OpenUri (uri)
+				end
+				
+				if not view then return end
+				
+				self:BringUpView (view, startLine, char, endLine)
 			end
 		end
 	)
@@ -204,9 +208,7 @@ function self:ctor (container)
 				self:Append ("\n", GLib.Colors.White, sourceId)
 				firstOutput = true
 				
-				for i = 2, math.huge do
-					if ret [i] == nil then break end
-					
+				for i = 2, table.maxn (ret) do
 					GCompute.IDE.Console.Printer (pipe):Print (ret [i])
 					self:Append ("\n", GLib.Colors.White, sourceId)
 					firstOutput = true
@@ -314,23 +316,33 @@ function self:Think ()
 end
 
 -- Internal, do not call
-function self:BringUpView (view, line, char)
+function self:BringUpView (view, startLine, char, endLine)
+	if GLib.CallSelfInThread () then return end
+	
 	if not view then return end
 	view:Select ()
 	
 	char = char or 1
-	if not line then return end
+	if not startLine then return end
 	if view:GetType () ~= "Code" then return end
 	
-	local location = GCompute.CodeEditor.LineCharacterLocation (line - 1, char and (char - 1) or 0)
+	if endLine then
+		GLib.Yield ()
+		local location = GCompute.CodeEditor.LineCharacterLocation (endLine - 1, char and (char - 1) or 0)
+		location = view:GetEditor ():GetDocument ():CharacterToColumn (location, view:GetEditor ():GetTextRenderer ())
+			
+		view:GetEditor ():SetCaretPos (location)
+		view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
+		view:GetEditor ():ScrollToCaret ()
+	end
+	
+	GLib.Yield ()
+	local location = GCompute.CodeEditor.LineCharacterLocation (startLine - 1, char and (char - 1) or 0)
 	location = view:GetEditor ():GetDocument ():CharacterToColumn (location, view:GetEditor ():GetTextRenderer ())
+		
 	view:GetEditor ():SetCaretPos (location)
 	view:GetEditor ():SetSelection (view:GetEditor ():GetCaretPos ())
-	GLib.CallDelayed (
-		function ()
-			view:GetEditor ():ScrollToCaret ()
-		end
-	)
+	view:GetEditor ():ScrollToCaret ()
 end
 
 function self:ColorEquals (a, b)

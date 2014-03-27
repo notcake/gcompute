@@ -77,6 +77,8 @@ function self:Print (obj, multiline)
 		self:PrintFunction (obj, multiline)
 	elseif type == "table" then
 		self:PrintTable (obj, multiline)
+	elseif type == "Panel" then
+		self:PrintPanel (obj, multiline)
 	else
 		self:PrintGeneric (obj, multiline)
 	end
@@ -249,7 +251,31 @@ function self:PrintTable (t, multiline)
 		end
 		
 		self:Append ("}\n", GLib.Colors.White)
-		self:PrintComment ("-- " .. tostring (#sortedKeys) .. " total entrie" .. (#sortedKeys == 1 and "" or "s") .. ".")
+		self:PrintComment ("-- " .. tostring (#sortedKeys) .. " total entr" .. (#sortedKeys == 1 and "y" or "ies") .. ".")
+	end
+end
+
+function self:PrintPanel (p, multiline)
+	if multiline == nil then multiline = true end
+	
+	if not multiline then
+		self:PrintGeneric (p, multiline)
+		
+		if p:IsValid () then
+			self:PrintComment (" --[[ " .. (p:IsVisible () and "Visible" or "Invisible") .. " ]]")
+		else
+			self:PrintComment (" --[[ Invalid ]]")
+		end
+		return
+	end
+	
+	if p:IsValid () then
+		self:PrintTable (p:GetTable (), multiline)
+		self:PrintComment ("\n-- Children:\n")
+		self:PrintTable (p:GetChildren (), multiline)
+	else
+		self:PrintComment ("-- Invalid\n")
+		self:PrintGeneric (p, multiline)
 	end
 end
 

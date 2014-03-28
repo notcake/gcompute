@@ -308,8 +308,14 @@ end
 function self:PrintColor (t, multiline)
 	if multiline == nil then multiline = true end
 	
+	local tableName = GLib.Lua.GetObjectName (t)
+	
 	if multiline then
 		self:PrintComment ("-- " .. string.format ("0x%08x", GLib.Lua.AddressOf (t)) .. "\n")
+		
+		if tableName then
+			self:PrintComment ("-- " .. tableName .. "\n")
+		end
 		
 		self:PrintComment ("-- ")
 		self:Append ("█", t)
@@ -330,6 +336,11 @@ function self:PrintColor (t, multiline)
 	if not multiline then
 		self:PrintComment (" --[[ ")
 		self:Append ("█", t)
+		
+		if tableName then
+			self:PrintComment (", " .. tableName)
+		end
+		
 		self:PrintComment (" ]]")
 	end
 end

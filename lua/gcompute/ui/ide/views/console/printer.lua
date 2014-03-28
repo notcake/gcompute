@@ -115,8 +115,33 @@ function self:PrintNumber (value, desiredWidth)
 	end
 end
 
+local escapeTable = {}
+local multilineEscapeTable = {}
+for i = 0, 255 do
+	local c = string.char (i)
+	
+	if i < string.byte (" ") then escapeTable [c] = string.format ("\\x%02x", i)
+	elseif i >= 127 then escapeTable [c] = string.format ("\\x%02x", i) end
+end
+escapeTable ["\\"] = "\\\\"
+escapeTable ["\t"] = "\\t"
+escapeTable ["\r"] = "\\r"
+escapeTable ["\n"] = "\\n"
+escapeTable ["\""] = "\\\""
+
+for k, v in pairs (escapeTable) do
+	multilineEscapeTable [k] = v
+end
+multilineEscapeTable ["\t"] = nil
+multilineEscapeTable ["\n"] = "\\\n"
+
 function self:PrintString (str, multiline)
-	self:Append (GLib.Lua.ToLuaString (str), GLib.Colors.Gray)
+	self:Append ("\"", GLib.Colors.Gray)
+	
+	str = string.gsub (str, ".", multiline and multilineEscapeTable or escapeTable)
+	
+	self:Append (str, GLib.Colors.Gray)
+	self:Append ("\"", GLib.Colors.Gray)
 end
 
 function self:PrintFunction (f, multiline)
@@ -124,33 +149,34 @@ function self:PrintFunction (f, multiline)
 	
 	local f = GLib.Lua.Function (f)
 	
+	local functionName = GLib.Lua.GetObjectName (f:GetRawFunction ())
 	if multiline then
 		if f:IsNative () then
 			self:PrintComment ("-- [Native]\n")
 		else
 			self:PrintComment ("-- " .. f:GetFilePath () .. ": " .. f:GetStartLine () .. "-" .. f:GetEndLine () .. "\n")
-			
-			local functionName = GLib.Lua.GetObjectName (f:GetRawFunction ())
-			if functionName then
-				self:PrintComment ("-- " .. functionName .. "\n")
-			end
 		end
+		
+		if functionName then
+			self:PrintComment ("-- " .. functionName .. "\n")
+		end
+		
 		self:Append (GLib.Lua.ToLuaString (f:GetRawFunction ()), GLib.Colors.White)
 	else
 		self:PrintKeyword ("function ")
 		self:Append (f:GetParameterList ():ToString (), GLib.Colors.White)
 		
 		if f:IsNative () then
-			self:PrintComment (" --[[ Native ]]")
+			self:PrintComment (" --[[ Native")
 		else
-			local functionName = GLib.Lua.GetObjectName (f:GetRawFunction ())
-			
-			if functionName then
-				self:PrintComment (" --[[ " .. f:GetFilePath () .. ": " .. f:GetStartLine () .. "-" .. f:GetEndLine () .. ", " ..  functionName .. " ]]")
-			else
-				self:PrintComment (" --[[ " .. f:GetFilePath () .. ": " .. f:GetStartLine () .. "-" .. f:GetEndLine () .. " ]]")
-			end
+			self:PrintComment (" --[[ " .. f:GetFilePath () .. ": " .. f:GetStartLine () .. "-" .. f:GetEndLine ())
 		end
+		
+		if functionName then
+			self:PrintComment (", " ..  functionName)
+		end
+		
+		self:PrintComment (" ]]")
 	end
 end
 

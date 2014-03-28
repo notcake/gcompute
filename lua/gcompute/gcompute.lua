@@ -298,5 +298,6 @@ GCompute.GlobalNamespace:ResolveNames (
 )
 
 if CLIENT then
+	GCompute.UI = {}
 	GCompute.IncludeDirectory ("gcompute/ui")
 end

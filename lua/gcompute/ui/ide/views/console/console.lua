@@ -174,11 +174,13 @@ function self:ctor (container)
 			self.InputHistoryPosition = #self.InputHistory + 1
 			
 			local syntaxError = false
+			local syntaxErrorSourceId = nil
+			local syntaxErrorMessage = nil
 			luaOutputSink:AddEventListener ("SyntaxError",
 				function (_, sourceId, message)
 					syntaxError = true
-					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, sourceId)
-					firstOutput = true
+					syntaxErrorMessage = message
+					syntaxErrorSourceId = sourceId
 				end
 			)
 			
@@ -190,7 +192,12 @@ function self:ctor (container)
 			
 			local ret = luaSession:Execute (inputId, nil, "return " .. code, luaOutputSink)
 			if syntaxError then
+				syntaxError = false
 				ret = luaSession:Execute (inputId, nil, code, luaOutputSink)
+			end
+			if syntaxError then
+				self:Append ("\t" .. string.gsub (syntaxErrorMessage, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, syntaxErrorSourceId)
+				firstOutput = true
 			end
 			if ret.Success then
 				local pipe = GCompute.Pipe ()
@@ -204,11 +211,7 @@ function self:ctor (container)
 					end
 				)
 				
-				GCompute.IDE.Console.Printer (pipe):Print (ret [1])
-				self:Append ("\n", GLib.Colors.White, sourceId)
-				firstOutput = true
-				
-				for i = 2, table.maxn (ret) do
+				for i = 1, table.maxn (ret) do
 					GCompute.IDE.Console.Printer (pipe):Print (ret [i])
 					self:Append ("\n", GLib.Colors.White, sourceId)
 					firstOutput = true

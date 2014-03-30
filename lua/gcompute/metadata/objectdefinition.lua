@@ -201,11 +201,7 @@ end
 function self:GetFileStaticNamespaceEnumerator ()
 	if not self.FileStaticNamespaces then return GCompute.NullCallback end
 	
-	local next, tbl, key = pairs (self.FileStaticNamespaces)
-	return function ()
-		key = next (tbl, key)
-		return key, tbl [key]
-	end
+	return GLib.KeyValueEnumerator (self.FileStaticNamespaces)
 end
 
 function self:GetNamespace ()
@@ -296,11 +292,7 @@ function self:GetAttributeCount ()
 end
 
 function self:GetAttributeEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Attributes [i]
-	end
+	return GLib.ArrayEnumerator (self.Attributes)
 end
 
 function self:RemoveAttribute (index)

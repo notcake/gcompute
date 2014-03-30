@@ -16,11 +16,7 @@ function self:Clear ()
 end
 
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Usings [i]
-	end
+	return GLib.ArrayEnumerator (self.Usings)
 end
 
 function self:GetUsing (index)

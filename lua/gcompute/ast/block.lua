@@ -131,11 +131,7 @@ function self:GetDefinition ()
 end
 
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Statements [i]
-	end
+	return GLib.ArrayEnumerator (self.Statements)
 end
 
 function self:GetMergedLocalScope ()

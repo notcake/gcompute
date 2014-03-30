@@ -61,11 +61,7 @@ end
 --- Gets an iterator for this class group
 -- @return An iterator function returning the ClassDefinitions in this class group
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Classes [i]
-	end
+	return GLib.ArrayEnumerator (self.Classes)
 end
 self.GetGroupEnumerator = self.GetEnumerator
 

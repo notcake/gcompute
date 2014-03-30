@@ -37,7 +37,7 @@ function self:CreateProcess ()
 end
 
 function self:GetEnumerator ()
-	return pairs (self.Processes)
+	return GLib.KeyValueEnumerator (self.Processes)
 end
 
 -- Event handlers

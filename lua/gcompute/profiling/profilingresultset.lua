@@ -45,12 +45,7 @@ function self:GetFunctionEntry (func)
 end
 
 function self:GetFunctionEntryEnumerator ()
-	local next, tbl, key = pairs (self.FunctionEntries)
-	
-	return function ()
-		key = next (tbl, key)
-		return tbl [key]
-	end
+	return GLib.ValueEnumerator (self.FunctionEntries)
 end
 
 function self:GetSampleCount ()

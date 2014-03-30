@@ -13,9 +13,5 @@ function Languages.Get (name)
 end
 
 function Languages.GetEnumerator ()
-	local next, tbl, key = pairs (Languages.Languages)
-	return function ()
-		key = next (tbl, key)
-		return tbl [key]
-	end
+	return GLib.ValueEnumerator (Languages.Languages)
 end

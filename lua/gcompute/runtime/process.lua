@@ -121,11 +121,7 @@ function self:GetModuleCount ()
 end
 
 function self:GetModuleEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Modules [i]
-	end
+	return GLib.ArrayEnumerator (self.Modules)
 end
 
 -- Process
@@ -223,7 +219,7 @@ function self:GetThreadCount ()
 end
 
 function self:GetThreadEnumerator ()
-	return pairs (self.Threads)
+	return GLib.KeyValueEnumerator (self.Threads)
 end
 
 -- Environment
@@ -253,11 +249,7 @@ function self:GetHoldCount ()
 end
 
 function self:GetHoldEnumerator ()
-	local next, tbl, key = pairs (self.Holds)
-	return function ()
-		key = next (tbl, key)
-		return key
-	end
+	return GLib.KeyEnumerator (self.Holds)
 end
 
 function self:RemoveHold (holdName)

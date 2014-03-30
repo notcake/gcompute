@@ -87,11 +87,7 @@ function self:GetDocumentCount ()
 end
 
 function self:GetEnumerator ()
-	local next, tbl, key = pairs (self.Documents)
-	return function ()
-		key = next (tbl, key)
-		return key
-	end
+	return GLib.KeyEnumerator (self.Documents)
 end
 
 function self:RemoveDocument (document)

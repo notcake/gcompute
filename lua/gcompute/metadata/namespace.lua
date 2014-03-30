@@ -220,19 +220,11 @@ function self:Clear ()
 end
 
 function self:GetEnumerator ()
-	local next, tbl, key = pairs (self.Members)
-	return function ()
-		key = next (tbl, key)
-		return key, tbl [key]
-	end
+	return GLib.KeyValueEnumerator (self.Members)
 end
 
 function self:GetLazyEnumerator ()
-	local next, tbl, key = pairs (self.Members)
-	return function ()
-		key = next (tbl, key)
-		return key, tbl [key]
-	end
+	return GLib.KeyValueEnumerator (self.Members)
 end
 
 function self:GetMember (member)

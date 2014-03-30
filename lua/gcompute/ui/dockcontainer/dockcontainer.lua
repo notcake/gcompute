@@ -149,11 +149,7 @@ function PANEL:GetLocalViewCount ()
 end
 
 function PANEL:GetLocalViewEnumerator ()
-	local next, tbl, key = pairs (self.LocalViewSet)
-	return function ()
-		key = next (tbl, key)
-		return key
-	end
+	return GLib.KeyEnumerator (self.LocalViewSet)
 end
 
 function PANEL:GetParentDockContainer ()

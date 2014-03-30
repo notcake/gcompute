@@ -156,11 +156,7 @@ end
 function self:GetMessageEnumerator ()
 	if not self.Messages then return GCompute.NullCallback end
 	
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Messages [i]
-	end
+	return GLib.ArrayEnumerator (self.Messages)
 end
 
 function self:GetMessages (compilerMessageCollection)

@@ -44,11 +44,7 @@ function self:AddSourceFile (sourceFile, languageName)
 end
 
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.SourceFiles [i]
-	end
+	return GLib.ArrayEnumerator (self.SourceFiles)
 end
 
 function self:GetSourceFile (index)

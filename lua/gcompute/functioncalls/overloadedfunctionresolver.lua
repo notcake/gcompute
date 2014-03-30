@@ -171,11 +171,7 @@ function self:GetOverloadCount ()
 end
 
 function self:GetOverloadEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Overloads [i]
-	end
+	return GLib.ArrayEnumerator (self.Overloads)
 end
 
 function self:HasNoResults ()

@@ -58,11 +58,7 @@ end
 --- Returns an iterator function for this type parameter list
 -- @return An iterator function for this type parameter list
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.ParameterNames [i]
-	end
+	return GLib.ArrayEnumerator (self.ParameterNames)
 end
 
 --- Gets the number of parameters in this type parameter list

@@ -23,11 +23,7 @@ end
 --- Gets an iterator for this method group
 -- @return An iterator function returning the MethodDefinitions in this method group
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Methods [i]
-	end
+	return GLib.ArrayEnumerator (self.Methods)
 end
 self.GetGroupEnumerator = self.GetEnumerator
 

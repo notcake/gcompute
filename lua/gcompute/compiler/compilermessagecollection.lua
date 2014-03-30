@@ -25,11 +25,7 @@ function self:GetEnumerator ()
 		self:SortMessages ()
 	end
 	
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Messages [i]
-	end
+	return GLib.ArrayEnumerator (self.Messages)
 end
 
 function self:GetErrorCount ()

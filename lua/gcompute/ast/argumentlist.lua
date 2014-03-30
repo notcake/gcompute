@@ -97,11 +97,7 @@ end
 --- Returns an iterator function for this argument list
 -- @return An iterator function for this argument list
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Arguments [i]
-	end
+	return GLib.ArrayEnumerator (self.Arguments)
 end
 
 function self:InsertArgument (argumentId, argument)

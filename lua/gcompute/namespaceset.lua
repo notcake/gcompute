@@ -31,11 +31,7 @@ function self:ContainsNamespace (namespaceDefinition)
 end
 
 function self:GetEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Namespaces [i]
-	end
+	return GLib.ArrayEnumerator (self.Namespaces)
 end
 
 function self:GetNamespace (index)

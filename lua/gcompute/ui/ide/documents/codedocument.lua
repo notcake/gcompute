@@ -155,11 +155,7 @@ function self:GetEnd ()
 end
 
 function self:GetEnumerator ()
-	local i = -1
-	return function ()
-		i = i + 1
-		return self.Lines [i]
-	end
+	return GLib.ArrayEnumerator (self.Lines)
 end
 
 function self:GetLine (line)

@@ -82,11 +82,7 @@ function self:GetConstructorCount ()
 end
 
 function self:GetConstructorEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.Constructors [i]
-	end
+	return GLib.ArrayEnumerator (self.Constructors)
 end
 
 function self:GetExplicitCast (index)
@@ -98,11 +94,7 @@ function self:GetExplicitCastCount ()
 end
 
 function self:GetExplicitCastEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.ExplicitCasts [i]
-	end
+	return GLib.ArrayEnumerator (self.ExplicitCasts)
 end
 
 function self:GetImplicitCast (index)
@@ -114,11 +106,7 @@ function self:GetImplicitCastCount ()
 end
 
 function self:GetImplicitCastEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.ImplicitCasts [i]
-	end
+	return GLib.ArrayEnumerator (self.ImplicitCasts)
 end
 
 function self:IsClassNamespace ()

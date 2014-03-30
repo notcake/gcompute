@@ -79,12 +79,7 @@ function self:GetLineCount (line)
 end
 
 function self:GetLineCountEnumerator ()
-	local next, tbl, key = pairs (self.LineCounts)
-	
-	return function ()
-		key = next (tbl, key)
-		return key, tbl [key]
-	end
+	return GLib.KeyValueEnumerator (self.LineCounts)
 end
 
 function self:GetLineFraction (line)
@@ -96,12 +91,7 @@ function self:GetCallerCount (func)
 end
 
 function self:GetCallerEnumerator ()
-	local next, tbl, key = pairs (self.CallerCounts)
-	
-	return function ()
-		key = next (tbl, key)
-		return key, tbl [key]
-	end
+	return GLib.KeyValueEnumerator (self.CallerCounts)
 end
 
 function self:GetCallerFraction (func)
@@ -113,12 +103,7 @@ function self:GetCalleeCount (func)
 end
 
 function self:GetCalleeEnumerator ()
-	local next, tbl, key = pairs (self.CalleeCounts)
-	
-	return function ()
-		key = next (tbl, key)
-		return key, tbl [key]
-	end
+	return GLib.KeyValueEnumerator (self.CalleeCounts)
 end
 
 function self:GetCalleeFraction (func)

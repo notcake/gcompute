@@ -24,11 +24,7 @@ function self:CreateType (type)
 end
 
 function self:GetEnumerator ()
-	local next, tbl, key = pairs (self.Types)
-	return function ()
-		key = next (tbl, key)
-		return tbl [key]
-	end
+	return GLib.ValueEnumerator (self.Types)
 end
 
 function self:GetType (type)

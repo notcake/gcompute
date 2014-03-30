@@ -95,11 +95,7 @@ function self:GenerateViewId (view)
 end
 
 function self:GetEnumerator ()
-	local next, tbl, key = pairs (self.Views)
-	return function ()
-		key = next (tbl, key)
-		return key
-	end
+	return GLib.KeyEnumerator (self.Views)
 end
 
 function self:GetViewById (viewId)

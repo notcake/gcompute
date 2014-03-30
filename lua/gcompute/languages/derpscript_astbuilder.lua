@@ -36,18 +36,18 @@ function self:Statement (parseTree)
 end
 
 function self:FunctionDeclaration (parseTree)
-	local FunctionDeclaration = GCompute.AST.FunctionDeclaration ()
+	local functionDeclaration = GCompute.AST.FunctionDeclaration ()
 	
-	FunctionDeclaration.ReturnType = self:Type (parseTree:FindChild ("rtype"):GetFirstChild ())
-	FunctionDeclaration.Name = parseTree:GetChild (2).Value
-	FunctionDeclaration.Block = self:Block (parseTree:FindChild ("scope"), GCompute.AST.BlockType.Function)
+	functionDeclaration.ReturnType = self:Type (parseTree:FindChild ("rtype"):GetFirstChild ())
+	functionDeclaration.Name = parseTree:GetChild (2).Value
+	functionDeclaration.Block = self:Block (parseTree:FindChild ("scope"), GCompute.AST.BlockType.Function)
 	
-	local Arguments = parseTree:FindChild ("args")
-	for Argument in Arguments:GetEnumerator () do
-		FunctionDeclaration:AddArgument (self:Type (Argument:GetFirstChild ()), Argument:GetChild (1).Value)
+	local arguments = parseTree:FindChild ("args")
+	for argument in arguments:GetEnumerator () do
+		functionDeclaration:AddArgument (self:Type (argument:GetFirstChild ()), argument:GetChild (1).Value)
 	end
 	
-	return FunctionDeclaration
+	return functionDeclaration
 end
 
 function self:VariableDeclaration (parseTree)

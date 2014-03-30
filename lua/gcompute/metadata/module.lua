@@ -60,11 +60,7 @@ function self:GetReferencedModuleCount ()
 end
 
 function self:GetReferencedModuleEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		return self.ReferencedModules [i]
-	end
+	return GLib.ArrayEnumerator (self.ReferencedModules)
 end
 
 -- Namespace

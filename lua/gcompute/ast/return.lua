@@ -53,12 +53,7 @@ function self:ExecuteAsAST (astRunner, state)
 end
 
 function self:GetChildEnumerator ()
-	local i = 0
-	return function ()
-		i = i + 1
-		if i == 1 then return self.ReturnExpression end
-		return nil
-	end
+	return GLib.SingleValueEnumerator (self.ReturnExpression)
 end
 
 function self:GetReturnExpression ()

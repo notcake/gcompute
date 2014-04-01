@@ -554,12 +554,12 @@ function PANEL:Paint (w, h)
 end
 
 -- Data
-function PANEL:Append (text)
-	local autoscroll = self:IsLineVisible (self:GetDocument ():GetLineCount () - 1)
+function PANEL:Append (text, autoScroll)
+	autoScroll = autoScroll or self:IsLineVisible (self:GetDocument ():GetLineCount () - 1)
 	
 	self:GetDocument ():Insert (self:GetDocument ():GetEnd (), text)
 	
-	if autoscroll then
+	if autoScroll then
 		self:SetVerticalScrollPos (self:GetDocument ():GetLineCount () - self.ViewLineCount)
 	end
 end

@@ -281,7 +281,7 @@ function self:Flush ()
 		local codeEditor = self.Output
 		local document = codeEditor:GetDocument ()
 		local startPos = document:GetEnd ()
-		codeEditor:Append (table.concat (self.BufferText))
+		codeEditor:Append (table.concat (self.BufferText), true)
 		local endPos = document:GetEnd ()
 		if self.BufferColor then
 			document:SetColor (self.BufferColor, startPos, endPos)

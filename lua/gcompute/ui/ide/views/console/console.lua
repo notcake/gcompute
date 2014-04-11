@@ -355,7 +355,7 @@ function self:Execute (code)
 			if returnCode == GCompute.ReturnCode.NoCarrier then
 				self:Append ("NO CARRIER", GLib.Colors.IndianRed)
 			else
-				self:Append ("Failed to create the execution context.", GLib.Colors.IndianRed)
+				self:Append ("Failed to create the execution context (" .. (GCompute.ReturnCode [returnCode] or returnCode) .. ").", GLib.Colors.IndianRed)
 			end
 			return
 		end
@@ -375,7 +375,7 @@ function self:Execute (code)
 		if returnCode == GCompute.ReturnCode.NoCarrier then
 			self:Append ("NO CARRIER", GLib.Colors.IndianRed)
 		else
-			self:Append ("Failed to create the execution instance.", GLib.Colors.IndianRed)
+			self:Append ("Failed to create the execution instance (" .. (GCompute.ReturnCode [returnCode] or returnCode) .. ").", GLib.Colors.IndianRed)
 		end
 		return
 	end

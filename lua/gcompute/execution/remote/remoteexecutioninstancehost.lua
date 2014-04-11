@@ -11,7 +11,11 @@ function self:ctor (remoteExecutionContextHost, executionInstance)
 end
 
 function self:dtor ()
-	self:UnhookExecutionInstance (self.ExecutionInstance)
+	if self.ExecutionInstance then
+		self:UnhookExecutionInstance (self.ExecutionInstance)
+		self.ExecutionInstance:dtor ()
+		self.ExecutionInstance = nil
+	end
 	
 	if not self.NetworkableHost then return end
 	

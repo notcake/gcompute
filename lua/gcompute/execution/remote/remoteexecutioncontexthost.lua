@@ -7,6 +7,11 @@ function self:ctor (remoteExecutionServiceHost, executionContext)
 end
 
 function self:dtor ()
+	if self.ExecutionContext then
+		self.ExecutionContext:dtor ()
+		self.ExecutionContext = nil
+	end
+	
 	if not self.NetworkableHost then return end
 	
 	GCompute.Debug ("RemoteExecutionContextHost:dtor ()")

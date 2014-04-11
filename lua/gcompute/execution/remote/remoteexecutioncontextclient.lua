@@ -58,7 +58,7 @@ function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback
 	local returnCode = inBuffer:UInt8 ()
 	
 	if returnCode ~= GCompute.ReturnCode.Success then
-		return false, returnCode
+		return nil, returnCode
 	end
 	
 	-- GOGOGO

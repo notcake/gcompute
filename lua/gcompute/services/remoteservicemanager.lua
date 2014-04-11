@@ -142,11 +142,11 @@ function self:DispatchResetPacket ()
 	outBuffer:UInt32 (0)
 	self.NetworkableHost:DispatchCustomPacket (self:GetRemoteId (), outBuffer)
 	
-	print ("RemoteServiceManager:DispatchResetPacket ()")
+	GCompute.Debug ("RemoteServiceManager:DispatchResetPacket ()")
 end
 
 function self:Reset ()
-	print ("RemoteServiceManager:Reset ()")
+	GCompute.Debug ("RemoteServiceManager:Reset ()")
 	
 	if self.NetworkableHost:GetNetworkableCount () == 0 and
 	   not next (self.ServiceClients) and

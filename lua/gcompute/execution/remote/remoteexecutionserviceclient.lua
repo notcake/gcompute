@@ -69,7 +69,7 @@ function self:CreateExecutionContext (authId, hostId, languageName, contextOptio
 	local returnCode = inBuffer:UInt8 ()
 	
 	if returnCode ~= GCompute.ReturnCode.Success then
-		return false, returnCode
+		return nil, returnCode
 	end
 	
 	-- GOGOGO

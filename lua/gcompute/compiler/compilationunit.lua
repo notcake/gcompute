@@ -335,7 +335,7 @@ function self:Parse (callback)
 	
 	local startTime = SysTime ()
 	local parser = self.Language:Parser (self)
-	parser.DebugOutput = GCompute.TextOutputBuffer ()
+	parser.DebugOutput = GCompute.Text.ColoredTextBuffer ()
 	local callbackChain = GCompute.CallbackChain ()
 	
 	local chunkStartTime = SysTime ()
@@ -361,7 +361,7 @@ function self:Parse (callback)
 	end
 	callbackChain:Then (
 		function (callback, errorCallback)
-			-- parser.DebugOutput:OutputLines (print)
+			-- parser.DebugOutput:Output (Msg)
 			self.AST = self.Tokens.First.AST
 			self:AddPassDuration ("Parser", SysTime () - startTime)
 			

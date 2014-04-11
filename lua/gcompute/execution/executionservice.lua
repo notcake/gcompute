@@ -1,0 +1,1 @@
+GCompute.Execution.ExecutionService = GCompute.Execution.AggregateExecutionService

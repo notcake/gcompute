@@ -1,0 +1,95 @@
+local self = {}
+GCompute.GLua.Printing.StringPrinter = GCompute.MakeConstructor (self, GCompute.GLua.Printing.TypePrinter)
+
+function self:ctor ()
+	self.Buffer = GCompute.Text.ColoredTextBuffer ()
+end
+
+-- Caching
+function self:InvalidateCache ()
+	self.Buffer:Clear ()
+end
+
+-- Printing
+function self:Measure (printer, obj, printingOptions, alignmentController)
+	self:Cache (printer, obj, printingOptions)
+	return self.Buffer:GetBytesWritten ()
+end
+
+function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentController)
+	if self:IsCached (printer, obj, printingOptions) then
+		self.Buffer:Output (coloredTextSink)
+		return self.Buffer:GetBytesWritten ()
+	end
+	
+	return self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController)
+end
+
+-- Internal, do not call
+function self:Cache (printer, obj, printingOptions)
+	if self:IsCached (printer, obj, printingOptions) then return end
+	self:SetCache (printer, obj, printingOptions)
+	self:PrintInternal (printer, self.Buffer, obj, printingOptions, GCompute.GLua.Printing.NullAlignmentController)
+end
+
+local escapeTable = {}
+local multilineEscapeTable = {}
+for i = 0, 255 do
+	local c = string.char (i)
+	
+	if i < string.byte (" ") then escapeTable [c] = string.format ("\\x%02x", i)
+	elseif i >= 127 then escapeTable [c] = string.format ("\\x%02x", i) end
+end
+escapeTable ["\\"] = "\\\\"
+escapeTable ["\t"] = "\\t"
+escapeTable ["\r"] = "\\r"
+escapeTable ["\n"] = "\\n"
+escapeTable ["\""] = "\\\""
+
+for k, v in pairs (escapeTable) do
+	multilineEscapeTable [k] = v
+end
+multilineEscapeTable ["\t"] = nil
+multilineEscapeTable ["\n"] = "\\\n"
+
+function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController)
+	local outputWidth = 0
+	local multiline = bit.band (printingOptions, GCompute.GLua.Printing.PrintingOptions.Multiline) ~= 0
+	if multiline then
+		outputWidth = outputWidth + coloredTextSink:WriteColor ("-- " .. tostring (#obj) .. " B\n", printer:GetColor ("Comment"))
+		
+		-- Unicode information
+		if GLib.UTF8.ContainsSequences (obj) then
+			-- Code point count
+			local codePointCount = GLib.UTF8.Length (obj)
+			outputWidth = outputWidth + coloredTextSink:WriteColor ("-- " .. tostring (codePointCount) .. " code point" .. (codePointCount == 1 and "" or "s") .. "\n", printer:GetColor ("Comment"))
+			
+			-- First 5 character names
+			local i = 0
+			for c in GLib.UTF8.Iterator (obj) do
+				if i >= 5 then
+					outputWidth = outputWidth + coloredTextSink:WriteColor ("--     ...\n", printer:GetColor ("Comment"))
+					break
+				end
+				i = i + 1
+				
+				outputWidth = outputWidth + coloredTextSink:WriteColor ("--     ", printer:GetColor ("Comment"))
+				coloredTextSink:WriteColor (c, printer:GetColor ("Comment"))
+				outputWidth = outputWidth + 1
+				outputWidth = outputWidth + coloredTextSink:WriteColor (" " .. GLib.Unicode.GetCharacterName (c) .. "\n", printer:GetColor ("Comment"))
+			end
+		end
+	end
+
+	coloredTextSink:WriteColor ("\"", printer:GetColor ("String"))
+	
+	obj = string.gsub (obj, ".", multiline and multilineEscapeTable or escapeTable)
+	
+	coloredTextSink:WriteColor (obj, printer:GetColor ("String"))
+	coloredTextSink:WriteColor ("\"", printer:GetColor ("String"))
+	outputWidth = outputWidth + 2 + #obj
+	
+	return outputWidth
+end
+
+GCompute.GLua.Printing.StringPrinter = GCompute.GLua.Printing.StringPrinter ()

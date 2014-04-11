@@ -237,7 +237,11 @@ function self:SetSelectedItem (listBoxItem)
 end
 
 function self:SetToolTipVisible (toolTipVisible)
+	if not self.ToolTip then return self end
+	if not self.ToolTip:IsValid () then return self end
+	
 	self.ToolTip:SetVisible (toolTipVisible)
+	return self
 end
 
 function self:ShouldHide (lastShowTime)

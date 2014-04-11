@@ -1,11 +1,13 @@
 local self, info = GCompute.IDE.ViewTypes:CreateType ("Console")
 info:SetAutoCreate (true)
+info:SetAutoCreationCount (4)
 info:SetDefaultLocation ("Bottom")
 self.Title    = "Console"
 self.Icon     = "icon16/application_xp_terminal.png"
 self.Hideable = true
 
 function self:ctor (container)
+	-- Output
 	self.Output = vgui.Create ("GComputeCodeEditor", container)
 	self.Output:GetDocument ():AddView (self)
 	self.Output:SetCompilationEnabled (false)
@@ -38,6 +40,7 @@ function self:ctor (container)
 		:AddEventListener ("Click",
 			function ()
 				self.Output:Clear ()
+				self.OutputEmpty = true
 			end
 		)
 	self.Output:SetContextMenu (self.ContextMenu)
@@ -72,16 +75,16 @@ function self:ctor (container)
 			-- debug.Trace style stack traces
 			-- GLib style stack traces
 			if not startLineMatch then
-				luaPath, startLineMatch, endLineMatch = string.match (lowercaseLineText, "lua/(.*): ?([0-9]+)%-([0-9]+)")
+				luaPath, startLineMatch, endLineMatch = string.match (lowercaseLineText, "lua/(.*) *: *([0-9]+)%- *([0-9]+)")
 			end
 			if not startLineMatch then
-				luaPath, startLineMatch = string.match (lowercaseLineText, "lua/(.*): ?([0-9]+)")
+				luaPath, startLineMatch = string.match (lowercaseLineText, "lua/(.*) *: *([0-9]+)")
 			end
 			if not startLineMatch then
-				luaPath, startLineMatch, endLineMatch = string.match (lowercaseLineText, "gamemodes/(.*): ?([0-9]+)%-([0-9]+)")
+				luaPath, startLineMatch, endLineMatch = string.match (lowercaseLineText, "gamemodes/(.*) *: *([0-9]+)%- *([0-9]+)")
 			end
 			if not startLineMatch then
-				luaPath, startLineMatch = string.match (lowercaseLineText, "gamemodes/(.*): ?([0-9]+)")
+				luaPath, startLineMatch = string.match (lowercaseLineText, "gamemodes/(.*) *: *([0-9]+)")
 			end
 			
 			-- Getting desperate
@@ -99,6 +102,8 @@ function self:ctor (container)
 			local client = false
 			local uri = nil
 			if luaPath then
+				luaPath = string.Trim (luaPath)
+				
 				-- We found a match, disregard the source document information
 				sourceDocumentId = nil
 				
@@ -136,87 +141,112 @@ function self:ctor (container)
 	
 	self.ClipboardTarget = GCompute.CodeEditor.EditorClipboardTarget (self.Output)
 	
-	self.NextInputId = 0
+	-- Input
+	self.HostComboBox = vgui.Create ("GComboBox", container)
+	self.HostComboBox:SetWidth (128)
+	self.HostComboBox:AddItem ("Self"   ):SetIcon ("icon16/user_go.png")
+	self.HostComboBox:AddItem ("Server" ):SetIcon ("icon16/server_go.png")
+	self.HostComboBox:AddItem ("Client" ):SetIcon ("icon16/user_go.png")
+	self.HostComboBox:AddItem ("Clients"):SetIcon ("icon16/group_go.png")
+	self.HostComboBox:AddItem ("Shared" ):SetIcon ("icon16/world_go.png")
+	
+	self.HostComboBox:AddEventListener ("MenuOpening",
+		function (_, menu)
+			local menuItem = menu:GetItemById ("Client")
+			if not menuItem then return end
+			
+			menuItem:GetEventProvider ():ClearEventListeners ("Click")
+			menuItem:SetSubMenu (self.UserMenu)
+			
+			menu:GetItemById ("Server" ):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Server",  nil))
+			menu:GetItemById ("Client" ):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Clients", nil))
+			menu:GetItemById ("Clients"):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Clients", nil))
+			menu:GetItemById ("Shared" ):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Shared",  nil))
+		end
+	)
+	
+	self.HostComboBox:AddEventListener ("SelectedItemChanged",
+		function (_, lastSelectedItem, selectedItem)
+			self:SetHostId (selectedItem and selectedItem:GetId ())
+		end
+	)
+	
+	self.UserMenu = Gooey.Menu ()
+	self.HostComboBox:AddEventListener ("MenuOpening",
+		function (_)
+			self.UserMenu:Clear ()
+			
+			local users = GLib.Enumerator.ToArray (GCompute.PlayerMonitor:GetUserEnumerator ())
+			table.sort (users,
+				function (a, b)
+					return GLib.UTF8.ToLower (GCompute.PlayerMonitor:GetUserName (a)) < GLib.UTF8.ToLower (GCompute.PlayerMonitor:GetUserName (b))
+				end
+			)
+			
+			for _, userId in ipairs (users) do
+				local ply = GCompute.PlayerMonitor:GetUserEntity (userId)
+				local isAdmin = ply and ply:IsValid () and ply:IsAdmin ()
+				self.UserMenu:AddItem (userId)
+					:SetChecked (userId == self:GetHostId ())
+					:SetText (GCompute.PlayerMonitor:GetUserName (userId))
+					:SetIcon (isAdmin and "icon16/shield_go.png" or "icon16/user_go.png")
+					:AddEventListener ("Click",
+						function ()
+							self:SetHostId (userId)
+						end
+					)
+			end
+		end
+	)
+	
+	self.LanguageComboBox = vgui.Create ("GComboBox", container)
+	
+	self.LanguageComboBox:AddEventListener ("SelectedItemChanged",
+		function (_, lastSelectedItem, selectedItem)
+			self:SetLanguage (selectedItem and selectedItem:GetId ())
+		end
+	)
+	
+	local icons =
+	{
+		["Console"]           = "icon16/application_xp_terminal.png",
+		["Terminal Emulator"] = "icon16/application_xp_terminal.png"
+	}
+	local lastLanguageExists = nil
+	for language in GCompute.Execution.ExecutionService:GetLanguageEnumerator () do
+		local languageExists = GCompute.Languages.Get (language) ~= nil
+		if lastLanguageExists ~= nil and lastLanguageExists ~= languageExists then
+			self.LanguageComboBox = self.LanguageComboBox
+			self.LanguageComboBox:GetMenu ():AddSeparator ()
+		end
+		lastLanguageExists = languageExists
+		
+		local comboBoxItem = self.LanguageComboBox:AddItem (language)
+		comboBoxItem:SetIcon (icons [language])
+	end
+	
+	-- Input
 	self.InputHistory = {}
 	self.InputHistoryPosition = 1
 	
 	self.Input = vgui.Create ("GComputeCodeEditor", container)
 	self.Input:SetMultiline (false)
 	self.Input:SetLineNumbersVisible (false)
+	self.Input:SetHorizontalScrollbarEnabled (false)
 	
 	self.Input:SetKeyboardMap (self.Input:GetKeyboardMap ():Clone ())
 	self.Input:GetKeyboardMap ():Register (KEY_ENTER,
 		function (_, key, ctrl, shift, alt)
-			local luaSession = GCompute.LocalLuaSession ()
-			local luaOutputSink = GCompute.LuaOutputSink ()
-			luaOutputSink:AddEventListener ("Error",
-				function (_, sourceId, userId, message, stackTrace)
-					local stackTraceString = stackTrace:ToString ()
-					self:Append ("\t" .. string.gsub (message, "\n", "\n\t") .. "\n\t" .. string.gsub (stackTraceString, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, sourceId)
-				end
-			)
-			
-			local firstOutput = true
-			luaOutputSink:AddEventListener ("Output",
-				function (_, sourceId, userId, message, color)
-					if firstOutput then
-						self:Append ("\t", GLib.Colors.White, sourceId)
-						firstOutput = false
-					end
-					self:Append (string.gsub (message, "\n", "\n\t"), color or GLib.Colors.White, sourceId)
-				end
-			)
-			
 			local code = self.Input:GetText ()
 			
+			if #code == 0 then return end
+			
 			-- Input history
-			self.InputHistory [#self.InputHistory + 1] = self.Input:GetText ()
+			self.InputHistory [#self.InputHistory + 1] = code
 			self.InputHistoryPosition = #self.InputHistory + 1
 			
-			local syntaxError = false
-			local syntaxErrorSourceId = nil
-			local syntaxErrorMessage = nil
-			luaOutputSink:AddEventListener ("SyntaxError",
-				function (_, sourceId, message)
-					syntaxError = true
-					syntaxErrorMessage = message
-					syntaxErrorSourceId = sourceId
-				end
-			)
-			
-			self:Append (code .. "\n", GLib.Colors.White, sourceId)
-			
-			-- Input Id
-			local inputId = "@repl_" .. tostring (self.NextInputId)
-			self.NextInputId = self.NextInputId + 1
-			
-			local ret = luaSession:Execute (inputId, nil, "return " .. code, luaOutputSink)
-			if syntaxError then
-				syntaxError = false
-				ret = luaSession:Execute (inputId, nil, code, luaOutputSink)
-			end
-			if syntaxError then
-				self:Append ("\t" .. string.gsub (syntaxErrorMessage, "\n", "\n\t") .. "\n", GLib.Colors.IndianRed, syntaxErrorSourceId)
-				firstOutput = true
-			end
-			if ret.Success then
-				local pipe = GCompute.Pipe ()
-				pipe:AddEventListener ("Data",
-					function (_, data, color)
-						if firstOutput then
-							self:Append ("\t", GLib.Colors.White, sourceId)
-							firstOutput = false
-						end
-						self:Append (string.gsub (data, "\n", "\n\t"), color, sourceId)
-					end
-				)
-				
-				for i = 1, table.maxn (ret) do
-					GCompute.IDE.Console.Printer (pipe):Print (ret [i])
-					self:Append ("\n", GLib.Colors.White, sourceId)
-					firstOutput = true
-				end
-			end
+			-- Execute
+			self:Execute (code)
 			
 			self.Input:SetText ("")
 		end
@@ -240,6 +270,20 @@ function self:ctor (container)
 		end
 	)
 	
+	-- Execution
+	self.HostId = nil
+	self.Language = nil
+	self.ExecutionContext = nil
+	self.NextExecutionId = 0
+	
+	self:SetHostId ("Self")
+	self:SetLanguage ("GLua")
+	
+	-- Output formatting
+	self.OutputEmpty = true
+	self.LastOutputType = nil
+	self.LastOutputId   = nil
+	
 	-- Buffering
 	self.BufferText        = {}
 	self.BufferColor       = nil
@@ -248,9 +292,205 @@ function self:ctor (container)
 end
 
 function self:dtor ()
+	if self.ExecutionContext then
+		self.ExecutionContext:dtor ()
+		self.ExecutionContext = nil
+	end
+	
 	self.ContextMenu:dtor ()
+	self.UserMenu:dtor ()
 end
 
+function self:Clear ()
+	self:Flush ()
+	self.Output:Clear ()
+	self.OutputEmpty = true
+end
+
+-- Persistance
+function self:LoadSession (inBuffer)
+	local hostId = inBuffer:StringN16 ()
+	if hostId ~= "" then self:SetHostId (hostId) end
+	
+	local language = inBuffer:StringN16 ()
+	if language ~= "" then self:SetLanguage (language) end
+end
+
+function self:SaveSession (outBuffer)
+	outBuffer:StringN16 (self:GetHostId ())
+	outBuffer:StringN16 (self:GetLanguage ())
+end
+
+-- Execution
+function self:Execute (code)
+	if GLib.CallSelfInThread () then return end
+	
+	local returnCode
+	
+	local executionId = self.NextExecutionId
+	self.NextExecutionId = self.NextExecutionId + 1
+	
+	-- Check if the execution context is still valid
+	if self.ExecutionContext and
+	   self.ExecutionContext:IsDisposed () then
+		self.ExecutionContext = nil
+	end
+	
+	if not self.ExecutionContext then
+		local executionContext, returnCode = GCompute.Execution.ExecutionService:CreateExecutionContext (GLib.GetLocalId (), self:GetHostId (), self:GetLanguage (), GCompute.Execution.ExecutionContextOptions.EasyContext + GCompute.Execution.ExecutionContextOptions.Repl)
+		
+		-- Two execution contexts might be created due to concurrent executions
+		-- There can only be one.
+		if executionContext then
+			if self.ExecutionContext then
+				executionContext:dtor ()
+			else
+				self.ExecutionContext = executionContext
+			end
+		end
+		
+		if not self.ExecutionContext then
+			self:SetLastOutputType ("Error", executionId)
+			if not self:IsOutputEmpty () then self:Append ("\n") end
+			if returnCode == GCompute.ReturnCode.NoCarrier then
+				self:Append ("NO CARRIER", GLib.Colors.IndianRed)
+			else
+				self:Append ("Failed to create the execution context.", GLib.Colors.IndianRed)
+			end
+			return
+		end
+	end
+	
+	-- Code
+	self:SetLastOutputType ("Code", executionId)
+	if not self:IsOutputEmpty () then self:Append ("\n") end
+	self:Append (code, GLib.Colors.White)
+	
+	local executionInstance, returnCode = self.ExecutionContext:CreateExecutionInstance (code, nil, GCompute.Execution.ExecutionInstanceOptions.CaptureOutput + GCompute.Execution.ExecutionInstanceOptions.ExecuteImmediately)
+	if not executionInstance then
+		if self:SetLastOutputType ("Error", executionId) then
+			if not self:IsOutputEmpty () then self:Append ("\n") end
+			self:Append ("\t")
+		end
+		if returnCode == GCompute.ReturnCode.NoCarrier then
+			self:Append ("NO CARRIER", GLib.Colors.IndianRed)
+		else
+			self:Append ("Failed to create the execution instance.", GLib.Colors.IndianRed)
+		end
+		return
+	end
+	
+	-- Output
+	executionInstance:GetStdOut ():AddEventListener ("Text",
+		function (_, text, color)
+			color = color or GLib.Colors.White
+			
+			-- Translate color
+			local colorId = GCompute.SyntaxColoring.PlaceholderSyntaxColoringScheme:GetIdFromColor (color)
+			if colorId then
+				color = GCompute.SyntaxColoring.DefaultSyntaxColoringScheme:GetColor (colorId) or color
+			end
+			
+			if self:SetLastOutputType ("StdOut", executionId) then
+				if not self:IsOutputEmpty () then self:Append ("\n") end
+				self:Append ("\t")
+			end
+			
+			self:Append (string.gsub (string.gsub (text, "[\r\n]", "%1\t"), "\r\t\n", "\r\n"), color)
+		end
+	)
+	
+	executionInstance:GetStdErr ():AddEventListener ("Text",
+		function (_, text, color)
+			color = color or GLib.Colors.IndianRed
+			
+			if self:SetLastOutputType ("StdErr", executionId) then
+				if not self:IsOutputEmpty () then self:Append ("\n") end
+				self:Append ("\t")
+			end
+			
+			self:Append (string.gsub (string.gsub (text, "[\r\n]", "%1\t"), "\r\t\n", "\r\n"), color)
+		end
+	)
+	
+	executionInstance:GetCompilerStdErr ():AddEventListener ("Text",
+		function (_, text, color)
+			color = color or GLib.Colors.IndianRed
+			
+			if self:SetLastOutputType ("CompilerStdErr", executionId) then
+				if not self:IsOutputEmpty () then self:Append ("\n") end
+				self:Append ("\t")
+			end
+			
+			self:Append (string.gsub (string.gsub (text, "[\r\n]", "%1\t"), "\r\t\n", "\r\n"), color)
+		end
+	)
+end
+
+function self:GetHostId ()
+	return self.HostId
+end
+
+function self:GetLanguage ()
+	return self.Language
+end
+
+function self:SetHostId (hostId)
+	if self.HostId == hostId then return self end
+	
+	self.HostComboBox:SetSelectedItem (hostId)
+	self.HostId = hostId
+	
+	if self.ExecutionContext then
+		self.ExecutionContext:dtor ()
+		self.ExecutionContext = nil
+	end
+	
+	if hostId and not self.HostComboBox:GetItemById (hostId) then
+		local ply = GCompute.PlayerMonitor:GetUserEntity (hostId)
+		local isAdmin = ply and ply:IsValid () and ply:IsAdmin ()
+		local displayName = GCompute.PlayerMonitor:GetUserName (hostId)
+		
+		if ply then
+			self.HostComboBox:SetText (displayName)
+			self.HostComboBox:SetIcon (isAdmin and "icon16/shield_go.png" or "icon16/user_go.png")
+		else
+			self.HostComboBox:SetText (hostId)
+			self.HostComboBox:SetIcon ("icon16/cross.png")
+		end
+	end
+	
+	return self
+end
+
+function self:SetLanguage (language)
+	if self.Language == language then return self end
+	
+	self.LanguageComboBox:SetSelectedItem (language)
+	self.Language = language
+	
+	if self.Input then
+		self.Input:SetLanguage (GCompute.Languages.Get (language))
+	end
+	
+	if self.ExecutionContext then
+		self.ExecutionContext:dtor ()
+		self.ExecutionContext = nil
+	end
+	
+	return self
+end
+
+function self:Focus ()
+	self.Input:Focus ()
+end
+
+function self:GetEditor ()
+	if self.Input:ContainsFocus () then return self.Input end
+	return self.Output
+end
+
+-- Output
 function self:Append (text, color, sourceDocumentId, sourceDocumentUri)
 	if not text then return end
 	
@@ -265,15 +505,12 @@ function self:Append (text, color, sourceDocumentId, sourceDocumentUri)
 	end
 	
 	self.BufferText [#self.BufferText + 1] = text
+	
+	self.OutputEmpty = false
 end
 
-function self:Clear ()
-	self:Flush ()
-	self.Output:Clear ()
-end
-
-function self:Focus ()
-	self.Input:Focus ()
+function self:GetLastOutputType ()
+	return self.LastOutputType
 end
 
 function self:Flush ()
@@ -296,9 +533,20 @@ function self:Flush ()
 	self.BufferDocumentUri = nil
 end
 
-function self:GetEditor ()
-	if self.Input:ContainsFocus () then return self.Input end
-	return self.Output
+function self:IsOutputEmpty ()
+	return self.OutputEmpty
+end
+
+function self:SetLastOutputType (outputType, outputId)
+	if self.LastOutputType == outputType and
+	   self.LastOutputId   == outputId then
+		return false
+	end
+	
+	self.LastOutputType = outputType
+	self.LastOutputId   = outputId
+	
+	return true
 end
 
 -- Components
@@ -308,10 +556,19 @@ end
 
 -- Event handlers
 function self:PerformLayout (w, h)
-	self.Input:SetSize (w, self.Input:GetLineHeight ())
-	self.Input:SetPos (0, h - self.Input:GetTall ())
-	self.Output:SetSize (w, h - self.Input:GetTall () - 4)
+	local inputHeight = math.max (self.HostComboBox:GetHeight (), self.Input:GetLineHeight ())
+
+	self.Output:SetSize (w, h - inputHeight - 4)
 	self.Output:SetPos (0, 0)
+	
+	self.HostComboBox:SetWidth (128)
+	self.HostComboBox:SetPos (0, h - inputHeight / 2 - self.HostComboBox:GetHeight () / 2)
+	
+	self.LanguageComboBox:SetWidth (128)
+	self.LanguageComboBox:SetPos (self.HostComboBox:GetWidth () + 4, h - inputHeight / 2 - self.LanguageComboBox:GetHeight () / 2)
+	
+	self.Input:SetSize (w - self.HostComboBox:GetWidth () - 4 - self.LanguageComboBox:GetWidth () - 4, self.Input:GetLineHeight ())
+	self.Input:SetPos (self.HostComboBox:GetWidth () + 4 + self.LanguageComboBox:GetWidth () + 4, h - inputHeight / 2 - self.Input:GetHeight () / 2)
 end
 
 function self:Think ()

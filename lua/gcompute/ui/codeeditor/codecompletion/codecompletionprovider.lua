@@ -206,6 +206,8 @@ function self:SetVisible (visible)
 end
 
 function self:Trigger (forceShow)
+	if not self.Language then return end
+	
 	local lineNumber = self.Editor:GetCaretPos ():GetLine ()
 	local column     = self.Editor:GetCaretPos ():GetColumn ()
 	local line       = self:GetDocument ():GetLine (lineNumber)
@@ -217,7 +219,7 @@ function self:Trigger (forceShow)
 	end
 	self.Editor:GetSyntaxHighlighter ():ForceHighlightLine (lineNumber)
 	
-	local character  = line:ColumnToCharacter (column, self.Editor:GetTextRenderer ())
+	local character = line:ColumnToCharacter (column, self.Editor:GetTextRenderer ())
 	local tokens = line.Tokens
 	local token = tokens and tokens [1]
 	

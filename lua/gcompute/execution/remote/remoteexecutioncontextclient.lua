@@ -1,0 +1,101 @@
+local self = {}
+GCompute.Execution.RemoteExecutionContextClient = GCompute.MakeConstructor (self, GLib.Networking.SingleEndpointNetworkable, GCompute.Execution.IExecutionContext)
+
+function self:ctor (remoteExecutionServiceClient, inBuffer)
+	GCompute.Debug ("RemoteExecutionContextClient:ctor ()")
+	
+	self.HostId  = nil
+	self.OwnerId = nil
+	self.ContextOptions = GCompute.Execution.ExecutionContextOptions.None
+	
+	self:Deserialize (inBuffer)
+end
+
+function self:dtor ()
+	if not self.NetworkableHost then return end
+	
+	GCompute.Debug ("RemoteExecutionContextClient:dtor ()")
+	
+	local outBuffer = GLib.Net.OutBuffer ()
+	outBuffer:UInt32 (0)
+	self:DispatchPacket (self:GetRemoteId (), outBuffer)
+	
+	self.NetworkableHost:UnregisterNetworkable (self)
+end
+
+-- Networkable
+function self:HandlePacket (sourceId, inBuffer)
+	
+end
+
+-- IExecutionContext
+function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback)
+	if callback then GLib.CallSelfAsSync () return end
+	
+	if self:IsDisposed () then return nil, GCompute.ReturnCode.NoCarrier end
+	
+	-- Create request session
+	local connection = self.NetworkableHost:CreateConnection (self:GetRemoteId (), GLib.Net.ConnectionEndpoint.Local)
+	
+	-- Create request
+	local outBuffer = GLib.Net.OutBuffer ()
+	outBuffer:UInt32 (connection:GetId ())
+	outBuffer:StringN8 ("CreateExecutionInstance")
+	outBuffer:UInt8 (0)
+	outBuffer:UInt32 (instanceOptions)
+	outBuffer:StringN16 (sourceId or "")
+	outBuffer:StringN32 (code)
+	
+	-- Dispatch request
+	self:DispatchPacket (self:GetRemoteId (), outBuffer)
+	
+	-- Wait for response
+	local inBuffer = connection:Read ()
+	connection:Close ()
+	
+	if not inBuffer then return nil, GCompute.ReturnCode.Timeout end
+	
+	local returnCode = inBuffer:UInt8 ()
+	
+	if returnCode ~= GCompute.ReturnCode.Success then
+		return false, returnCode
+	end
+	
+	-- GOGOGO
+	local networkableId = inBuffer:UInt32 ()
+	local executionInstanceClient = GCompute.Execution.RemoteExecutionInstanceClient (self, inBuffer)
+	executionInstanceClient:SetRemoteId (self:GetRemoteId ())
+	
+	self.NetworkableHost:RegisterStrongNetworkable (executionInstanceClient, networkableId)
+	
+	return executionInstanceClient
+end
+
+function self:GetHostId ()
+	return self.HostId
+end
+
+function self:GetOwnerId ()
+	return self.OwnerId
+end
+
+function self:GetContextOptions ()
+	return self.ContextOptions
+end
+
+-- RemoteExecutionContextClient
+function self:Deserialize (inBuffer)
+	self.OwnerId = inBuffer:StringN16 ()
+	
+	local hostIdCount = inBuffer:UInt16 ()
+	if hostIdCount == 1 then
+		self.HostId = inBuffer:StringN16 ()
+	else
+		self.HostId = {}
+		for i = 1, hostIdCount do
+			self.HostId [#self.HostId + 1] = inBuffer:StringN16 ()
+		end
+	end
+	
+	self.ContextOptions = inBuffer:UInt32 ()
+end

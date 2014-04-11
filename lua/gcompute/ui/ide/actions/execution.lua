@@ -12,8 +12,8 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 		outputPaneCleared = true
 		
 		local pipe = GCompute.Pipe ()
-		pipe:AddEventListener ("Data",
-			function (_, data, color)
+		pipe:AddEventListener ("Text",
+			function (_, text, color)
 				if not self or not self:IsValid () then return end
 				
 				if not outputPaneCleared then
@@ -26,13 +26,13 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 					outputReceived = true
 				end
 				
-				self:GetViewManager ():GetViewById ("Output"):Append (data, color, sourceDocumentId, sourceDocumentUri)
+				self:GetViewManager ():GetViewById ("Output"):Append (text, color, sourceDocumentId, sourceDocumentUri)
 			end
 		)
 		
 		local errorPipe = GCompute.Pipe ()
-		errorPipe:AddEventListener ("Data",
-			function (_, data, color)
+		errorPipe:AddEventListener ("Text",
+			function (_, text, color)
 				if not self or not self:IsValid () then return end
 				
 				if not outputPaneCleared then
@@ -45,7 +45,7 @@ GCompute.IDE.ActionMap:Register ("Run Code",
 					outputReceived = true
 				end
 				
-				self:GetViewManager ():GetViewById ("Output"):Append (data, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentUri)
+				self:GetViewManager ():GetViewById ("Output"):Append (text, color or GLib.Colors.IndianRed, sourceDocumentId, sourceDocumentUri)
 			end
 		)
 		

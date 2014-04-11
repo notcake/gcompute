@@ -34,12 +34,40 @@ function self:ctor ()
 end
 
 function self:dtor ()
+	for userId, remoteServiceManager in pairs (self.Endpoints) do
+		remoteServiceManager:dtor ()
+		self.Endpoints [userId] = nil
+	end
+	
 	GCompute.PlayerMonitor:RemoveEventListener ("PlayerDisconnected", "GCompute.RemoteServiceManagerManager")
 	
 	self.EndpointChannelMultiplexer:dtor ()
 	self.Channel:dtor ()
 	
 	GCompute:RemoveEventListener ("Unloaded", "GCompute.RemoteServiceManagerManager")
+end
+
+function self:GetRemoteService (remoteId, serviceName, callback)
+	local remoteServiceManager = self:GetRemoteServiceManager (remoteId)
+	
+	if not remoteServiceManager then
+		if callback then callback (nil, GCompute.ReturnCode.NoCarrier) end
+		return nil, GCompute.ReturnCode.NoCarrier
+	end
+	
+	return remoteServiceManager:GetRemoteService (serviceName, callback)
+end
+
+function self:GetRemoteServiceManager (remoteId)
+	if not self.Endpoints [remoteId] then
+		self.EndpointChannelMultiplexer:CreateSingleEndpointChannel (remoteId)
+	end
+	
+	return self.Endpoints [remoteId]
+end
+
+function self:IsAvailable ()
+	return self.Channel:IsOpen ()
 end
 
 GCompute.Services.RemoteServiceManagerManager = GCompute.Services.RemoteServiceManagerManager ()

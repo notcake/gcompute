@@ -7,6 +7,7 @@ function self:ctor ()
 end
 
 function self:AddNamespace (namespaceDefinition)
+	if not namespaceDefinition then return self end
 	if self.NamespaceSet [namespaceDefinition] then return self end
 	
 	self.Namespaces [#self.Namespaces + 1] = namespaceDefinition

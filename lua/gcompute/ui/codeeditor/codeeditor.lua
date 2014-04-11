@@ -78,6 +78,7 @@ function PANEL:Init ()
 	
 	self.VScroll = vgui.Create ("GVScrollBar", self)
 	self.VScroll:AddEventListener ("EnabledChanged", function () self:InvalidateLayout () end)
+	self.HorizontalScrollbarEnabled = true
 	self.HScroll = vgui.Create ("GHScrollBar", self)
 	self.HScroll:AddEventListener ("EnabledChanged", function () self:InvalidateLayout () end)
 	self.ScrollCorner = vgui.Create ("GScrollBarCorner", self)
@@ -177,11 +178,12 @@ function PANEL:PerformLayout ()
 		self.ViewLineCount = math.floor (h / self.Settings.LineHeight)
 		self.ViewColumnCount = math.floor (w / self.Settings.CharacterWidth)
 		
-		local horizontalScrollNeeded = self.ViewColumnCount < self.MaximumColumnCount
+		local horizontalScrollNeeded = self.ViewColumnCount < self.MaximumColumnCount and self:IsHorizontalScrollbarEnabled ()
 		if horizontalScrollNeeded then
 			h = h - self.HScroll:GetTall ()
 			self.ViewLineCount = math.floor (h / self.Settings.LineHeight)
 		end
+		
 		local verticalScrollNeeded = self.ViewLineCount < self.Document:GetLineCount ()
 		if verticalScrollNeeded then
 			w = w - self.VScroll:GetWide ()
@@ -200,7 +202,7 @@ function PANEL:PerformLayout ()
 		self.VScroll:SetTall (self:GetTall ())
 	end
 	if self.HScroll then
-		self.HScroll:SetVisible (self.HScroll:IsEnabled ())
+		self.HScroll:SetVisible (self.HScroll:IsEnabled () and self:IsHorizontalScrollbarEnabled ())
 		self.HScroll:SetPos (0, self:GetTall () - self.HScroll:GetTall ())
 		self.HScroll:SetWide (self:GetWide ())
 	end
@@ -697,7 +699,8 @@ function PANEL:ReplaceSelectionText (text, pasted)
 	if not pasted then
 		-- Auto-outdentation
 		local autoOutdentationAction
-		if self:GetEditorHelper ():ShouldOutdent (self, self.Document:ColumnToCharacter (self:GetCaretPos (), self.TextRenderer)) then
+		if self:GetEditorHelper () and
+		   self:GetEditorHelper ():ShouldOutdent (self, self.Document:ColumnToCharacter (self:GetCaretPos (), self.TextRenderer)) then
 			autoOutdentationAction = autoOutdentationAction or GCompute.CodeEditor.AutoOutdentationAction (self)
 			autoOutdentationAction:AddLine (self:GetCaretPos ():GetLine ())
 		end
@@ -1044,6 +1047,10 @@ function PANEL:IsCaretVisible ()
 	return self:IsLocationVisible (self.CaretLocation:GetLine (), self.CaretLocation:GetColumn ())
 end
 
+function PANEL:IsHorizontalScrollbarEnabled ()
+	return self.HorizontalScrollbarEnabled
+end
+
 function PANEL:IsLocationVisible (line, column)
 	return line   >= self.ViewLocation:GetLine ()   and line   < self.ViewLocation:GetLine   () + self.ViewLineCount   and
 	       column >= self.ViewLocation:GetColumn () and column < self.ViewLocation:GetColumn () + self.ViewColumnCount
@@ -1151,6 +1158,15 @@ function PANEL:ScrollRelative (deltaLines)
 	end
 	if topLine < 0 then topLine = 0 end
 	self:SetVerticalScrollPos (topLine)
+end
+
+function PANEL:SetHorizontalScrollbarEnabled (horizontalScrollbarEnabled)
+	if self.HorizontalScrollbarEnabled == horizontalScrollbarEnabled then return self end
+	
+	self.HorizontalScrollbarEnabled = horizontalScrollbarEnabled
+	self:InvalidateLayout ()
+	
+	return self
 end
 
 function PANEL:SetHorizontalScrollPos (leftColumn)
@@ -1407,9 +1423,14 @@ function PANEL:HookDocument (document)
 		function (_, location, text, newLocation)
 			self.DocumentChangeUnhandled = true
 			
+			-- Update the maximum column count using the first line
+			self:UpdateMaximumColumnCount (self.Document:GetLine (location:GetLine ()):GetColumnCount (self.TextRenderer) + 1)
+			
+			-- Do the rest later
 			for i = location:GetLine (), newLocation:GetLine () do
 				self.DocumentLinesUnchecked [i] = true
 			end
+			
 			self:UpdateVerticalScrollBar ()
 		end
 	)
@@ -1471,7 +1492,7 @@ function PANEL:OnKeyCodeTyped (keyCode)
 				
 				local replacementLocation = self.Selection:GetSelectionEndPoints ()
 				replacementLocation = self.Document:ColumnToCharacter (replacementLocation, self.TextRenderer)
-				self:ReplaceSelectionText ("\n" .. self.EditorHelper:GetNewLineIndentation (self, replacementLocation))
+				self:ReplaceSelectionText ("\n" .. self:GetEditorHelper ():GetNewLineIndentation (self, replacementLocation))
 			end
 		end
 	elseif keyCode == KEY_A then
@@ -1565,6 +1586,7 @@ function PANEL:DocumentUpdateThink ()
 		self.DocumentChangeUnhandled = false
 	end
 	
+	-- Compute the column count of unmeasured lines
 	if next (self.DocumentLinesUnchecked) then
 		local startTime = SysTime ()
 		local maximumColumnCount = 0

@@ -6,6 +6,14 @@ function self:ctor ()
 	self.ServiceClientConstructors = {}
 end
 
+function self:CanCreateServiceClient (serviceName)
+	return self.ServiceClientConstructors [serviceName] ~= nil
+end
+
+function self:CanCreateServiceHost (serviceName)
+	return self.ServiceHostConstructors [serviceName] ~= nil
+end
+
 function self:CreateServiceClient (serviceName, ...)
 	local constructor = self.ServiceClientConstructors [serviceName]
 	if not constructor then return nil end

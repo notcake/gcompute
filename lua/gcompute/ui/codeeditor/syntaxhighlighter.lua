@@ -70,6 +70,8 @@ function self:ForceHighlightLine (lineNumber)
 	if not self:IsEnabled () then return end
 	if self.CurrentLine > lineNumber then return end
 	
+	if not self.EditorHelper then return end
+	
 	local previousLine = self.Document:GetLine (lineNumber - 1)
 	local previousOutState = previousLine and previousLine.TokenizationOutState
 	local line = self.Document:GetLine (lineNumber)

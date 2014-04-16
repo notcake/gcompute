@@ -9,7 +9,7 @@ function self:PrintReference (printer, coloredTextSink, obj, printingOptions, al
 	local outputWidth = 0
 	
 	-- Expression
-	outputWidth = outputWidth + self:PrintExpression ()
+	outputWidth = outputWidth + self:PrintExpression (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	
 	-- Comment
 	if obj:IsValid () then

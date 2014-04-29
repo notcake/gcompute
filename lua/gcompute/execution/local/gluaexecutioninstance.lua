@@ -174,7 +174,7 @@ function self:HandlePanelReplValue (panel)
 			local t = SysTime () - startTime
 			
 			if not panel:IsValid () or
-			   t > 1 then
+			   t > 3 then
 				hook.Remove ("PostRenderVGUI", hookId)
 				return
 			end

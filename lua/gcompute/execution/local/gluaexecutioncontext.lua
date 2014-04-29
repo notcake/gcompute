@@ -2,7 +2,8 @@ local self = {}
 GCompute.Execution.GLuaExecutionContext = GCompute.MakeConstructor (self, GCompute.Execution.LocalExecutionContext)
 
 function self:ctor (ownerId, contextOptions)
-	self.Environment = _G
+	local globalEnvironment = debug.getfenv (function () end)
+	self.Environment = globalEnvironment
 	
 	if self:IsEasyContext () then
 		self.Environment = {}
@@ -17,7 +18,7 @@ function self:ctor (ownerId, contextOptions)
 		debug.setmetatable (self.Environment,
 			{
 				__index = function (self, key)
-					local v = rawget (self, key) or _G [key]
+					local v = rawget (self, key) or globalEnvironment [key]
 					if v ~= nil then return v end
 					
 					-- Entity ID match
@@ -32,7 +33,7 @@ function self:ctor (ownerId, contextOptions)
 					end
 				end,
 				__newindex = function (self, key, value)
-					_G [key] = value
+					globalEnvironment [key] = value
 				end
 			}
 		)

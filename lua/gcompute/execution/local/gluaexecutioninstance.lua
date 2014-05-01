@@ -122,7 +122,7 @@ function self:Start ()
 		xpcall (self.ExecutionFunction,
 			function (message)
 				message = tostring (message)
-				if self:CapturesOutput () then self:GetStdErr ():Write (message .. "\n" .. GLib.Lua.StackTrace ():ToString ()) end
+				if self:CapturesOutput () then self:GetStdErr ():Write (message .. "\n" .. GLib.Lua.StackTrace (nil, nil, GLib.Lua.StackCaptureOptions.Arguments):ToString ()) end
 				if not self:SuppressesHostOutput () then self.UpvalueBackup.ErrorNoHalt (message) end
 			end
 		)

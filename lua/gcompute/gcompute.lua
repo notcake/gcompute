@@ -61,11 +61,14 @@ include ("text/icoloredtextsink.lua")
 include ("text/icoloredtextsource.lua")
 include ("text/nullcoloredtextsink.lua")
 
+include ("text/consoletextsink.lua")
 include ("text/coloredtextbuffer.lua")
 include ("text/pipe.lua")
 include ("text/nullpipe.lua")
 
-include ("epoe.lua")
+-- Interop
+include ("interop/epoe.lua")
+include ("interop/aowl.lua")
 
 -- Syntax trees
 include ("astnode.lua")

@@ -95,8 +95,8 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 				process:SetOwnerId (GLib.GetLocalId ())
 				process:AddModule (compilationGroup:GetModule ())
 				
-				stdOut:Chain (process:GetStdOut ())
-				stdErr:Chain (process:GetStdErr ())
+				stdOut:ChainFrom (process:GetStdOut ())
+				stdErr:ChainFrom (process:GetStdErr ())
 				
 				process:Start ()
 			end

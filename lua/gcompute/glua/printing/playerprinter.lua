@@ -47,6 +47,11 @@ function self:PrintMultiline (printer, coloredTextSink, obj, printingOptions, al
 		-- Steam ID
 		outputWidth = outputWidth + coloredTextSink:WriteColor ("-- " .. obj:SteamID () .. "\n", printer:GetColor ("Comment"))
 		
+		if SERVER then
+			-- IP address
+			outputWidth = outputWidth + coloredTextSink:WriteColor ("-- " .. obj:IPAddress () .. "\n", printer:GetColor ("Comment"))
+		end
+		
 		-- Display name
 		outputWidth = outputWidth + coloredTextSink:WriteColor ("-- ", printer:GetColor ("Comment"))
 		coloredTextSink:WriteColor (obj:Nick (), printer:GetColor ("Comment"))

@@ -42,10 +42,16 @@ end
 
 -- Pipe
 -- Chaining
-function self:Chain (pipe)
+function self:ChainFrom (textSource)
 end
 
-function self:Unchain (pipe)
+function self:ChainTo (textSink)
+end
+
+function self:UnchainFrom (textSource)
+end
+
+function self:UnchainTo (textSink)
 end
 
 function self:__call ()

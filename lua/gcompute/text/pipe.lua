@@ -64,16 +64,32 @@ end
 
 -- Pipe
 -- Chaining
-function self:Chain (pipe)
-	pipe:AddEventListener ("Text", self:GetHashCode (),
+function self:ChainFrom (textSource)
+	textSource:AddEventListener ("Text", self:GetHashCode (),
 		function (_, text, color)
 			self:WriteColor (text, color)
 		end
 	)
 end
 
-function self:Unchain (pipe)
-	pipe:RemoveEventListener ("Text", self:GetHashCode ())
+function self:ChainTo (textSink)
+	self:AddEventListener ("Text", textSink:GetHashCode (),
+		function (_, text, color)
+			if textSink.WriteColor then
+				textSink:WriteColor (text, color)
+			else
+				textSink:Write (text)
+			end
+		end
+	)
+end
+
+function self:UnchainFrom (textSource)
+	textSource:RemoveEventListener ("Text", self:GetHashCode ())
+end
+
+function self:UnchainTo (textSink)
+	self:RemoveEventListener ("Text", textSink:GetHashCode ())
 end
 
 -- Internal, do not call

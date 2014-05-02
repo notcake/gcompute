@@ -5,7 +5,9 @@ function self:ctor (gluaExecutionContext, instanceOptions)
 	self.UpvalueDetours = {}
 	self.UpvalueBackup = {}
 	self.LuaCompiler = GCompute.GLua.LuaCompiler ()
+	
 	self.ExecutionFunction = nil
+	self.MinimumReturnValueCount = 0
 	
 	local captureOutput  = self:CapturesOutput ()
 	local suppressOutput = self:SuppressesHostOutput ()
@@ -79,6 +81,7 @@ function self:Compile ()
 	
 	if self:GetExecutionContext ():IsReplContext () then
 		self.ExecutionFunction = self.LuaCompiler:Compile ("return " .. self.SourceFiles [1], self.SourceIds [1])
+		self.MinimumReturnValueCount = self.ExecutionFunction and 1 or 0
 	end
 	
 	if not self.ExecutionFunction then
@@ -140,7 +143,7 @@ function self:Start ()
 			local printer = GCompute.GLua.Printing.DefaultPrinter:Clone ()
 			printer:SetColorScheme (GCompute.SyntaxColoring.PlaceholderSyntaxColoringScheme)
 			
-			for i = 2, table.maxn (ret) do
+			for i = 2, math.max (self.MinimumReturnValueCount + 1, table.maxn (ret)) do
 				if self:GetStdOut ():GetBytesWritten () > 0 then
 					self:GetStdOut ():Write ("\n")
 				end

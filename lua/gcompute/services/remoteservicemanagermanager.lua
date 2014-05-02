@@ -60,6 +60,10 @@ end
 
 function self:GetRemoteServiceManager (remoteId)
 	if not self.Endpoints [remoteId] then
+		if not GCompute.PlayerMonitor:GetUserEntity (remoteId) and
+		   remoteId ~= GLib.GetServerId () then
+			GLib.Error ("RemoteServiceManagerManager:GetRemoteServiceManager : Remote endpoint " .. remoteId .. " is invalid!")
+		end
 		self.EndpointChannelMultiplexer:CreateSingleEndpointChannel (remoteId)
 	end
 	

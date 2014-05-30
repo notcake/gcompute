@@ -74,6 +74,7 @@ function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, ali
 				i = i + 1
 				
 				outputWidth = outputWidth + coloredTextSink:WriteColor ("--     ", printer:GetColor ("Comment"))
+				outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", GLib.UTF8.Byte (c)), printer:GetColor ("Comment"))
 				coloredTextSink:WriteColor (c, printer:GetColor ("Comment"))
 				outputWidth = outputWidth + 1
 				outputWidth = outputWidth + coloredTextSink:WriteColor (" " .. GLib.Unicode.GetCharacterName (c) .. "\n", printer:GetColor ("Comment"))

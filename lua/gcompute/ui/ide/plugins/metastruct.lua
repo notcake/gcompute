@@ -1,6 +1,6 @@
 local self = GCompute.IDE.Plugins:Create ("Metastruct")
 
-CreateClientConVar ("gcompute_editor_5ever", 0, true, false)
+CreateClientConVar ("gcompute_editor_5ever", 1, true, false)
 
 function self:ctor (ide)
 	self.IDE = ide

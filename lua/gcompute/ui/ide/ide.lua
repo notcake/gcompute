@@ -257,7 +257,7 @@ function self:CloseView (view, callback)
 	end
 	
 	if view:GetSavable () and view:GetSavable ():IsUnsaved () and view:GetDocument ():GetViewCount () <= 1 then
-		Gooey.YesNoDialog ()
+		Gooey.YesNoCancelDialog ()
 			:SetTitle ("Save")
 			:SetText ("Save \"" .. view:GetTitle () .. "\"?")
 			:SetCallback (

@@ -242,8 +242,10 @@ function self:ctor (container)
 			if #code == 0 then return end
 			
 			-- Input history
-			self.InputHistory [#self.InputHistory + 1] = code
-			self.InputHistoryPosition = #self.InputHistory + 1
+			if self.InputHistory [#self.InputHistory] ~= code then
+				self.InputHistory [#self.InputHistory + 1] = code
+				self.InputHistoryPosition = #self.InputHistory + 1
+			end
 			
 			-- Execute
 			self:Execute (code)

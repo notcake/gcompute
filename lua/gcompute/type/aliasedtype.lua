@@ -8,7 +8,9 @@ local blacklist =
 }
 
 for functionName, v in pairs (GCompute.GetMetaTable (GCompute.Type)) do
-	if type (v) == "function" and not blacklist [functionName] then
+	if type (v) == "function" and
+	   not blacklist [functionName] and
+	   string.sub (functionName, 1, 2) ~= "__" then
 		self [functionName] = function (self, ...)
 			return self.InnerType [functionName] (self.InnerType, ...)
 		end

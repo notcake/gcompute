@@ -81,7 +81,7 @@ function self:Populate ()
 		explored [t] = true
 		
 		t = t and getmetatable (t)
-		t = t and t.__index
+		t = istable (t) and t.__index
 	end
 end
 
@@ -116,7 +116,7 @@ function self:ResolveMember (name)
 		explored [t] = true
 		
 		t = t and getmetatable (t)
-		t = t and t.__index
+		t = istable (t) and t.__index
 	end
 end
 

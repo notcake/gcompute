@@ -1,5 +1,5 @@
 local self = {}
-GCompute.Tokenizer = GCompute.MakeConstructor (self)
+GCompute.Tokenizer = GCompute.MakeConstructor (self, GCompute.ITokenizer)
 
 local SymbolMatchType = GCompute.SymbolMatchType
 
@@ -188,11 +188,13 @@ function self:Compile ()
 	end
 end
 
+-- Returns rawTokenString, tokenCharacterCount, tokenType
 function self:MatchSymbol (code, offset)
 	self:Compile ()
 	return self:MatchSymbol (code, offset)
 end
 
+-- Returns rawTokenString, tokenCharacterCount, tokenType
 function self:MatchSymbolSlow (code, offset)
 	for i = 1, #self.SymbolMatchers do
 		local symbolMatcher = self.SymbolMatchers [i]

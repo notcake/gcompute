@@ -2,7 +2,6 @@ local LANGUAGE = GCompute.Languages.Create ("GLua")
 GCompute.LanguageDetector:AddExtension   (LANGUAGE, "lua")
 GCompute.LanguageDetector:AddPathPattern (LANGUAGE, "%.lua$")
 GCompute.LanguageDetector:AddPathPattern (LANGUAGE, "/luapad/")
-GCompute.LanguageDetector:AddPathPattern (LANGUAGE, "/starfall/")
 
 -- Lexer
 LANGUAGE:GetTokenizer ()

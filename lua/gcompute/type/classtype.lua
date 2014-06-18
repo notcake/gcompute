@@ -83,7 +83,7 @@ function self:GetCorrespondingDefinition (globalNamespace)
 	return correspondingDefinition:GetClassType ()
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveTypes (objectResolver, compilerMessageSink)
 	for k, baseType in ipairs (self.BaseTypes) do
 		if baseType:IsDeferredObjectResolution () then
 			-- Set the local namespace to our definition, 
@@ -95,7 +95,7 @@ function self:ResolveTypes (objectResolver, errorReporter)
 			baseType:Resolve (objectResolver)
 			if baseType:IsFailedResolution () then
 				GCompute.Error ("ClassType:ResolveTypes : Failed to resolve base type of " .. self:GetFullName () .. " : " .. baseType:GetFullName ())
-				baseType:GetAST ():GetMessages ():PipeToErrorReporter (GCompute.DefaultErrorReporter)
+				baseType:GetAST ():GetMessages ():PipeToCompilerMessageSink (GCompute.DefaultCompilerMessageSink)
 				self.BaseTypes [k] = GCompute.ErrorType ()
 			else
 				baseType = baseType:GetObject ():ToType ()

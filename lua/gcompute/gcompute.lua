@@ -46,7 +46,8 @@ function GCompute.ToFunction (f)
 end
 
 include ("callbackchain.lua")
-include ("ierrorreporter.lua")
+include ("compilermessagetype.lua")
+include ("icompilermessagesink.lua")
 include ("ieditorhelper.lua")
 include ("iobject.lua")
 include ("isavable.lua")

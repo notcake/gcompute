@@ -247,9 +247,9 @@ function self:MemberExists (name)
 	return self.Members [name] and true or false
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveTypes (objectResolver, compilerMessageSink)
 	for _, member in self:GetLazyEnumerator () do
-		member:ResolveTypes (objectResolver, errorReporter)
+		member:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

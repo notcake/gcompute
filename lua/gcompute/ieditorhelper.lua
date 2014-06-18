@@ -74,7 +74,7 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 			
 			compilationUnit:OutputMessages (
 				function (message, messageType)
-					if messageType == GCompute.MessageType.Error then
+					if messageType == GCompute.CompilerMessageType.Error then
 						compilerStdErr:WriteLine (message)
 					else
 						compilerStdOut:WriteLine (message)

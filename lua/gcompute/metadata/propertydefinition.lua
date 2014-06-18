@@ -66,13 +66,13 @@ function self:IsProperty ()
 	return true
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	if self.Type and self.Type:IsDeferredObjectResolution () then
 		self.Type:Resolve (objectResolver)
 		if self.Type:IsFailedResolution () then
-			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+			self.Type:GetAST ():GetMessages ():PipeToCompilerMessageSink (compilerMessageSink)
 			self.Type = GCompute.ErrorType ()
 		else
 			self.Type = self.Type:GetObject ():ToType ()
@@ -80,10 +80,10 @@ function self:ResolveTypes (objectResolver, errorReporter)
 	end
 	
 	if self.Getter then
-		self.Getter:ResolveTypes (objectResolver, errorReporter)
+		self.Getter:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 	if self.Setter then
-		self.Setter:ResolveTypes (objectResolver, errorReporter)
+		self.Setter:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

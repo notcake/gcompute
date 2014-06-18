@@ -33,15 +33,15 @@ function self:IsVariable ()
 end
 
 --- Resolves the type of this variable
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	if not self.Type then return end
 	
 	if self.Type:IsDeferredObjectResolution () then
 		self.Type:Resolve (objectResolver)
 		if self.Type:IsFailedResolution () then
-			self.Type:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+			self.Type:GetAST ():GetMessages ():PipeToCompilerMessageSink (compilerMessageSink)
 			self.Type = GCompute.ErrorType ()
 		else
 			self.Type = self.Type:GetObject ():ToType ()

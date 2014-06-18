@@ -36,12 +36,12 @@ function self:GetWarningCount ()
 	return self.WarningCount
 end
 
-function self:PipeToErrorReporter (errorReporter)
+function self:PipeToCompilerMessageSink (compilerMessageSink)
 	for message in self:GetEnumerator () do
 		if message:GetMessageType () == GCompute.CompilerMessageType.Warning then
-			errorReporter:Warning (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+			compilerMessageSink:Warning (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
 		elseif message:GetMessageType () == GCompute.CompilerMessageType.Error then
-			errorReporter:Error (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
+			compilerMessageSink:Error (message:GetText (), message:GetStartLine (), message:GetStartCharacter ())
 		end
 	end
 end

@@ -1,31 +1,23 @@
 local self = {}
-GCompute.IErrorReporter = GCompute.MakeConstructor (self)
-
-GCompute.MessageType =
-{
-	Debug       = 0,
-	Information = 1,
-	Warning     = 2,
-	Error       = 3
-}
+GCompute.ICompilerMessageSink = GCompute.MakeConstructor (self)
 
 function self:ctor ()
 end
 
 function self:Error (message, line, char)
-	self:Message (GCompute.MessageType.Error, message, line, char)
+	self:Message (GCompute.CompilerMessageType.Error, message, line, char)
 end
 
 function self:Debug (message, line, char)
-	self:Message (GCompute.MessageType.Debug, message, line, char)
+	self:Message (GCompute.CompilerMessageType.Debug, message, line, char)
 end
 
 function self:Information (message, line, char)
-	self:Message (GCompute.MessageType.Information, message, line, char)
+	self:Message (GCompute.CompilerMessageType.Information, message, line, char)
 end
 
 function self:Warning (message, line, char)
-	self:Message (GCompute.MessageType.Warning, message, line, char)
+	self:Message (GCompute.CompilerMessageType.Warning, message, line, char)
 end
 
 function self:Message (messageType, message, line, char)
@@ -38,4 +30,4 @@ function self:Message (messageType, message, line, char)
 	end
 end
 
-GCompute.DefaultErrorReporter = GCompute.IErrorReporter ()
+GCompute.DefaultCompilerMessageSink = GCompute.ICompilerMessageSink ()

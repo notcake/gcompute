@@ -148,15 +148,15 @@ function self:MatchesArgumentCount (argumentCount)
 end
 
 --- Resolves the types of all parameters in this parameter list
-function self:ResolveTypes (objectResolver, localNamespace, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, localNamespace, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	for i = 1, #self.ParameterTypes do
 		if self.ParameterTypes [i]:IsDeferredObjectResolution () then
 			self.ParameterTypes [i]:SetLocalNamespace (localNamespace)
 			self.ParameterTypes [i]:Resolve (objectResolver)
 			if self.ParameterTypes [i]:IsFailedResolution () then
-				self.ParameterTypes [i]:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+				self.ParameterTypes [i]:GetAST ():GetMessages ():PipeToCompilerMessageSink (compilerMessageSink)
 				self.ParameterTypes [i] = GCompute.ErrorType ()
 			else
 				self.ParameterTypes [i] = self.ParameterTypes [i]:GetObject ():ToType ()

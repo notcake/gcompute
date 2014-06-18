@@ -48,11 +48,11 @@ function self:IsOverloadedMethod ()
 end
 
 --- Resolves the types of all methods in this method group
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	for method in self:GetEnumerator () do
-		method:ResolveTypes (objectResolver, errorReporter)
+		method:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

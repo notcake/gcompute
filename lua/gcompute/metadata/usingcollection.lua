@@ -31,9 +31,9 @@ function self:IsEmpty ()
 	return #self.Usings == 0
 end
 
-function self:Resolve (objectResolver, errorReporter)
+function self:Resolve (objectResolver, compilerMessageSink)
 	for usingDirective in self:GetEnumerator () do
-		usingDirective:Resolve (objectResolver, errorReporter)
+		usingDirective:Resolve (objectResolver, compilerMessageSink)
 	end
 end
 

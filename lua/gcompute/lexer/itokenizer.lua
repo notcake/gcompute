@@ -8,3 +8,7 @@ end
 function self:MatchSymbol (code, offset)
 	GCompute.Error ("ITokenizer:MatchSymbol : Not implemented.")
 end
+
+function self:ToLexer ()
+	return GCompute.Lexing.Lexer (self)
+end

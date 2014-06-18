@@ -1,5 +1,5 @@
 local self = {}
-GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.IErrorReporter)
+GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.ICompilerMessageSink)
 
 --[[
 	CompilationUnit

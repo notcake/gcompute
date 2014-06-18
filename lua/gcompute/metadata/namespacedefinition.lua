@@ -118,8 +118,8 @@ function self:GetUsings ()
 	return self.Usings
 end
 
-function self:ResolveUsings (objectResolver, errorReporter)
-	self.Usings:Resolve (objectResolver, errorReporter)
+function self:ResolveUsings (objectResolver, compilerMessageSink)
+	self.Usings:Resolve (objectResolver, compilerMessageSink)
 end
 
 function self:SetMergedLocalScope (mergedLocalScope)
@@ -153,13 +153,13 @@ function self:IsNamespace ()
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
-	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
+	self:GetNamespace ():ResolveTypes (objectResolver, compilerMessageSink)
 	
 	for _, fileStaticNamespace in self:GetFileStaticNamespaceEnumerator () do
-		fileStaticNamespace:ResolveTypes (objectResolver, errorReporter)
+		fileStaticNamespace:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

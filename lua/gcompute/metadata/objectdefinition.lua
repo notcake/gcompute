@@ -433,12 +433,12 @@ function self:IsVariable ()
 end
 
 --- Resolves all types
-function self:ResolveNames (objectResolver, errorReporter)
-	GCompute.AliasResolver (objectResolver, errorReporter):Process (self)
-	self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveNames (objectResolver, compilerMessageSink)
+	GCompute.AliasResolver (objectResolver, compilerMessageSink):Process (self)
+	self:ResolveTypes (objectResolver, compilerMessageSink)
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveTypes (objectResolver, compilerMessageSink)
 	GCompute.Error (self:GetFullName () .. ":ResolveTypes : Not implemented.")
 end
 

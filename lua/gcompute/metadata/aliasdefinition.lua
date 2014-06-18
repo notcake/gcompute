@@ -84,8 +84,8 @@ function self:IsAlias ()
 	return true
 end
 
-function self:ResolveAlias (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveAlias (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	if self:IsResolved () then return end
 	
@@ -95,7 +95,7 @@ function self:ResolveAlias (objectResolver, errorReporter)
 	deferredObjectResolution:SetLocalNamespace (self:GetDeclaringObject ())
 	deferredObjectResolution:Resolve (objectResolver)
 	if deferredObjectResolution:IsFailedResolution () then
-		deferredObjectResolution:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+		deferredObjectResolution:GetAST ():GetMessages ():PipeToCompilerMessageSink (compilerMessageSink)
 	else
 		self.Object = deferredObjectResolution:GetObject ()
 		if self.Object:IsObjectDefinition () then
@@ -104,7 +104,7 @@ function self:ResolveAlias (objectResolver, errorReporter)
 	end
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveTypes (objectResolver, compilerMessageSink)
 end
 
 function self:ToString ()

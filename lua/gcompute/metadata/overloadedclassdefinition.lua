@@ -73,11 +73,11 @@ function self:IsOverloadedClass ()
 end
 
 --- Resolves the types of all types in this class group
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	for class in self:GetEnumerator () do
-		class:ResolveTypes (objectResolver, errorReporter)
+		class:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

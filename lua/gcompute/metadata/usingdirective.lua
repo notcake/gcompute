@@ -33,8 +33,8 @@ function self:IsResolved ()
 	return self.Namespace and true or false
 end
 
-function self:Resolve (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:Resolve (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	if self:IsResolved () then return end
 	
@@ -43,7 +43,7 @@ function self:Resolve (objectResolver, errorReporter)
 	
 	deferredObjectResolution:Resolve (objectResolver)
 	if deferredObjectResolution:IsFailedResolution () then
-		deferredObjectResolution:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+		deferredObjectResolution:GetAST ():GetMessages ():PipeToCompilerMessageSink (compilerMessageSink)
 	else
 		self.Namespace = deferredObjectResolution:GetObject ()
 		if self.Namespace:IsObjectDefinition () then

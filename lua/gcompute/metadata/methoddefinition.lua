@@ -309,8 +309,8 @@ function self:IsMethod ()
 end
 
 --- Resolves the return type and paremeter types of this function
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	self:BuildNamespace ()
 	
@@ -318,17 +318,17 @@ function self:ResolveTypes (objectResolver, errorReporter)
 	if returnType and returnType:IsDeferredObjectResolution () then
 		returnType:Resolve (objectResolver)
 		if returnType:IsFailedResolution () then
-			returnType:GetAST ():GetMessages ():PipeToErrorReporter (errorReporter)
+			returnType:GetAST ():GetMessages ():PipeToCompilerMessageSink (compilerMessageSink)
 			self:SetReturnType (GCompute.ErrorType ())
 		else
 			self:SetReturnType (returnType:GetObject ())
 		end
 	end
-	self:GetParameterList ():ResolveTypes (objectResolver, self, errorReporter)
-	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
+	self:GetParameterList ():ResolveTypes (objectResolver, self, compilerMessageSink)
+	self:GetNamespace ():ResolveTypes (objectResolver, compilerMessageSink)
 	
 	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
-		typeCurriedDefinition:ResolveTypes (objectResolver, errorReporter)
+		typeCurriedDefinition:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

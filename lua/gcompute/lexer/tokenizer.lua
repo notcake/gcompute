@@ -3,18 +3,18 @@ GCompute.Lexing.Tokenizer = GCompute.MakeConstructor (self, GCompute.Lexing.ITok
 
 local SymbolMatchType = GCompute.Lexing.SymbolMatchType
 
-function self:ctor (language)
-	self.Language = language
+function self:ctor (name)
+	self.Name = name or self:GetHashCode ()
 	self.SymbolMatchers = {}
 	
 	self.NativeCode = nil
+	self.NativeSymbolMatcher = nil
 end
 
 -- ITokenizer
 -- Returns rawTokenString, tokenCharacterCount, tokenType
 function self:MatchSymbol (code, offset)
-	self:Compile ()
-	return self:MatchSymbol (code, offset)
+	return self:MatchSymbolCompile (code, offset)
 end
 
 -- Tokenizer
@@ -26,6 +26,8 @@ function self:AddCustomSymbol (tokenType, prefix, matchingFunction)
 		TokenType = tokenType,
 		Matcher   = matchingFunction
 	}
+	
+	self:InvalidateCompiledSymbolMatcher ()
 	
 	return self
 end
@@ -46,6 +48,8 @@ function self:AddPatternSymbol (tokenType, pattern)
 		TokenType = tokenType
 	}
 	
+	self:InvalidateCompiledSymbolMatcher ()
+	
 	return self
 end
 
@@ -58,10 +62,10 @@ function self:AddPatternSymbols (tokenType, patterns)
 end
 
 function self:AddPlainSymbol (tokenType, symbol)
-	if symbol:len () == 0 then GCompute.Error ("Tokenizer:AddPlainSymbol : Symbol cannot be zero-length.") return end
+	if #symbol == 0 then GCompute.Error ("Tokenizer:AddPlainSymbol : Symbol cannot be zero-length.") return end
 	
 	local lookup = nil
-	if symbol:len () <= 3 then
+	if #symbol <= 3 then
 		local previousSymbolMatcher = self.SymbolMatchers [#self.SymbolMatchers]
 		if not previousSymbolMatcher or previousSymbolMatcher.MatchType ~= SymbolMatchType.Lookup then
 			lookup = {}
@@ -74,7 +78,9 @@ function self:AddPlainSymbol (tokenType, symbol)
 			lookup = previousSymbolMatcher.Lookup
 		end
 	end
+	
 	if not lookup then
+		-- New entry
 		self.SymbolMatchers [#self.SymbolMatchers + 1] =
 		{
 			String    = symbol,
@@ -86,16 +92,22 @@ function self:AddPlainSymbol (tokenType, symbol)
 			GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (string.sub (symbol, 1, 1)) .. "\" and will never be reached.")
 			return self
 		end
+		
 		if lookup [string.sub (symbol, 1, 2)] then
 			GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (string.sub (symbol, 1, 2)) .. "\" and will never be reached.")
 			return self
 		end
+		
 		if lookup [string.sub (symbol, 1, 3)] then
 			GCompute.Error ("Tokenizer:AddPlainSymbol : \"" .. GLib.String.Escape (symbol) .. "\" is longer and has a lower precedence than \"" .. GLib.String.Escape (string.sub (symbol, 1, 3)) .. "\" and will never be reached.")
 			return self
 		end
+		
+		-- Add to lookup table
 		lookup [symbol] = tokenType
 	end
+	
+	self:InvalidateCompiledSymbolMatcher ()
 	
 	return self
 end
@@ -104,6 +116,21 @@ function self:AddPlainSymbols (tokenType, symbols)
 	for _, symbol in ipairs (symbols) do
 		self:AddPlainSymbol (tokenType, symbol)
 	end
+	
+	return self
+end
+
+function self:GetName ()
+	return self.Name
+end
+
+function self:SetName (name)
+	if self.Name == name then return self end
+	
+	self.Name = name
+	
+	-- The source attribution for the compiled symbol matcher needs updating
+	self:InvalidateCompiledSymbolMatcher ()
 	
 	return self
 end
@@ -185,16 +212,29 @@ function self:Compile ()
 	end
 	
 	self.NativeCode = upvalues .. code
-	local nativeFunctionFactory = CompileString (self.NativeCode, self.Language:GetName () .. ".Tokenizer")
+	local nativeFunctionFactory = CompileString (self.NativeCode, self:GetName () .. ".Tokenizer")
 	local nativeFunction = nativeFunctionFactory ()
 	if not nativeFunction then
-		GCompute.Error ("Failed to create a native function for " .. self.Language:GetName () .. "'s tokenizer.")
+		GCompute.Error ("Failed to create a native function for " .. self:GetName () .. "'s tokenizer.")
 	end
-	self.MatchSymbol = nativeFunction or self.MatchSymbolSlow
+	self.NativeSymbolMatcher = nativeFunction
+	self.MatchSymbol         = self.NativeSymbolMatcher or self.MatchSymbolSlow
 	
 	for upvalueName, _ in pairs (upvalueTable) do
 		_G [upvalueName] = upvalueBackup [upvalueName]
 	end
+end
+
+function self:InvalidateCompiledSymbolMatcher ()
+	self.NativeCode          = nil
+	self.NativeSymbolMatcher = nil
+	
+	self.MatchSymbol         = self.MatchSymbolCompile
+end
+
+function self:MatchSymbolCompile (code, offset)
+	self:Compile ()
+	return self:MatchSymbol (code, offset)
 end
 
 -- Returns rawTokenString, tokenCharacterCount, tokenType

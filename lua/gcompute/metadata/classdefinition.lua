@@ -367,21 +367,21 @@ function self:IsType ()
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
 	-- Resolve base types
-	self:GetClassType ():ResolveTypes (objectResolver, errorReporter)
+	self:GetClassType ():ResolveTypes (objectResolver, compilerMessageSink)
 	
 	-- Resolve member types
-	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
+	self:GetNamespace ():ResolveTypes (objectResolver, compilerMessageSink)
 	
 	for _, fileStaticNamespace in self:GetFileStaticNamespaceEnumerator () do
-		fileStaticNamespace:ResolveTypes (objectResolver, errorReporter)
+		fileStaticNamespace:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 	
 	for _, typeCurriedDefinition in pairs (self.TypeCurriedDefinitions) do
-		typeCurriedDefinition:ResolveTypes (objectResolver, errorReporter)
+		typeCurriedDefinition:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

@@ -119,25 +119,25 @@ function self:IsEmpty ()
 	return #self.Constructors == 0 and next (self.Members) == nil and #self.ImplicitCasts == 0 and #self.ExplicitCasts == 0
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveTypes (objectResolver, compilerMessageSink)
 	-- Resolve constructor types
 	for constructor in self:GetConstructorEnumerator () do
-		constructor:ResolveTypes (objectResolver, errorReporter)
+		constructor:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 	
 	-- Resolve members
 	for _, member in self:GetEnumerator () do
-		member:ResolveTypes (objectResolver, errorReporter)
+		member:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 	
 	-- Resolve implicit cast destination types
 	for implicitCast in self:GetImplicitCastEnumerator () do
-		implicitCast:ResolveTypes (objectResolver, errorReporter)
+		implicitCast:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 	
 	-- Resolve explicit cast destination types
 	for explicitCast in self:GetExplicitCastEnumerator () do
-		explicitCast:ResolveTypes (objectResolver, errorReporter)
+		explicitCast:ResolveTypes (objectResolver, compilerMessageSink)
 	end
 end
 

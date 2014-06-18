@@ -102,10 +102,10 @@ function self:GetUniqueNameMap ()
 end
 
 --- Resolves the types in this namespace
-function self:ResolveTypes (objectResolver, errorReporter)
-	errorReporter = errorReporter or GCompute.DefaultErrorReporter
+function self:ResolveTypes (objectResolver, compilerMessageSink)
+	compilerMessageSink = compilerMessageSink or GCompute.DefaultCompilerMessageSink
 	
-	self:GetNamespace ():ResolveTypes (objectResolver, errorReporter)
+	self:GetNamespace ():ResolveTypes (objectResolver, compilerMessageSink)
 end
 
 --- Returns a string representation of this namespace

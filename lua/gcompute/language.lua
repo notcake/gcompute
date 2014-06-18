@@ -16,7 +16,7 @@ function self:ctor (name)
 	
 	-- Compilation
 	self.KeywordClassifier = GCompute.Lexing.KeywordClassifier ()
-	self.Tokenizer         = GCompute.Lexing.Tokenizer (self)
+	self.Tokenizer         = GCompute.Lexing.Tokenizer (self.Name)
 	self.Keywords = {}
 	
 	-- Usings

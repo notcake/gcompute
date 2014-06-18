@@ -183,7 +183,7 @@ if CLIENT then
 				
 				compilationUnit:OutputMessages (
 					function (message, messageType)
-						if messageType == GCompute.MessageType.Error then
+						if messageType == GCompute.CompilerMessageType.Error then
 							GCompute.PrintError (message)
 						else
 							GCompute.PrintDebug (message)

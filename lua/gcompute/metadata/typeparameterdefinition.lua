@@ -37,7 +37,7 @@ function self:IsType ()
 	return true
 end
 
-function self:ResolveTypes (objectResolver, errorReporter)
+function self:ResolveTypes (objectResolver, compilerMessageSink)
 end
 
 function self:ToString ()

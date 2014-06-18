@@ -15,14 +15,14 @@ function self:Sequence ()
 	self:AcceptWhitespaceAndNewlines ()
 		
 	local statements = {}
-	while self:PeekType () ~= GCompute.TokenType.EndOfFile and self:Peek () ~= "}" do
+	while self:PeekType () ~= GCompute.Lexing.TokenType.EndOfFile and self:Peek () ~= "}" do
 		local statement, accepted = self:Statement ()
 		statements [#statements + 1] = statement
 		if not statement and not accepted then
 			statements [#statements + 1] = self:ExpectedItem ("statement")
 			self:AdvanceToken ()
 		end
-		if self:Accept (",") and (self:PeekType () == GCompute.TokenType.EndOfFile or self:Peek () == "}") then
+		if self:Accept (",") and (self:PeekType () == GCompute.Lexing.TokenType.EndOfFile or self:Peek () == "}") then
 			statements [#statements + 1] = GCompute.AST.Error ("Expected <statement> after ','.")
 				:SetStartToken (self:GetLastToken ())
 				:SetEndToken   (self:GetCurrentToken ())
@@ -36,7 +36,7 @@ end
 -- Statement
 function self:Statement ()
 	self:SavePosition ()
-	self:AcceptType (GCompute.TokenType.Newline)
+	self:AcceptType (GCompute.Lexing.TokenType.Newline)
 	
 	local statement, accepted =
 		self:StatementNull () or
@@ -186,7 +186,7 @@ function self:ForVariable ()
 		variable:SetStartToken (self:GetLastToken ())
 		variable:SetLocal (true)
 		
-		local identifier = self:AcceptType (GCompute.TokenType.Identifier) 
+		local identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier) 
 		variable:SetName (identifier)
 		if not identifier then
 			variable:AddErrorMessage ("Expected <identifier> after 'local' in for loop expression.", self:GetCurrentToken ())
@@ -218,7 +218,7 @@ function self:ForEachVariables ()
 			local variable = GCompute.AST.VariableDeclaration ()
 			variable:SetStartToken (self:GetCurrentToken ())
 			variable:SetLocal (isLocal)
-			identifier = self:AcceptType (GCompute.TokenType.Identifier)
+			identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 			variable:SetName (identifier)
 			
 			if self:Accept (":") then
@@ -367,7 +367,7 @@ function Parser:StatementTypeDeclaration ()
 	
 	self:SavePosition ()
 	self:ChompModifiers ()
-	if self.Language:GetKeywordType (self:Peek ()) ~= GCompute.KeywordType.DataType then
+	if self.Language:GetKeywordType (self:Peek ()) ~= GCompute.Lexing.KeywordType.DataType then
 		self:ClearModifiers ()
 		self:RestorePosition ()
 		return false
@@ -383,7 +383,7 @@ function Parser:StatementTypeDeclaration ()
 	self:AddParseItem ("mod"):AddRange (self.Modifiers)
 	self:ClearModifiers ()
 	
-	local TypeName = self:AcceptType (GCompute.TokenType.Identifier)
+	local TypeName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if TypeName then
 		self:AddParseItem ("name"):Add (TypeName)
 	end
@@ -391,7 +391,7 @@ function Parser:StatementTypeDeclaration ()
 		self:PushParseItem ("values")
 		self:Accept ("{")
 		repeat
-			local Identifier = self:AcceptType (GCompute.TokenTypes.Identifier)
+			local Identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 			if self:Accept ("=") then
 				local Value = self:AddParseItem ("val")
 				Value:Add (Identifier)
@@ -410,7 +410,7 @@ function Parser:StatementTypeDeclaration ()
 	end
 	
 	local ExpectingIdentifier = false
-	while self:AcceptType (GCompute.TokenType.Identifier) do
+	while self:AcceptType (GCompute.Lexing.TokenType.Identifier) do
 		ExpectingIdentifier = false
 		self:PushParseItem ("var")
 		self:AddParseItem (self.LastAccepted)
@@ -467,7 +467,7 @@ function self:StatementFunctionDeclaration ()
 	
 	local returnType = nil
 	local typeExpression = nil
-	local functionName = self:AcceptType (GCompute.TokenType.Identifier)
+	local functionName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if not self:Accept ("(") then
 		-- either:
 		--    type:functionName (
@@ -481,14 +481,14 @@ function self:StatementFunctionDeclaration ()
 			
 			typeExpression = returnType
 			returnType = nil
-			functionName = self:AcceptType (GCompute.TokenType.Identifier)
+			functionName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 			self:Accept ("(")
 		else
 			-- type
 			--     type:functionName (
 			--     functionName (
 			self:SavePosition ()
-			functionName = self:AcceptType (GCompute.TokenType.Identifier)
+			functionName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 			if self:Accept ("(") then
 				-- type functionName (
 				self:CommitPosition ()
@@ -497,7 +497,7 @@ function self:StatementFunctionDeclaration ()
 				self:RestorePosition ()
 				typeExpression = self:Type ()
 				self:Accept (":")
-				functionName = self:AcceptType (GCompute.TokenType.Identifier)
+				functionName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 				self:Accept ("(")
 			end
 		end
@@ -517,7 +517,7 @@ function self:StatementFunctionDeclaration ()
 	
 	if self:Peek () ~= ")" then
 		repeat
-			local parameterName = self:AcceptType (GCompute.TokenType.Identifier)
+			local parameterName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 			local parameterType = nil
 			if self:Accept (":") then
 				parameterType = self:Type () or GCompute.AST.Error ("Expected <type> after ':' in argument list of function declaration.", self:GetCurrentToken ())
@@ -554,7 +554,7 @@ function self:StatementVariableDeclaration ()
 	local variableDeclaration = GCompute.AST.VariableDeclaration ()
 	variableDeclaration:SetStartToken (self:GetLastToken ())
 	
-	local variableName = self:AcceptType (GCompute.TokenType.Identifier)
+	local variableName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if not variableName then
 		variableDeclaration:AddErrorMessage ("Expected <identifier> after 'local' in variable declaration.", self:GetCurrentToken ())
 	end
@@ -1023,7 +1023,7 @@ function self:ExpressionBooleanLiteral ()
 end
 
 function self:ExpressionNumericLiteral ()
-	if self:AcceptType (GCompute.TokenType.Number) then
+	if self:AcceptType (GCompute.Lexing.TokenType.Number) then
 		local numericLiteral = GCompute.AST.NumericLiteral (self:GetLastToken ().Value)
 		numericLiteral:SetStartToken (self:GetLastToken ())
 		numericLiteral:SetEndToken (self:GetLastToken ())
@@ -1033,7 +1033,7 @@ function self:ExpressionNumericLiteral ()
 end
 
 function self:ExpressionStringLiteral ()
-	local stringToken = self:AcceptType (GCompute.TokenType.String)
+	local stringToken = self:AcceptType (GCompute.Lexing.TokenType.String)
 	if stringToken then
 		local stringLiteral = GCompute.AST.StringLiteral (stringToken)
 		stringLiteral:SetStartToken (self:GetLastToken ())
@@ -1127,7 +1127,7 @@ function self:QualifiedIdentifier ()
 end
 
 function self:UnqualifiedIdentifier ()
-	if not self:AcceptType (GCompute.TokenType.Identifier) then return nil end
+	if not self:AcceptType (GCompute.Lexing.TokenType.Identifier) then return nil end
 	return GCompute.AST.Identifier (self:GetLastToken ().Value)
 		:SetStartToken (self:GetLastToken ())
 		:SetEndToken (self:GetLastToken ())

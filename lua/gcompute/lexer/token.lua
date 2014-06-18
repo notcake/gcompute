@@ -1,7 +1,7 @@
 local self = {}
-GCompute.Token = GCompute.MakeConstructor (self, GCompute.Containers.LinkedListNode)
+GCompute.Lexing.Token = GCompute.MakeConstructor (self, GCompute.Containers.LinkedListNode)
 
-function GCompute.Token ()
+function GCompute.Lexing.Token ()
 	return
 	{
 		List         = nil,
@@ -9,7 +9,7 @@ function GCompute.Token ()
 		Previous     = nil,
 		Value        = nil,
 		
-		TokenType    = GCompute.TokenType.Unknown,
+		TokenType    = GCompute.Lexing.TokenType.Unknown,
 		
 		Line         = 0,
 		Character    = 0,
@@ -21,7 +21,7 @@ function GCompute.Token ()
 end
 
 function self:ctor ()
-	self.TokenType    = GCompute.TokenType.Unknown
+	self.TokenType    = GCompute.Lexing.TokenType.Unknown
 	
 	self.Line         = 0
 	self.Character    = 0

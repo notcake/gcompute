@@ -1,7 +1,7 @@
 local self = {}
-GCompute.Tokenizer = GCompute.MakeConstructor (self, GCompute.ITokenizer)
+GCompute.Lexing.Tokenizer = GCompute.MakeConstructor (self, GCompute.Lexing.ITokenizer)
 
-local SymbolMatchType = GCompute.SymbolMatchType
+local SymbolMatchType = GCompute.Lexing.SymbolMatchType
 
 function self:ctor (language)
 	self.Language = language
@@ -162,7 +162,7 @@ function self:Compile ()
 		end
 	end
 	code = code .. "\tmatch = GLib.UTF8.NextChar (code, offset)\n"
-	code = code .. "\treturn match, #match, GCompute.TokenType.Unknown\n"
+	code = code .. "\treturn match, #match, GCompute.Lexing.TokenType.Unknown\n"
 	code = code .. "end\n"
 	
 	local upvalues = ""
@@ -232,5 +232,5 @@ function self:MatchSymbolSlow (code, offset)
 	end
 	
 	local match = GLib.UTF8.NextChar (code, offset)
-	return match, #match, GCompute.TokenType.Unknown
+	return match, #match, GCompute.Lexing.TokenType.Unknown
 end

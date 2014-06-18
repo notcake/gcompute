@@ -245,16 +245,16 @@ function self:Trigger (forceShow)
 		nameEndCharacter   = previousToken.EndCharacter
 		fullName           = ""
 		
-		if previousToken.TokenType == GCompute.TokenType.MemberIndexer then
+		if previousToken.TokenType == GCompute.Lexing.TokenType.MemberIndexer then
 			shouldShowCodeCompletion = true
-			if tokenType == GCompute.TokenType.Identifier or
-			   tokenType == GCompute.TokenType.Keyword then
+			if tokenType == GCompute.Lexing.TokenType.Identifier or
+			   tokenType == GCompute.Lexing.TokenType.Keyword then
 				-- The caret is also at the start of an identifier
 				nameEndCharacter   = token.EndCharacter
 				fullName           = token.Value
 			end
-		elseif previousToken.TokenType == GCompute.TokenType.Identifier or
-		       acceptKeywords and previousToken.TokenType == GCompute.TokenType.Keyword then
+		elseif previousToken.TokenType == GCompute.Lexing.TokenType.Identifier or
+		       acceptKeywords and previousToken.TokenType == GCompute.Lexing.TokenType.Keyword then
 			shouldShowCodeCompletion = true
 			nameStartCharacter       = previousToken.StartCharacter
 			nameEndCharacter         = previousToken.EndCharacter
@@ -264,8 +264,8 @@ function self:Trigger (forceShow)
 		end
 	elseif token then
 		-- Caret is mid-way through a token OR at the start of the first token
-		local isIdentifierToken = token and tokenType == GCompute.TokenType.Identifier
-		isIdentifierToken = isIdentifierToken or acceptKeywords and tokenType == GCompute.TokenType.Keyword
+		local isIdentifierToken = token and tokenType == GCompute.Lexing.TokenType.Identifier
+		isIdentifierToken = isIdentifierToken or acceptKeywords and tokenType == GCompute.Lexing.TokenType.Keyword
 		shouldShowCodeCompletion = isIdentifierToken
 		
 		nameStartCharacter = token and token.StartCharacter or 0
@@ -419,18 +419,18 @@ function self:BuildPreviousIndexingTokenChain (token)
 	local expectingIdentifier = false
 	local reverseTokens = {}
 	while token do
-		if token.TokenType == GCompute.TokenType.Whitespace or
-		   token.TokenType == GCompute.TokenType.Newline then
+		if token.TokenType == GCompute.Lexing.TokenType.Whitespace or
+		   token.TokenType == GCompute.Lexing.TokenType.Newline then
 		elseif expectingIndexer then
-			if token.TokenType == GCompute.TokenType.MemberIndexer then
+			if token.TokenType == GCompute.Lexing.TokenType.MemberIndexer then
 				expectingIndexer = false
 				expectingIdentifier = true
 			else
 				break
 			end
 		else
-			if token.TokenType == GCompute.TokenType.Identifier or
-			   token.TokenType == GCompute.TokenType.Keyword then
+			if token.TokenType == GCompute.Lexing.TokenType.Identifier or
+			   token.TokenType == GCompute.Lexing.TokenType.Keyword then
 				reverseTokens [#reverseTokens + 1] = token
 				expectingIdentifier = false
 				expectingIndexer = true

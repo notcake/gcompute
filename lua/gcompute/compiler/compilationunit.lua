@@ -265,10 +265,10 @@ function self:Lex (callback)
 	self.LexingRevision = self.SourceFile:GetCodeHash ()
 	
 	self.Tokens = GCompute.Containers.LinkedList ()
-	self.Tokens.LinkedListNode = GCompute.Token
+	self.Tokens.LinkedListNode = GCompute.Lexing.Token
 	
 	local startTime = SysTime ()
-	self.Lexer = GCompute.Lexer (self)
+	self.Lexer = GCompute.Lexing.Lexer (self)
 	self.Lexer:AddEventListener ("Progress",
 		function (_, bytesProcessed, totalBytes)
 			self:DispatchEvent ("LexerProgress", self.Lexer, bytesProcessed, totalBytes)

@@ -1,4 +1,4 @@
-GCompute.TokenType = GCompute.Enum (
+GCompute.Lexing.TokenType = GCompute.Enum (
 	{
 		Unknown             =  0,
 		Whitespace          =  1,

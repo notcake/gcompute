@@ -1,4 +1,4 @@
-GCompute.SymbolMatchType = GCompute.Enum (
+GCompute.Lexing.SymbolMatchType = GCompute.Enum (
 	{
 		Plain   = 1,
 		Lookup  = 2,

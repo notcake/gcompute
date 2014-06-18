@@ -190,19 +190,19 @@ function self:Token (startCharacter, endCharacter, tokenType, tokenValue)
 end
 
 function self:GetTokenColor (tokenType)
-	if tokenType == GCompute.TokenType.String then
+	if tokenType == GCompute.Lexing.TokenType.String then
 		return GLib.Colors.Gray
-	elseif tokenType == GCompute.TokenType.Number then
+	elseif tokenType == GCompute.Lexing.TokenType.Number then
 		return GLib.Colors.SandyBrown
-	elseif tokenType == GCompute.TokenType.Comment then
+	elseif tokenType == GCompute.Lexing.TokenType.Comment then
 		return GLib.Colors.ForestGreen
-	elseif tokenType == GCompute.TokenType.Keyword then
+	elseif tokenType == GCompute.Lexing.TokenType.Keyword then
 		return GLib.Colors.RoyalBlue
-	elseif tokenType == GCompute.TokenType.Preprocessor then
+	elseif tokenType == GCompute.Lexing.TokenType.Preprocessor then
 		return GLib.Colors.Wheat
-	elseif tokenType == GCompute.TokenType.Identifier then
+	elseif tokenType == GCompute.Lexing.TokenType.Identifier then
 		return GLib.Colors.PaleGreen
-	elseif tokenType == GCompute.TokenType.Unknown then
+	elseif tokenType == GCompute.Lexing.TokenType.Unknown then
 		return GLib.Colors.Tomato
 	end
 	return GLib.Colors.White
@@ -239,7 +239,7 @@ function self:ProcessLineTokens (line, tokens)
 		local startCharacter = token.StartCharacter
 		local endCharacter   = token.EndCharacter
 		local tokenType      = token.TokenType
-		local color = self:GetTokenColor (previousTokenType == GCompute.TokenType.Preprocessor and previousTokenType or token.TokenType)
+		local color = self:GetTokenColor (previousTokenType == GCompute.Lexing.TokenType.Preprocessor and previousTokenType or token.TokenType)
 		
 		line:SetColor (color, startCharacter, endCharacter)
 		line:SetAttribute ("Token",     token,     startCharacter, endCharacter)

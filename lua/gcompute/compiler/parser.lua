@@ -18,7 +18,7 @@ function self:ctor (compilationUnit)
 end
 
 function self:Accept (token)
-	if self.CurrentTokenValue == token and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if self.CurrentTokenValue == token and self.CurrentTokenType ~= GCompute.Lexing.TokenType.String then
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:AdvanceToken ()
@@ -28,7 +28,7 @@ function self:Accept (token)
 end
 
 function self:AcceptAndSave (token)
-	if self.CurrentTokenValue == token and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if self.CurrentTokenValue == token and self.CurrentTokenType ~= GCompute.Lexing.TokenType.String then
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:SavePosition ()
@@ -53,11 +53,11 @@ function self:AcceptAST ()
 end
 
 function self:AcceptNewlines ()
-	while self:AcceptType (GCompute.TokenType.Newline) do end
+	while self:AcceptType (GCompute.Lexing.TokenType.Newline) do end
 end
 
 function self:AcceptTokens (tokens)
-	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.Lexing.TokenType.String then
 		self.LastAcceptedTokenValue = self.CurrentTokenValue
 		self.LastAcceptedTokenType  = self.CurrentTokenType
 		self:AdvanceToken ()
@@ -87,11 +87,11 @@ function self:AcceptType (tokenType)
 end
 
 function self:AcceptWhitespace ()
-	while self:AcceptType (GCompute.TokenType.Whitespace) do end
+	while self:AcceptType (GCompute.Lexing.TokenType.Whitespace) do end
 end
 
 function self:AcceptWhitespaceAndNewlines ()
-	while self:AcceptType (GCompute.TokenType.Whitespace) or self:AcceptType (GCompute.TokenType.Newline) do end
+	while self:AcceptType (GCompute.Lexing.TokenType.Whitespace) or self:AcceptType (GCompute.Lexing.TokenType.Newline) do end
 end
 
 function self:AddParseItem (Value)
@@ -122,7 +122,7 @@ function self:AdvanceToken ()
 end
 
 function self:ChompModifiers ()
-	while self.CompilationUnit.Language:GetKeywordType (self.CurrentTokenValue) == GCompute.KeywordType.Modifier do
+	while self.CompilationUnit.Language:GetKeywordType (self.CurrentTokenValue) == GCompute.Lexing.KeywordType.Modifier do
 		self.Modifiers [#self.Modifiers + 1] = self.CurrentTokenValue
 		self:AdvanceToken ()
 	end
@@ -244,7 +244,7 @@ function self:RecurseLeft (subParseFunction, tokens)
 		gotExpression = false
 		-- The looping of this bit will ensure (I think) that left associativity is preserved.
 		self:AcceptWhitespaceAndNewlines ()
-		if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
+		if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.Lexing.TokenType.String then
 			gotExpression = true
 			local nextLeftExpression = GCompute.AST.BinaryOperator ()
 			nextLeftExpression:SetStartToken (leftExpression:GetStartToken ())
@@ -266,7 +266,7 @@ function self:RecurseRight (subParseFunction, tokens)
 	if not leftExpression then return nil end
 	
 	self:AcceptWhitespaceAndNewlines ()
-	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.Lexing.TokenType.String then
 		local binaryOperatorExpression = GCompute.AST.BinaryOperator ()
 		binaryOperatorExpression:SetStartToken (leftExpression:GetStartToken ())
 		binaryOperatorExpression:SetOperator (self.CurrentTokenValue)
@@ -284,7 +284,7 @@ function self:RecurseRight (subParseFunction, tokens)
 end
 
 function self:RecurseRightUnary (subParseFunction, tokens, subItemName)
-	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.TokenType.String then
+	if tokens [self.CurrentTokenValue] and self.CurrentTokenType ~= GCompute.Lexing.TokenType.String then
 		local unaryExpression = GCompute.AST.LeftUnaryOperator ()
 		unaryExpression:SetStartToken (self:GetCurrentToken ())
 		unaryExpression:SetOperator (self.CurrentTokenValue)

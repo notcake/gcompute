@@ -1,4 +1,4 @@
-GCompute.KeywordType = GCompute.Enum (
+GCompute.Lexing.KeywordType = GCompute.Enum (
 	{
 		Unknown		= 0,
 		Control		= 1,

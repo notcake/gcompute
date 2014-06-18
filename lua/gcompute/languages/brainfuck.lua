@@ -2,7 +2,7 @@ local LANGUAGE = GCompute.Languages.Create ("Brainfuck")
 
 -- Lexer
 LANGUAGE:GetTokenizer ()
-	:AddCustomSymbols (GCompute.TokenType.String, {"\"", "'"},
+	:AddCustomSymbols (GCompute.Lexing.TokenType.String, {"\"", "'"},
 		function (code, offset)
 			local quotationMark = string.sub (code, offset, offset)
 			local searchStartOffset = offset + 1
@@ -28,7 +28,7 @@ LANGUAGE:GetTokenizer ()
 			end
 		end
 	)
-	:AddCustomSymbol (GCompute.TokenType.Comment, "/*",
+	:AddCustomSymbol (GCompute.Lexing.TokenType.Comment, "/*",
 		function (code, offset)
 			local endOffset = string.find (code, "*/", offset + 2, true)
 			if endOffset then
@@ -37,8 +37,8 @@ LANGUAGE:GetTokenizer ()
 			return string.sub (code, offset), string.len (code) - offset + 1
 		end
 	)
-	:AddPatternSymbol (GCompute.TokenType.Comment,   "//[^\n\r]*")
-	:AddPatternSymbol (GCompute.TokenType.Operator,  "[<>+%-%.]+")
-	:AddPlainSymbols  (GCompute.TokenType.Operator, {"[", "]"})
+	:AddPatternSymbol (GCompute.Lexing.TokenType.Comment,   "//[^\n\r]*")
+	:AddPatternSymbol (GCompute.Lexing.TokenType.Operator,  "[<>+%-%.]+")
+	:AddPlainSymbols  (GCompute.Lexing.TokenType.Operator, {"[", "]"})
 
 LANGUAGE:LoadParser ("brainfuck_parser.lua")

@@ -15,7 +15,7 @@ function self:ctor (name)
 	self.EditorHelper = nil
 	
 	-- Compilation
-	self.Tokenizer = GCompute.Tokenizer (self)
+	self.Tokenizer = GCompute.Lexing.Tokenizer (self)
 	self.Keywords = {}
 	
 	-- Usings
@@ -83,7 +83,7 @@ function self:GetKeywordEnumerator ()
 end
 
 function self:GetKeywordType (token)
-	return self.Keywords [token] or GCompute.KeywordType.Unknown
+	return self.Keywords [token] or GCompute.Lexing.KeywordType.Unknown
 end
 
 function self:GetTokenizer ()

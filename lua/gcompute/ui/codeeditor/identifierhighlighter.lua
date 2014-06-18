@@ -136,8 +136,8 @@ function self:ProcessLine (lineNumber, tokens)
 	local lastResolutionResults = nil
 	local previousTokenType
 	for _, token in ipairs (tokens) do
-		if previousTokenType ~= GCompute.TokenType.Preprocessor and
-		   token.TokenType == GCompute.TokenType.Identifier then
+		if previousTokenType ~= GCompute.Lexing.TokenType.Preprocessor and
+		   token.TokenType == GCompute.Lexing.TokenType.Identifier then
 			token.ResolutionResults = GCompute.ResolutionResults ()
 			
 			if not lastResolutionResults then
@@ -156,10 +156,10 @@ function self:ProcessLine (lineNumber, tokens)
 			end
 			
 			lastResolutionResults = token.ResolutionResults
-		elseif token.TokenType == GCompute.TokenType.MemberIndexer then
+		elseif token.TokenType == GCompute.Lexing.TokenType.MemberIndexer then
 			indexing = true
-		elseif token.TokenType == GCompute.TokenType.Whitespace or
-			   token.TokenType == GCompute.TokenType.Newline then
+		elseif token.TokenType == GCompute.Lexing.TokenType.Whitespace or
+			   token.TokenType == GCompute.Lexing.TokenType.Newline then
 		else
 			indexing = false
 			lastResolutionResults = nil

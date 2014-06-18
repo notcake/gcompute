@@ -66,7 +66,7 @@ function Parser:Root ()
 	local token = self.CurrentToken
 	--[[
 	while token do
-		Msg ("Token: " .. tostring (token.Value) .. " | " .. tostring (GCompute.TokenType [token.TokenType]) .. "\n")
+		Msg ("Token: " .. tostring (token.Value) .. " | " .. tostring (GCompute.Lexing.TokenType [token.TokenType]) .. "\n")
 		token = token.Next
 	end
 	]]
@@ -88,7 +88,7 @@ function Parser:Statement ()
 	self.DebugOutput:IncreaseIndent ()
 	
 	self:SavePosition ()
-	self:AcceptType (GCompute.TokenType.Newline)
+	self:AcceptType (GCompute.Lexing.TokenType.Newline)
 	if self:StatementNull () or
 		self:StatementIf () or
 		self:StatementWhile () or
@@ -272,7 +272,7 @@ function Parser:StatementTypeDeclaration ()
 	self.DebugOutput:WriteLine ("Trying type declaration...")
 	self:SavePosition ()
 	self:ChompModifiers ()
-	if self.Language:GetKeywordType (self.CurrentToken) ~= GCompute.KeywordType.DataType then
+	if self.Language:GetKeywordType (self.CurrentToken) ~= GCompute.Lexing.KeywordType.DataType then
 		self:ClearModifiers ()
 		self:RestorePosition ()
 		return false
@@ -288,7 +288,7 @@ function Parser:StatementTypeDeclaration ()
 	self:AddParseItem ("mod"):AddRange (self.Modifiers)
 	self:ClearModifiers ()
 	
-	local TypeName = self:AcceptType (GCompute.TokenType.Identifier)
+	local TypeName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if TypeName then
 		self:AddParseItem ("name"):Add (TypeName)
 	end
@@ -296,7 +296,7 @@ function Parser:StatementTypeDeclaration ()
 		self:PushParseItem ("values")
 		self:Accept ("{")
 		repeat
-			local Identifier = self:AcceptType (GCompute.TokenTypes.Identifier)
+			local Identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 			if self:Accept ("=") then
 				local Value = self:AddParseItem ("val")
 				Value:Add (Identifier)
@@ -315,7 +315,7 @@ function Parser:StatementTypeDeclaration ()
 	end
 	
 	local ExpectingIdentifier = false
-	while self:AcceptType (GCompute.TokenType.Identifier) do
+	while self:AcceptType (GCompute.Lexing.TokenType.Identifier) do
 		ExpectingIdentifier = false
 		self:PushParseItem ("var")
 		self:AddParseItem (self.LastAccepted)
@@ -374,7 +374,7 @@ function Parser:StatementFunctionDeclaration ()
 	end
 	
 	-- Then the identifier
-	local Identifier = self:AcceptType (GCompute.TokenType.Identifier)
+	local Identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if not Identifier then
 		self:RestorePosition ()
 		self:DiscardParseItem ()
@@ -395,7 +395,7 @@ function Parser:StatementFunctionDeclaration ()
 		if not Type then
 			break
 		end
-		local Identifier = self:AcceptType (GCompute.TokenType.Identifier)
+		local Identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 		local Item = self:AddParseItem ("arg")
 		Item:AddNode (Type)
 		if Identifier then
@@ -408,7 +408,7 @@ function Parser:StatementFunctionDeclaration ()
 		self:DiscardParseItem ()
 		return false
 	end
-	self:AcceptType (GCompute.TokenType.Newline)
+	self:AcceptType (GCompute.Lexing.TokenType.Newline)
 	local Block = self:StatementBlock ()
 	if not Block then
 		self:Accept (";")
@@ -437,7 +437,7 @@ function Parser:StatementVariableDeclaration ()
 	self:AddParseItem ("type"):AddNode (Type)
 	
 	repeat
-		Identifier = self:AcceptType (GCompute.TokenType.Identifier)
+		Identifier = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 		if not Identifier then
 			self:DiscardParseItem ()
 			self:RestorePosition ()
@@ -481,7 +481,7 @@ function Parser:StatementExpression ()
 		return false
 	end
 	if self:IsTokenAvailable () and
-		not self:AcceptType (GCompute.TokenType.Newline) and
+		not self:AcceptType (GCompute.Lexing.TokenType.Newline) and
 		self.CurrentToken ~= ";" and
 		self.CurrentToken ~= "}" then
 		self:RestorePosition ()
@@ -700,7 +700,7 @@ function Parser:ExpressionAnonymousFunction ()
 		Argument:AddNode (Type)
 		
 		-- Arguments may be anonymous
-		if self:AcceptType (GCompute.TokenType.Identifier) then
+		if self:AcceptType (GCompute.Lexing.TokenType.Identifier) then
 			Argument:Add (self.LastAccepted)
 		end
 	until not self:Accept (",")
@@ -723,7 +723,7 @@ function Parser:ExpressionAnonymousFunction ()
 end
 
 function Parser:ExpressionVariable ()
-	local token = self:AcceptType (GCompute.TokenType.Identifier)
+	local token = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if token then
 		if token == "true" then
 			return GCompute.Containers.Tree ("true")
@@ -741,19 +741,19 @@ function Parser:ExpressionVariable ()
 end
 
 function Parser:ExpressionValue ()
-	local Token = self:AcceptType (GCompute.TokenType.String)
+	local Token = self:AcceptType (GCompute.Lexing.TokenType.String)
 	if Token then
 		local Tree = GCompute.Containers.Tree ("str")
 		Tree:Add (Token)
 		return Tree
 	end
-	Token = self:AcceptType (GCompute.TokenType.Number)
+	Token = self:AcceptType (GCompute.Lexing.TokenType.Number)
 	if Token then
 		local Tree = GCompute.Containers.Tree ("num")
 		Tree:Add (Token)
 		return Tree
 	end
-	self.DebugOutput:WriteLine ("Failed to parse expression (" .. tostring (self.CurrentToken) .. ", " .. tostring (GCompute.TokenType [self.CurrentTokenType]) .. ").")
+	self.DebugOutput:WriteLine ("Failed to parse expression (" .. tostring (self.CurrentToken) .. ", " .. tostring (GCompute.Lexing.TokenType [self.CurrentTokenType]) .. ").")
 end
 
 -- Type
@@ -797,7 +797,7 @@ function Parser:TypeArrayRank ()
 		return GCompute.Containers.Tree ("any")
 	end
 	
-	local number = self:AcceptType (GCompute.TokenType.Number)
+	local number = self:AcceptType (GCompute.Lexing.TokenType.Number)
 	if number then
 		return GCompute.Containers.Tree (number)
 	end
@@ -841,7 +841,7 @@ function Parser:TypeTemplate ()
 end
 
 function Parser:TypeName ()
-	local typeName = self:AcceptType (GCompute.TokenType.Identifier)
+	local typeName = self:AcceptType (GCompute.Lexing.TokenType.Identifier)
 	if not typeName then
 		return nil
 	end

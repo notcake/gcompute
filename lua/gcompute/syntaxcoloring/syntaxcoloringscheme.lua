@@ -19,7 +19,7 @@ function self:Initialize ()
 end
 
 function self:GetTokenColor (tokenType)
-	return self [GCompute.TokenType [tokenType]] or self.Default
+	return self [GCompute.Lexing.TokenType [tokenType]] or self.Default
 end
 
 function self:__call ()

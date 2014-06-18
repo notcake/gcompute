@@ -87,10 +87,12 @@ include ("compiler/compilationunit.lua")
 include ("regex/regex.lua")
 
 -- Lexing
+GCompute.Lexing = {}
 include ("lexer/keywordtype.lua")
 include ("lexer/tokentype.lua")
 include ("lexer/symbolmatchtype.lua")
 
+include ("lexer/ikeywordclassifier.lua")
 include ("lexer/token.lua")
 include ("lexer/itokenizer.lua")
 include ("lexer/tokenizer.lua")

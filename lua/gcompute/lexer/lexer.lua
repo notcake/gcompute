@@ -1,5 +1,5 @@
 local self = {}
-GCompute.Lexer = GCompute.MakeConstructor (self)
+GCompute.Lexing.Lexer = GCompute.MakeConstructor (self)
 
 --[[
 	Events:
@@ -63,10 +63,10 @@ function self:Process (code, language, callback)
 end
 
 function self:ProcessSome ()
-	local GCompute_KeywordType_Unknown = GCompute.KeywordType.Unknown
-	local GCompute_TokenType_EndOfFile = GCompute.TokenType.EndOfFile
-	local GCompute_TokenType_Keyword   = GCompute.TokenType.Keyword
-	local GCompute_TokenType_Unknown   = GCompute.TokenType.Unknown
+	local GCompute_Lexing_KeywordType_Unknown = GCompute.Lexing.KeywordType.Unknown
+	local GCompute_Lexing_TokenType_EndOfFile        = GCompute.Lexing.TokenType.EndOfFile
+	local GCompute_Lexing_TokenType_Keyword          = GCompute.Lexing.TokenType.Keyword
+	local GCompute_Lexing_TokenType_Unknown          = GCompute.Lexing.TokenType.Unknown
 	
 	local tokensProcessed
 	
@@ -86,7 +86,7 @@ function self:ProcessSome ()
 	-- Line break counting
 	local crOffset = 0
 	local lfOffset = 0
-			
+	
 	while SysTime () - tickStartTime < 0.010 and offset <= codeLength do
 		tokensProcessed = 0
 		while tokensProcessed < 10 and offset <= codeLength do
@@ -124,7 +124,7 @@ function self:ProcessSome ()
 			
 			-- Check for tokenizer bugs
 			if match == "" then
-				ErrorNoHalt ("Lexer: Matched a zero-length string! (" .. GCompute.TokenType [tokenType] .. ")\n")
+				ErrorNoHalt ("Lexer: Matched a zero-length string! (" .. GCompute.Lexing.TokenType [tokenType] .. ")\n")
 				match = nil
 			end
 			
@@ -132,8 +132,8 @@ function self:ProcessSome ()
 			local token = tokens:AddLast (match)
 			
 			-- Check if the token is a key word that has been classed as an identifier
-			if language:GetKeywordType (match) ~= GCompute_KeywordType_Unknown then
-				tokenType = GCompute_TokenType_Keyword
+			if language:GetKeywordType (match) ~= GCompute_Lexing_KeywordType_Unknown then
+				tokenType = GCompute_Lexing_TokenType_Keyword
 			end
 			
 			token.TokenType    = tokenType
@@ -167,7 +167,7 @@ function self:ProcessSome ()
 		)
 	else
 		local token        = self.Tokens:AddLast ("<eof>")
-		token.TokenType    = GCompute_TokenType_EndOfFile
+		token.TokenType    = GCompute_Lexing_TokenType_EndOfFile
 		token.Line         = self.Line
 		token.Character    = self.Character
 		token.EndLine      = self.Line

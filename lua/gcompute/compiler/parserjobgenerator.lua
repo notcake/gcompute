@@ -33,7 +33,7 @@ function self:Process (callback)
 
 	for token in self.Tokens:GetEnumerator () do
 		local symbol = token.Value
-		if token.TokenType ~= GCompute.TokenType.Operator then
+		if token.TokenType ~= GCompute.Lexing.TokenType.Operator then
 		elseif self.OpeningSymbols [symbol] then
 			self.Stack:Push (token)
 		elseif self.ClosingSymbols [symbol] then

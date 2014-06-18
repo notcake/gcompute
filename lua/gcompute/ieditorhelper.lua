@@ -109,9 +109,9 @@ function self:ShouldOutdent (codeEditor, location)
 end
 
 function self:TokenizeLine (line, tokenSink, inState, outState)
-	local GLib_UTF8_Length             = GLib.UTF8.Length
-	local GCompute_KeywordType_Unknown = GCompute.KeywordType.Unknown
-	local GCompute_TokenType_Keyword   = GCompute.TokenType.Keyword
+	local GLib_UTF8_Length                    = GLib.UTF8.Length
+	local GCompute_Lexing_KeywordType_Unknown = GCompute.Lexing.KeywordType.Unknown
+	local GCompute_Lexing_TokenType_Keyword   = GCompute.Lexing.TokenType.Keyword
 	local math_max   = math.max
 	local string_sub = string.sub
 	
@@ -134,8 +134,8 @@ function self:TokenizeLine (line, tokenSink, inState, outState)
 		lastToken = string_sub (line, offset, offset + tokenLength - 1)
 		characterCount = GLib_UTF8_Length (lastToken)
 		
-		if language:GetKeywordType (token) ~= GCompute_KeywordType_Unknown then
-			tokenType = GCompute_TokenType_Keyword
+		if language:GetKeywordType (token) ~= GCompute_Lexing_KeywordType_Unknown then
+			tokenType = GCompute_Lexing_TokenType_Keyword
 		end
 		if currentCharacter < 0 then token = GLib.UTF8.Sub (token, 1 - currentCharacter) end
 		tokenSink:Token (math_max (0, currentCharacter), currentCharacter + characterCount, tokenType, token)

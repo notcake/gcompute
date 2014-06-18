@@ -2,8 +2,9 @@ local self = {}
 GCompute.Parser = GCompute.MakeConstructor (self)
 
 function self:ctor (compilationUnit)
-	self.CompilationUnit = compilationUnit
-	self.Language = compilationUnit:GetLanguage ()
+	self.CompilationUnit   = compilationUnit
+	self.Language          = compilationUnit:GetLanguage ()
+	self.KeywordClassifier = self.Language:GetKeywordClassifier ()
 	
 	self.Tokens = nil
 	self.LastAcceptedToken      = nil
@@ -122,7 +123,7 @@ function self:AdvanceToken ()
 end
 
 function self:ChompModifiers ()
-	while self.CompilationUnit.Language:GetKeywordType (self.CurrentTokenValue) == GCompute.Lexing.KeywordType.Modifier do
+	while self.KeywordClassifier:GetKeywordType (self.CurrentTokenValue) == GCompute.Lexing.KeywordType.Modifier do
 		self.Modifiers [#self.Modifiers + 1] = self.CurrentTokenValue
 		self:AdvanceToken ()
 	end

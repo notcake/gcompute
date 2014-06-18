@@ -385,7 +385,7 @@ function self:Trigger (forceShow)
 		end
 		
 		-- Global lookup, keywords are acceptable
-		for keyword in self.Language:GetKeywordEnumerator () do
+		for keyword in self.Language:GetKeywordClassifier ():GetKeywordEnumerator () do
 			if string.sub (keyword, 1, #lowercaseNamePrefix):lower () == lowercaseNamePrefix then
 				self.SuggestionFrame:AddKeyword (keyword)
 			end

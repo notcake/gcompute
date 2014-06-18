@@ -416,7 +416,7 @@ function Parser:StatementTypeDeclaration ()
 	
 	self:SavePosition ()
 	self:ChompModifiers ()
-	if self.Language:GetKeywordType (self:Peek ()) ~= GCompute.Lexing.KeywordType.DataType then
+	if self.KeywordClassifier:GetKeywordType (self:Peek ()) ~= GCompute.Lexing.KeywordType.DataType then
 		self:ClearModifiers ()
 		self:RestorePosition ()
 		return false

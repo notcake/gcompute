@@ -76,9 +76,10 @@ LANGUAGE:GetTokenizer ()
 	:AddPlainSymbols  (GCompute.Lexing.TokenType.Newline,             {"\r\n", "\r", "\n"})
 	:AddPatternSymbol (GCompute.Lexing.TokenType.Whitespace,           "[ \t]+")
 
-LANGUAGE:AddKeywords (GCompute.Lexing.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "foreach", "do", "break", "switch", "case", "return", "continue"})
-LANGUAGE:AddKeywords (GCompute.Lexing.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using", "function", "local"})
-LANGUAGE:AddKeywords (GCompute.Lexing.KeywordType.Constant, {"true", "false", "null"})
+LANGUAGE:GetKeywordClassifier ()
+	:AddKeywords (GCompute.Lexing.KeywordType.Control,  {"if", "else", "elseif", "while", "for", "foreach", "do", "break", "switch", "case", "return", "continue"})
+	:AddKeywords (GCompute.Lexing.KeywordType.DataType, {"namespace", "struct", "class", "enum", "using", "function", "local"})
+	:AddKeywords (GCompute.Lexing.KeywordType.Constant, {"true", "false", "null"})
 
 LANGUAGE:SetDirectiveCaseSensitivity (false)
 

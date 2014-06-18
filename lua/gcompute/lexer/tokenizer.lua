@@ -10,6 +10,14 @@ function self:ctor (language)
 	self.NativeCode = nil
 end
 
+-- ITokenizer
+-- Returns rawTokenString, tokenCharacterCount, tokenType
+function self:MatchSymbol (code, offset)
+	self:Compile ()
+	return self:MatchSymbol (code, offset)
+end
+
+-- Tokenizer
 function self:AddCustomSymbol (tokenType, prefix, matchingFunction)
 	self.SymbolMatchers [#self.SymbolMatchers + 1] =
 	{
@@ -100,6 +108,7 @@ function self:AddPlainSymbols (tokenType, symbols)
 	return self
 end
 
+-- Internal, do not call
 function self:Compile ()
 	-- Solid organic waste reification is about to occur.
 	
@@ -186,12 +195,6 @@ function self:Compile ()
 	for upvalueName, _ in pairs (upvalueTable) do
 		_G [upvalueName] = upvalueBackup [upvalueName]
 	end
-end
-
--- Returns rawTokenString, tokenCharacterCount, tokenType
-function self:MatchSymbol (code, offset)
-	self:Compile ()
-	return self:MatchSymbol (code, offset)
 end
 
 -- Returns rawTokenString, tokenCharacterCount, tokenType

@@ -15,7 +15,8 @@ function self:ctor (name)
 	self.EditorHelper = nil
 	
 	-- Compilation
-	self.Tokenizer = GCompute.Lexing.Tokenizer (self)
+	self.KeywordClassifier = GCompute.Lexing.KeywordClassifier ()
+	self.Tokenizer         = GCompute.Lexing.Tokenizer (self)
 	self.Keywords = {}
 	
 	-- Usings
@@ -78,20 +79,12 @@ function self:AddKeywords (keywordType, keywords)
 	end
 end
 
-function self:GetKeywordEnumerator ()
-	return GLib.KeyValueEnumerator (self.Keywords)
-end
-
-function self:GetKeywordType (token)
-	return self.Keywords [token] or GCompute.Lexing.KeywordType.Unknown
+function self:GetKeywordClassifier ()
+	return self.KeywordClassifier
 end
 
 function self:GetTokenizer ()
 	return self.Tokenizer
-end
-
-function self:IsKeyword (token)
-	return self.Keywords [token] == true
 end
 
 -- Preprocessing

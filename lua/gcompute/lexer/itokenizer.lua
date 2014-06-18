@@ -1,5 +1,5 @@
 local self = {}
-GCompute.Lexing.ITokenizer = GCompute.MakeConstructor (self, GCompute.Lexing.IKeywordClassifier)
+GCompute.Lexing.ITokenizer = GCompute.MakeConstructor (self)
 
 function self:ctor ()
 end

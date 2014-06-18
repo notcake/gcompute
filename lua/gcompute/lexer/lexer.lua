@@ -70,14 +70,16 @@ function self:ProcessSome ()
 	
 	local tokensProcessed
 	
-	local code       = self.Code
-	local codeLength = string_len (self.Code)
-	local language   = self.Language
-	local tokenizer  = language:GetTokenizer ()
-	local tokens     = self.Tokens
-	local offset     = self.Offset
-	local line       = self.Line
-	local character  = self.Character
+	local language          = self.Language
+	local keywordClassifier = language:GetKeywordClassifier ()
+	local tokenizer         = language:GetTokenizer ()
+	
+	local code              = self.Code
+	local codeLength        = string_len (self.Code)
+	local tokens            = self.Tokens
+	local offset            = self.Offset
+	local line              = self.Line
+	local character         = self.Character
 	
 	local startToken = tokens.Last
 	
@@ -132,7 +134,7 @@ function self:ProcessSome ()
 			local token = tokens:AddLast (match)
 			
 			-- Check if the token is a key word that has been classed as an identifier
-			if language:GetKeywordType (match) ~= GCompute_Lexing_KeywordType_Unknown then
+			if keywordClassifier:GetKeywordType (match) ~= GCompute_Lexing_KeywordType_Unknown then
 				tokenType = GCompute_Lexing_TokenType_Keyword
 			end
 			
@@ -157,7 +159,7 @@ function self:ProcessSome ()
 	self.Line      = line
 	self.Character = character
 	
-	self.CompilationUnit:Debug ("Lexer tick took " .. ((SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. (self:GetProgress () * 100) .. "%.")
+	self.CompilationUnit:Debug ("Lexer tick took " .. string.format ("%.3f", (SysTime () - self.TickStartTime) * 1000) .. " ms, now at " .. string.format ("%.2f", self:GetProgress () * 100) .. "%.")
 	if self.Offset <= string_len (self.Code) then
 		GLib.CallDelayed (
 			function ()

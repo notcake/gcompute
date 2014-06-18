@@ -93,6 +93,7 @@ include ("lexer/tokentype.lua")
 include ("lexer/symbolmatchtype.lua")
 
 include ("lexer/ikeywordclassifier.lua")
+include ("lexer/keywordclassifier.lua")
 include ("lexer/token.lua")
 include ("lexer/itokenizer.lua")
 include ("lexer/tokenizer.lua")

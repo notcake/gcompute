@@ -113,7 +113,7 @@ function self:ctor (container)
 	)
 	
 	-- Initialize
-	self:SetProfiler (GCompute.Profiling.Profiler)
+	self:SetProfiler (GCompute.Profiling.SamplingProfiler)
 	self:SetProfilingResultSet (GCompute.Profiling.ProfilingResultSet ())
 	
 	self:NavigateToSubView (self.SubViews.Functions)

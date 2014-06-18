@@ -36,7 +36,7 @@ function self:GetFunctionEntry (func)
 		end
 		
 		-- Otherwise go ahead and create the function entry
-		local functionEntry = GCompute.Profiling.FunctionEntry (self, func)
+		local functionEntry = GCompute.Profiling.SamplingFunctionEntry (self, func)
 		self.FunctionEntries [func] = functionEntry
 		self.FunctionEntriesByPath [path] = functionEntry
 	end

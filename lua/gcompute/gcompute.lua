@@ -231,6 +231,12 @@ include ("metadata/lua/classnamespace.lua")
 -- Lua profiling
 GCompute.Profiling = {}
 include ("profiling/profiler.lua")
+include ("profiling/samplingprofiler.lua")
+include ("profiling/instrumentingprofiler.lua")
+include ("profiling/functionentry.lua")
+include ("profiling/samplingfunctionentry.lua")
+include ("profiling/timedfunctionentry.lua")
+include ("profiling/perframetimedfunctionentry.lua")
 include ("profiling/profilingresultset.lua")
 include ("profiling/functionentry.lua")
 

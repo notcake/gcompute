@@ -8,13 +8,13 @@ function self:ctor ()
 end
 
 function self:AddExtension (language, extension)
-	extension = extension:lower ()
+	extension = string.lower (extension)
 	
 	self.Extensions [extension] = language
 end
 
 function self:AddPathPattern (language, pattern)
-	pattern = pattern:lower ()
+	pattern = string.lower (pattern)
 	
 	self.PathPatterns [#self.PathPatterns + 1] =
 	{
@@ -32,11 +32,11 @@ function self:DetectLanguage (sourceFile)
 end
 
 function self:DetectLanguageByPath (path)
-	path = path:lower ()
+	path = string.lower (path)
 	
-	local extension = path:match ("%.([^%.]*)$") or ""
-	if self.Extensions [extension:lower ()] then
-		return self.Extensions [extension:lower ()]
+	local extension = string.match (path, "%.([^%.]*)$") or ""
+	if self.Extensions [string.lower (extension)] then
+		return self.Extensions [string.lower (extension)]
 	end
 	for i = 1, #self.PathPatterns do
 		if string.find (path, self.PathPatterns [i].Pattern) then

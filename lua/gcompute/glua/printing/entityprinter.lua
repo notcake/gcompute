@@ -13,7 +13,7 @@ function self:PrintReference (printer, coloredTextSink, obj, printingOptions, al
 	end
 	
 	-- Expression
-	outputWidth = outputWidth + self:PrintExpressioN ()
+	outputWidth = outputWidth + self:PrintExpression ()
 	
 	-- Comment
 	if obj:IsValid () then

@@ -69,14 +69,13 @@ function self:GetIntrinsicUsings ()
 end
 
 -- Lexing
-function self:AddKeyword (keywordType, keyword)
-	self.Keywords [keyword] = keywordType
-end
-
-function self:AddKeywords (keywordType, keywords)
-	for _, keyword in ipairs (keywords) do
-		self:AddKeyword (keywordType, keyword)
-	end
+function self:CreateLexer ()
+	-- TODO: Fix the lexer mess.
+	local lexer = GCompute.Lexing.Lexer ()
+	lexer.Tokenizer         = self.Tokenizer
+	lexer.KeywordClassifier = self.KeywordClassifier
+	
+	return lexer
 end
 
 function self:GetKeywordClassifier ()
@@ -85,6 +84,11 @@ end
 
 function self:GetTokenizer ()
 	return self.Tokenizer
+end
+
+-- Convenience method, returns an ITokenStream
+function self:Lex (code)
+	return self:CreateLexer ():Lex (code)
 end
 
 -- Preprocessing

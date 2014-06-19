@@ -49,7 +49,41 @@ function self:PrintMultiline (printer, coloredTextSink, obj, printingOptions, al
 		outputWidth = outputWidth + coloredTextSink:WriteColor ("-- " .. f:GetFilePath () .. ": " .. f:GetStartLine () .. "-" .. f:GetEndLine () .. "\n", printer:GetColor ("Comment"))
 	end
 	
-	outputWidth = outputWidth + coloredTextSink:WriteColor (GLib.Lua.ToLuaString (f:GetRawFunction ()), printer:GetColor ("Default"))
+	-- Source
+	if f:IsNative () then
+		local name = GLib.Lua.GetFunctionName (obj)
+		if name then
+			outputWidth = outputWidth + coloredTextSink:WriteColor (name, printer:GetColor ("ResolvedIdentifier"))
+		else
+			outputWidth = outputWidth + self:PrintPrototype (printer, coloredTextSink, f)
+		end
+	else
+		local code = nil
+		
+		local sourceFile = f:GetFilePath ()
+		local data = file.Read (sourceFile, "GAME")
+		data = data or file.Read (sourceFile, "LUA")
+		data = data or file.Read (sourceFile, SERVER and "LSV" or "LCL")
+		
+		if data then
+			local startLine = f:GetStartLine ()
+			local endLine   = f:GetEndLine ()
+			
+			local lines = string.Split (data, "\n")
+			if endLine <= #lines then
+				local codeLines = {}
+				for i = startLine, endLine do
+					codeLines [#codeLines + 1] = lines [i]
+				end
+				code = table.concat (codeLines, "\n")
+			end
+		end
+		
+		code = code or GLib.Lua.BytecodeReader (obj):ToString ()
+		
+		-- Output syntax highlighted code
+		outputWidth = outputWidth + GCompute.Languages.Get ("GLua"):Lex (code):Print (coloredTextSink, printer)
+	end
 	
 	return outputWidth
 end
@@ -58,10 +92,7 @@ function self:PrintInline (printer, coloredTextSink, obj, printingOptions, align
 	local f = GLib.Lua.Function (obj)
 	local outputWidth = 0
 	
-	outputWidth = outputWidth + coloredTextSink:WriteColor ("function ", printer:GetColor ("Keyword"))
-	outputWidth = outputWidth + coloredTextSink:WriteColor ("(", printer:GetColor ("Operator"))
-	outputWidth = outputWidth + coloredTextSink:WriteColor (f:GetParameterList ():ToUnbracketedString (), printer:GetColor ("Default"))
-	outputWidth = outputWidth + coloredTextSink:WriteColor (")", printer:GetColor ("Operator"))
+	outputWidth = outputWidth + self:PrintPrototype (printer, coloredTextSink, f)
 	
 	-- Comment
 	outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
@@ -89,6 +120,16 @@ function self:PrintInline (printer, coloredTextSink, obj, printingOptions, align
 	
 	outputWidth = outputWidth + coloredTextSink:WriteColor (" ]]", printer:GetColor ("Comment"))
 	
+	return outputWidth
+end
+
+-- Internal, do not call
+function self:PrintPrototype (printer, coloredTextSink, f)
+	local outputWidth = 0
+	outputWidth = outputWidth + coloredTextSink:WriteColor ("function ", printer:GetColor ("Keyword"))
+	outputWidth = outputWidth + coloredTextSink:WriteColor ("(", printer:GetColor ("Operator"))
+	outputWidth = outputWidth + coloredTextSink:WriteColor (f:GetParameterList ():ToUnbracketedString (), printer:GetColor ("Default"))
+	outputWidth = outputWidth + coloredTextSink:WriteColor (")", printer:GetColor ("Operator"))
 	return outputWidth
 end
 

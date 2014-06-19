@@ -24,10 +24,6 @@ GCompute.CompilationUnit = GCompute.MakeConstructor (self, GCompute.ICompilerMes
 			Fired when the lexer has processed some data.
 		LexerStarted (Lexer lexer)
 			Fired when the lexing process for this CompilationUnit has started.
-		TokenRangeAdded (Token startToken, Token endToken)
-			Fired when a range of tokens has been inserted.
-		TokenRangeRemoved (Token startToken, Token endToken)
-			Fired when a range of tokens has been removed.
 ]]
 
 function self:ctor (sourceFile)
@@ -269,19 +265,10 @@ function self:Lex (callback)
 	
 	local startTime = SysTime ()
 	self.Lexer = GCompute.Lexing.Lexer (self)
+	self.Lexer:SetCompilerMessageSink (self)
 	self.Lexer:AddEventListener ("Progress",
 		function (_, bytesProcessed, totalBytes)
 			self:DispatchEvent ("LexerProgress", self.Lexer, bytesProcessed, totalBytes)
-		end
-	)
-	self.Lexer:AddEventListener ("RangeAdded",
-		function (_, startToken, endToken)
-			self:DispatchEvent ("TokenRangeAdded", startToken, endToken)
-		end
-	)
-	self.Lexer:AddEventListener ("RangeRemoved",
-		function (_, startToken, endToken)
-			self:DispatchEvent ("TokenRangeRemoved", startToken, endToken)
 		end
 	)
 	self:DispatchEvent ("LexerStarted", self.Lexer)

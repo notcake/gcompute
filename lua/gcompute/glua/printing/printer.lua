@@ -33,6 +33,10 @@ function self:SetColorScheme (colorScheme)
 	return self
 end
 
+function self:GetTokenColor (tokenType)
+	return self:GetColor (GCompute.Lexing.TokenType [tokenType] or "Default")
+end
+
 -- Type printers
 function self:GetTypePrinter (type)
 	return self.TypePrinters [type]

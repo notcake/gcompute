@@ -48,6 +48,7 @@ end
 include ("callbackchain.lua")
 include ("compilermessagetype.lua")
 include ("icompilermessagesink.lua")
+include ("nullcompilermessagesink.lua")
 include ("ieditorhelper.lua")
 include ("iobject.lua")
 include ("isavable.lua")
@@ -98,7 +99,14 @@ include ("lexer/keywordclassifier.lua")
 include ("lexer/token.lua")
 include ("lexer/itokenizer.lua")
 include ("lexer/tokenizer.lua")
+
+-- TODO: Fix the lexer mess
+include ("lexer/ilexer.lua")
 include ("lexer/lexer.lua")
+include ("lexer/itokenstream.lua")          -- This is stupid, it should be an optional buffer.
+include ("lexer/tokenstream.lua")           -- This is stupid by extension.
+include ("lexer/linkedlisttokenstream.lua") -- This too.
+include ("lexer/lexertokenstream.lua")      -- And this.
 
 -- Compiler output
 include ("compiler/compilermessage.lua")

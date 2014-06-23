@@ -21,7 +21,7 @@ function self:Process (compilationUnit, tokens)
 			-- Preprocessor directive
 			local tokensToRemove = self:ProcessDirective (compilationUnit, token) + 1
 			for i = 1, tokensToRemove do
-				tokens:Remove (token)
+				tokens:RemoveNode (token)
 				token = nextToken
 				nextToken = token.Next
 			end
@@ -29,7 +29,7 @@ function self:Process (compilationUnit, tokens)
 		elseif token.TokenType == GCompute.Lexing.TokenType.Whitespace or
 		   token.TokenType == GCompute.Lexing.TokenType.Comment then
 			-- Remove whitespace and comments
-			tokens:Remove (token)
+			tokens:RemoveNode (token)
 		elseif token.TokenType == GCompute.Lexing.TokenType.String then
 			-- Unescape strings and merge adjacent double-quoted strings
 			local quoteType = token.Value:sub (1, 1)
@@ -39,13 +39,13 @@ function self:Process (compilationUnit, tokens)
 				token.Previous and
 				token.Previous.TokenType == GCompute.Lexing.TokenType.String then
 				token.Previous.Value = token.Previous.Value .. token.Value
-				tokens:Remove (token)
+				tokens:RemoveNode (token)
 			end
 		elseif token.TokenType == GCompute.Lexing.TokenType.Newline and
 				token.Previous and
 				token.Previous.TokenType == GCompute.Lexing.TokenType.Newline then
 			-- Collapse multiple newlines into one
-			tokens:Remove (token)
+			tokens:RemoveNode (token)
 		elseif token.Value == "##" then
 			-- Here be dragons
 			-- Join the previous and next symbols
@@ -57,8 +57,8 @@ function self:Process (compilationUnit, tokens)
 				
 				token.Previous.Value = token.Previous.Value .. token.Next.Value
 				
-				tokens:Remove (token.Next)
-				tokens:Remove (token)
+				tokens:RemoveNode (token.Next)
+				tokens:RemoveNode (token)
 			end
 		end
 		token = nextToken

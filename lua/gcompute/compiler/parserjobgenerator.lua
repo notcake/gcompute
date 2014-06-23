@@ -31,7 +31,7 @@ end
 function self:Process (callback)
 	callback = callback or GCompute.NullCallback
 
-	for token in self.Tokens:GetEnumerator () do
+	for token in self.Tokens:GetNodeEnumerator () do
 		local symbol = token.Value
 		if token.TokenType ~= GCompute.Lexing.TokenType.Operator then
 		elseif self.OpeningSymbols [symbol] then

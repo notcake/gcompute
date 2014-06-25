@@ -41,6 +41,11 @@ function self:AddCustomSymbols (tokenType, prefixes, matchingFunction)
 end
 
 function self:AddPatternSymbol (tokenType, pattern)
+	if not isstring (pattern) then
+		GCompute.Error ("Tokenizer:AddPatternSymbol : pattern should be a string, not a " .. type (pattern) .. "!")
+		return
+	end
+	
 	self.SymbolMatchers [#self.SymbolMatchers + 1] =
 	{
 		String    = "^" .. pattern,
@@ -54,6 +59,11 @@ function self:AddPatternSymbol (tokenType, pattern)
 end
 
 function self:AddPatternSymbols (tokenType, patterns)
+	if not istable (pattern) then
+		GCompute.Error ("Tokenizer:AddPatternSymbols : patterns should be a table of patterns, not a " .. type (patterns) .. "!")
+		return
+	end
+	
 	for _, pattern in ipairs (patterns) do
 		self:AddPatternSymbol (tokenType, pattern)
 	end
@@ -62,6 +72,11 @@ function self:AddPatternSymbols (tokenType, patterns)
 end
 
 function self:AddPlainSymbol (tokenType, symbol)
+	if not isstring (symbol) then
+		GCompute.Error ("Tokenizer:AddPlainSymbol : symbol should be a string, not a " .. type (symbol) .. "!")
+		return
+	end
+	
 	if #symbol == 0 then GCompute.Error ("Tokenizer:AddPlainSymbol : Symbol cannot be zero-length.") return end
 	
 	local lookup = nil
@@ -113,6 +128,11 @@ function self:AddPlainSymbol (tokenType, symbol)
 end
 
 function self:AddPlainSymbols (tokenType, symbols)
+	if not istable (symbols) then
+		GCompute.Error ("Tokenizer:AddPlainSymbols : symbols should be a table of symbols, not a " .. type (symbols) .. "!")
+		return
+	end
+	
 	for _, symbol in ipairs (symbols) do
 		self:AddPlainSymbol (tokenType, symbol)
 	end

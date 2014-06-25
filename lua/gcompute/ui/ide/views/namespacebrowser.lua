@@ -11,7 +11,19 @@ function self:ctor (container)
 	self.ComboBox:AddItem ("Lua - GVote"   ).GetNamespace = function (_) return GCompute.Lua.Table ("GVote",    GVote   ) end
 	self.ComboBox:AddItem ("GCompute"      ).GetNamespace = function (_) return GCompute.GlobalNamespace                  end
 	self.ComboBox:AddItem ("Expression 2"  ).GetNamespace = function (_) return GCompute.Other.Expression2Namespace ()    end
-	self.ComboBox:AddItem ("Lemon Gate"    ).GetNamespace = function (_) return GCompute.Other.LemonGateNamespace   ()    end
+	
+	-- Add all languages
+	local languages = GLib.Enumerator.ToArray (GCompute.Languages.GetEnumerator ())
+	table.sort (languages,
+		function (a, b)
+			return a:GetName () < b:GetName ()
+		end
+	)
+	for _, language in ipairs (languages) do
+		self.ComboBox:AddItem (language:GetName ()).GetNamespace = function (_)
+			return language:GetEditorHelper ():GetRootNamespace ()
+		end
+	end
 	
 	self.ComboBox:AddEventListener ("SelectedItemChanged",
 		function (_, lastSelectedItem, selectedItem)

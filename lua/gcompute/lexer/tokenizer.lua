@@ -59,7 +59,7 @@ function self:AddPatternSymbol (tokenType, pattern)
 end
 
 function self:AddPatternSymbols (tokenType, patterns)
-	if not istable (pattern) then
+	if not istable (patterns) then
 		GCompute.Error ("Tokenizer:AddPatternSymbols : patterns should be a table of patterns, not a " .. type (patterns) .. "!")
 		return
 	end

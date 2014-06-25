@@ -61,3 +61,7 @@ function self:PrintInlineCommentNamePart (printer, coloredTextSink, obj, alignme
 	
 	return outputWidth
 end
+
+function self:PrintInlineCommentAddress (printer, coloredTextSink, obj)
+	return coloredTextSink:WriteColor (string.format ("%p", obj), printer:GetColor ("Comment"))
+end

@@ -23,9 +23,11 @@ end
 function self:PrintInline (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	local outputWidth = 0
 	
+	-- Mesh () --[[ 0x00000000, name ]]
 	outputWidth = outputWidth + self:PrintExpression (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
-	outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ " .. string.format ("%p", obj), printer:GetColor ("Comment"))
+	outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ ", printer:GetColor ("Comment"))
+	outputWidth = outputWidth + self:PrintInlineCommentAddress (printer, coloredTextSink, obj)
 	outputWidth = outputWidth + self:PrintInlineCommentNamePart (printer, coloredTextSink, obj, alignmentController, alignmentSink)
 	outputWidth = outputWidth + coloredTextSink:WriteColor (" ]]", printer:GetColor ("Comment"))
 	

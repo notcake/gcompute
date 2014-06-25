@@ -51,6 +51,7 @@ end
 function self:PrintInline (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	local outputWidth = 0
 	
+	-- { Panel: <ClassName> 0x00000000 } --[[ (Invalid|Invisible|Visible) ]]
 	outputWidth = outputWidth + coloredTextSink:WriteColor ("{ ", printer:GetColor ("Operator"))
 	outputWidth = outputWidth + coloredTextSink:WriteColor ("Panel", printer:GetColor ("ResolvedIdentifier"))
 	outputWidth = outputWidth + coloredTextSink:WriteColor (": ", printer:GetColor ("Operator"))

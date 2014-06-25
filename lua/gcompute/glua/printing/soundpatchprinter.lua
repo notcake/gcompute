@@ -25,7 +25,8 @@ function self:PrintInline (printer, coloredTextSink, obj, printingOptions, align
 	
 	outputWidth = outputWidth + self:PrintExpression (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
-	outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ " .. string.format ("%p", obj), printer:GetColor ("Comment"))
+	outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ ", printer:GetColor ("Comment"))
+	outputWidth = outputWidth + self:PrintInlineCommentAddress (printer, coloredTextSink, obj)
 	outputWidth = outputWidth + self:PrintInlineCommentNamePart (printer, coloredTextSink, obj, alignmentController, alignmentSink)
 	outputWidth = outputWidth + coloredTextSink:WriteColor (" ]]", printer:GetColor ("Comment"))
 	

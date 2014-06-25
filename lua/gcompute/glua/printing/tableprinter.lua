@@ -21,12 +21,15 @@ function self:PrintReference (printer, coloredTextSink, obj, printingOptions, al
 		outputWidth = outputWidth + coloredTextSink:WriteColor (tableName, printer:GetColor ("ResolvedIdentifier"))
 	else
 		if next (obj) then
+			-- { --[[ table: 0x00000000 ]] }
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("{ ", printer:GetColor ("Operator"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("--[[ ", printer:GetColor ("Comment"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (self:PadRight (self:GetClass (obj) or "table", "TableClass", alignmentController, alignmentSink), printer:GetColor ("Comment"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (": " .. string.format ("%p", obj) .. " ]]", printer:GetColor ("Comment"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (" }", printer:GetColor ("Operator"))
 		else
+			-- Empty table
+			-- {} --[[ table: 0x00000000 ]]
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("{}")
 			outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
 			outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ ", printer:GetColor ("Comment"))

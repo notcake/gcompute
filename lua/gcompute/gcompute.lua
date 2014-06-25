@@ -332,11 +332,13 @@ include ("glua/printing/playerprinter.lua")
 include ("glua/printing/panelprinter.lua")
 -- include ("glua/printing/physobjprinter.lua")
 
+-- include ("glua/printing/igmodaudiochannelprinter.lua")
+include ("glua/printing/soundpatchprinter.lua")
+
 -- include ("glua/printing/materialprinter.lua")
 include ("glua/printing/meshprinter.lua")
 -- include ("glua/printing/textureprinter.lua")
 
--- include ("glua/printing/igmodaudiochannelprinter.lua")
 -- include ("glua/printing/cusercmdprinter.lua")
 -- include ("glua/printing/cmovedataprinter.lua")
 -- include ("glua/printing/ctakedamageinfoprinter.lua")

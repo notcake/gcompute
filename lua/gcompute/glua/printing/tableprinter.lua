@@ -28,6 +28,7 @@ function self:PrintReference (printer, coloredTextSink, obj, printingOptions, al
 			outputWidth = outputWidth + coloredTextSink:WriteColor (" }", printer:GetColor ("Operator"))
 		else
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("{}")
+			outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
 			outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ ", printer:GetColor ("Comment"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (self:PadRight (self:GetClass (obj) or "table", "EmptyTableClass", alignmentController, alignmentSink), printer:GetColor ("Comment"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (": " .. string.format ("%p", obj) .. " ]]", printer:GetColor ("Comment"))

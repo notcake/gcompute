@@ -49,3 +49,15 @@ function self:PrintNameCommentLine (printer, coloredTextSink, obj)
 	coloredTextSink:WriteColor ("-- " .. objectName .. "\n", printer:GetColor ("Comment"))
 	return 3 + GLib.UTF8.Length (objectName) + 1
 end
+
+function self:PrintInlineCommentNamePart (printer, coloredTextSink, obj, alignmentController, alignmentSink)
+	local objectName = GLib.Lua.GetObjectName (obj)
+	if not objectName then return 0 end
+	
+	local outputWidth = 0
+	outputWidth = outputWidth + coloredTextSink:WriteColor (", ", printer:GetColor ("Comment"))
+	objectName = self:PadRight (objectName, "Name", alignmentController, alignmentSink)
+	outputWidth = outputWidth + coloredTextSink:WriteColor (objectName, printer:GetColor ("Comment"))
+	
+	return outputWidth
+end

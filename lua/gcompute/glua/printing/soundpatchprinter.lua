@@ -1,5 +1,5 @@
 local self = {}
-GCompute.GLua.Printing.MeshPrinter = GCompute.MakeConstructor (self, GCompute.GLua.Printing.ReferenceTypePrinter)
+GCompute.GLua.Printing.SoundPatchPrinter = GCompute.MakeConstructor (self, GCompute.GLua.Printing.ReferenceTypePrinter)
 
 function self:ctor ()
 end
@@ -37,10 +37,10 @@ function self:PrintExpression (printer, coloredTextSink, obj, printingOptions, a
 	
 	printingOptions = bit.band (printingOptions, bit.bnot (GCompute.GLua.Printing.PrintingOptions.TrimRight))
 	
-	outputWidth = outputWidth + coloredTextSink:WriteColor ("Mesh ", printer:GetColor ("ResolvedIdentifier"))
+	outputWidth = outputWidth + coloredTextSink:WriteColor ("CSoundPatch ", printer:GetColor ("ResolvedIdentifier"))
 	outputWidth = outputWidth + coloredTextSink:WriteColor ("()", printer:GetColor ("Operator"))
 	
 	return outputWidth
 end
 
-GCompute.GLua.Printing.MeshPrinter = GCompute.GLua.Printing.MeshPrinter ()
+GCompute.GLua.Printing.SoundPatchPrinter = GCompute.GLua.Printing.SoundPatchPrinter ()

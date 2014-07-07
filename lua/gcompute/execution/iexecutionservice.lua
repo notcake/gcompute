@@ -1,6 +1,15 @@
 local self = {}
 GCompute.Execution.IExecutionService = GCompute.MakeConstructor (self, GLib.IDisposable)
 
+--[[
+	Events:
+		CanCreateExecutionContext (authId, hostId, languageName)
+			Fired when an execution context is about to be created.
+		ExecutionContextCreated (IExecutionContext executionContext)
+			Fired when an execution context has been created.
+			
+]]
+
 function self:ctor ()
 end
 

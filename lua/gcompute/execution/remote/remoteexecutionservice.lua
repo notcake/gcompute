@@ -1,19 +1,43 @@
 local self = {}
 GCompute.Execution.RemoteExecutionService = GCompute.MakeConstructor (self, GCompute.Execution.IExecutionService)
 
+--[[
+	Events:
+		CanCreateExecutionContext (authId, hostId, languageName)
+			Fired when an execution context is about to be created.
+		ExecutionContextCreated (IExecutionContext executionContext)
+			Fired when an execution context has been created.
+			
+]]
+
 function self:ctor ()
+	GCompute.EventProvider (self)
 end
 
 function self:CanCreateExecutionContext (authId, hostId, languageName)
 	if not self:GetRemoteExecutionService () then return nil, GCompute.ReturnCode.NoCarrier end
 	
-	return self:GetRemoteExecutionService ():CanCreateExecutionContext (authId, hostId, languageName)
+	local allowed, denialReason = self:GetRemoteExecutionService ():CanCreateExecutionContext (authId, hostId, languageName)
+	if allowed == false then return false, denialReason end
+	
+	-- CanCreateExecutionContext event
+	allowed, denialReason = self:DispatchEvent ("CanCreateExecutionContext", authId, hostId, languageName)
+	if allowed == false then return false, denialReason end
+	
+	return true
 end
 
 function self:CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
 	if not self:GetRemoteExecutionService () then return nil, GCompute.ReturnCode.NoCarrier end
 	
-	return self:GetRemoteExecutionService ():CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
+	local executionContext, denialReason = self:GetRemoteExecutionService ():CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
+	
+	-- ExecutionContextCreated event
+	if executionContext then
+		self:DispatchEvent ("ExecutionContextCreated", executionContext)
+	end
+	
+	return executionContext, denialReason
 end
 
 function self:GetHostEnumerator ()

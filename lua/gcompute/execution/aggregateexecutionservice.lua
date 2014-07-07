@@ -1,66 +1,90 @@
 local self = {}
 GCompute.Execution.AggregateExecutionService = GCompute.MakeConstructor (self, GCompute.Execution.IExecutionService)
 
+--[[
+	Events:
+		CanCreateExecutionContext (authId, hostId, languageName)
+			Fired when an execution context is about to be created.
+		ExecutionContextCreated (IExecutionContext executionContext)
+			Fired when an execution context has been created.
+			
+]]
+
 function self:ctor ()
+	GCompute.EventProvider (self)
 end
 
 function self:CanCreateExecutionContext (authId, hostId, languageName)
-	-- Aggregate execution
-	if type (hostId) == "table" then
-		for _, hostId in ipairs (hostId) do
-			local allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
-			if not allowed then return false, denialReason end
-		end
-		return true
-	end
-	
-	-- Shared
-	if hostId == "Shared" then
-		local allowed, denialReason = self:CanCreateExecutionContext (authId, GLib.GetServerId (), languageName)
-		if not allowed then return false, denialReason end
-		hostId = "Clients"
-	end
-	
-	-- Clients
-	if hostId == "Clients" then
-		for hostId in GCompute.PlayerMonitor:GetUserEnumerator () do
-			local allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
-			if not allowed then return false, denialReason end
-		end
-		return true
-	end
-	
-	-- Local host
 	if hostId == "Self" then hostId = GLib.GetLocalId () end
-	if hostId == GLib.GetLocalId () then
-		return GCompute.Execution.LocalExecutionService:CanCreateExecutionContext (authId, hostId, languageName)
+	
+	local allowed, denialReason
+	if type (hostId) == "table" then
+		-- Aggregate execution
+		for _, hostId in ipairs (hostId) do
+			allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
+			if not allowed then return false, denialReason end
+		end
+	elseif hostId == "Shared" then
+		-- Shared
+		allowed, denialReason = self:CanCreateExecutionContext (authId, GLib.GetServerId (), languageName)
+		if not allowed then return false, denialReason end
+		
+		allowed, denialReason = self:CanCreateExecutionContext (authId, "Clients", languageName)
+		if not allowed then return false, denialReason end
+	elseif hostId == "Clients" then
+		-- Clients
+		for hostId in GCompute.PlayerMonitor:GetUserEnumerator () do
+			allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
+			if not allowed then return false, denialReason end
+		end
+	elseif hostId == GLib.GetLocalId () then
+		-- Local host
+		allowed, denialReason = GCompute.Execution.LocalExecutionService:CanCreateExecutionContext (authId, hostId, languageName)
+		if not allowed then return false, denialReason end
+	else
+		-- Remote host
+		allowed, denialReason = GCompute.Execution.RemoteExecutionService:CanCreateExecutionContext (authId, hostId, languageName)
+		if not allowed then return false, denialReason end
 	end
 	
-	-- Remote host
-	return GCompute.Execution.RemoteExecutionService:CanCreateExecutionContext (authId, hostId, languageName)
+	-- CanCreateExecutionContext event
+	allowed, denialReason = self:DispatchEvent ("CanCreateExecutionContext", authId, hostId, languageName)
+	if allowed == false then return false, denialReason end
+	
+	return true
 end
 
 function self:CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
 	if callback then GLib.CallSelfAsSync () return end
 	
+	-- Check if creation is allowed
 	local allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
 	if not allowed then return nil, denialReason end
 	
-	-- Aggregate execution
+	-- Create the execution context
+	local executionContext
+	
+	if hostId == "Self" then hostId = GLib.GetLocalId () end
+	
 	if type (hostId) == "table" or
 	   hostId == "Clients" or
 	   hostId == "Shared" then
-		return GCompute.Execution.AggregateExecutionContext (authId, hostId, languageName, contextOptions)
+		-- Aggregate execution
+		executionContext = GCompute.Execution.AggregateExecutionContext (authId, hostId, languageName, contextOptions)
+	elseif hostId == GLib.GetLocalId () then
+		-- Local host
+		executionContext, denialReason = GCompute.Execution.LocalExecutionService:CreateExecutionContext (authId, hostId, languageName, contextOptions)
+	else
+		-- Remote host
+		executionContext, denialReason = GCompute.Execution.RemoteExecutionService:CreateExecutionContext (authId, hostId, languageName, contextOptions)
 	end
 	
-	-- Local host
-	if hostId == "Self" then hostId = GLib.GetLocalId () end
-	if hostId == GLib.GetLocalId () then
-		return GCompute.Execution.LocalExecutionService:CreateExecutionContext (authId, hostId, languageName, contextOptions)
+	-- ExecutionContextCreated event
+	if executionContext then
+		self:DispatchEvent ("ExecutionContextCreated", executionContext)
 	end
 	
-	-- Remote host
-	return GCompute.Execution.RemoteExecutionService:CreateExecutionContext (authId, hostId, languageName, contextOptions)
+	return executionContext, denialReason
 end
 
 local targets =

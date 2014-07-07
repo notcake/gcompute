@@ -10,7 +10,7 @@ function self:Compile ()
 	if self:IsCompiled  () then return end
 	
 	self:SetState (GCompute.Execution.ExecutionInstanceState.Compiling)
-	self:SetState (GCompute.Execution.ExecutionInstanceState.Compiled)
+	self:SetState (GCompute.Execution.ExecutionInstanceState.Compiled )
 end
 
 function self:Start ()

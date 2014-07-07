@@ -1,10 +1,24 @@
 local self = {}
 GCompute.Execution.LocalExecutionService = GCompute.MakeConstructor (self, GCompute.Execution.IExecutionService)
 
+--[[
+	Events:
+		CanCreateExecutionContext (authId, hostId, languageName)
+			Fired when an execution context is about to be created.
+		ExecutionContextCreated (IExecutionContext executionContext)
+			Fired when an execution context has been created.
+			
+]]
+
 function self:ctor ()
+	GCompute.EventProvider (self)
 end
 
 function self:CanCreateExecutionContext (authId, hostId, languageName)
+	-- CanCreateExecutionContext event
+	local allowed, denialReason = self:DispatchEvent ("CanCreateExecutionContext", authId, hostId, languageName)
+	if allowed == false then return false, denialReason end
+	
 	-- Check permissions
 	if authId ~= GLib.GetLocalId () and
 	   (not GCompute.PlayerMonitor:GetUserEntity (authId) or not GCompute.PlayerMonitor:GetUserEntity (authId):IsSuperAdmin ()) then
@@ -30,18 +44,29 @@ end
 function self:CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
 	if callback then GLib.CallSelfAsSync () return end
 	
+	-- Check if creation is allowed
 	local allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
 	if not allowed then return nil, denialReason end
 	
+	-- Create the execution context
+	local executionContext
+	
 	if languageName == "Console" then
-		return GCompute.Execution.ConsoleExecutionContext (authId, contextOptions), GCompute.ReturnCode.Success
+		executionContext = GCompute.Execution.ConsoleExecutionContext (authId, contextOptions), GCompute.ReturnCode.Success
 	-- elseif languageName == "Terminal Emulator" then
-	-- 	return GCompute.Execution.TerminalEmulatorExecutionContext (authId, contextOptions), GCompute.ReturnCode.Success
+	-- 	executionContext = GCompute.Execution.TerminalEmulatorExecutionContext (authId, contextOptions), GCompute.ReturnCode.Success
 	elseif languageName == "GLua" then
-		return GCompute.Execution.GLuaExecutionContext (authId, contextOptions), GCompute.ReturnCode.Success
+		executionContext = GCompute.Execution.GLuaExecutionContext (authId, contextOptions), GCompute.ReturnCode.Success
+	else
+		denialReason = GCompute.ReturnCode.NotSupported
 	end
 	
-	return nil, GCompute.ReturnCode.NotSupported
+	-- ExecutionContextCreated event
+	if executionContext then
+		self:DispatchEvent ("ExecutionContextCreated", executionContext)
+	end
+	
+	return executionContext, denialReason
 end
 
 function self:GetHostEnumerator ()

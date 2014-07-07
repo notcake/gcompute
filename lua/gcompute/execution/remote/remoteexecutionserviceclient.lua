@@ -2,6 +2,15 @@ local self = {}
 GCompute.Execution.RemoteExecutionServiceClient = GCompute.MakeConstructor (self, GLib.Networking.SingleEndpointNetworkable, GCompute.Execution.IExecutionService)
 GCompute.Services.RemoteServiceRegistry:RegisterServiceClient ("ExecutionService", GCompute.Execution.RemoteExecutionServiceClient)
 
+--[[
+	Events:
+		CanCreateExecutionContext (authId, hostId, languageName)
+			Fired when an execution context is about to be created.
+		ExecutionContextCreated (IExecutionContext executionContext)
+			Fired when an execution context has been created.
+			
+]]
+
 function self:ctor ()
 	GCompute.Debug ("RemoteExecutionServiceClient:ctor ()")
 end
@@ -20,11 +29,14 @@ end
 
 -- Networkable
 function self:HandlePacket (sourceId, inBuffer)
-	
 end
 
 -- IExecutionService
 function self:CanCreateExecutionContext (authId, hostId, languageName)
+	-- CanCreateExecutionContext event
+	local allowed, denialReason = self:DispatchEvent ("CanCreateExecutionContext", authId, hostId, languageName)
+	if allowed == false then return false, denialReason end
+	
 	return true
 end
 
@@ -78,6 +90,11 @@ function self:CreateExecutionContext (authId, hostId, languageName, contextOptio
 	executionContextClient:SetRemoteId (self:GetRemoteId ())
 	
 	self.NetworkableHost:RegisterNetworkable (executionContextClient, networkableId)
+	
+	-- ExecutionContextCreated event
+	if executionContext then
+		self:DispatchEvent ("ExecutionContextCreated", executionContext)
+	end
 	
 	return executionContextClient
 end

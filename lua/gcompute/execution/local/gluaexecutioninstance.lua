@@ -112,7 +112,7 @@ function self:Start ()
 	if self:IsTerminated () then return end
 	
 	-- CanStartExecution event
-	if not self:DispatchEvent ("CanStartExecution") then return end
+	if not self:DispatchEvent ("CanStartExecution") == false then return end
 	
 	if GLib.CallSelfInThread () then return end
 	

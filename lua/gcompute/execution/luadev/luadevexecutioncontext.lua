@@ -23,7 +23,7 @@ function self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
 	
 	-- CanCreateExecutionInstance event
 	local allowed, denialReason = self:DispatchEvent ("CanCreateExecutionInstance", code, sourceId, instanceOptions)
-	if not allowed then return false, denialReason end
+	if allowed == false then return false, denialReason end
 	
 	if istable (hostId)    then return true end
 	if hostId == "Server"  then return true end

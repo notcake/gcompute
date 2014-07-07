@@ -26,7 +26,7 @@ function self:Start ()
 	if self:IsTerminated () then return end
 	
 	-- CanStartExecution event
-	if not self:DispatchEvent ("CanStartExecution") then return end
+	if self:DispatchEvent ("CanStartExecution") == false then return end
 	
 	if not self:IsCompiled () then
 		self:Compile ()

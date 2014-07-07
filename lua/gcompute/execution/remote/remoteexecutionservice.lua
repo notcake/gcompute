@@ -18,7 +18,7 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 	if not self:GetRemoteExecutionService () then return nil, GCompute.ReturnCode.NoCarrier end
 	
 	local allowed, denialReason = self:GetRemoteExecutionService ():CanCreateExecutionContext (authId, hostId, languageName)
-	if allowed == false then return false, denialReason end
+	if not allowed then return false, denialReason end
 	
 	-- CanCreateExecutionContext event
 	allowed, denialReason = self:DispatchEvent ("CanCreateExecutionContext", authId, hostId, languageName)

@@ -95,7 +95,7 @@ end
 
 function self:Start ()
 	-- CanStartExecution event
-	if not self:DispatchEvent ("CanStartExecution") then return end
+	if not self:DispatchEvent ("CanStartExecution") == false then return end
 	
 	local outBuffer = GLib.Net.OutBuffer ()
 	outBuffer:UInt32 (0)

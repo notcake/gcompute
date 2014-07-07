@@ -1,6 +1,15 @@
 local self = {}
 GCompute.Execution.LuadevExecutionContext = GCompute.MakeConstructor (self, GCompute.Execution.ExecutionContext)
 
+--[[
+	Events:
+		CanCreateExecutionInstance (code, sourceId, instanceOptions)
+			Fired when an execution instance is about to be created.
+		ExecutionInstanceCreated (IExecutionInstance executionInstance)
+			Fired when an execution instance has been created.
+			
+]]
+
 function self:ctor (ownerId, hostId, languageName, contextOptions)
 	self.HostId  = hostId
 	self.OwnerId = ownerId
@@ -9,8 +18,12 @@ function self:ctor (ownerId, hostId, languageName, contextOptions)
 end
 
 -- Internal, do not call
-function self:CanCreateExecutionInstance ()
+function self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
 	local hostId = self:GetHostId ()
+	
+	-- CanCreateExecutionInstance event
+	local allowed, denialReason = self:DispatchEvent ("CanCreateExecutionInstance", code, sourceId, instanceOptions)
+	if not allowed then return false, denialReason end
 	
 	if istable (hostId)    then return true end
 	if hostId == "Server"  then return true end

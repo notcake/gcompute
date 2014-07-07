@@ -1,6 +1,15 @@
 local self = {}
 GCompute.Execution.ExecutionContext = GCompute.MakeConstructor (self, GCompute.Execution.IExecutionContext)
 
+--[[
+	Events:
+		CanCreateExecutionInstance (code, sourceId, instanceOptions)
+			Fired when an execution instance is about to be created.
+		ExecutionInstanceCreated (IExecutionInstance executionInstance)
+			Fired when an execution instance has been created.
+			
+]]
+
 function self:ctor ()
 	self.HostId  = nil
 	self.OwnerId = nil
@@ -8,12 +17,22 @@ function self:ctor ()
 	self.ContextOptions = GCompute.Execution.ExecutionContextOptions.None
 	
 	self.NextInstanceId = 0
+	
+	GCompute.EventProvider (self)
+end
+
+function self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
+	-- CanCreateExecutionInstance event
+	local allowed, denialReason = self:DispatchEvent ("CanCreateExecutionInstance", code, sourceId, instanceOptions)
+	if not allowed then return false, denialReason end
+	
+	return true
 end
 
 function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback)
 	if callback then GLib.CallSelfAsSync () return end
 	
-	-- Check
+	-- Check if creation is allowed
 	local allowed, denialReason = self:CanCreateExecutionInstance ()
 	if not allowed then return false, denialReason end
 	
@@ -26,6 +45,9 @@ function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback
 	end
 	
 	executionInstance:AddSourceFile (code, sourceId)
+	
+	-- ExecutionInstanceCreated event
+	self:DispatchEvent ("ExecutionInstanceCreated", executionInstance)
 	
 	-- Execute
 	if bit.band (instanceOptions, GCompute.Execution.ExecutionInstanceOptions.ExecuteImmediately) ~= 0 then
@@ -60,10 +82,6 @@ function self:AllocateInstanceId ()
 	local instanceId = self.NextInstanceId
 	self.NextInstanceId = self.NextInstanceId + 1
 	return instanceId
-end
-
-function self:CanCreateExecutionInstance ()
-	return true
 end
 
 function self:GetExecutionInstanceConstructor ()

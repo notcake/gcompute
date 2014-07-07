@@ -1,6 +1,15 @@
 local self = {}
 GCompute.Execution.RemoteExecutionContextClient = GCompute.MakeConstructor (self, GLib.Networking.SingleEndpointNetworkable, GCompute.Execution.IExecutionContext)
 
+--[[
+	Events:
+		CanCreateExecutionInstance (code, sourceId, instanceOptions)
+			Fired when an execution instance is about to be created.
+		ExecutionInstanceCreated (IExecutionInstance executionInstance)
+			Fired when an execution instance has been created.
+			
+]]
+
 function self:ctor (remoteExecutionServiceClient, inBuffer)
 	GCompute.Debug ("RemoteExecutionContextClient:ctor ()")
 	
@@ -25,14 +34,25 @@ end
 
 -- Networkable
 function self:HandlePacket (sourceId, inBuffer)
-	
 end
 
 -- IExecutionContext
+function self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
+	-- CanCreateExecutionInstance event
+	local allowed, denialReason = self:DispatchEvent ("CanCreateExecutionInstance", code, sourceId, instanceOptions)
+	if allowed == false then return false, denialReason end
+	
+	return true
+end
+
 function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback)
 	if callback then GLib.CallSelfAsSync () return end
 	
 	if self:IsDisposed () then return nil, GCompute.ReturnCode.NoCarrier end
+	
+	-- Check if creation is allowed
+	local allowed, denialReason = self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
+	if not allowed then return nil, denialReason end
 	
 	-- Create request session
 	local connection = self.NetworkableHost:CreateConnection (self:GetRemoteId (), GLib.Net.ConnectionEndpoint.Local)
@@ -67,6 +87,9 @@ function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback
 	executionInstanceClient:SetRemoteId (self:GetRemoteId ())
 	
 	self.NetworkableHost:RegisterStrongNetworkable (executionInstanceClient, networkableId)
+	
+	-- ExecutionInstanceCreated event
+	self:DispatchEvent ("ExecutionInstanceCreated", executionInstanceClient)
 	
 	return executionInstanceClient
 end

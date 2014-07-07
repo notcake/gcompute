@@ -45,7 +45,7 @@ function self:CreateExecutionContext (authId, hostId, languageName, contextOptio
 	
 	if self:IsDisposed () then return nil, GCompute.ReturnCode.NoCarrier end
 	
-	-- Check
+	-- Check if creation is allowed
 	local allowed, denialReason = self:CanCreateExecutionContext (authId, hostId, languageName)
 	if not allowed then return nil, denialReason end
 	
@@ -92,9 +92,7 @@ function self:CreateExecutionContext (authId, hostId, languageName, contextOptio
 	self.NetworkableHost:RegisterNetworkable (executionContextClient, networkableId)
 	
 	-- ExecutionContextCreated event
-	if executionContext then
-		self:DispatchEvent ("ExecutionContextCreated", executionContext)
-	end
+	self:DispatchEvent ("ExecutionContextCreated", executionContextClient)
 	
 	return executionContextClient
 end

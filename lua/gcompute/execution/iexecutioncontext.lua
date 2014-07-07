@@ -1,7 +1,20 @@
 local self = {}
 GCompute.Execution.IExecutionContext = GCompute.MakeConstructor (self, GLib.IDisposable)
 
+--[[
+	Events:
+		CanCreateExecutionInstance (code, sourceId, instanceOptions)
+			Fired when an execution instance is about to be created.
+		ExecutionInstanceCreated (IExecutionInstance executionInstance)
+			Fired when an execution instance has been created.
+			
+]]
+
 function self:ctor ()
+end
+
+function self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
+	GCompute.Error ("IExecutionContext:CanCreateExecutionInstance : Not implemented.")
 end
 
 function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback)

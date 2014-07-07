@@ -33,7 +33,7 @@ function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback
 	if callback then GLib.CallSelfAsSync () return end
 	
 	-- Check if creation is allowed
-	local allowed, denialReason = self:CanCreateExecutionInstance ()
+	local allowed, denialReason = self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
 	if not allowed then return false, denialReason end
 	
 	-- Create execution instance

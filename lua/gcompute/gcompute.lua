@@ -385,7 +385,11 @@ include ("execution/luadev/luadevexecutionservice.lua")
 include ("execution/luadev/luadevexecutioncontext.lua")
 include ("execution/luadev/luadevexecutioninstance.lua")
 
+include ("execution/iexecutionfilterable.lua")
+include ("execution/executionserviceexecutionfilterable.lua")
+
 include ("execution/executionservice.lua")
+include ("execution/executionfilterable.lua")
 
 GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 

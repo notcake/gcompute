@@ -1,6 +1,14 @@
 local self = {}
 GCompute.Execution.RemoteExecutionInstanceClient = GCompute.MakeConstructor (self, GLib.Networking.SingleEndpointNetworkable, GCompute.Execution.IExecutionInstance)
 
+--[[
+	Events:
+		CanStartExecution ()
+			Fired when this instance is about to start execution.
+		StateChanged (state)
+			Fired when this instance's state has changed.
+]]
+
 function self:ctor (remoteExecutionContextClient, inBuffer)
 	self.ExecutionContext = remoteExecutionContextClient
 	
@@ -86,6 +94,9 @@ function self:Compile ()
 end
 
 function self:Start ()
+	-- CanStartExecution event
+	if not self:DispatchEvent ("CanStartExecution") then return end
+	
 	local outBuffer = GLib.Net.OutBuffer ()
 	outBuffer:UInt32 (0)
 	outBuffer:StringN16 ("Start")

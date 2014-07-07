@@ -1,6 +1,14 @@
 local self = {}
 GCompute.Execution.LuadevExecutionInstance = GCompute.MakeConstructor (self, GCompute.Execution.LocalExecutionInstance)
 
+--[[
+	Events:
+		CanStartExecution ()
+			Fired when this instance is about to start execution.
+		StateChanged (state)
+			Fired when this instance's state has changed.
+]]
+
 function self:ctor (luadevExecutionContext, instanceOptions)
 end
 
@@ -16,6 +24,9 @@ end
 function self:Start ()
 	if self:IsStarted    () then return end
 	if self:IsTerminated () then return end
+	
+	-- CanStartExecution event
+	if not self:DispatchEvent ("CanStartExecution") then return end
 	
 	if not self:IsCompiled () then
 		self:Compile ()

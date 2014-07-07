@@ -1,6 +1,14 @@
 local self = {}
 GCompute.Execution.LocalExecutionInstance = GCompute.MakeConstructor (self, GCompute.Execution.IExecutionInstance)
 
+--[[
+	Events:
+		CanStartExecution ()
+			Fired when this instance is about to start execution.
+		StateChanged (state)
+			Fired when this instance's state has changed.
+]]
+
 function self:ctor (executionContext, instanceOptions)
 	self.ExecutionContext = executionContext
 	self.InstanceOptions  = instanceOptions

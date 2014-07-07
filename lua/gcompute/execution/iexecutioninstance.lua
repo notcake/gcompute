@@ -3,6 +3,8 @@ GCompute.Execution.IExecutionInstance = GCompute.MakeConstructor (self, GLib.IDi
 
 --[[
 	Events:
+		CanStartExecution ()
+			Fired when this instance is about to start execution.
 		StateChanged (state)
 			Fired when this instance's state has changed.
 ]]

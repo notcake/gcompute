@@ -62,6 +62,7 @@ function self:Serialize (outBuffer)
 		outBuffer:StringN16 (hostId)
 	end
 	
+	outBuffer:StringN16 (self.ExecutionContext:GetLanguageName ())
 	outBuffer:UInt32 (self.ExecutionContext:GetContextOptions ())
 end
 

@@ -11,8 +11,10 @@ GCompute.Execution.LuadevExecutionContext = GCompute.MakeConstructor (self, GCom
 ]]
 
 function self:ctor (ownerId, hostId, languageName, contextOptions)
-	self.HostId  = hostId
-	self.OwnerId = ownerId
+	self.HostId         = hostId
+	self.OwnerId        = ownerId
+	
+	self.LanguageName   = languageName
 	
 	self.ContextOptions = contextOptions
 end

@@ -11,8 +11,10 @@ GCompute.Execution.ExecutionContext = GCompute.MakeConstructor (self, GCompute.E
 ]]
 
 function self:ctor ()
-	self.HostId  = nil
-	self.OwnerId = nil
+	self.HostId         = nil
+	self.OwnerId        = nil
+	
+	self.LanguageName   = nil
 	
 	self.ContextOptions = GCompute.Execution.ExecutionContextOptions.None
 	
@@ -63,6 +65,10 @@ end
 
 function self:GetOwnerId ()
 	return self.OwnerId
+end
+
+function self:GetLanguageName ()
+	return self.LanguageName
 end
 
 function self:GetContextOptions ()

@@ -29,6 +29,10 @@ function self:GetOwnerId ()
 	GCompute.Error ("IExecutionContext:GetOwnerId : Not implemented.")
 end
 
+function self:GetLanguageName ()
+	GCompute.Error ("IExecutionContext:GetLanguageName : Not implemented.")
+end
+
 function self:GetContextOptions ()
 	GCompute.Error ("IExecutionContext:GetContextOptions : Not implemented.")
 end

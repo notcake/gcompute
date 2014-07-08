@@ -13,8 +13,9 @@ GCompute.Execution.RemoteExecutionContextClient = GCompute.MakeConstructor (self
 function self:ctor (remoteExecutionServiceClient, inBuffer)
 	GCompute.Debug ("RemoteExecutionContextClient:ctor ()")
 	
-	self.HostId  = nil
-	self.OwnerId = nil
+	self.HostId         = nil
+	self.OwnerId        = nil
+	self.LanguageName   = nil
 	self.ContextOptions = GCompute.Execution.ExecutionContextOptions.None
 	
 	self:Deserialize (inBuffer)
@@ -120,5 +121,6 @@ function self:Deserialize (inBuffer)
 		end
 	end
 	
+	self.LanguageName   = inBuffer:StringN16 ()
 	self.ContextOptions = inBuffer:UInt32 ()
 end

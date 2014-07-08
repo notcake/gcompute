@@ -34,8 +34,7 @@ function self:PrintMultiline (printer, coloredTextSink, obj, printingOptions, al
 	local valid = obj:IsValid ()
 	
 	-- worldspawn
-	if CLIENT and obj == Entity (0)       then valid = true end
-	if SERVER and obj == game.GetWorld () then valid = true end
+	if obj == game.GetWorld () then valid = true end
 	
 	-- Address
 	outputWidth = outputWidth + self:PrintAddressCommentLine (printer, coloredTextSink, obj)
@@ -71,8 +70,7 @@ function self:PrintInline (printer, coloredTextSink, obj, printingOptions, align
 	local valid = obj:IsValid ()
 	
 	-- worldspawn
-	if CLIENT and obj == Entity (0)       then valid = true end
-	if SERVER and obj == game.GetWorld () then valid = true end
+	if obj == game.GetWorld () then valid = true end
 	
 	if valid then
 		outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
@@ -99,8 +97,7 @@ function self:PrintExpression (printer, coloredTextSink, obj, printingOptions, a
 	local valid = obj:IsValid ()
 	
 	-- worldspawn
-	if CLIENT and obj == Entity (0)       then valid = true end
-	if SERVER and obj == game.GetWorld () then valid = true end
+	if obj == game.GetWorld () then valid = true end
 	
 	if valid then
 		if obj:EntIndex () < 0 and obj:GetModel () and obj:GetModel () ~= "" then
@@ -108,7 +105,7 @@ function self:PrintExpression (printer, coloredTextSink, obj, printingOptions, a
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("(", printer:GetColor ("Operator"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (self:PadRight ("\"" .. obj:GetModel () .. "\"", "EntityClientsideModel", alignmentController, alignmentSink), printer:GetColor ("String"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (")", printer:GetColor ("Operator"))
-		elseif SERVER and obj:EntIndex () == 0 and obj == game.GetWorld () then
+		elseif obj == game.GetWorld () then
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("game", printer:GetColor ("ResolvedIdentifier"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor (".", printer:GetColor ("Operator"))
 			outputWidth = outputWidth + coloredTextSink:WriteColor ("GetWorld ", printer:GetColor ("ResolvedIdentifier"))

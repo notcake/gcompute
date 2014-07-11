@@ -693,8 +693,20 @@ function PANEL:ReplaceSelectionText (text, pasted)
 		
 		undoRedoItem = GCompute.CodeEditor.ReplacementAction (self, selectionStart, selectionEnd, originalText, text)
 	end
+	
 	undoRedoItem:Redo ()
-	self:GetUndoRedoStack ():Push (undoRedoItem)
+	
+	local previousUndoRedoItem = self:GetUndoRedoStack ():GetUndoItem ()
+	if undoRedoItem:Is (GCompute.CodeEditor.InsertionAction) and
+	   previousUndoRedoItem and
+	   previousUndoRedoItem:Is (GCompute.CodeEditor.InsertionAction) then
+		-- Merge insertion actions
+		previousUndoRedoItem:SetText (previousUndoRedoItem:GetText () .. undoRedoItem:GetText ())
+		previousUndoRedoItem:SetFinalLocation (undoRedoItem:GetFinalLocation ())
+		self:GetUndoRedoStack ():GetRedoStack ():Clear ()
+	else
+		self:GetUndoRedoStack ():Push (undoRedoItem)
+	end
 	
 	if not pasted then
 		-- Auto-outdentation

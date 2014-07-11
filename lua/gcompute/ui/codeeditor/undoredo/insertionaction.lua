@@ -5,6 +5,8 @@ function self:ctor (codeEditor, insertionLocation, text)
 	self.CodeEditor = codeEditor
 	self.Document = self.CodeEditor:GetDocument ()
 	
+	self.Verb = nil
+	
 	self.InsertionLocation = GCompute.CodeEditor.LineCharacterLocation (insertionLocation)
 	self.Text = text
 	
@@ -22,20 +24,38 @@ function self:Redo ()
 	self.CodeEditor:ScrollToCaret ()
 end
 
+function self:GetFinalLocation ()
+	return self.FinalLocation
+end
+
+function self:GetText ()
+	return self.Text
+end
+
 function self:SetFinalLocation (finalLocation)
 	self.FinalLocation:CopyFrom (finalLocation)
 end
 
 function self:SetText (text)
+	if self.Text == text then return self end
+	
 	self.Text = text
 	
-	self:SetDescription (verb .. " \"" .. GLib.String.Escape (GLib.UTF8.Sub (self.Text, 1, 32)) .. "\"")
+	self:SetDescription (self.Verb .. " \"" .. GLib.String.Escape (GLib.UTF8.Sub (self.Text, 1, 32)) .. "\"")
+	
+	return self
 end
 
 function self:SetVerb (verb)
 	verb = verb or "insert"
 	
-	self:SetDescription (verb .. " \"" .. GLib.String.Escape (GLib.UTF8.Sub (self.Text, 1, 32)) .. "\"")
+	if self.Verb == verb then return self end
+	
+	self.Verb = verb
+	
+	self:SetDescription (self.Verb .. " \"" .. GLib.String.Escape (GLib.UTF8.Sub (self.Text, 1, 32)) .. "\"")
+	
+	return self
 end
 
 function self:Undo ()

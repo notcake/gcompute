@@ -50,7 +50,7 @@ function self:dtor ()
 		executionInstance:dtor ()
 	end
 	
-	self.ExecutionInstances = nil
+	self.ExecutionInstances = {}
 end
 
 -- IExecutionInstance

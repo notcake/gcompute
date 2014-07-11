@@ -56,6 +56,8 @@ function self:dtor ()
 	for _, executionContext in ipairs (self.ExecutionContexts) do
 		executionContext:dtor ()
 	end
+	
+	self.ExecutionContexts = {}
 end
 
 -- IExecutionContext

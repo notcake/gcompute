@@ -68,133 +68,69 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	self.LastStdOut = stdOut
 	self.LastStdErr = stdErr
 	
+	local function ExecuteCode (hostId)
+		if GLib.CallSelfInThread () then return end
+		
+		local document = codeEditor:GetDocument ()
+		local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
+		
+		local code = codeEditor:GetText ()
+		if not self:ValidateCode (code, fileId, compilerStdOut, compilerStdErr) then return end
+		
+		-- Execution context
+		local executionContext, returnCode = GCompute.Execution.ExecutionService:CreateExecutionContext (GLib.GetLocalId (), hostId, "GLua", GCompute.Execution.ExecutionContextOptions.EasyContext)
+		if not executionContext then
+			compilerStdErr:WriteLine ("Failed to create execution context (" .. GCompute.ReturnCode [returnCode] .. ").")
+			return
+		end
+		
+		-- Execution instance
+		local executionInstance, returnCode = executionContext:CreateExecutionInstance (code, nil, GCompute.Execution.ExecutionInstanceOptions.EasyContext + GCompute.Execution.ExecutionInstanceOptions.ExecuteImmediately + GCompute.Execution.ExecutionInstanceOptions.CaptureOutput)
+		if executionInstance then
+			executionInstance:GetCompilerStdOut ():ChainTo (compilerStdOut)
+			executionInstance:GetCompilerStdErr ():ChainTo (compilerStdErr)
+			executionInstance:GetStdOut ():ChainTo (stdOut)
+			executionInstance:GetStdErr ():ChainTo (stdErr)
+		else
+			compilerStdErr:WriteLine ("Failed to create execution instance (" .. GCompute.ReturnCode [returnCode] .. ").")
+		end
+	end
+	
 	local menu = Gooey.Menu ()
 	local playerMenu = Gooey.Menu ()
 	menu:AddItem ("Run on self")
 		:SetIcon ("icon16/user_go.png")
 		:AddEventListener ("Click",
 			function ()
-				local document = codeEditor:GetDocument ()
-				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
-				
-				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
-				
-				local code = ""
-				code = code .. "local ErrorNoHalt = ErrorNoHalt "
-				code = code .. "local Msg         = Msg "
-				code = code .. "local MsgN        = MsgN "
-				code = code .. "local MsgC        = MsgC "
-				code = code .. "local print       = print "
-				code = code .. codeEditor:GetText ()
-				local f = CompileString (code, fileId)
-				
-				local _ErrorNoHalt = ErrorNoHalt
-				local _Msg         = Msg
-				local _MsgN        = MsgN
-				local _MsgC        = MsgC
-				local _print       = print
-				
-				local function makeOutputter (outputFunction, separator)
-					return function (...)
-						local args = {...}
-						for i = 1, table.maxn (args) do
-							args [i] = tostring (args [i])
-						end
-						outputFunction (table.concat (args, separator))
-					end
-				end
-				ErrorNoHalt = makeOutputter (
-					function (text)
-						stdErr:WriteLine (text)
-						_ErrorNoHalt (text)
-					end
-				)
-				Msg = makeOutputter (
-					function (text)
-						stdOut:WriteColor (text, GLib.Colors.SandyBrown)
-					end
-				)
-				MsgN = makeOutputter (
-					function (text)
-						stdOut:WriteColor (text .. "\n", GLib.Colors.SandyBrown)
-					end
-				)
-				MsgC = function (color, ...)
-					local args = {...}
-					for i = 1, table.maxn (args) do
-						args [i] = tostring (args [i])
-					end
-					
-					stdOut:WriteColor (
-						table.concat (args),
-						type (color) == "table" and
-						type (color.r) == "number" and
-						type (color.g) == "number" and
-						type (color.b) == "number" and
-						type (color.a) == "number" and
-						color or GLib.Colors.White
-					)
-				end
-				print = makeOutputter (
-					function (text)
-						stdOut:WriteLine (text)
-					end,
-					"\t"
-				)
-				
-				xpcall (f,
-					function (message)
-						stdErr:WriteLine (message)
-						stdErr:WriteLine (GLib.StackTrace (nil, 3))
-						_ErrorNoHalt (message)
-					end
-				)
-				
-				ErrorNoHalt = _ErrorNoHalt
-				Msg         = _Msg
-				MsgN        = _MsgN
-				MsgC        = _MsgC
-				print       = _print
+				ExecuteCode (GLib.GetLocalId ())
 			end
 		)
 	menu:AddItem ("Run on server")
-		:SetEnabled (luadev ~= nil)
+		:SetEnabled (GCompute.Execution.RemoteExecutionService:IsAvailable ())
 		:SetIcon ("icon16/server_go.png")
 		:AddEventListener ("Click",
 			function ()
-				local document = codeEditor:GetDocument ()
-				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
-				
-				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
-				luadev.RunOnServer (codeEditor:GetText ())
+				ExecuteCode (GLib.GetServerId ())
 			end
 		)
 	menu:AddItem ("Run on client")
-		:SetEnabled (luadev ~= nil)
+		:SetEnabled (GCompute.Execution.RemoteExecutionService:IsAvailable ())
 		:SetIcon ("icon16/user_go.png")
 		:SetSubMenu (playerMenu)
 	menu:AddItem ("Run on clients")
-		:SetEnabled (luadev ~= nil)
+		:SetEnabled (GCompute.Execution.RemoteExecutionService:IsAvailable ())
 		:SetIcon ("icon16/group_go.png")
 		:AddEventListener ("Click",
 			function ()
-				local document = codeEditor:GetDocument ()
-				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
-				
-				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
-				luadev.RunOnClients (codeEditor:GetText ())
+				ExecuteCode ("Clients")
 			end
 		)
 	menu:AddItem ("Run on shared")
-		:SetEnabled (luadev ~= nil)
+		:SetEnabled (GCompute.Execution.RemoteExecutionService:IsAvailable ())
 		:SetIcon ("icon16/world_go.png")
 		:AddEventListener ("Click",
 			function ()
-				local document = codeEditor:GetDocument ()
-				local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
-				
-				if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
-				luadev.RunOnShared (codeEditor:GetText ())
+				ExecuteCode ("Shared")
 			end
 		)
 	menu:AddEventListener ("MenuClosed",
@@ -212,15 +148,11 @@ function self:Run (codeEditor, compilerStdOut, compilerStdErr, stdOut, stdErr)
 	)
 	for _, v in ipairs (players) do
 		playerMenu:AddItem (v:Name ())
-			:SetEnabled (luadev ~= nil)
+			:SetEnabled (GCompute.Execution.RemoteExecutionService:IsAvailable ())
 			:SetIcon (v:IsAdmin () and "icon16/shield_go.png" or "icon16/user_go.png")
 			:AddEventListener ("Click",
 				function ()
-					local document = codeEditor:GetDocument ()
-					local fileId = document:HasUri () and document:GetUri () or ("@anonymous_" .. document:GetId ())
-					
-					if not self:ValidateCode (codeEditor:GetText (), fileId, compilerStdOut, compilerStdErr) then return end
-					luadev.RunOnClient (codeEditor:GetText (), nil, v)
+					ExecuteCode (GLib.GetPlayerId (v))
 				end
 			)
 	end

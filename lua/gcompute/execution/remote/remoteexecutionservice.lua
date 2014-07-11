@@ -14,6 +14,7 @@ function self:ctor ()
 	GCompute.EventProvider (self)
 end
 
+-- IExecutionService
 function self:CanCreateExecutionContext (authId, hostId, languageName)
 	if not self:GetRemoteExecutionService () then return nil, GCompute.ReturnCode.NoCarrier end
 	
@@ -50,7 +51,7 @@ function self:GetLanguageEnumerator ()
 	return self:GetRemoteExecutionService ():GetLanguageEnumerator ()
 end
 
--- Internal, do not call
+-- RemoteExecutionService
 function self:GetRemoteExecutionService ()
 	if GCompute.Execution.GComputeRemoteExecutionService:IsAvailable () then
 		return GCompute.Execution.GComputeRemoteExecutionService
@@ -59,6 +60,10 @@ function self:GetRemoteExecutionService ()
 	end
 	
 	return nil
+end
+
+function self:IsAvailable ()
+	return self:GetRemoteExecutionService () ~= nil
 end
 
 GCompute.Execution.RemoteExecutionService = GCompute.Execution.RemoteExecutionService ()

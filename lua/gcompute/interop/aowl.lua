@@ -2,15 +2,16 @@ if not SERVER then return end
 
 local function RegisterAowlCommands ()
 	local function ExecuteExpression (ownerId, hostId, expression)
-		local executionContext, returnCode = GCompute.Execution.ExecutionService:CreateExecutionContext (ownerId, hostId, "GLua", GCompute.Execution.ExecutionContextOptions.EasyContext + GCompute.Execution.ExecutionContextOptions.Repl)
+		if GLib.CallSelfInThread () then return end
 		
+		-- Execution context
+		local executionContext, returnCode = GCompute.Execution.ExecutionService:CreateExecutionContext (ownerId, hostId, "GLua", GCompute.Execution.ExecutionContextOptions.EasyContext + GCompute.Execution.ExecutionContextOptions.Repl)
 		if not executionContext then
 			print ("Failed to create execution context (" .. GCompute.ReturnCode [returnCode] .. ").")
 			return
 		end
 		
 		local executionInstance, returnCode = executionContext:CreateExecutionInstance (expression, nil, GCompute.Execution.ExecutionInstanceOptions.EasyContext + GCompute.Execution.ExecutionInstanceOptions.ExecuteImmediately + GCompute.Execution.ExecutionInstanceOptions.CaptureOutput + GCompute.Execution.ExecutionInstanceOptions.SuppressHostOutput)
-		
 		if executionInstance then
 			executionInstance:GetCompilerStdOut ():ChainTo (GCompute.Text.ConsoleTextSink)
 			executionInstance:GetCompilerStdErr ():ChainTo (GCompute.Text.ConsoleTextSink)
@@ -31,15 +32,9 @@ local function RegisterAowlCommands ()
 			
 			-- Line break
 			GCompute.Text.ConsoleTextSink:WriteOptionalLineBreak ()
-			
-			executionInstance:dtor ()
-			executionInstance = nil
 		else
 			print ("Failed to create execution instance (" .. GCompute.ReturnCode [returnCode] .. ").")
 		end
-		
-		executionContext:dtor ()
-		executionContext = nil
 	end
 	
 	local executionCommands =

@@ -15,7 +15,7 @@ function self:ctor (remoteExecutionContextClient, inBuffer)
 	self.InstanceOptions = GCompute.Execution.ExecutionInstanceOptions.None
 	
 	-- IO
-	self.StdIn = GCompute.Pipe ()
+	self.StdIn  = GCompute.Pipe ()
 	self.StdOut = GCompute.Pipe ()
 	self.StdErr = GCompute.Pipe ()
 	self.CompilerStdOut = GCompute.Pipe ()

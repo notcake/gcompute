@@ -132,6 +132,8 @@ function self:Start ()
 	end
 	
 	-- Run the code
+	self:SetState (GCompute.Execution.ExecutionInstanceState.Running)
+	
 	local ret = {
 		xpcall (self.ExecutionFunction,
 			function (message)

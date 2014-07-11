@@ -103,6 +103,10 @@ function self:GetOwnerId ()
 	return self.OwnerId
 end
 
+function self:GetLanguageName ()
+	return self.LanguageName
+end
+
 function self:GetContextOptions ()
 	return self.ContextOptions
 end

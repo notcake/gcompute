@@ -33,6 +33,8 @@ function self:Start ()
 	end
 	
 	-- Run the code
+	self:SetState (GCompute.Execution.ExecutionInstanceState.Running)
+	
 	for _, commands in self:GetSourceFileEnumerator () do
 		if SERVER then
 			game.ConsoleCommand (commands .. "\n")

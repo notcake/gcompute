@@ -67,6 +67,10 @@ end
 function self:dtor ()
 	self:DispatchResetPacket ()
 	
+	for networkable in self.NetworkableHost:GetNetworkableEnumerator () do
+		networkable:dtor ()
+	end
+	
 	self.NetworkableHost:dtor ()
 end
 

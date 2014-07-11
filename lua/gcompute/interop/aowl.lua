@@ -16,7 +16,7 @@ local function RegisterAowlCommands ()
 				local executionContext, returnCode = GCompute.Execution.ExecutionService:CreateExecutionContext (GLib.GetPlayerId (ply), GLib.GetServerId (), "GLua", GCompute.Execution.ExecutionContextOptions.EasyContext + GCompute.Execution.ExecutionContextOptions.Repl)
 				
 				if not executionContext then
-					print ("Failed to create execution context.")
+					print ("Failed to create execution context (" .. GCompute.ReturnCode [returnCode] .. ").")
 					return
 				end
 				
@@ -46,7 +46,7 @@ local function RegisterAowlCommands ()
 					executionInstance:dtor ()
 					executionInstance = nil
 				else
-					print ("Failed to create execution instance.")
+					print ("Failed to create execution instance (" .. GCompute.ReturnCode [returnCode] .. ").")
 				end
 				
 				executionContext:dtor ()

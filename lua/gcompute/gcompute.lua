@@ -391,6 +391,12 @@ include ("execution/executionserviceexecutionfilterable.lua")
 include ("execution/executionservice.lua")
 include ("execution/executionfilterable.lua")
 
+include ("execution/executionlogger.lua")
+
+GCompute.ExecutionLogger = GCompute.Execution.ExecutionLogger ()
+GCompute.ExecutionLogger:AddExecutionFilterable (GCompute.Execution.ExecutionFilterable)
+GCompute.ExecutionLogger:AddOutputTextSink (GCompute.Text.ConsoleTextSink)
+
 GCompute.AddReloadCommand ("gcompute/gcompute.lua", "gcompute", "GCompute")
 
 GCompute.PlayerMonitor = GCompute.PlayerMonitor ("GCompute")

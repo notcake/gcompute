@@ -24,6 +24,10 @@ function self:Redo ()
 	self.CodeEditor:ScrollToCaret ()
 end
 
+function self:GetInsertionLocation ()
+	return self.InsertionLocation
+end
+
 function self:GetFinalLocation ()
 	return self.FinalLocation
 end

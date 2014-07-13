@@ -699,7 +699,8 @@ function PANEL:ReplaceSelectionText (text, pasted)
 	local previousUndoRedoItem = self:GetUndoRedoStack ():GetUndoItem ()
 	if undoRedoItem:Is (GCompute.CodeEditor.InsertionAction) and
 	   previousUndoRedoItem and
-	   previousUndoRedoItem:Is (GCompute.CodeEditor.InsertionAction) then
+	   previousUndoRedoItem:Is (GCompute.CodeEditor.InsertionAction) and
+	   previousUndoRedoItem:GetFinalLocation () == undoRedoItem:GetInsertionLocation () then
 		-- Merge insertion actions
 		previousUndoRedoItem:SetText (previousUndoRedoItem:GetText () .. undoRedoItem:GetText ())
 		previousUndoRedoItem:SetFinalLocation (undoRedoItem:GetFinalLocation ())

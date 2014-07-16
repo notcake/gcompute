@@ -11,6 +11,7 @@ GCompute.Execution.LuadevExecutionService = GCompute.MakeConstructor (self, GCom
 ]]
 
 function self:ctor ()
+	GCompute.EventProvider (self)
 end
 
 function self:CanCreateExecutionContext (authId, hostId, languageName)

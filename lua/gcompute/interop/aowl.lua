@@ -72,7 +72,14 @@ local function RegisterAowlCommands ()
 		aowl.AddCommand (
 			command,
 			function (ply, expression)
-				local userId = GLib.GetPlayerId (ply)
+				local userId
+				if ply == NULL then
+					-- Console
+					userId = GLib.GetServerId ()
+				else
+					userId = GLib.GetPlayerId (ply)
+				end
+				
 				ExecuteExpression (userId, hostId == "^" and userId or hostId, expression)
 			end,
 			"developers"

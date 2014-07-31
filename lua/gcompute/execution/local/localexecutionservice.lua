@@ -21,6 +21,8 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 	
 	-- Check permissions
 	if authId ~= GLib.GetLocalId () and
+	   authId ~= GLib.GetServerId () and
+	   authId ~= GLib.GetSystemId () and
 	   (not GCompute.PlayerMonitor:GetUserEntity (authId) or not GCompute.PlayerMonitor:GetUserEntity (authId):IsSuperAdmin ()) then
 		return false, GCompute.ReturnCode.AccessDenied
 	end

@@ -199,8 +199,6 @@ local colorKeys =
 	a = true
 }
 function self:IsColor (t)
-	if debug.getmetatable (t) ~= nil then return false end
-	
 	for k, v in pairs (t) do
 		if not colorKeys [k] then return false end
 	end

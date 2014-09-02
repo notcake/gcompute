@@ -1,3 +1,9 @@
+local pairs    = pairs
+local next     = next
+local rawget   = rawget
+local isnumber = isnumber
+local tostring = tostring
+
 local self = {}
 GCompute.GLua.Printing.TablePrinter = GCompute.MakeConstructor (self, GCompute.GLua.Printing.ReferenceTypePrinter)
 
@@ -40,9 +46,6 @@ function self:PrintReference (printer, coloredTextSink, obj, printingOptions, al
 	
 	return outputWidth
 end
-
-local isnumber = isnumber
-local tostring = tostring
 
 function self:PrintMultiline (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	if self:IsColor (obj) then
@@ -204,7 +207,7 @@ function self:IsColor (t)
 	end
 	
 	for k, _ in pairs (colorKeys) do
-		if not isnumber (t [k]) then return false end
+		if not isnumber (rawget (t, k)) then return false end
 	end
 	
 	return true

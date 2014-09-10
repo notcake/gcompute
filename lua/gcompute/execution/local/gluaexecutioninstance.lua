@@ -126,10 +126,13 @@ function self:Start ()
 	end
 	
 	-- Replace printing functions
-	for upvalueName, upvalue in pairs (self.UpvalueDetours) do
-		self.UpvalueBackup [upvalueName] = _G [upvalueName]
-		_G [upvalueName] = upvalue
-	end
+	GLib.GetCurrentThread ():AddEventListener ("Yielded", "GLuaExecutionInstance." .. self:GetHashCode (),
+		function ()
+			-- Restore printing functions
+			self:UndetourPrintingFunctions ()
+		end
+	)
+	self:DetourPrintingFunctions ()
 	
 	-- Run the code
 	self:SetState (GCompute.Execution.ExecutionInstanceState.Running)
@@ -145,11 +148,8 @@ function self:Start ()
 	}
 	
 	-- Restore printing functions
-	for upvalueName, upvalue in pairs (self.UpvalueDetours) do
-		if _G [upvalueName] == upvalue then
-			_G [upvalueName] = self.UpvalueBackup [upvalueName]
-		end
-	end
+	self:UndetourPrintingFunctions ()
+	GLib.GetCurrentThread ():RemoveEventListener ("Yielded", "GLuaExecutionInstance." .. self:GetHashCode ())
 	
 	if self:GetExecutionContext ():IsReplContext () then
 		if ret [1] then
@@ -172,6 +172,21 @@ function self:Start ()
 end
 
 -- Internal, do not call
+function self:DetourPrintingFunctions ()
+	for upvalueName, upvalue in pairs (self.UpvalueDetours) do
+		self.UpvalueBackup [upvalueName] = _G [upvalueName]
+		_G [upvalueName] = upvalue
+	end
+end
+
+function self:UndetourPrintingFunctions ()
+	for upvalueName, upvalue in pairs (self.UpvalueDetours) do
+		if _G [upvalueName] == upvalue then
+			_G [upvalueName] = self.UpvalueBackup [upvalueName]
+		end
+	end
+end
+
 function self:HandleReplValue (obj)
 	local type = type (obj)
 	if type == "Panel" then

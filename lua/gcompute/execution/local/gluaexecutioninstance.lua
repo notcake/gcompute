@@ -125,13 +125,18 @@ function self:Start ()
 		return
 	end
 	
-	-- Replace printing functions
-	GLib.GetCurrentThread ():AddEventListener ("Yielded", "GLuaExecutionInstance." .. self:GetHashCode (),
+	-- Setup printing function detours
+	GLib.GetCurrentThread ():AddEventListener ("ExecutionSliceStarted", "GLuaExecutionInstance." .. self:GetHashCode (),
 		function ()
-			-- Restore printing functions
+			self:DetourPrintingFunctions ()
+		end
+	)
+	GLib.GetCurrentThread ():AddEventListener ("ExecutionSliceEnded", "GLuaExecutionInstance." .. self:GetHashCode (),
+		function ()
 			self:UndetourPrintingFunctions ()
 		end
 	)
+	
 	self:DetourPrintingFunctions ()
 	
 	-- Run the code
@@ -149,7 +154,9 @@ function self:Start ()
 	
 	-- Restore printing functions
 	self:UndetourPrintingFunctions ()
-	GLib.GetCurrentThread ():RemoveEventListener ("Yielded", "GLuaExecutionInstance." .. self:GetHashCode ())
+	
+	GLib.GetCurrentThread ():RemoveEventListener ("ExecutionSliceStarted", "GLuaExecutionInstance." .. self:GetHashCode ())
+	GLib.GetCurrentThread ():RemoveEventListener ("ExecutionSliceEnded",   "GLuaExecutionInstance." .. self:GetHashCode ())
 	
 	if self:GetExecutionContext ():IsReplContext () then
 		if ret [1] then

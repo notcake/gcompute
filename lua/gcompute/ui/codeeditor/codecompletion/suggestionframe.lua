@@ -85,6 +85,12 @@ function self:Init ()
 	
 	self:SetVisible (false)
 	
+	self:AddEventListener ("PositionChanged",
+		function (_, x, y)
+			self:UpdateToolTip ()
+		end
+	)
+	
 	self:AddEventListener ("VisibleChanged",
 		function (_, visible)
 			if visible then

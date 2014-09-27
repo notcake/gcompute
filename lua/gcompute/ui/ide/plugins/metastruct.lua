@@ -72,7 +72,8 @@ function self:UpdateHookedView ()
 	if not codeEditor and
 	   self.IDE:GetActiveView () and
 	   (self.IDE:GetActiveView ():GetType () == "Output" or
-	    self.IDE:GetActiveView ():GetType () == "Console") then
+	    self.IDE:GetActiveView ():GetType () == "Console" or
+		self.IDE:GetActiveView ():GetType () == "Memory") then
 		codeEditor = self.IDE:GetActiveView ():GetEditor ()
 	end
 	if not self.IDE:IsVisible () then

@@ -15,6 +15,46 @@ function self:ctor (ownerId, contextOptions)
 		self.Environment.inf = math.huge
 		self.Environment.nan = 0 / 0
 		
+		if ownerId == self:GetHostId () then
+			self.Environment.PROPERTY = function (a, ...)
+				local code = GLib.StringBuilder ()
+				
+				local propertyNames
+				if istable (a) then
+					propertyNames = a
+				else
+					propertyNames = { a, ... }
+				end
+				
+				for _, propertyName in ipairs (propertyNames) do
+					code:Append ("function self:Get" .. propertyName .. " ()\r\n")
+					code:Append ("\treturn self." .. propertyName .. "\r\n")
+					code:Append ("end\r\n")
+					code:Append ("\r\n")
+				end
+				for _, propertyName in ipairs (propertyNames) do
+					local variableName = string.lower (string.sub (propertyName, 1, 1)) .. string.sub (propertyName, 2)
+					code:Append ("function self:Set" .. propertyName .. " (" .. variableName .. ")\r\n")
+					code:Append ("\tif self." .. propertyName .. " == " .. variableName .. " then return self end\r\n")
+					code:Append ("\t\r\n")
+					code:Append ("\tself." .. propertyName .. " = " .. variableName .. "\r\n")
+					code:Append ("\t\r\n")
+					code:Append ("\tself:DispatchEvent (\"" .. propertyName .. "Changed\", self." .. propertyName .. ")\r\n")
+					code:Append ("\t\r\n")
+					code:Append ("\treturn self\r\n")
+					code:Append ("end\r\n")
+					code:Append ("\r\n")
+				end
+				
+				code = code:ToString ()
+				
+				MsgN ("Code copied to clipboard.")
+				SetClipboardText (code)
+				
+				return code
+			end
+		end
+		
 		debug.setmetatable (self.Environment,
 			{
 				__index = function (self, key)

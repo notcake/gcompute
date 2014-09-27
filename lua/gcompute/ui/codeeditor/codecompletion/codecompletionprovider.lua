@@ -397,7 +397,6 @@ function self:Trigger (forceShow)
 		self.SuggestionFrame:SelectItem (preferredItem)
 		GLib.CallDelayed (
 			function ()
-				if not preferredItem:IsValid () then return end
 				self.SuggestionFrame:EnsureVisible (preferredItem)
 			end
 		)

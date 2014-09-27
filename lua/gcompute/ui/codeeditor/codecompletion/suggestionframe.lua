@@ -15,8 +15,11 @@ function self:Init ()
 	self.ResizeGrip:SetSize (16, 16)
 	
 	self.ListBox = vgui.Create ("GListBox", self)
+	
 	self.ListBox:SetKeyboardInputEnabled (false)
 	self.ListBox:SetSelectionMode (Gooey.SelectionMode.One)
+	
+	self.ListBox.IsFocused = function () return true end
 	
 	self.ListBox:AddEventListener ("DoubleClick",
 		function (_, item)
@@ -186,7 +189,7 @@ function self:PerformLayout ()
 end
 
 function self:SelectById (id)
-	local listBoxItem = self.ListBox:GetItemBySortedId (id)
+	local listBoxItem = self.ListBox:GetItem (id)
 	if not listBoxItem then return end
 	listBoxItem:Select ()
 end
@@ -198,26 +201,26 @@ end
 
 function self:SelectPrevious ()
 	local selectedItem = self.ListBox:GetSelectedItem ()
-	local selectedSortedId = 0
+	local selectedSortedIndex = 0
 	if selectedItem then
-		selectedSortedId = selectedItem:GetSortedId () - 1
+		selectedSortedIndex = selectedItem:GetSortedIndex () - 1
 	end
-	if selectedSortedId < 1 then
-		selectedSortedId = self.ListBox:GetItemCount ()
+	if selectedSortedIndex < 1 then
+		selectedSortedIndex = self.ListBox:GetItemCount ()
 	end
-	self.ListBox:SetSelectedItem (self.ListBox:GetItemBySortedId (selectedSortedId))
+	self.ListBox:SetSelectedItem (self.ListBox:GetItemBySortedIndex (selectedSortedIndex))
 end
 
 function self:SelectNext ()
 	local selectedItem = self.ListBox:GetSelectedItem ()
-	local selectedSortedId = 1
+	local selectedSortedIndex = 1
 	if selectedItem then
-		selectedSortedId = selectedItem:GetSortedId () + 1
+		selectedSortedIndex = selectedItem:GetSortedIndex () + 1
 	end
-	if selectedSortedId > self.ListBox:GetItemCount () then
-		selectedSortedId = 1
+	if selectedSortedIndex > self.ListBox:GetItemCount () then
+		selectedSortedIndex = 1
 	end
-	self.ListBox:SetSelectedItem (self.ListBox:GetItemBySortedId (selectedSortedId))
+	self.ListBox:SetSelectedItem (self.ListBox:GetItemBySortedIndex (selectedSortedIndex))
 end
 
 function self:SetAlignedPos (x, y)
@@ -316,7 +319,7 @@ function self:UpdateToolTip ()
 	self.ToolTip:SetVisible (not hideToolTip)
 	if hideToolTip then return end
 	
-	local _, y = selectedItem:LocalToScreen (selectedItem:GetWide (), 0)
+	local _, y = selectedItem:LocalToScreen (0, 0)
 	local x = self:GetPos () + self:GetWide () + 8
 	self.ToolTip:SetPos (x, y)
 	

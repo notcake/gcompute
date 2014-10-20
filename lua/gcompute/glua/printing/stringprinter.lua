@@ -84,11 +84,20 @@ function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, ali
 
 	coloredTextSink:WriteColor ("\"", printer:GetColor ("String"))
 	
-	obj = string.gsub (obj, ".", multiline and multilineEscapeTable or escapeTable)
+	local escapedString = string.gsub (obj, ".", multiline and multilineEscapeTable or escapeTable)
 	
-	coloredTextSink:WriteColor (obj, printer:GetColor ("String"))
+	coloredTextSink:WriteColor (escapedString, printer:GetColor ("String"))
 	coloredTextSink:WriteColor ("\"", printer:GetColor ("String"))
-	outputWidth = outputWidth + 2 + #obj
+	outputWidth = outputWidth + 2 + #escapedString
+	
+	if not multiline and GLib.UTF8.Length (obj) == 1 then
+		local c = obj
+		outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ ", printer:GetColor ("Comment"))
+		outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", GLib.UTF8.Byte (c)), printer:GetColor ("Comment"))
+		coloredTextSink:WriteColor (c, printer:GetColor ("Comment"))
+		outputWidth = outputWidth + 1
+		outputWidth = outputWidth + coloredTextSink:WriteColor (" " .. GLib.Unicode.GetCharacterName (c) .. "]]", printer:GetColor ("Comment"))
+	end
 	
 	return outputWidth
 end

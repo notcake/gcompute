@@ -109,7 +109,7 @@ function self:PrintMultiline (printer, coloredTextSink, obj, printingOptions, al
 			else
 				keyLength = 2
 				keyAlignmentController:PushAlignments ()
-				keyLength = keyLength + printer:Measure (k, GCompute.GLua.Printing.PrintingOptions.AttemptReferenceEquality, keyAlignmentController)
+				keyLength = keyLength + printer:Measure (k, GCompute.GLua.Printing.PrintingOptions.AttemptReferenceEquality, keyAlignmentController, keyAlignmentController)
 				
 				if keyLength <= 64 then
 					keyAlignmentController:PopMergeAlignments ()
@@ -128,7 +128,7 @@ function self:PrintMultiline (printer, coloredTextSink, obj, printingOptions, al
 			
 			-- Measure value
 			valueAlignmentController:PushAlignments ()
-			valueLength = printer:Measure (v, GCompute.GLua.Printing.PrintingOptions.TrimRight, valueAlignmentController)
+			valueLength = printer:Measure (v, GCompute.GLua.Printing.PrintingOptions.TrimRight, valueAlignmentController, valueAlignmentController)
 			
 			if valueLength <= 128 then
 				valueAlignmentController:PopMergeAlignments ()

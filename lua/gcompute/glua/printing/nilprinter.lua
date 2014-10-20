@@ -5,11 +5,11 @@ function self:ctor ()
 end
 
 -- Printing
-function self:Measure (printer, obj, printingOptions, alignmentController)
+function self:Measure (printer, obj, printingOptions, alignmentController, alignmentSink)
 	return 3
 end
 
-function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentController)
+function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	coloredTextSink:WriteColor ("nil", printer:GetColor ("Keyword"))
 	return 3
 end

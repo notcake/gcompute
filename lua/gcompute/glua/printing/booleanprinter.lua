@@ -5,7 +5,7 @@ function self:ctor ()
 end
 
 -- Printing
-function self:Measure (printer, obj, printingOptions, alignmentController)
+function self:Measure (printer, obj, printingOptions, alignmentController, alignmentSink)
 	return obj and 4 or 5
 end
 

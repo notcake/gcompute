@@ -51,20 +51,22 @@ function self:UnregisterTypePrinter (type)
 end
 
 -- Printing
-function self:Measure (obj, printingOptions, alignmentController)
+function self:Measure (obj, printingOptions, alignmentController, alignmentSink)
 	if printingOptions == nil then printingOptions = GCompute.GLua.Printing.PrintingOptions.Multiline end
 	alignmentController = alignmentController or GCompute.GLua.Printing.AlignmentController ()
+	alignmentSink       = alignmentSink       or GCompute.GLua.Printing.NullAlignmentController
 	
 	local type = type (obj)
 	local typePrinter = self:GetTypePrinter (type) or self:GetTypePrinter ("default")
 	if not typePrinter then return #("No printer registered for " .. type .. " and no default printer registered.") end
 	
-	return typePrinter:Measure (self, obj, printingOptions, alignmentController)
+	return typePrinter:Measure (self, obj, printingOptions, alignmentController, alignmentSink)
 end
 
 function self:Print (coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	if printingOptions == nil then printingOptions = GCompute.GLua.Printing.PrintingOptions.Multiline end
 	alignmentController = alignmentController or GCompute.GLua.Printing.AlignmentController ()
+	alignmentSink       = alignmentSink       or GCompute.GLua.Printing.NullAlignmentController
 	
 	local type = type (obj)
 	local typePrinter = self:GetTypePrinter (type) or self:GetTypePrinter ("default")

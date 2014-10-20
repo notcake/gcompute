@@ -11,27 +11,17 @@ function self:InvalidateCache ()
 end
 
 -- Printing
-function self:Measure (printer, obj, printingOptions, alignmentController)
-	self:Cache (printer, obj, printingOptions)
-	return self.Buffer:GetBytesWritten ()
+function self:Measure (printer, obj, printingOptions, alignmentController, alignmentSink)
+	return self:PrintInternal (printer, self.Buffer, obj, printingOptions, alignmentController, alignmentSink)
 end
 
-function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentController)
-	if self:IsCached (printer, obj, printingOptions) then
-		self.Buffer:Output (coloredTextSink)
-		return self.Buffer:GetBytesWritten ()
-	end
+function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
+	alignmentSink = alignmentSink or GCompute.GLua.Printing.NullAlignmentController
 	
-	return self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController)
+	return self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 end
 
 -- Internal, do not call
-function self:Cache (printer, obj, printingOptions)
-	if self:IsCached (printer, obj, printingOptions) then return end
-	self:SetCache (printer, obj, printingOptions)
-	self:PrintInternal (printer, self.Buffer, obj, printingOptions, GCompute.GLua.Printing.NullAlignmentController)
-end
-
 local escapeTable = {}
 local multilineEscapeTable = {}
 for i = 0, 255 do
@@ -52,7 +42,7 @@ end
 multilineEscapeTable ["\t"] = nil
 multilineEscapeTable ["\n"] = "\\\n"
 
-function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController)
+function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	local outputWidth = 0
 	local multiline = bit.band (printingOptions, GCompute.GLua.Printing.PrintingOptions.Multiline) ~= 0
 	if multiline then
@@ -96,7 +86,9 @@ function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, ali
 		outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", GLib.UTF8.Byte (c)), printer:GetColor ("Comment"))
 		coloredTextSink:WriteColor (c, printer:GetColor ("Comment"))
 		outputWidth = outputWidth + 1
-		outputWidth = outputWidth + coloredTextSink:WriteColor (" " .. GLib.Unicode.GetCharacterName (c) .. "]]", printer:GetColor ("Comment"))
+		outputWidth = outputWidth + coloredTextSink:WriteColor (" ", printer:GetColor ("Comment"))
+		outputWidth = outputWidth + coloredTextSink:WriteColor (self:PadRight (GLib.Unicode.GetCharacterName (c), "CodePointName", alignmentController, alignmentSink), printer:GetColor ("Comment"))
+		outputWidth = outputWidth + coloredTextSink:WriteColor ("]]", printer:GetColor ("Comment"))
 	end
 	
 	return outputWidth

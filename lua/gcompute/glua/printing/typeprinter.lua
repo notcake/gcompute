@@ -34,7 +34,7 @@ function self:InvalidateCache ()
 end
 
 -- Printing
-function self:Measure (printer, obj, multiline, alignmentController)
+function self:Measure (printer, obj, multiline, alignmentController, alignmentSink)
 	GCompute.Error ("TypePrinter:Measure : Not implemented.")
 end
 

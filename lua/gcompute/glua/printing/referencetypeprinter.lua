@@ -5,8 +5,8 @@ function self:ctor ()
 end
 
 -- Printing
-function self:Measure (printer, obj, printingOptions, alignmentController)
-	return self:Print (printer, GCompute.Text.NullTextSink, obj, printingOptions, GCompute.GLua.Printing.NullAlignmentController, alignmentController)
+function self:Measure (printer, obj, printingOptions, alignmentController, alignmentSink)
+	return self:Print (printer, GCompute.Text.NullTextSink, obj, printingOptions, alignmentController, alignmentSink)
 end
 
 function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)

@@ -1,4 +1,4 @@
-GCompute In-Game Lua IDE
+GCompute: In-Game Lua IDE
 ========================
 
 IDE Features
@@ -30,6 +30,8 @@ You will need to install the following addons additionally:
 
 Screenshots
 ------------------------
+![](https://dl.dropboxusercontent.com/u/7290193/Screenshots/Garrysmod/GCompute/1.png)
+
 Autocompletion:
 ![](https://i.minus.com/iwcm9pQstP58J.png)
 

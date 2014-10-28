@@ -42,6 +42,13 @@ end
 multilineEscapeTable ["\t"] = nil
 multilineEscapeTable ["\n"] = "\\\n"
 
+local characterPrintingBlacklist =
+{
+	["\0"] = true,
+	["\r"] = true,
+	["\n"] = true
+}
+
 function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, alignmentController, alignmentSink)
 	local outputWidth = 0
 	local multiline = bit.band (printingOptions, GCompute.GLua.Printing.PrintingOptions.Multiline) ~= 0
@@ -64,8 +71,8 @@ function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, ali
 				i = i + 1
 				
 				outputWidth = outputWidth + coloredTextSink:WriteColor ("--     ", printer:GetColor ("Comment"))
-				outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", c ~= 0 and GLib.UTF8.Byte (c) or " "), printer:GetColor ("Comment"))
-				coloredTextSink:WriteColor (c, printer:GetColor ("Comment"))
+				outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", GLib.UTF8.Byte (c)), printer:GetColor ("Comment"))
+				coloredTextSink:WriteColor (not characterPrintingBlacklist [c] and c or " ", printer:GetColor ("Comment"))
 				outputWidth = outputWidth + 1
 				outputWidth = outputWidth + coloredTextSink:WriteColor (" " .. GLib.Unicode.GetCharacterName (c) .. "\n", printer:GetColor ("Comment"))
 			end
@@ -83,8 +90,8 @@ function self:PrintInternal (printer, coloredTextSink, obj, printingOptions, ali
 	if not multiline and GLib.UTF8.Length (obj) == 1 then
 		local c = obj
 		outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ ", printer:GetColor ("Comment"))
-		outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", c ~= 0 and GLib.UTF8.Byte (c) or " "), printer:GetColor ("Comment"))
-		coloredTextSink:WriteColor (c, printer:GetColor ("Comment"))
+		outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("U+%06X ", GLib.UTF8.Byte (c)), printer:GetColor ("Comment"))
+		coloredTextSink:WriteColor (not characterPrintingBlacklist [c] and c or " ", printer:GetColor ("Comment"))
 		outputWidth = outputWidth + 1
 		outputWidth = outputWidth + coloredTextSink:WriteColor (" ", printer:GetColor ("Comment"))
 		outputWidth = outputWidth + coloredTextSink:WriteColor (self:PadRight (GLib.Unicode.GetCharacterName (c), "CodePointName", alignmentController, alignmentSink), printer:GetColor ("Comment"))

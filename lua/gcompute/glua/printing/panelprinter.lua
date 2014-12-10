@@ -19,8 +19,10 @@ function self:PrintReference (printer, coloredTextSink, obj, printingOptions, al
 	outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "CommentStart", alignmentController, alignmentSink)
 	if obj:IsValid () then
 		outputWidth = outputWidth + coloredTextSink:WriteColor (" --[[ " .. (obj:IsVisible () and "Visible" or "Invisible"), printer:GetColor ("Comment"))
-		if obj.ClassName then
-			outputWidth = outputWidth + coloredTextSink:WriteColor (", " .. obj.ClassName, printer:GetColor ("Comment"))
+		
+		local className = obj.ClassName or obj:GetClassName ()
+		if className then
+			outputWidth = outputWidth + coloredTextSink:WriteColor (", " .. className, printer:GetColor ("Comment"))
 		end
 		outputWidth = outputWidth + coloredTextSink:WriteColor (" ]]", printer:GetColor ("Comment"))
 	else
@@ -55,8 +57,10 @@ function self:PrintInline (printer, coloredTextSink, obj, printingOptions, align
 	outputWidth = outputWidth + coloredTextSink:WriteColor ("{ ", printer:GetColor ("Operator"))
 	outputWidth = outputWidth + coloredTextSink:WriteColor ("Panel", printer:GetColor ("ResolvedIdentifier"))
 	outputWidth = outputWidth + coloredTextSink:WriteColor (": ", printer:GetColor ("Operator"))
-	if obj.ClassName then
-		outputWidth = outputWidth + coloredTextSink:WriteColor (obj.ClassName .. " ", printer:GetColor ("ResolvedIdentifier"))
+	
+	local className = obj.ClassName or obj:GetClassName ()
+	if className then
+		outputWidth = outputWidth + coloredTextSink:WriteColor (className .. " ", printer:GetColor ("ResolvedIdentifier"))
 	end
 	outputWidth = outputWidth + self:Pad (coloredTextSink, outputWidth, "PanelAddressStart", alignmentController, alignmentSink)
 	outputWidth = outputWidth + coloredTextSink:WriteColor (string.format ("%p", obj), printer:GetColor ("Number"))

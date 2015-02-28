@@ -10,6 +10,8 @@ GCompute.Execution.LocalExecutionService = GCompute.MakeConstructor (self, GComp
 			
 ]]
 
+local sv_allowcslua = GetConVar ("sv_allowcslua")
+
 function self:ctor ()
 	GCompute.EventProvider (self)
 end
@@ -38,6 +40,13 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 	   languageName ~= "Terminal Emulator" and
 	   not GCompute.Languages.Get (languageName) then
 		return false, GCompute.ReturnCode.NotSupported
+	end
+	
+	-- sv_allowcslua
+	if authId == GLib.GetLocalId () and
+	   not LocalPlayer ():IsSuperAdmin () and
+	   not sv_allowcslua:GetBool () then
+		return false, GCompute.ReturnCode.AccessDenied
 	end
 	
 	return true

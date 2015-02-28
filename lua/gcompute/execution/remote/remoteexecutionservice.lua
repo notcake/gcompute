@@ -29,7 +29,7 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 end
 
 function self:CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
-	if not self:GetRemoteExecutionService () then return nil, GCompute.ReturnCode.NoCarrier end
+	if not self:GetRemoteExecutionService () then return false, GCompute.ReturnCode.NoCarrier end
 	
 	local executionContext, denialReason = self:GetRemoteExecutionService ():CreateExecutionContext (authId, hostId, languageName, contextOptions, callback)
 	

@@ -158,6 +158,7 @@ function self:ctor (container)
 			menuItem:GetEventProvider ():ClearEventListeners ("Click")
 			menuItem:SetSubMenu (self.UserMenu)
 			
+			menu:GetItemById ("Self"   ):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Self",    nil))
 			menu:GetItemById ("Server" ):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Server",  nil))
 			menu:GetItemById ("Client" ):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Clients", nil))
 			menu:GetItemById ("Clients"):SetEnabled (GCompute.Execution.ExecutionService:CanCreateExecutionContext (GLib.GetLocalId (), "Clients", nil))

@@ -18,7 +18,8 @@ function self:CanCreateExecutionInstance (code, sourceId, instanceOptions)
 	if allowed == false then return false, denialReason end
 	
 	-- sv_allowcslua
-	if self.OwnerId == GLib.GetLocalId () and
+	if CLIENT and
+	   self.OwnerId == GLib.GetLocalId () and
 	   not LocalPlayer ():IsSuperAdmin () and
 	   not sv_allowcslua:GetBool () then
 		return false, GCompute.ReturnCode.AccessDenied

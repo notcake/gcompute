@@ -43,7 +43,8 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 	end
 	
 	-- sv_allowcslua
-	if authId == GLib.GetLocalId () and
+	if CLIENT and
+	   authId == GLib.GetLocalId () and
 	   not LocalPlayer ():IsSuperAdmin () and
 	   not sv_allowcslua:GetBool () then
 		return false, GCompute.ReturnCode.AccessDenied

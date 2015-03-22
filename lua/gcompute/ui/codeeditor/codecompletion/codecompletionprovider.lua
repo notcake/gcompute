@@ -401,7 +401,7 @@ function self:Trigger (forceShow)
 			end
 		)
 	else
-		self.SuggestionFrame:SelectById (1)
+		self.SuggestionFrame:SelectByIndex (1)
 	end
 	
 	self.TriggerOnBackspace = true

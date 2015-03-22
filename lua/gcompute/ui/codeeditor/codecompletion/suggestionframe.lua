@@ -185,8 +185,7 @@ function self:Paint (w, h)
 	draw.RoundedBox (4, 0, 0, w, h, GLib.Colors.Silver)
 end
 
-function self:PerformLayout ()
-	local w, h = self:GetSize ()
+function self:PerformLayout (w, h)
 	self.ListBox:SetPos (self:GetBorderThickness (), self:GetBorderThickness ())
 	self.ListBox:SetSize (w - self:GetBorderThickness () * 2, h - self:GetBorderThickness () * 2)
 	self.ListBox:InvalidateLayout ()
@@ -194,7 +193,7 @@ function self:PerformLayout ()
 	self:UpdateToolTip ()
 end
 
-function self:SelectById (id)
+function self:SelectByIndex (id)
 	local listBoxItem = self.ListBox:GetItem (id)
 	if not listBoxItem then return end
 	listBoxItem:Select ()
@@ -255,8 +254,8 @@ end
 
 function self:ShouldHide (lastShowTime)
 	local x, y = self:CursorPos ()
-	local containsMouse = x >= 0 and x < self:GetWide () and
-	                      y >= 0 and y < self:GetTall ()
+	local containsMouse = x >= 0 and x < self:GetWidth () and
+	                      y >= 0 and y < self:GetHeight ()
 	containsMouse = containsMouse or self.ResizeGrip:IsPressed ()
 	if self.Control:IsVisible () and
 	   not self.Control:IsFocused () and
@@ -322,18 +321,23 @@ function self:UpdateToolTip ()
 	hideToolTip = hideToolTip or suggestionType == GCompute.CodeEditor.CodeCompletion.SuggestionType.None
 	hideToolTip = hideToolTip or suggestionType == GCompute.CodeEditor.CodeCompletion.SuggestionType.Keyword
 	
-	self.ToolTip:SetVisible (not hideToolTip)
+	if self.ToolTip and self.ToolTip:IsValid () then
+		self.ToolTip:SetVisible (not hideToolTip)
+	end
 	if hideToolTip then return end
 	
-	local _, y = selectedItem:LocalToScreen (0, 0)
-	local x = self:GetPos () + self:GetWide () + 8
-	self.ToolTip:SetPos (x, y)
+	if self.ToolTip and self.ToolTip:IsValid () then
+		local _, y = selectedItem:LocalToScreen (0, 0)
+		local x = self:GetPos () + self:GetWide () + 8
+		self.ToolTip:SetPos (x, y)
+	end
 	
 	-- Update contents
 	if suggestionItem:IsClass () and suggestionItem:GetConstructorCount () > 0 then
 		suggestionItem = suggestionItem:GetConstructor (1)
 	end
-	if suggestionItem then
+	if suggestionItem and
+	   self.ToolTip and self.ToolTip:IsValid () then
 		self.ToolTip:SetText (suggestionItem:GetDisplayText ())
 	end
 end

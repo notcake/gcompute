@@ -103,6 +103,7 @@ function self:UpdateChatStatus ()
 	else
 		if self.TypingCode then
 			coh.FinishChat ()
+			coh.SendTypedMessage (true)
 			self.TypingCode = false
 		end
 	end

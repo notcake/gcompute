@@ -1,14 +1,14 @@
 local self = GCompute.IDE.Plugins:Create ("Metastruct.sendcode")
 
 function self:ctor (ideFrame)
-	if not sendcode then return end
-	
-	self.IDEFrame = ideFrame
+	self.IDEFrame         = ideFrame
 	self.ActiveView       = nil
 	self.ActiveCodeEditor = nil
 	
 	self.ModifiedMenus = GLib.WeakKeyTable ()
 	self.Controls = {}
+	
+	if not sendcode then return end
 	
 	self.IDEFrame:AddEventListener ("ActiveViewChanged", "Metastruct.sendcode",
 		function (_)
@@ -154,7 +154,7 @@ function self:dtor ()
 	self:SetActiveView       (nil)
 	self:SetActiveCodeEditor (nil)
 	
-	self.IDEFrame.TabContextMenu       :RemoveEventListener ("MenuOpening", "Metastruct.sendcode")
+	self.IDEFrame.TabContextMenu:RemoveEventListener ("MenuOpening", "Metastruct.sendcode")
 	
 	for menu, _ in pairs (self.ModifiedMenus) do
 		menu:RemoveEventListener ("MenuOpening", "Metastruct.sendcode")
@@ -164,8 +164,10 @@ function self:dtor ()
 	
 	self.IDEFrame:RemoveEventListener ("ActiveViewChanged", "Metastruct.sendcode")
 	
-	self.PlayerMenu:dtor ()
-	self.PlayerMenu = nil
+	if self.PlayerMenu then
+		self.PlayerMenu:dtor ()
+		self.PlayerMenu = nil
+	end
 	
 	for control in self:GetControlEnumerator () do
 		control:Remove ()

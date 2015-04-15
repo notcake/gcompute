@@ -109,7 +109,7 @@ function self:Init ()
 		end
 	)
 	
-	self.TabContextMenu = GCompute.IDE.TabContextMenu (self)
+	self.TabContextMenu        = GCompute.IDE.TabContextMenu (self)
 	self.CodeEditorContextMenu = GCompute.CodeEditor.CodeEditorContextMenu (self)
 	
 	self.StatusBar = vgui.Create ("GStatusBar", self)
@@ -302,6 +302,15 @@ function self:SetIDE (ide)
 			end
 		end
 	end
+end
+
+-- Frame
+function self:GetMenu ()
+	return self.Menu
+end
+
+function self:GetToolbar ()
+	return self.Toolbar
 end
 
 -- Views

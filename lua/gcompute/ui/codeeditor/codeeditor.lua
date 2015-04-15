@@ -656,7 +656,7 @@ function PANEL:DeleteSelection ()
 	local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
 	local text = self.Document:GetText (selectionStart, selectionEnd)
 	
-	local deletionAction = GCompute.CodeEditor.DeletionAction (self, selectionStartLocation, selectionEndLocation, selectionStart, selectionEnd, text)
+	local deletionAction = GCompute.CodeEditor.DeletionAction (self, selectionStart, selectionEnd, selectionStart, selectionEnd, text)
 	deletionAction:Redo ()
 	self:GetUndoRedoStack ():Push (deletionAction)
 end
@@ -705,6 +705,8 @@ function PANEL:ReplaceSelectionText (text, pasted)
 		previousUndoRedoItem:SetText (previousUndoRedoItem:GetText () .. undoRedoItem:GetText ())
 		previousUndoRedoItem:SetFinalLocation (undoRedoItem:GetFinalLocation ())
 		self:GetUndoRedoStack ():GetRedoStack ():Clear ()
+		
+		undoRedoItem = previousUndoRedoItem
 	else
 		self:GetUndoRedoStack ():Push (undoRedoItem)
 	end
@@ -714,7 +716,7 @@ function PANEL:ReplaceSelectionText (text, pasted)
 		local autoOutdentationAction
 		if self:GetEditorHelper () and
 		   self:GetEditorHelper ():ShouldOutdent (self, self.Document:ColumnToCharacter (self:GetCaretPos (), self.TextRenderer)) then
-			autoOutdentationAction = autoOutdentationAction or GCompute.CodeEditor.AutoOutdentationAction (self)
+			autoOutdentationAction = autoOutdentationAction or GCompute.CodeEditor.AutoOutdentationAction (self, self:CreateSelectionSnapshot ())
 			autoOutdentationAction:AddLine (self:GetCaretPos ():GetLine ())
 		end
 		
@@ -731,6 +733,8 @@ function PANEL:ReplaceSelectionText (text, pasted)
 				))
 				self.Selection:SetSelection (self:GetCaretPos ())
 			end
+			
+			autoOutdentationAction:SetPostSelectionSnapshot (self:CreateSelectionSnapshot ())
 		end
 	end
 	
@@ -1007,6 +1011,13 @@ function PANEL:GetSelectionStart ()
 	return self.Selection:GetSelectionStart ()
 end
 
+function PANEL:GetSelectionText ()
+	local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
+	local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
+	
+	return self.Document:GetText (selectionStart, selectionEnd)
+end
+
 function PANEL:IsInSelection (location)
 	return self.Selection:IsInSelection (location)
 end
@@ -1225,10 +1236,7 @@ function PANEL:CopySelection ()
 	
 	local text
 	if self.Selection:GetSelectionMode () == GCompute.CodeEditor.SelectionMode.Regular then
-		local selectionStart = self.Document:ColumnToCharacter (self.Selection:GetSelectionStart (), self.TextRenderer)
-		local selectionEnd   = self.Document:ColumnToCharacter (self.Selection:GetSelectionEnd (),   self.TextRenderer)
-		
-		text = self.Document:GetText (selectionStart, selectionEnd)
+		text = self:GetSelectionText ()
 	else
 		local lines = {}
 		local line

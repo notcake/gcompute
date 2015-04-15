@@ -406,7 +406,7 @@ function self:Trigger (forceShow)
 	
 	self.TriggerOnBackspace = true
 	self:SetVisible (not self.SuggestionFrame:IsEmpty ())
-	self:SetToolTipVisible (not self.SuggestionFrame:IsEmpty ())
+	self.SuggestionFrame:UpdateToolTip ()
 	self.AnchorLine      = lineNumber
 	self.AnchorCharacter = nameStartCharacter
 	self:UpdateSuggestionFramePosition ()

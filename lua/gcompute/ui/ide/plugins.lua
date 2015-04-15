@@ -4,7 +4,7 @@ GCompute.IDE.Plugins.Plugins = {}
 
 function GCompute.IDE.Plugins:Create (pluginName)
 	local plugin = {}
-	plugin.Initialize = GCompute.NullCallback
+	plugin.Initialize   = GCompute.NullCallback
 	plugin.Uninitialize = GCompute.NullCallback
 	self.PluginConstructors [pluginName] = GCompute.MakeConstructor (plugin)
 	return plugin
@@ -12,13 +12,16 @@ end
 
 function GCompute.IDE.Plugins:Initialize (...)
 	for pluginName, ctor in pairs (self.PluginConstructors) do
-		self.Plugins [pluginName] = ctor (...)
+		local success, plugin = xpcall (ctor, GLib.Error, ...)
+		if success then
+			self.Plugins [pluginName] = plugin
+		end
 	end
 end
 
 function GCompute.IDE.Plugins:Uninitialize (...)
 	for _, plugin in pairs (self.Plugins) do
-		plugin:dtor (...)
+		xpcall (plugin.dtor, GLib.Error, plugin, ...)
 	end
 	self.Plugins = {}
 end

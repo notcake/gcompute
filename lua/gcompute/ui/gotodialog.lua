@@ -18,17 +18,19 @@ function self:Init ()
 	self.TextEntry.OnEnter = function ()
 		self.GoToButton:DispatchEvent ("Click")
 	end
-	self.TextEntry.OnTextChanged = function ()
-		local text = self.TextEntry:GetText ()
-		if text:find ("[^0-9]") then
-			text = text:gsub ("[^0-9]", "")
-			local caretAdjustmentRequired = self.TextEntry:GetCaretPos () > text:len ()
-			self.TextEntry:SetText (text)
-			if caretAdjustmentRequired then
-				self.TextEntry:SetCaretPos (text:len ())
+	self.TextEntry:AddEventListener ("TextChanged",
+		function (_)
+			local text = self.TextEntry:GetText ()
+			if string.find (text, "[^0-9]") then
+				text = string.gsub (text, "[^0-9]", "")
+				local caretAdjustmentRequired = self.TextEntry:GetCaretPos () > #text
+				self.TextEntry:SetText (text)
+				if caretAdjustmentRequired then
+					self.TextEntry:SetCaretPos (#text)
+				end
 			end
 		end
-	end
+	)
 	
 	self.GoToButton = vgui.Create ("GButton", self)
 	self.GoToButton:SetText ("Go to line")

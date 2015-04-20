@@ -93,6 +93,7 @@ function GCompute.AST.MakeConstructor (metatable, base)
 	staticTable.__ictor = ictor
 	staticTable.__static = true
 	staticTable.ctor = ictor
+	staticTable.GetInstanceMetatable = function () return metatable end
 	setmetatable (staticTable, StaticTableMetatable)
 	
 	return staticTable

@@ -68,14 +68,14 @@ function self:SeekRelative (relativeSeekPos)
 	end
 end
 
-function self:SeekTo (position)
+function self:SeekAbsolute (position)
 	if position == nil or
 	   istable (position) then
 		self.PreviousToken = position
 		
 		self:UpdateEndOfStream ()
 	else
-		GCompute.Error ("LinkedListTokenStream:SeekTo : Position must be a position object returned by GetPosition!")
+		GCompute.Error ("LinkedListTokenStream:SeekAbsolute : Position must be a position object returned by GetPosition!")
 	end
 end
 

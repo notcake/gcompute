@@ -28,6 +28,6 @@ function self:SeekRelative (relativeSeekPos)
 	GCompute.Error ("ITokenStream:SeekRelative : Not implemented.")
 end
 
-function self:SeekTo (position)
-	GCompute.Error ("ITokenStream:SeekTo : Not implemented.")
+function self:SeekAbsolute (position)
+	GCompute.Error ("ITokenStream:SeekAbsolute : Not implemented.")
 end

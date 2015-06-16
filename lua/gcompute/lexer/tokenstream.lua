@@ -5,7 +5,7 @@ function self:ctor ()
 end
 
 function self:GetEnumerator ()
-	self:SeekTo (nil)
+	self:SeekAbsolute (nil)
 	return function ()
 		return self:Read ()
 	end

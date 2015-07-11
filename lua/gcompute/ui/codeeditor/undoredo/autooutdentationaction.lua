@@ -40,7 +40,6 @@ function self:SetPostSelectionSnapshot (selectionSnapshot)
 end
 
 function self:Redo ()
-	print ("REDO")
 	local line
 	local indentation
 	local character

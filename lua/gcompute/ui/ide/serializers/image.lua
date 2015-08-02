@@ -10,14 +10,14 @@ info:SetCanSerialize (true)
 function self:ctor (document)
 end
 
-function self:Deserialize (inBuffer, callback, resource)
-	callback = callback or GCompute.NullCallback
-	self:GetDocument ():SetData (inBuffer:Bytes (inBuffer:GetBytesRemaining ()))
-	callback (true)
-end
-
 function self:Serialize (outBuffer, callback, resource)
 	callback = callback or GCompute.NullCallback
 	outBuffer:Bytes (self:GetDocument ():GetData ())
+	callback (true)
+end
+
+function self:Deserialize (inBuffer, callback, resource)
+	callback = callback or GCompute.NullCallback
+	self:GetDocument ():SetData (inBuffer:Bytes (inBuffer:GetBytesRemaining ()))
 	callback (true)
 end

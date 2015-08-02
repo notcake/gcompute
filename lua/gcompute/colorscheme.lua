@@ -1,6 +1,5 @@
 local self = {}
 GCompute.ColorScheme = GCompute.MakeConstructor (self, GLib.Serialization.ISerializable)
-GLib.RegisterSerializable ("GCompute.ColorScheme")
 
 --[[
 	Events:
@@ -17,6 +16,10 @@ function self:ctor ()
 end
 
 -- ISerializable
+function self:Serialize (outBuffer)
+	outBuffer:StringZ (self:ToString ())
+end
+
 function self:Deserialize (inBuffer)
 	local str = inBuffer:StringZ ()
 	
@@ -41,10 +44,6 @@ function self:Deserialize (inBuffer)
 			end
 		end
 	end
-end
-
-function self:Serialize (outBuffer)
-	outBuffer:StringZ (self:ToString ())
 end
 
 -- ColorScheme

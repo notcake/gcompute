@@ -18,10 +18,10 @@ function self:GetType ()
 	return self.__Type
 end
 
-function self:Deserialize (inBuffer, callback, resource)
-	GCompute.Error (self:GetType () .. ":Deserialize : Not implemented.")
-end
-
 function self:Serialize (outBuffer, callback, resource)
 	GCompute.Error (self:GetType () .. ":Serialize : Not implemented.")
+end
+
+function self:Deserialize (inBuffer, callback, resource)
+	GCompute.Error (self:GetType () .. ":Deserialize : Not implemented.")
 end

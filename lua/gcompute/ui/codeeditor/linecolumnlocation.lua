@@ -6,11 +6,26 @@ function self:ctor (line, column)
 	self.Column = 0
 	
 	if type (line) == "table" then
-		self:CopyFrom (line)
+		self:Copy (line)
 	else
 		self:SetLine (line or self.Line)
 		self:SetColumn (column or self.Column)
 	end
+end
+
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	self.Line     = source:GetLine ()    or 0
+	self.Column   = source:GetColumn ()  or 0
+	
+	return self
 end
 
 function self:AddColumns (columns)
@@ -19,15 +34,6 @@ function self:AddColumns (columns)
 	lineColumnLocation.Column   = math.max (0, self.Column + columns)
 	
 	return lineColumnLocation
-end
-
-function self:Clone ()
-	return GCompute.CodeEditor.LineColumnLocation (self.Line, self.Column)
-end
-
-function self:CopyFrom (lineColumnLocation)
-	self.Line     = lineColumnLocation.Line     or 0
-	self.Column   = lineColumnLocation.Column   or 0
 end
 
 function self:GetColumn ()

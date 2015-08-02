@@ -17,19 +17,23 @@ function self:ctor (codeEditor)
 	GCompute.EventProvider (self)
 end
 
-function self:Clone (textSelection)
-	textSelection = textSelection or GCompute.TextSelection ()
-	textSelection:CopyFrom (self)
-	return textSelection
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
 end
 
-function self:CopyFrom (textSelection)
-	if not textSelection then return end
-	self.Editor = textSelection.Editor
-	self.SelectionMode = textSelection.SelectionMode
-	self.SelectionStart:CopyFrom (textSelection.SelectionStart)
-	self.SelectionEnd:CopyFrom (textSelection.SelectionEnd)
+function self:Copy (source)
+	self.Editor        = source.Editor
+	self.SelectionMode = source:GetSelectionMode ()
+	self.SelectionStart:Copy (source:GetSelectionStart ())
+	self.SelectionEnd  :Copy (source:GetSelectionEnd   ())
+	
 	self:DispatchEvent ("SelectionChanged")
+	
+	return self
 end
 
 function self:Flatten ()
@@ -149,14 +153,14 @@ end
 function self:SetSelection (selectionStart, selectionEnd)
 	selectionEnd = selectionEnd or selectionStart
 	
-	self.SelectionStart:CopyFrom (selectionStart)
-	self.SelectionEnd:CopyFrom (selectionEnd)
+	self.SelectionStart:Copy (selectionStart)
+	self.SelectionEnd  :Copy (selectionEnd  )
 	
 	self:DispatchEvent ("SelectionChanged", self.SelectionStart, self.SelectionEnd)
 end
 
 function self:SetSelectionEnd (selectionEnd)
-	self.SelectionEnd:CopyFrom (selectionEnd)
+	self.SelectionEnd:Copy (selectionEnd)
 	
 	self:DispatchEvent ("SelectionChanged", self.SelectionStart, self.SelectionEnd)
 end
@@ -169,7 +173,7 @@ function self:SetSelectionMode (selectionMode)
 end
 
 function self:SetSelectionStart (selectionStart)
-	self.SelectionStart:CopyFrom (selectionStart)
+	self.SelectionStart:Copy (selectionStart)
 	
 	self:DispatchEvent ("SelectionChanged", self.SelectionStart, self.SelectionEnd)
 end

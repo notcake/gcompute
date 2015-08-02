@@ -44,9 +44,9 @@ function self:GetSelectionStart ()
 end
 
 function self:SetCaretPosition (caretPosition)
-	self.CaretPosition:CopyFrom (caretPosition)
+	self.CaretPosition:Copy (caretPosition)
 end
 
 function self:SetPreferredCaretPosition (preferredCaretPosition)
-	self.PreferredCaretPosition:CopyFrom (preferredCaretPosition)
+	self.PreferredCaretPosition:Copy (preferredCaretPosition)
 end

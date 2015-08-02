@@ -7,6 +7,26 @@ function self:ctor ()
 	self.Arguments = {}
 end
 
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	self:SetStartToken (source:GetStartToken ())
+	self:SetEndToken   (source:GetEndToken   ())
+	
+	self:Clear ()
+	for i = 1, source:GetArgumentCount () do
+		self:AddArgument (source:GetArgument (i))
+	end
+	
+	return self
+end
+
 function self:AddArgument (expression)
 	self.ArgumentCount = self.ArgumentCount + 1
 	self:SetArgument (self.ArgumentCount, expression)
@@ -24,17 +44,11 @@ function self:AppendArgumentList (argumentList)
 	end
 end
 
-function self:Clone ()
-	local argumentList = GCompute.AST.ArgumentList ()
-	argumentList:SetStartToken (self:GetStartToken ())
-	argumentList:SetEndToken (self:GetEndToken ())
+function self:Clear ()
+	if self.ArgumentCount == 0 then return end
 	
-	argumentList.ArgumentCount = self.ArgumentCount
-	argumentList.Arguments = {}
-	for i = 1, self.ArgumentCount do
-		argumentList.Arguments [i] = self.Arguments [i]
-	end
-	return argumentList
+	self.ArgumentCount = 0
+	self.Arguments = {}
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)

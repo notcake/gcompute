@@ -6,11 +6,26 @@ function self:ctor (line, character)
 	self.Character = 0
 	
 	if type (line) == "table" then
-		self:CopyFrom (line)
+		self:Copy (line)
 	else
 		self:SetLine (line or self.Line)
 		self:SetCharacter (character or self.Character)
 	end
+end
+
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	self.Line      = source:GetLine ()      or 0
+	self.Character = source:GetCharacter () or 0
+	
+	return self
 end
 
 function self:AddCharacters (characters)
@@ -19,15 +34,6 @@ function self:AddCharacters (characters)
 	lineCharacterLocation.Character = math.max (0, self.Character + characters)
 	
 	return lineCharacterLocation
-end
-
-function self:Clone ()
-	return GCompute.CodeEditor.LineCharacterLocation (self.Line, self.Character)
-end
-
-function self:CopyFrom (lineCharacterLocation)
-	self.Line      = lineCharacterLocation.Line      or 0
-	self.Character = lineCharacterLocation.Character or 0
 end
 
 function self:GetCharacter ()

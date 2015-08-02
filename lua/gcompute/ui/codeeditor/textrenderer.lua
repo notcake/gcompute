@@ -9,6 +9,22 @@ function self:ctor ()
 	self.TabWidth = 4
 end
 
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	self.NextHashId = source.NextHashId
+	self.StateHash  = source.StateHash
+	self.TabWidth   = source.TabWidth
+	
+	return self
+end
+
 function self:CharacterFromColumn (text, column, currentColumn)
 	currentColumn = currentColumn or 0
 	local relativeCurrentColumn = 0
@@ -26,14 +42,6 @@ end
 
 function self:ColumnFromCharacter (text, character)
 	return self:GetStringColumnCount (GLib.UTF8.Sub (text, 1, character), 0)
-end
-
-function self:Clone ()
-	local textRenderer = GCompute.CodeEditor.TextRenderer ()
-	textRenderer.NextHashId = self.NextHashId
-	textRenderer.StateHash  = self.StateHash
-	textRenderer.TabWidth   = self.TabWidth
-	return textRenderer
 end
 
 function self:GetCharacterColumnCount (character, currentColumn)

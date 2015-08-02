@@ -23,23 +23,32 @@ function self:SetGlobalNamespace (globalNamespace)
 end
 
 -- Type System
-function self:Clone (globalNamespace)
-	local typeSystem = GCompute.TypeSystem ()
-	typeSystem:SetGlobalNamespace (globalNamespace or self.GlobalNamespace)
+function self:Clone (clone, globalNamespace)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self, globalNamespace)
+	
+	return clone
+end
+
+function self:Copy (source, globalNamespace)
+	self:SetGlobalNamespace (globalNamespace or source:GetGlobalNamespace ())
+	
 	if globalNamespace then
-		typeSystem:SetBottom   (self.Bottom   and self.Bottom  :GetCorrespondingDefinition (globalNamespace) or nil)
-		typeSystem:SetTop      (self.Top      and self.Top     :GetCorrespondingDefinition (globalNamespace) or nil)
-		typeSystem:SetEnum     (self.Enum     and self.Enum    :GetCorrespondingDefinition (globalNamespace) or nil)
-		typeSystem:SetFunction (self.Function and self.Function:GetCorrespondingDefinition (globalNamespace) or nil)
-		typeSystem:SetType     (self.Type     and self.Type    :GetCorrespondingDefinition (globalNamespace) or nil)
+		self:SetBottom   (source.Bottom   and source.Bottom  :GetCorrespondingDefinition (globalNamespace) or nil)
+		self:SetTop      (source.Top      and source.Top     :GetCorrespondingDefinition (globalNamespace) or nil)
+		self:SetEnum     (source.Enum     and source.Enum    :GetCorrespondingDefinition (globalNamespace) or nil)
+		self:SetFunction (source.Function and source.Function:GetCorrespondingDefinition (globalNamespace) or nil)
+		self:SetType     (source.Type     and source.Type    :GetCorrespondingDefinition (globalNamespace) or nil)
 	else
-		typeSystem:SetBottom   (self.Bottom)
-		typeSystem:SetTop      (self.Top)
-		typeSystem:SetEnum     (self.Enum)
-		typeSystem:SetFunction (self.Function)
-		typeSystem:SetType     (self.Type)
+		self:SetBottom   (source.Bottom)
+		self:SetTop      (source.Top)
+		self:SetEnum     (source.Enum)
+		self:SetFunction (source.Function)
+		self:SetType     (source.Type)
 	end
-	return typeSystem
+	
+	return self
 end
 
 function self:CreateAliasedType (aliasDefinition, innerType)

@@ -8,14 +8,21 @@ function self:ctor ()
 end
 
 function self:Clone (clone)
-	clone = clone or GCompute.GLua.Printing.Printer ()
-	clone:SetColorScheme (self:GetColorScheme ())
+	clone = clone or self.__ictor ()
 	
-	for type, typePrinter in pairs (self.TypePrinters) do
-		clone:RegisterTypePrinter (type, typePrinter)
-	end
+	clone:Copy (self)
 	
 	return clone
+end
+
+function self:Copy (source)
+	self:SetColorScheme (source:GetColorScheme ())
+	
+	for type, typePrinter in source:GetTypePrinterEnumerator () do
+		self:RegisterTypePrinter (type, typePrinter)
+	end
+	
+	return self
 end
 
 -- Color scheme
@@ -40,6 +47,10 @@ end
 -- Type printers
 function self:GetTypePrinter (type)
 	return self.TypePrinters [type]
+end
+
+function self:GetTypePrinterEnumerator ()
+	return GLib.KeyValueEnumerator (self.TypePrinters)
 end
 
 function self:RegisterTypePrinter (type, typePrinter)

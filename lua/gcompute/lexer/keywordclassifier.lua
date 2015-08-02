@@ -21,14 +21,12 @@ end
 
 -- KeywordClassifier
 -- Copying
-function self:Clone (out)
-	out = out or GCompute.Lexing.KeywordClassifier ()
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
 	
-	for keyword, keywordType in self:GetEnumerator () do
-		out:AddKeyword (keywordType, keyword)
-	end
+	clone:Copy (self)
 	
-	return out
+	return clone
 end
 
 function self:Copy (source)

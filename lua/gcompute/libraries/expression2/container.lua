@@ -6,18 +6,26 @@ function self:ctor ()
 	self.Types  = {}
 end
 
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	for k, v in pairs (source.Types) do
+		self.Values [k] = source.Values [k]
+		self.Types  [k] = v
+	end
+
+	return self
+end
+
 function self:Clear ()
 	self.Values = {}
 	self.Types  = {}
-end
-
-function self:Clone ()
-	local container = GCompute.Expression2.Container ()
-	for k, v in pairs (self.Types) do
-		container.Values [k] = self.Values [k]
-		container.Types  [k] = v
-	end
-	return container
 end
 
 function self:Get (index, destinationType)

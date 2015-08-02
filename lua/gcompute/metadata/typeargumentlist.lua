@@ -12,6 +12,22 @@ function self:ctor (arguments)
 	end
 end
 
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	for argument in source:GetEnumerator () do
+		self:AddArgument (argument)
+	end
+	
+	return self
+end
+
 function self:AddArgument (type)
 	if type:IsObjectDefinition () then
 		GCompute.Error ("TypeArgumentList:AddArgument : type should be a Type, not an ObjectDefinition.")
@@ -19,14 +35,6 @@ function self:AddArgument (type)
 	
 	self.ArgumentCount = self.ArgumentCount + 1
 	self.Arguments [self.ArgumentCount] = type
-end
-
-function self:Clone ()
-	local typeArgumentList = GCompute.TypeArgumentList ()
-	for i = 1, self.ArgumentCount do
-		typeArgumentList:AddArgument (self.Arguments [i])
-	end
-	return typeArgumentList
 end
 
 function self:Equals (otherArgumentList)

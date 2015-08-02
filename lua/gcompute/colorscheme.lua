@@ -48,18 +48,28 @@ function self:Serialize (outBuffer)
 end
 
 -- ColorScheme
-function self:Clone (colorScheme)
-	colorScheme = colorScheme or GCompute.ColorScheme ()
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
 	
-	for id, color in pairs (self.Colors) do
-		colorScheme:SetColor (id, color)
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	for id, color in source:GetColorEnumerator () do
+		self:SetColor (id, color)
 	end
 	
-	return colorScheme
+	return self
 end
 
 function self:GetColor (id)
 	return self.Colors [id]
+end
+
+function self:GetColorEnumerator ()
+	return GLib.KeyValueEnumerator (self.Colors)
 end
 
 function self:SetColor (id, color)

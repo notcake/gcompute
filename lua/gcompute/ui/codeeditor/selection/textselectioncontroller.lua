@@ -128,8 +128,8 @@ function self:ConvertToRegularSelection (preferredLine)
 end
 
 function self:CopyInitialSelection ()
-	self.InitialSelectionStart:CopyFrom (self.Selection:GetSelectionStart ())
-	self.InitialSelectionEnd:CopyFrom (self.Selection:GetSelectionEnd ())
+	self.InitialSelectionStart:Copy (self.Selection:GetSelectionStart ())
+	self.InitialSelectionEnd  :Copy (self.Selection:GetSelectionEnd   ())
 end
 
 function self:SelectLocation (lineColumnLocation, modifySelection)

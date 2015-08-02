@@ -21,9 +21,18 @@ function self:ctor ()
 	self.EndCharacter   = 0
 end
 
-function self:Clone ()
-	ErrorNoHalt (self:GetNodeType () .. ":Clone : Not implemented.\n")
-	return nil
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	ErrorNoHalt (self:GetNodeType () .. ":Copy : Not implemented.\n")
+	
+	return self
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport)
@@ -36,8 +45,8 @@ function self:ComputeMemoryUsage (memoryUsageReport)
 end
 
 function self:CopySource (sourceNode)
-	self.SourceFile = sourceNode.SourceFile
-	self.SourceLine = sourceNode.SourceLine
+	self.SourceFile      = sourceNode.SourceFile
+	self.SourceLine      = sourceNode.SourceLine
 	self.SourceCharacter = sourceNode.SourceCharacter
 end
 

@@ -958,9 +958,9 @@ function PANEL:SetPreferredCaretPos (preferredCaretLocation, scrollToCaret)
 	if scrollToCaret == nil then scrollToCaret = true end
 	if self.PreferredCaretLocation == preferredCaretLocation then return end
 	
-	self.PreferredCaretLocation:CopyFrom (preferredCaretLocation)
+	self.PreferredCaretLocation:Copy (preferredCaretLocation)
 	preferredCaretLocation = GCompute.CodeEditor.LineColumnLocation (preferredCaretLocation:GetLine (), self:FixupColumn (preferredCaretLocation:GetLine (), preferredCaretLocation:GetColumn ()))
-	self.CaretLocation:CopyFrom (preferredCaretLocation)
+	self.CaretLocation:Copy (preferredCaretLocation)
 	self:DispatchEvent ("CaretMoved", self.CaretLocation)
 	
 	self:ResetCaretBlinkTime ()
@@ -976,8 +976,8 @@ function PANEL:SetRawCaretPos (caretLocation, scrollToCaret)
 	if scrollToCaret == nil then scrollToCaret = true end
 	if self.CaretLocation == caretLocation then return end
 	
-	self.CaretLocation:CopyFrom (caretLocation)
-	self.PreferredCaretLocation:CopyFrom (caretLocation)
+	self.CaretLocation:Copy (caretLocation)
+	self.PreferredCaretLocation:Copy (caretLocation)
 	self:DispatchEvent ("CaretMoved", self.CaretLocation)
 	
 	self:ResetCaretBlinkTime ()
@@ -989,7 +989,7 @@ end
 -- Selection
 function PANEL:CreateSelectionSnapshot (selectionSnapshot)
 	selectionSnapshot = selectionSnapshot or GCompute.CodeEditor.SelectionSnapshot ()
-	selectionSnapshot:GetSelection ():CopyFrom (self.Selection)
+	selectionSnapshot:GetSelection ():Copy (self.Selection)
 	selectionSnapshot:SetCaretPosition (self.CaretLocation)
 	selectionSnapshot:SetPreferredCaretPosition (self.PreferredCaretLocation)
 	return selectionSnapshot
@@ -1031,9 +1031,9 @@ function PANEL:IsSelectionMultiline ()
 end
 
 function PANEL:RestoreSelectionSnapshot (selectionSnapshot)
-	self.Selection:CopyFrom (selectionSnapshot:GetSelection ())
-	self.CaretLocation:CopyFrom (selectionSnapshot:GetCaretPosition ())
-	self.PreferredCaretLocation:CopyFrom (selectionSnapshot:GetPreferredCaretPosition ())
+	self.Selection:Copy (selectionSnapshot:GetSelection ())
+	self.CaretLocation:Copy (selectionSnapshot:GetCaretPosition ())
+	self.PreferredCaretLocation:Copy (selectionSnapshot:GetPreferredCaretPosition ())
 	
 	self:DispatchEvent ("CaretMoved", self.CaretLocation)
 end

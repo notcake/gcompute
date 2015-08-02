@@ -32,6 +32,20 @@ function self:ctor (parameters)
 	end
 end
 
+function self:Clone (clone)
+	clone = clone or self.__ictor ()
+	
+	clone:Copy (self)
+	
+	return clone
+end
+
+function self:Copy (source)
+	self:AddParameters (source)
+	
+	return self
+end
+
 --- Adds a parameter to the list
 -- @param parameterType The type of the parameter, as a string or TypeReference
 -- @param parameterName (Optional) The name of the parameter
@@ -58,12 +72,6 @@ function self:AddParameters (parameterList)
 		self:AddParameter (parameterList:GetParameterType (i), parameterList:GetParameterName (i))
 		self:SetParameterDocumentation (i, parameterList:GetParameterDocumentation (i))
 	end
-end
-
-function self:Clone ()
-	local parameterList = GCompute.ParameterList ()
-	parameterList:AddParameters (self)
-	return parameterList
 end
 
 function self:ComputeMemoryUsage (memoryUsageReport, poolName)

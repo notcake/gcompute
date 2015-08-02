@@ -16,7 +16,7 @@ function self:ctor (codeEditor, insertionLocation, text)
 end
 
 function self:Redo ()
-	self.FinalLocation:CopyFrom (self.Document:Insert (self.InsertionLocation, self.Text))
+	self.FinalLocation:Copy (self.Document:Insert (self.InsertionLocation, self.Text))
 	
 	self.CodeEditor:SetRawCaretPos (self.Document:CharacterToColumn (self.FinalLocation, self.CodeEditor.TextRenderer))
 	self.CodeEditor:SetSelection (self.CodeEditor.CaretLocation, self.CodeEditor.CaretLocation)
@@ -37,7 +37,7 @@ function self:GetText ()
 end
 
 function self:SetFinalLocation (finalLocation)
-	self.FinalLocation:CopyFrom (finalLocation)
+	self.FinalLocation:Copy (finalLocation)
 end
 
 function self:SetText (text)

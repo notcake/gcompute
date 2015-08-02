@@ -2,7 +2,7 @@ local self = {}
 GCompute.CodeEditor.LineCharacterLocation = GCompute.MakeConstructor (self)
 
 function self:ctor (line, character)
-	self.Line = 0
+	self.Line      = 0
 	self.Character = 0
 	
 	if type (line) == "table" then

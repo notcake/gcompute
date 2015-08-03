@@ -56,6 +56,8 @@ end
 function self:Serialize (outBuffer)
 	outBuffer:UInt32 (self.ExecutionInstance:GetInstanceOptions ())
 	outBuffer:UInt32 (self.ExecutionInstance:GetState ())
+	
+	return outBuffer
 end
 
 -- Internal, do not call

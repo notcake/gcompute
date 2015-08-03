@@ -127,4 +127,6 @@ function self:Deserialize (inBuffer)
 	
 	self.LanguageName   = inBuffer:StringN16 ()
 	self.ContextOptions = inBuffer:UInt32 ()
+	
+	return self
 end

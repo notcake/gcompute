@@ -64,6 +64,8 @@ function self:Serialize (outBuffer)
 	
 	outBuffer:StringN16 (self.ExecutionContext:GetLanguageName ())
 	outBuffer:UInt32 (self.ExecutionContext:GetContextOptions ())
+	
+	return outBuffer
 end
 
 -- Internal, do not call

@@ -18,6 +18,8 @@ end
 -- ISerializable
 function self:Serialize (outBuffer)
 	outBuffer:StringZ (self:ToString ())
+	
+	return outBuffer
 end
 
 function self:Deserialize (inBuffer)
@@ -44,6 +46,8 @@ function self:Deserialize (inBuffer)
 			end
 		end
 	end
+	
+	return self
 end
 
 -- ColorScheme

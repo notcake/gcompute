@@ -119,6 +119,8 @@ end
 function self:Deserialize (inBuffer)
 	self.InstanceOptions = inBuffer:UInt32 ()
 	self.State = inBuffer:UInt8 ()
+	
+	return self
 end
 
 -- Internal, do not call

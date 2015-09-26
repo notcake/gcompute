@@ -337,7 +337,7 @@ include ("glua/printing/soundpatchprinter.lua")
 
 -- include ("glua/printing/materialprinter.lua")
 include ("glua/printing/meshprinter.lua")
--- include ("glua/printing/textureprinter.lua")
+include ("glua/printing/textureprinter.lua")
 
 -- include ("glua/printing/cusercmdprinter.lua")
 -- include ("glua/printing/cmovedataprinter.lua")

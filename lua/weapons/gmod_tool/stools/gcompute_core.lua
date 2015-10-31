@@ -34,7 +34,7 @@ if SERVER then
 elseif CLIENT then
 	usermessage.Hook ("gcompute_open_editor",
 		function (umsg)
-			GCompute.IDE:GetFrame ():SetVisible (true)
+			GCompute.IDE.GetInstance():GetFrame():SetVisible (true)
 		end
 	)
 end

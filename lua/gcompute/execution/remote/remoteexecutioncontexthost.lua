@@ -88,7 +88,7 @@ function self:HandleExecutionInstanceCreationRequest0 (connection, inBuffer)
 	local instanceOptions = inBuffer:UInt32 ()
 	local sourceId = inBuffer:StringN16 ()
 	if sourceId == "" then sourceId = nil end
-	local code = inBuffer:StringN32 ()
+	local code = util.Decompress (inBuffer:StringN32 ()) or ""
 	
 	-- Create the execution instance
 	local executionInstance, returnCode = self.ExecutionContext:CreateExecutionInstance (code, sourceId, instanceOptions)

@@ -65,7 +65,7 @@ function self:CreateExecutionInstance (code, sourceId, instanceOptions, callback
 	outBuffer:UInt8 (0)
 	outBuffer:UInt32 (instanceOptions)
 	outBuffer:StringN16 (sourceId or "")
-	outBuffer:StringN32 (code)
+	outBuffer:StringN32 (util.Compress (code) or "")
 	
 	-- Dispatch request
 	self:DispatchPacket (self:GetRemoteId (), outBuffer)

@@ -384,7 +384,7 @@ function self:LoadWorkspace ()
 	local inBuffer = GLib.StringInBuffer (file.Read ("data/gcompute_ide_tabs.txt", "GAME") or "")
 	inBuffer:String () -- Discard comment
 	self:GetDocumentManager ():LoadSession (GLib.StringInBuffer (inBuffer:LongString ()), self:GetSerializerRegistry ())
-	inBuffer:Char ()   -- Discard newline
+	inBuffer:Bytes (1) -- Discard newline
 	inBuffer:String () -- Discard comment
 	
 	self:GetViewManager ():LoadSession (inBuffer)
@@ -452,7 +452,7 @@ function self:SaveWorkspace ()
 	local subOutBuffer = GLib.StringOutBuffer ()
 	self:GetDocumentManager ():SaveSession (subOutBuffer, self:GetSerializerRegistry ())
 	outBuffer:LongString (subOutBuffer:GetString ())
-	outBuffer:Char ("\n")
+	outBuffer:Bytes ("\n")
 	outBuffer:String ("\n=== Views ===\n")
 	
 	self:GetViewManager ():SaveSession (outBuffer)

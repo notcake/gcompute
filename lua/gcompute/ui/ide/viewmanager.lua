@@ -132,11 +132,11 @@ function self:LoadSession (inBuffer)
 			self:AddView (view)
 		end
 		
-		inBuffer:Char () -- Discard newline
+		inBuffer:Bytes (1) -- Discard newline
 		viewId = inBuffer:String ()
 	end
 	
-	inBuffer:Char () -- Discard newline
+	inBuffer:Bytes (1) -- Discard newline
 end
 
 function self:SaveSession (outBuffer)
@@ -149,10 +149,10 @@ function self:SaveSession (outBuffer)
 		subOutBuffer:Clear ()
 		view:SaveSession (subOutBuffer)
 		outBuffer:String (subOutBuffer:GetString ())
-		outBuffer:Char ("\n")
+		outBuffer:Bytes ("\n")
 	end
 	outBuffer:String ("")
-	outBuffer:Char ("\n")
+	outBuffer:Bytes ("\n")
 end
 
 -- Internal, do not call

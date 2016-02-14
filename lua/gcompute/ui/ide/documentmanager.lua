@@ -118,7 +118,7 @@ function self:LoadSession (inBuffer, serializerRegistry)
 			self:AddDocument (document)
 		end
 		
-		inBuffer:Char () -- Discard newline
+		inBuffer:Bytes (1) -- Discard newline
 		documentId = inBuffer:String ()
 	end
 end
@@ -131,7 +131,7 @@ function self:SaveSession (outBuffer, serializerRegistry)
 		subOutBuffer:Clear ()
 		document:SaveSession (subOutBuffer, serializerRegistry)
 		outBuffer:LongString (subOutBuffer:GetString ())
-		outBuffer:Char ("\n")
+		outBuffer:Bytes ("\n")
 	end
 	outBuffer:String ("")
 end

@@ -23,6 +23,12 @@ function self:ctor (tokenizer, keywordClassifier, code)
 end
 
 function self:GenerateNextToken ()
+	-- Check for end of file
+	if self.Offset > #self.Code then
+		self:EmitEof ()
+		return
+	end
+	
 	local match, matchLength, tokenType = self.Tokenizer:MatchSymbol (self.Code, self.Offset)
 	
 	-- Count line breaks
@@ -79,16 +85,16 @@ function self:GenerateNextToken ()
 	-- Advance position in the input string
 	self.Offset = self.Offset + matchLength
 	self.Line   = self.Line   + lineCount
+end
+
+-- Internal
+function self:EmitEof ()
+	local token        = self:AddToken ("<eof>")
+	token.TokenType    = GCompute_Lexing_TokenType_EndOfFile
+	token.Line         = self.Line
+	token.Character    = self.Character
+	token.EndLine      = self.Line
+	token.EndCharacter = self.Character
 	
-	-- Check for end of file
-	if self.Offset > #self.Code then
-		local token        = self:AddToken ("<eof>")
-		token.TokenType    = GCompute_Lexing_TokenType_EndOfFile
-		token.Line         = self.Line
-		token.Character    = self.Character
-		token.EndLine      = self.Line
-		token.EndCharacter = self.Character
-		
-		self:FinalizeTokens ()
-	end
+	self:FinalizeTokens ()
 end

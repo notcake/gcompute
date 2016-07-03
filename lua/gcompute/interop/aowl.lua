@@ -82,7 +82,8 @@ local function RegisterAowlCommands ()
 				
 				ExecuteExpression (userId, hostId == "^" and userId or hostId, expression)
 			end,
-			"developers"
+			"developers",
+			true
 		)
 	end
 end

@@ -72,12 +72,16 @@ local function RegisterAowlCommands ()
 		aowl.AddCommand (
 			command,
 			function (ply, expression)
+				local expression = expression or ""
+				
 				local userId
 				if ply == NULL then
 					-- Console
 					userId = GLib.GetServerId ()
+					aowlMsg("!" .. command .. " CONSOLE", expression)
 				else
 					userId = GLib.GetPlayerId (ply)
+					aowlMsg("!" .. command .. " " .. ply:Nick () .. " (" .. ply:SteamID () .. ")", expression)
 				end
 				
 				ExecuteExpression (userId, hostId == "^" and userId or hostId, expression)

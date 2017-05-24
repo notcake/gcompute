@@ -65,13 +65,15 @@ local function RegisterAowlCommands ()
 		["tblm"   ] = "^",
 		["printm2"] = "^",
 		["tablem" ] = "^",
-		["tablem2"] = "^"
+		["tablem2"] = "^",
+		
+		["psc"    ] = "Client",
 	}
 	
-	for command, hostId in pairs (executionCommands) do
+	for command, defaultHostId in pairs (executionCommands) do
 		aowl.AddCommand (
 			command,
-			function (ply, expression)
+			function (ply, expression, target)
 				local expression = expression or ""
 				
 				local userId
@@ -84,7 +86,33 @@ local function RegisterAowlCommands ()
 					aowlMsg("!" .. command .. " " .. ply:Nick () .. " (" .. ply:SteamID () .. ")", expression)
 				end
 				
-				ExecuteExpression (userId, hostId == "^" and userId or hostId, expression)
+				local hostId = defaultHostId
+				if hostId == "^" then -- self
+					hostId = userId
+					
+				elseif hostId == "Client" then
+					expression = string.sub (expression, string.find (expression, target, 1, true) + (#target + 1))
+					target = easylua.FindEntity (target)
+					
+					if type (target) == "table" and target.get then
+						local targets = {}
+						
+						for _, pl in next, target.get() do
+							targets[#targets+1] = GLib.GetPlayerId (pl)
+						end
+						
+						if #targets == 0 then return false end
+						hostId = targets
+						
+					elseif type (target) == "Player" then
+						hostId = GLib.GetPlayerId (target)
+						
+					else
+						return false
+					end
+				end
+				
+				ExecuteExpression (userId, hostId, expression)
 			end,
 			"developers",
 			false

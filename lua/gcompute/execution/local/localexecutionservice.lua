@@ -33,6 +33,11 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 	if hostId ~= GLib.GetLocalId () then
 		return false, GCompute.ReturnCode.NotSupported
 	end
+
+	-- Check for server side only language
+	if CLIENT and languageName and languageName == "SQLite" then
+		return false, GCompute.ReturnCode.NotSupported
+	end
 	
 	-- Check languages
 	if languageName and
@@ -69,6 +74,8 @@ function self:CreateExecutionContext (authId, hostId, languageName, contextOptio
 	-- 	executionContext, returnCode = GCompute.Execution.TerminalEmulatorExecutionContext (authId, languageName, contextOptions), GCompute.ReturnCode.Success
 	elseif languageName == "GLua" then
 		executionContext, returnCode = GCompute.Execution.GLuaExecutionContext (authId, languageName, contextOptions), GCompute.ReturnCode.Success
+	elseif languageName == "SQLite" then
+		executionContext, returnCode = GCompute.Execution.SQLiteExecutionContext (authId, languageName, contextOptions), GCompute.ReturnCode.Success
 	else
 		returnCode = GCompute.ReturnCode.NotSupported
 	end

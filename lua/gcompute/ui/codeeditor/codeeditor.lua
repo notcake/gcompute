@@ -1,5 +1,23 @@
 local PANEL = {}
-surface.CreateFont (
+if system.IsLinux() then
+	surface.CreateFont (
+	"GComputeMonospace",
+	{
+		font   = "DejaVu Sans Mono",
+		size   = 14,
+		weight = 400
+	}
+)
+	surface.CreateFont (
+	"GComputeMonospaceBold",
+	{
+		font   = "DejaVu Sans Mono",
+		size   = 14,
+		weight = 1000
+	}
+)
+else
+	surface.CreateFont (
 	"GComputeMonospace",
 	{
 		font   = "Lucida Console",
@@ -7,7 +25,7 @@ surface.CreateFont (
 		weight = 400
 	}
 )
-surface.CreateFont (
+	surface.CreateFont (
 	"GComputeMonospaceBold",
 	{
 		font   = "Lucida Console",
@@ -15,6 +33,7 @@ surface.CreateFont (
 		weight = 1000
 	}
 )
+end
 
 --[[
 	Events:

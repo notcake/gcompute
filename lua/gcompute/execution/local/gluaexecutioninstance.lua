@@ -15,7 +15,6 @@ function self:ctor (gluaExecutionContext, instanceOptions)
 	self.LuaCompiler = GCompute.GLua.LuaCompiler ()
 	
 	self.ExecutionFunction = nil
-	self.MinimumReturnValueCount = 0
 	
 	local captureOutput  = self:CapturesOutput ()
 	local suppressOutput = self:SuppressesHostOutput ()
@@ -89,7 +88,6 @@ function self:Compile ()
 	
 	if self:GetExecutionContext ():IsReplContext () then
 		self.ExecutionFunction = self.LuaCompiler:Compile ("return " .. self.SourceFiles [1], self.SourceIds [1])
-		self.MinimumReturnValueCount = self.ExecutionFunction and 1 or 0
 	end
 	
 	if not self.ExecutionFunction then
@@ -142,7 +140,36 @@ function self:Start ()
 	-- Run the code
 	self:SetState (GCompute.Execution.ExecutionInstanceState.Running)
 	
-	local ret = {
+	;(
+		function (success, ...)
+			-- Restore printing functions
+			self:UndetourPrintingFunctions ()
+			
+			GLib.GetCurrentThread ():RemoveEventListener ("ExecutionSliceStarted", "GLuaExecutionInstance." .. self:GetHashCode ())
+			GLib.GetCurrentThread ():RemoveEventListener ("ExecutionSliceEnded",   "GLuaExecutionInstance." .. self:GetHashCode ())
+			
+			if self:GetExecutionContext ():IsReplContext () then
+				if success then
+					local printer = GCompute.GLua.Printing.DefaultPrinter:Clone ()
+					printer:SetColorScheme (GCompute.SyntaxColoring.PlaceholderSyntaxColoringScheme)
+					
+					local returns = { ... }
+					local returnCount = select ("#", ...)
+					for i = 1, returnCount do
+						if self:GetStdOut ():GetBytesWritten () > 0 then
+							self:GetStdOut ():Write ("\n")
+						end
+						
+						printer:Print (self:GetStdOut (), returns [i])
+						
+						self:HandleReplValue (returns [i])
+					end
+				else
+					self:GetStdErr ():Write (...)
+				end
+			end
+		end
+	) (
 		xpcall (self.ExecutionFunction,
 			function (message)
 				if message == "stack overflow" and pcall (debug.getlocal, 1024, 1) then return message end
@@ -152,32 +179,7 @@ function self:Start ()
 				if not self:SuppressesHostOutput () then self.UpvalueBackup.ErrorNoHalt (message) end
 			end
 		)
-	}
-	
-	-- Restore printing functions
-	self:UndetourPrintingFunctions ()
-	
-	GLib.GetCurrentThread ():RemoveEventListener ("ExecutionSliceStarted", "GLuaExecutionInstance." .. self:GetHashCode ())
-	GLib.GetCurrentThread ():RemoveEventListener ("ExecutionSliceEnded",   "GLuaExecutionInstance." .. self:GetHashCode ())
-	
-	if self:GetExecutionContext ():IsReplContext () then
-		if ret [1] then
-			local printer = GCompute.GLua.Printing.DefaultPrinter:Clone ()
-			printer:SetColorScheme (GCompute.SyntaxColoring.PlaceholderSyntaxColoringScheme)
-			
-			for i = 2, math.max (self.MinimumReturnValueCount + 1, table.maxn (ret)) do
-				if self:GetStdOut ():GetBytesWritten () > 0 then
-					self:GetStdOut ():Write ("\n")
-				end
-				
-				printer:Print (self:GetStdOut (), ret [i])
-				
-				self:HandleReplValue (ret [i])
-			end
-		else
-			self:GetStdErr ():Write (ret [2])
-		end
-	end
+	)
 end
 
 -- Internal, do not call

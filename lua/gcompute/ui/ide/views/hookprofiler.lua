@@ -116,8 +116,12 @@ function self:Stop ()
 	for eventName, hookTable in pairs (self.Hooks) do
 		for hookName, hookData in pairs (hookTable) do
 			if hook.GetTable () [eventName] [hookName] and hookData.OriginalHandler then
-				hook.Add (eventName, hookName, hookData.OriginalHandler)
-				hookData.OriginalHandler = nil
+				if type (hookName) == "string" or
+				   type (hookName) == "number" or
+				   hookName:IsValid () then
+					hook.Add (eventName, hookName, hookData.OriginalHandler)
+					hookData.OriginalHandler = nil
+				end
 			end
 		end
 	end

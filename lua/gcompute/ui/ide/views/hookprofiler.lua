@@ -83,27 +83,31 @@ function self:Start ()
 	for eventName, hookTable in pairs (hook.GetTable ()) do
 		self.Hooks [eventName] = self.Hooks [eventName] or {}
 		for hookName, handler in pairs (hookTable) do
-			local hookData = self.Hooks [eventName] [hookName] or self:CreateHookData (eventName, hookName)
-			self.Hooks [eventName] [hookName] = hookData
-			hookData.CallCount = 0
-			hookData.Time = 0
-			if not hookData.OriginalHandler then
-				hookData.OriginalHandler = handler
-			end
-			hook.Add (eventName, hookName,
-				function (...)
-					local startTime = SysTime ()
-					hookData.CallCount = hookData.CallCount + 1
-					local a, b, c, d, e, f, g, h = hookData.OriginalHandler (...)
-					hookData.Time = hookData.Time + SysTime () - startTime
-					if CurTime () ~= hookData.LastFrame then
-						hookData.LastFrame = CurTime ()
-						hookData.LastFrameTime = 0
-					end
-					hookData.LastFrameTime = hookData.LastFrameTime + SysTime () - startTime
-					return a, b, c, d, e, f, g, h
+			if type (hookName) == "string" or
+			   type (hookName) == "number" or
+			   hookName:IsValid () then
+				local hookData = self.Hooks [eventName] [hookName] or self:CreateHookData (eventName, hookName)
+				self.Hooks [eventName] [hookName] = hookData
+				hookData.CallCount = 0
+				hookData.Time = 0
+				if not hookData.OriginalHandler then
+					hookData.OriginalHandler = handler
 				end
-			)
+				hook.Add (eventName, hookName,
+					function (...)
+						local startTime = SysTime ()
+						hookData.CallCount = hookData.CallCount + 1
+						local a, b, c, d, e, f, g, h = hookData.OriginalHandler (...)
+						hookData.Time = hookData.Time + SysTime () - startTime
+						if CurTime () ~= hookData.LastFrame then
+							hookData.LastFrame = CurTime ()
+							hookData.LastFrameTime = 0
+						end
+						hookData.LastFrameTime = hookData.LastFrameTime + SysTime () - startTime
+						return a, b, c, d, e, f, g, h
+					end
+				)
+			end
 		end
 	end
 end

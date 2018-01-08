@@ -98,6 +98,11 @@ function self:UpdateChatStatus ()
 		if #code > 4096 then
 			code = string.sub (code, 1, GLib.UTF8.GetSequenceStart (code, 4097) - 1) .. "..."
 		end
+		if string.find (code, "-- SECRET", 1, true) then
+			local lineCount = select (2, string.gsub (code, "\n", "")) + 1
+			local title = string.match (code, "^%s*([^\r\n]+)") or ""
+			code = string.format ("[Lua code (%d line%s)]\n%s", lineCount, lineCount == 1 and "" or "s", title)
+		end
 		coh.SendTypedMessage (code)
 	else
 		if self.TypingCode then

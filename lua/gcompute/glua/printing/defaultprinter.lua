@@ -15,6 +15,7 @@ GCompute.GLua.Printing.DefaultPrinter:RegisterTypePrinter ("Vector",      GCompu
 GCompute.GLua.Printing.DefaultPrinter:RegisterTypePrinter ("VMatrix",     GCompute.GLua.Printing.VMatrixPrinter    )
 
 -- Entities
+GCompute.GLua.Printing.DefaultPrinter:RegisterTypePrinter ("NextBot",     GCompute.GLua.Printing.EntityPrinter     )
 GCompute.GLua.Printing.DefaultPrinter:RegisterTypePrinter ("Entity",      GCompute.GLua.Printing.EntityPrinter     )
 GCompute.GLua.Printing.DefaultPrinter:RegisterTypePrinter ("CSEnt",       GCompute.GLua.Printing.EntityPrinter     )
 GCompute.GLua.Printing.DefaultPrinter:RegisterTypePrinter ("Vehicle",     GCompute.GLua.Printing.EntityPrinter     )

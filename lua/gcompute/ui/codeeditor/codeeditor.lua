@@ -76,7 +76,7 @@ function PANEL:Init ()
 	
 		local pasted = ctrl and input.IsKeyDown (KEY_V)
 		
-		local text = self.TextEntry:GetValue ()
+		local text = self.TextEntry:GetText ()
 		self.TextEntry:SetText ("")
 		if text == "" then return end
 		if not pasted then

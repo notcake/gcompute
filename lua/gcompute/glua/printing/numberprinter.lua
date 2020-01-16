@@ -58,14 +58,22 @@ function self:Print (printer, coloredTextSink, obj, printingOptions, alignmentCo
 		end
 	end
 	
-	if obj >= 65536 and
-	   obj < 4294967296 and
-	   math.floor (obj) == obj then
-		-- Hexadecimal
-		alignmentSink:AddAlignment ("PreDecimal", 10)
-		outputWidth = outputWidth + self:PadN (coloredTextSink, widthAlignment - 10)
-		coloredTextSink:WriteColor (string.format ("0x%08x", obj), printer:GetColor ("Number"))
-		return outputWidth + 10
+	if math.floor (obj) == obj then
+		if obj >= 0x00010000 and
+		   obj <= 0xFFFFFFFF then
+			-- Hexadecimal
+			alignmentSink:AddAlignment ("PreDecimal", 10)
+			outputWidth = outputWidth + self:PadN (coloredTextSink, widthAlignment - 10)
+			coloredTextSink:WriteColor (string.format ("0x%08x", obj), printer:GetColor ("Number"))
+			return outputWidth + 10
+		elseif obj >= 0x0000000100000000 and
+		       obj <= 0x0000FFFFFFFFFFFF then
+			-- Hexadecimal
+			alignmentSink:AddAlignment ("PreDecimal", 18)
+			outputWidth = outputWidth + self:PadN (coloredTextSink, widthAlignment - 18)
+			coloredTextSink:WriteColor (string.format ("0x%08x%08x", math.floor(obj / 0x0000000100000000), obj % 0x0000000100000000), printer:GetColor ("Number"))
+			return outputWidth + 18
+		end
 	end
 	
 	local str = tostring (obj)

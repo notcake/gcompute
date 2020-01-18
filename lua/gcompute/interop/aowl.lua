@@ -68,6 +68,7 @@ local function RegisterAowlCommands ()
 		["tablem2"] = "^",
 		
 		["psc"    ] = "Client",
+		["pb"     ] = "Both",
 	}
 	
 	for command, defaultHostId in pairs (executionCommands) do
@@ -109,6 +110,18 @@ local function RegisterAowlCommands ()
 						
 					else
 						return false
+					end
+						
+				elseif hostId == "Both" then
+					if ply == NULL then
+						-- Console
+						hostId = userId
+					else
+						hostId =
+						{
+							GLib.GetServerId (),
+							userId,
+						}
 					end
 				end
 				

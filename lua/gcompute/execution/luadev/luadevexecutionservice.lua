@@ -20,7 +20,7 @@ function self:CanCreateExecutionContext (authId, hostId, languageName)
 	
 	-- Check luadev permissions
 	local owner = GCompute.PlayerMonitor:GetUserEntity (authId)
-	if owner and owner:IsValid () and not luadev.IsPlayerAllowed (owner, "") then
+	if owner and owner:IsValid () and not luadev.CanLuaDev (owner, "") then
 		return false, GCompute.ReturnCode.AccessDenied
 	end
 	
